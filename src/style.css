@@ -1,0 +1,17 @@
+html,
+body,
+#app {
+  height: 100%;
+  width: 100%;
+  margin: 0;
+}
+
+body {
+  overflow: hidden;
+  /* 让内容区不要出现双滚动条 */
+}
+
+#app {
+  padding: 0;
+  max-width: none;
+}

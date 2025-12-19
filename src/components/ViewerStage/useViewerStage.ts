@@ -58,10 +58,12 @@ export function useViewerStage(
   // three core
   let renderer: THREE.WebGLRenderer | null = null;
   let scene: THREE.Scene | null = null;
-  let camera: THREE.PerspectiveCamera | null = null;
+  let camera: THREE.PerspectiveCamera | THREE.OrthographicCamera | null = null;
   let controls: OrbitControls | null = null;
   let resizeObserver: ResizeObserver | null = null;
   let rafId = 0;
+  let orthoHalfHeight = 5; // 正交相机 frustum 的半高，会随 fit/resize 更新
+  let lastAtoms: Atom[] = []; // 用于 resetView 重新 fit
 
   let pivotGroup: THREE.Group | null = null;
   let modelGroup: THREE.Group | null = null;
@@ -282,19 +284,112 @@ export function useViewerStage(
 
     const size = box.getSize(new THREE.Vector3());
     const center = box.getCenter(new THREE.Vector3());
-
     const maxSize = Math.max(size.x, size.y, size.z);
-    const fov = (camera.fov * Math.PI) / 180.0;
-    const dist = maxSize / 2 / Math.tan(fov / 2);
 
-    camera.position.set(center.x, center.y, center.z + dist * 1.8);
-    camera.near = Math.max(0.01, dist / 100);
-    camera.far = dist * 100;
+    // 目标点
+    controls.target.copy(center);
+
+    if (isPerspective(camera)) {
+      const fov = (camera.fov * Math.PI) / 180.0;
+      const dist = maxSize / 2 / Math.tan(fov / 2);
+
+      camera.position.set(center.x, center.y, center.z + dist * 1.8);
+      camera.near = Math.max(0.01, dist / 100);
+      camera.far = dist * 100;
+      camera.updateProjectionMatrix();
+
+      controls.update();
+      controls.saveState();
+      return;
+    }
+
+    // Orthographic：用 box 尺度决定 frustum
+    const host = canvasHostRef.value;
+    const aspect = host
+      ? host.getBoundingClientRect().width /
+        Math.max(1, host.getBoundingClientRect().height)
+      : 1;
+
+    const margin = 1.15;
+    const halfH = (maxSize / 2) * margin;
+    orthoHalfHeight = Math.max(halfH, 0.1);
+
+    camera.left = -orthoHalfHeight * aspect;
+    camera.right = orthoHalfHeight * aspect;
+    camera.top = orthoHalfHeight;
+    camera.bottom = -orthoHalfHeight;
+
+    const dist = maxSize * 2.2;
+    camera.position.set(center.x, center.y, center.z + dist);
+    camera.near = Math.max(0.01, dist / 50);
+    camera.far = dist * 50;
     camera.updateProjectionMatrix();
 
-    controls.target.copy(center);
     controls.update();
+    controls.saveState();
   }
+
+  function resetView(): void {
+    if (lastAtoms.length > 0) {
+      fitCameraToAtoms(lastAtoms);
+      return;
+    }
+
+    // 没有模型时给个默认
+    controls?.target.set(0, 0, 0);
+    camera?.position.set(0, 0, 10);
+    controls?.update();
+    controls?.saveState();
+  }
+
+  function setProjectionMode(orthographic: boolean): void {
+    if (!scene || !renderer) return;
+
+    // 保留当前视角信息
+    const target = controls?.target?.clone() ?? new THREE.Vector3();
+    const pos = camera?.position?.clone() ?? new THREE.Vector3(0, 0, 10);
+
+    // 使用当前画布尺寸
+    const host = canvasHostRef.value;
+    const rect = host?.getBoundingClientRect();
+    const w = Math.max(1, Math.floor(rect?.width ?? 1));
+    const h = Math.max(1, Math.floor(rect?.height ?? 1));
+    const aspect = w / Math.max(1, h);
+
+    if (!orthographic) {
+      // Perspective
+      const cam = new THREE.PerspectiveCamera(45, aspect, 0.01, 2000);
+      cam.position.copy(pos);
+      camera = cam;
+      rebuildControls();
+      controls!.target.copy(target);
+      controls!.update();
+      updateCameraForSize(w, h);
+    } else {
+      // Orthographic（先给一个 frustum，后面 fit 会更新）
+      const halfH = orthoHalfHeight || 5;
+      const cam = new THREE.OrthographicCamera(
+        -halfH * aspect,
+        halfH * aspect,
+        halfH,
+        -halfH,
+        0.01,
+        2000
+      );
+      cam.position.copy(pos);
+      camera = cam;
+      rebuildControls();
+      controls!.target.copy(target);
+      controls!.update();
+      updateCameraForSize(w, h);
+    }
+
+    // 切换后对当前模型重新 fit 一次，保证画面正常
+    if (lastAtoms.length > 0) {
+      fitCameraToAtoms(lastAtoms);
+    }
+  }
+
   function degToRad(d: number): number {
     return (d * Math.PI) / 180;
   }
@@ -345,6 +440,17 @@ export function useViewerStage(
       degToRad(s.rotationDeg.z)
     );
   }
+  watch(
+    () => getSettings().orthographic,
+    (v) => setProjectionMode(v),
+    { immediate: true }
+  );
+
+  watch(
+    () => getSettings().resetViewSeq,
+    () => resetView()
+  );
+
   watch(
     () => getSettings().atomScale,
     () => applyAtomScale()
@@ -446,6 +552,27 @@ export function useViewerStage(
       (axesHelper.material as THREE.LineBasicMaterial).depthTest = false;
       axesHelper.renderOrder = 999;
     }
+    lastAtoms = atoms;
+  }
+  function isPerspective(cam: THREE.Camera): cam is THREE.PerspectiveCamera {
+    return (cam as THREE.PerspectiveCamera).isPerspectiveCamera === true;
+  }
+
+  function isOrthographic(cam: THREE.Camera): cam is THREE.OrthographicCamera {
+    return (cam as THREE.OrthographicCamera).isOrthographicCamera === true;
+  }
+
+  function rebuildControls(): void {
+    if (!camera || !renderer) return;
+
+    const oldTarget = controls?.target?.clone() ?? new THREE.Vector3();
+
+    controls?.dispose();
+    controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.08;
+    controls.target.copy(oldTarget);
+    controls.update();
   }
 
   async function loadFile(file: File): Promise<void> {
@@ -527,17 +654,35 @@ export function useViewerStage(
     };
   }
 
+  function updateCameraForSize(w: number, h: number): void {
+    if (!camera) return;
+
+    const aspect = w / Math.max(1, h);
+
+    if (isPerspective(camera)) {
+      camera.aspect = aspect;
+      camera.updateProjectionMatrix();
+      return;
+    }
+
+    // Orthographic
+    camera.left = -orthoHalfHeight * aspect;
+    camera.right = orthoHalfHeight * aspect;
+    camera.top = orthoHalfHeight;
+    camera.bottom = -orthoHalfHeight;
+    camera.updateProjectionMatrix();
+  }
+
   function resizeToHost(): void {
     const host = canvasHostRef.value;
-    if (!host || !renderer || !camera) return;
+    if (!host || !renderer) return;
 
     const { w, h } = getHostSize(host);
     renderer.setSize(w, h);
-    camera.aspect = w / h;
-    camera.updateProjectionMatrix();
 
-    if (labelRenderer) labelRenderer.setSize(w, h);
+    updateCameraForSize(w, h);
   }
+
   function makeAxisLabel(text: string): CSS2DObject {
     const div = document.createElement("div");
     div.textContent = text;
@@ -618,6 +763,7 @@ export function useViewerStage(
 
     applyBackground();
     applyShowAxes();
+    setProjectionMode(getSettings().orthographic);
   }
 
   function disposeThree(): void {

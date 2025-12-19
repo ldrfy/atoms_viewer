@@ -61,9 +61,14 @@
 .file-input {
   display: none;
 }
-.export-btn {
+
+.export-bar {
   position: absolute;
-  right: 12px;
-  top: 12px;
+  top: 10px;
+  right: 10px;
   z-index: 10;
+  /* 关键：不要 100%，只包内容 */
+  width: max-content; /* 或者直接不写 width */
+  display: inline-flex;
+
 }

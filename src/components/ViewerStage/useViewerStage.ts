@@ -70,7 +70,6 @@ export function useViewerStage(
   let axesHelper: THREE.AxesHelper | null = null;
   let axesGroup: THREE.Group | null = null;
   let labelRenderer: CSS2DRenderer | null = null;
-  let axisLabels: CSS2DObject[] = [];
 
   // model meshes
   let atomMeshes: THREE.InstancedMesh[] = [];
@@ -418,7 +417,6 @@ export function useViewerStage(
    */
   function applyAtomScale(): void {
     const scale = getSettings().atomScale;
-    console.log("xxxx", scale);
 
     for (const m of atomMeshes) {
       const baseRadius = m.userData.baseRadius as number | undefined;
@@ -524,12 +522,13 @@ export function useViewerStage(
     applyModelRotation();
 
     const size = box.getSize(new THREE.Vector3());
+    console.log(size);
+    
     const axisLen = Math.max(size.x, size.y, size.z) * 0.6; // 可调
 
-    // 先清理旧标签
-    for (const o of axisLabels) axesGroup?.remove(o);
-    axisLabels = [];
-    if (axesGroup && axesHelper) {
+    if (axesGroup) {
+        if (axesHelper) axesGroup.remove(axesHelper);
+
       const lx = makeAxisLabel("X");
       lx.position.set(axisLen, 0, 0);
 
@@ -540,17 +539,11 @@ export function useViewerStage(
       lz.position.set(0, 0, axisLen);
 
       axesGroup.add(lx, ly, lz);
-      axisLabels.push(lx, ly, lz);
-      axesGroup.remove(axesHelper);
-      axesHelper.geometry.dispose();
-      (axesHelper.material as THREE.Material).dispose?.();
 
       axesHelper = new THREE.AxesHelper(axisLen);
-      axesGroup.add(axesHelper);
-
-      // 如果要永远不被挡住
       (axesHelper.material as THREE.LineBasicMaterial).depthTest = false;
       axesHelper.renderOrder = 999;
+      axesGroup.add(axesHelper);
     }
     lastAtoms = atoms;
   }
@@ -708,9 +701,6 @@ export function useViewerStage(
     pivotGroup.add(modelGroup);
 
     axesGroup = new THREE.Group();
-    axesHelper = new THREE.AxesHelper(2); // 初始给个长度，后面 renderModel 再按模型大小更新
-    axesGroup.add(axesHelper);
-    axesGroup.visible = false; // 默认隐藏，后面由 showAxes 控制
 
     pivotGroup.add(axesGroup); // 关键：挂到 pivotGroup（模型中心）
 
@@ -817,8 +807,7 @@ export function useViewerStage(
 
     renderer.setPixelRatio(1);
     renderer.setSize(w * scale, h * scale, false);
-    camera.aspect = w / Math.max(1, h);
-    camera.updateProjectionMatrix();
+    updateCameraForSize(w, h);
 
     renderer.render(scene, camera);
 
@@ -840,9 +829,9 @@ export function useViewerStage(
     renderer.render(scene, camera);
   }
 
-  async function onExportPng(): Promise<void> {
+  async function onExportPng(exportScale: number): Promise<void> {
     try {
-      await exportPngTransparentCropped("snapshot.png", 2);
+      await exportPngTransparentCropped("snapshot.png", exportScale);
       message.success("已导出 PNG（透明背景）");
     } catch (e) {
       // eslint-disable-next-line no-console

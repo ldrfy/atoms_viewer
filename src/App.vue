@@ -13,7 +13,7 @@ import {
 
 const antTheme = { algorithm: theme.darkAlgorithm };
 
-const collapsed = ref(false);
+const collapsed = ref(true);
 const activeKeys = ref<string[]>(["display"]);
 
 // 关键：用 ref，而不是 reactive

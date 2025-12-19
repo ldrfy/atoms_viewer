@@ -106,8 +106,8 @@
 
             <div class="pose-actions">
               <a-button @click="resetPose">重置</a-button>
-              <a-button @click="snapPose(90)">+90°</a-button>
-              <a-button @click="snapPose(-90)">-90°</a-button>
+              <!-- <a-button @click="snapPose(90)">+90°</a-button>
+              <a-button @click="snapPose(-90)">-90°</a-button> -->
             </div>
           </a-form>
         </a-collapse-panel>

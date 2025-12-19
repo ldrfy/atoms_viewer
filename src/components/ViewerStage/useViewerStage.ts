@@ -5,6 +5,11 @@ import type { ViewerSettings } from "../../lib/viewer/settings";
 import { message } from "ant-design-vue";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import {
+  CSS2DRenderer,
+  CSS2DObject,
+} from "three/examples/jsm/renderers/CSS2DRenderer.js";
+
 import type { Atom, StructureModel } from "../../lib/structure/types";
 import {
   loadStructureFromFile,
@@ -60,6 +65,10 @@ export function useViewerStage(
 
   let pivotGroup: THREE.Group | null = null;
   let modelGroup: THREE.Group | null = null;
+  let axesHelper: THREE.AxesHelper | null = null;
+  let axesGroup: THREE.Group | null = null;
+  let labelRenderer: CSS2DRenderer | null = null;
+  let axisLabels: CSS2DObject[] = [];
 
   // model meshes
   let atomMeshes: THREE.InstancedMesh[] = [];
@@ -113,8 +122,11 @@ export function useViewerStage(
     const mat = new THREE.Matrix4();
 
     for (const [el, indices] of elementToIndices.entries()) {
-      const rSphere = getSphereRadiusByElement(el);
+      const baseRadius = getSphereRadiusByElement(el); // 不含 atomScale
+      const rSphere = baseRadius * getSettings().atomScale;
+
       const geometry = new THREE.SphereGeometry(rSphere, 16, 16);
+
       const material = new THREE.MeshStandardMaterial({
         color: new THREE.Color(getElementColorHex(el)),
         metalness: 0.05,
@@ -122,7 +134,8 @@ export function useViewerStage(
       });
 
       const mesh = new THREE.InstancedMesh(geometry, material, indices.length);
-
+      mesh.userData.baseRadius = baseRadius;
+      mesh.userData.element = el;
       for (let k = 0; k < indices.length; k += 1) {
         const a = atoms[indices[k]];
         const [x, y, z] = a.position;
@@ -285,6 +298,43 @@ export function useViewerStage(
   function degToRad(d: number): number {
     return (d * Math.PI) / 180;
   }
+  function applyBackground(): void {
+    if (!scene || !renderer) return;
+    const s = getSettings();
+    const isLight = s.background === "light";
+    const c = isLight ? 0xffffff : 0x000000;
+
+    scene.background = new THREE.Color(c);
+    renderer.setClearColor(c, 1); // 视图显示背景跟随设置
+  }
+
+  function applyShowAxes(): void {
+    if (!axesGroup) return;
+    axesGroup.visible = getSettings().showAxes;
+  }
+
+  function applyShowBonds(): void {
+    const flag = getSettings().showBonds;
+    for (const m of bondMeshes) m.visible = flag;
+  }
+
+  /**
+   * 原子大小缩放
+   */
+  function applyAtomScale(): void {
+    const scale = getSettings().atomScale;
+    console.log("xxxx", scale);
+
+    for (const m of atomMeshes) {
+      const baseRadius = m.userData.baseRadius as number | undefined;
+      if (!baseRadius || baseRadius <= 0) continue;
+
+      const r = baseRadius * scale;
+
+      m.geometry.dispose();
+      m.geometry = new THREE.SphereGeometry(r, 16, 16);
+    }
+  }
 
   function applyModelRotation(): void {
     if (!pivotGroup) return;
@@ -295,6 +345,28 @@ export function useViewerStage(
       degToRad(s.rotationDeg.z)
     );
   }
+  watch(
+    () => getSettings().atomScale,
+    () => applyAtomScale()
+  );
+
+  watch(
+    () => getSettings().showBonds,
+    () => applyShowBonds(),
+    { immediate: true }
+  );
+
+  watch(
+    () => getSettings().showAxes,
+    () => applyShowAxes(),
+    { immediate: true }
+  );
+
+  watch(
+    () => getSettings().background,
+    () => applyBackground(),
+    { immediate: true }
+  );
 
   watch(
     () => {
@@ -338,6 +410,42 @@ export function useViewerStage(
 
     // 相机仍按原 atoms fit（因为世界坐标最终仍等于原坐标）
     fitCameraToAtoms(atoms);
+
+    applyAtomScale();
+    applyShowBonds();
+    applyShowAxes();
+    applyBackground();
+    applyModelRotation();
+
+    const size = box.getSize(new THREE.Vector3());
+    const axisLen = Math.max(size.x, size.y, size.z) * 0.6; // 可调
+
+    // 先清理旧标签
+    for (const o of axisLabels) axesGroup?.remove(o);
+    axisLabels = [];
+    if (axesGroup && axesHelper) {
+      const lx = makeAxisLabel("X");
+      lx.position.set(axisLen, 0, 0);
+
+      const ly = makeAxisLabel("Y");
+      ly.position.set(0, axisLen, 0);
+
+      const lz = makeAxisLabel("Z");
+      lz.position.set(0, 0, axisLen);
+
+      axesGroup.add(lx, ly, lz);
+      axisLabels.push(lx, ly, lz);
+      axesGroup.remove(axesHelper);
+      axesHelper.geometry.dispose();
+      (axesHelper.material as THREE.Material).dispose?.();
+
+      axesHelper = new THREE.AxesHelper(axisLen);
+      axesGroup.add(axesHelper);
+
+      // 如果要永远不被挡住
+      (axesHelper.material as THREE.LineBasicMaterial).depthTest = false;
+      axesHelper.renderOrder = 999;
+    }
   }
 
   async function loadFile(file: File): Promise<void> {
@@ -400,6 +508,7 @@ export function useViewerStage(
     const tick = () => {
       controls!.update();
       renderer!.render(scene!, camera!);
+      labelRenderer?.render(scene!, camera!);
       rafId = window.requestAnimationFrame(tick);
     };
     tick();
@@ -426,6 +535,17 @@ export function useViewerStage(
     renderer.setSize(w, h);
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
+
+    if (labelRenderer) labelRenderer.setSize(w, h);
+  }
+  function makeAxisLabel(text: string): CSS2DObject {
+    const div = document.createElement("div");
+    div.textContent = text;
+    div.style.color = "white";
+    div.style.fontSize = "12px";
+    div.style.fontWeight = "600";
+    div.style.textShadow = "0 0 3px rgba(0,0,0,0.8)";
+    return new CSS2DObject(div);
   }
 
   function initThree(): void {
@@ -433,10 +553,22 @@ export function useViewerStage(
     if (!host) return;
 
     scene = new THREE.Scene();
+    axesHelper = new THREE.AxesHelper(10);
+    axesHelper.visible = false; // 先默认 false，后面 applyShowAxes 会按设置更新
+    scene.add(axesHelper);
 
     pivotGroup = new THREE.Group();
+
     modelGroup = new THREE.Group();
     pivotGroup.add(modelGroup);
+
+    axesGroup = new THREE.Group();
+    axesHelper = new THREE.AxesHelper(2); // 初始给个长度，后面 renderModel 再按模型大小更新
+    axesGroup.add(axesHelper);
+    axesGroup.visible = false; // 默认隐藏，后面由 showAxes 控制
+
+    pivotGroup.add(axesGroup); // 关键：挂到 pivotGroup（模型中心）
+
     scene.add(pivotGroup);
 
     applyModelRotation();
@@ -459,6 +591,14 @@ export function useViewerStage(
 
     host.appendChild(renderer.domElement);
 
+    labelRenderer = new CSS2DRenderer();
+    labelRenderer.domElement.style.position = "absolute";
+    labelRenderer.domElement.style.top = "0";
+    labelRenderer.domElement.style.left = "0";
+    labelRenderer.domElement.style.pointerEvents = "none";
+    host.style.position = "relative"; // 关键：让 absolute 叠加层对齐 host
+    host.appendChild(labelRenderer.domElement);
+
     scene.add(new THREE.AmbientLight(0xffffff, 0.7));
     const dir = new THREE.DirectionalLight(0xffffff, 0.85);
     dir.position.set(5, 8, 10);
@@ -475,6 +615,9 @@ export function useViewerStage(
 
     resizeToHost();
     startRenderLoop();
+
+    applyBackground();
+    applyShowAxes();
   }
 
   function disposeThree(): void {

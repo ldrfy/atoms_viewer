@@ -24,6 +24,7 @@ import { computeBonds } from "../../lib/structure/bonds";
 import { cropCanvasToPngBlob, downloadBlob } from "../../lib/image/cropPng"; // 路径按你的项目别名调整
 // 预加载示例（你可替换文件）
 import xyzText from "../../assets/samples/mos2_cnt.xyz?raw";
+import { useI18n } from "vue-i18n";
 
 type ViewerStageBindings = {
   canvasHostRef: ReturnType<typeof ref<HTMLDivElement | null>>;
@@ -54,6 +55,7 @@ export function useViewerStage(
   const BOND_FACTOR = 1.05;
   const BOND_THICKNESS_FACTOR = 1.0;
   const BOND_RADIUS = 0.09 * BOND_THICKNESS_FACTOR;
+  const { t } = useI18n();
 
   // three core
   let renderer: THREE.WebGLRenderer | null = null;
@@ -392,15 +394,6 @@ export function useViewerStage(
   function degToRad(d: number): number {
     return (d * Math.PI) / 180;
   }
-  function applyBackground(): void {
-    if (!scene || !renderer) return;
-    const s = getSettings();
-    const isLight = s.background === "light";
-    const c = isLight ? 0xffffff : 0x000000;
-
-    scene.background = new THREE.Color(c);
-    renderer.setClearColor(c, 1); // 视图显示背景跟随设置
-  }
 
   function applyShowAxes(): void {
     if (!axesGroup) return;
@@ -467,12 +460,6 @@ export function useViewerStage(
   );
 
   watch(
-    () => getSettings().background,
-    () => applyBackground(),
-    { immediate: true }
-  );
-
-  watch(
     () => {
       const s = getSettings();
       return [s.rotationDeg.x, s.rotationDeg.y, s.rotationDeg.z];
@@ -518,16 +505,15 @@ export function useViewerStage(
     applyAtomScale();
     applyShowBonds();
     applyShowAxes();
-    applyBackground();
     applyModelRotation();
 
     const size = box.getSize(new THREE.Vector3());
     console.log(size);
-    
+
     const axisLen = Math.max(size.x, size.y, size.z) * 0.6; // 可调
 
     if (axesGroup) {
-        if (axesHelper) axesGroup.remove(axesHelper);
+      if (axesHelper) axesGroup.remove(axesHelper);
 
       const lx = makeAxisLabel("X");
       lx.position.set(axisLen, 0, 0);
@@ -574,7 +560,11 @@ export function useViewerStage(
 
     const bondSegCount = bondMeshes.reduce((acc, m) => acc + m.count, 0);
     message.success(
-      `已加载：${file.name}（${model.atoms.length} atoms，bondSegments=${bondSegCount}）`
+      t("viewer.load.success", {
+        fileName: file.name,
+        atomCount: model.atoms.length,
+        bondSegCount,
+      })
     );
   }
 
@@ -753,7 +743,6 @@ export function useViewerStage(
     resizeToHost();
     startRenderLoop();
 
-    applyBackground();
     applyShowAxes();
     setProjectionMode(getSettings().orthographic);
   }
@@ -832,11 +821,11 @@ export function useViewerStage(
   async function onExportPng(exportScale: number): Promise<void> {
     try {
       await exportPngTransparentCropped("snapshot.png", exportScale);
-      message.success("已导出 PNG（透明背景）");
+      message.success(t("viewer.export.pngSuccess"));
     } catch (e) {
       // eslint-disable-next-line no-console
       console.error("export png failed:", e);
-      message.error(`导出失败：${(e as Error).message}`);
+      message.error(t("viewer.export.fail", { reason: (e as Error).message }));
     }
   }
 
@@ -854,16 +843,16 @@ export function useViewerStage(
     window.addEventListener("dragover", preventWindowDropDefault);
     window.addEventListener("drop", preventWindowDropDefault);
 
-    // 避免布局未稳定时预加载导致 fit 偏差
-    requestAnimationFrame(() => {
-      try {
-        preloadDefault();
-      } catch (e) {
-        // eslint-disable-next-line no-console
-        console.error("preload failed:", e);
-        message.error(`预加载失败：${(e as Error).message}`);
-      }
-    });
+    // // 避免布局未稳定时预加载导致 fit 偏差
+    // requestAnimationFrame(() => {
+    //   try {
+    //     preloadDefault();
+    //   } catch (e) {
+    //     // eslint-disable-next-line no-console
+    //     console.error("preload failed:", e);
+    //     message.error(`预加载失败：${(e as Error).message}`);
+    //   }
+    // });
   });
 
   onBeforeUnmount(() => {

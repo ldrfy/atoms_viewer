@@ -10,7 +10,6 @@ export type ViewerSettings = {
   atomScale: number;
   showAxes: boolean;
   showBonds: boolean;
-  background: BackgroundMode;
   rotationDeg: RotationDeg;
   // 新增：是否正交（关闭透视）
   orthographic: boolean;
@@ -28,8 +27,3 @@ export const DEFAULT_SETTINGS: ViewerSettings = {
   orthographic: true,
   resetViewSeq: 0,
 };
-
-export const BG_OPTIONS = [
-  { value: "dark" as const, label: "深色" },
-  { value: "light" as const, label: "浅色" },
-];

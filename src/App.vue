@@ -64,7 +64,7 @@
           <div class="header-left">ldr_atoms</div>
           <div class="header-right">
             <!-- 先放占位：后续接“打开 xyz / 导入 CNT/graphene” -->
-            <a-button type="primary" @click="noop">打开 XYZ</a-button>
+            <!-- <a-button type="primary" @click="noop">打开 XYZ</a-button> -->
           </div>
         </a-layout-header>
 

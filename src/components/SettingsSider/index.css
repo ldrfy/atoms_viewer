@@ -118,7 +118,7 @@
 
 .angle-row {
   display: grid;
-  grid-template-columns: 1fr 108px;
+  grid-template-columns: 1fr 90px;
   gap: 8px;
   align-items: center;
 }

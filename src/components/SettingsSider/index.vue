@@ -19,7 +19,7 @@
                         <a-form-item label="">
                             <div class="row">
                                 <div class="row-left">
-                                    <span class="hint">是否透视</span>
+                                    <span>是否透视</span>
                                 </div>
 
                                 <div class="row-right">
@@ -59,7 +59,7 @@
                         <a-form-item>
                             <div class="row">
                                 <div class="row-left">
-                                    <a-button @click="resetView">恢复原始位置</a-button>
+                                    <span class="item-label">背景色</span>
                                 </div>
                                 <div class="row-right">
                                     <a-select v-model:value="backgroundModel" :options="bgOptions" />
@@ -70,7 +70,7 @@
                 </a-collapse-panel>
 
                 <!-- 姿态 -->
-                <a-collapse-panel key="pose" header="姿态（模型旋转，单位：度）">
+                <a-collapse-panel key="display" header="姿态（模型旋转，单位：度）">
                     <a-form layout="vertical">
                         <a-form-item label="X 轴旋转">
                             <div class="angle-row">
@@ -93,9 +93,18 @@
                             </div>
                         </a-form-item>
 
-                        <div class="pose-actions">
-                            <a-button @click="resetPose">重置旋转</a-button>
-                        </div>
+                        <a-form-item>
+                            <div class="row">
+                                <div class="row-left">
+                                    <a-button @click="resetPose">回到旋转前</a-button>
+
+                                </div>
+                                <div class="row-right">
+                                    <a-button @click="resetView">恢复原始方向</a-button>
+                                </div>
+                            </div>
+                        </a-form-item>
+
                     </a-form>
                 </a-collapse-panel>
             </a-collapse>
@@ -162,8 +171,8 @@ const showBondsModel = computed({
 });
 
 const orthographicModel = computed({
-    get: () => props.settings.orthographic,
-    set: (v: boolean) => patchSettings({ orthographic: v }),
+    get: () => !props.settings.orthographic,
+    set: (v: boolean) => patchSettings({ orthographic: !v }),
 });
 
 const backgroundModel = computed({
@@ -199,9 +208,6 @@ function resetView(): void {
     });
 }
 
-function snapPose(deltaDeg: number): void {
-    patchSettings({ rotationDeg: { z: rotZModel.value + deltaDeg } });
-}
 </script>
 
 <style scoped src="./index.css"></style>

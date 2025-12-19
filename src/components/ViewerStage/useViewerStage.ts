@@ -680,6 +680,9 @@ export function useViewerStage(
     const { w, h } = getHostSize(host);
     renderer.setSize(w, h);
 
+    // 关键：CSS2DRenderer 必须同步尺寸，否则标签层看不到
+    labelRenderer?.setSize(w, h);
+
     updateCameraForSize(w, h);
   }
 
@@ -698,9 +701,6 @@ export function useViewerStage(
     if (!host) return;
 
     scene = new THREE.Scene();
-    axesHelper = new THREE.AxesHelper(10);
-    axesHelper.visible = false; // 先默认 false，后面 applyShowAxes 会按设置更新
-    scene.add(axesHelper);
 
     pivotGroup = new THREE.Group();
 
@@ -741,6 +741,8 @@ export function useViewerStage(
     labelRenderer.domElement.style.top = "0";
     labelRenderer.domElement.style.left = "0";
     labelRenderer.domElement.style.pointerEvents = "none";
+    labelRenderer.domElement.style.zIndex = "2"; // 确保压在 canvas 上面
+
     host.style.position = "relative"; // 关键：让 absolute 叠加层对齐 host
     host.appendChild(labelRenderer.domElement);
 

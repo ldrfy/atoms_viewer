@@ -15,3 +15,7 @@ body {
   padding: 0;
   max-width: none;
 }
+
+.root {
+  height: 100vh;
+}

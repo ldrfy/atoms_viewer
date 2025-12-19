@@ -1,14 +1,37 @@
+/* =========================
+   Sider 基础
+   ========================= */
+
 .sider {
   border-right: 1px solid #1f1f1f;
+  background: #0f0f0f; /* 深色底，避免白底闪 */
 }
 
+/* 关键：让 antd sider children 成为 column flex
+   头部固定 + body滚动 */
+:deep(.ant-layout-sider-children) {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden; /* 防止外层滚动，滚动交给 .sider-body */
+}
+
+/* =========================
+   Header
+   ========================= */
+
 .sider-header {
+  flex: 0 0 48px;
   height: 48px;
+
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 0 8px;
+
+  padding: 6px;
   border-bottom: 1px solid #1f1f1f;
+
+  background: #0f0f0f;
 }
 
 .collapse-btn {
@@ -18,22 +41,146 @@
 
 .sider-title {
   font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
 }
 
+/* =========================
+   Body (scroll container)
+   ========================= */
+
 .sider-body {
-  padding: 12px;
+  flex: 1 1 auto;
+  min-height: 0; /* 关键：允许收缩，否则 overflow 不生效 */
   overflow: auto;
-  height: calc(100% - 48px);
+
+  padding: 10px 10px 10px 20px;
+  background: #0f0f0f;
+
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+/* Firefox 深色滚动条 */
+.sider-body {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.22) rgba(255, 255, 255, 0.06);
+}
+
+/* Chromium/Edge/Safari 深色滚动条 */
+.sider-body::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.sider-body::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 999px;
+}
+
+.sider-body::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.22);
+  border-radius: 999px;
+  border: 2px solid rgba(0, 0, 0, 0.35);
+}
+
+.sider-body::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.32);
+}
+
+/* =========================
+   你自定义的布局类
+   ========================= */
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 32px;
+}
+
+.row-left {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.row-right {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hint {
+  opacity: 0.85;
+  color: rgba(255, 255, 255, 0.78);
 }
 
 .angle-row {
   display: grid;
-  grid-template-columns: 1fr 92px;
-  gap: 10px;
+  grid-template-columns: 1fr 108px;
+  gap: 8px;
   align-items: center;
 }
 
 .pose-actions {
   display: flex;
   gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* =========================
+   Ant Design Vue 组件紧凑化 / 深色适配（scoped 下必须 :deep）
+   ========================= */
+
+/* Collapse header 更紧凑 */
+:deep(.ant-collapse-ghost > .ant-collapse-item > .ant-collapse-header) {
+  padding: 8px 4px;
+  color: rgba(255, 255, 255, 0.88);
+}
+
+/* Collapse content 更紧凑 */
+:deep(
+    .ant-collapse-ghost
+      > .ant-collapse-item
+      > .ant-collapse-content
+      > .ant-collapse-content-box
+  ) {
+  padding: 8px 2px 12px 6px;
+}
+
+/* Collapse 内容背景透明，避免白色块 */
+:deep(.ant-collapse-content) {
+  background: transparent;
+}
+
+/* 表单项间距缩小 */
+:deep(.ant-form-item) {
+  margin-bottom: 10px;
+}
+
+/* Form label 字体更稳一点 */
+:deep(.ant-form-item-label > label) {
+  color: rgba(255, 255, 255, 0.82);
+}
+
+/* Slider 收紧上下留白 */
+:deep(.ant-slider) {
+  margin: 6px 0 2px 0;
+}
+
+/* Select / InputNumber 圆角一致 */
+:deep(.ant-input-number),
+:deep(.ant-select-selector) {
+  border-radius: 10px;
+}
+
+/* 小按钮更像工具面板 */
+:deep(.ant-btn-sm) {
+  border-radius: 10px;
+}
+
+/* Switch 辅助文字对齐 */
+:deep(.ant-switch) {
+  vertical-align: middle;
 }

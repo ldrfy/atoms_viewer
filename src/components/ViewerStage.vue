@@ -15,7 +15,9 @@
     <div v-if="!hasModel" class="empty-overlay">
       <div class="empty-card">
         <div class="empty-title">拖拽 .xyz 文件到这里</div>
-        <div class="empty-sub">加载后可旋转/缩放查看结构（原子按元素着色、大小按元素半径、键双色分段）</div>
+        <div class="empty-sub">
+          加载后可旋转/缩放查看结构（原子按元素着色、大小按元素半径、键双色分段）
+        </div>
         <div class="empty-actions">
           <a-button type="primary" @click="openFilePicker">选择文件</a-button>
         </div>
@@ -40,9 +42,14 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 
 import type { Atom } from "../lib/structure/types";
 import { loadStructureFromFile } from "../lib/structure/parse";
-import { getElementColorHex, getCovalentRadiusAng, normalizeElementSymbol } from "../lib/structure/chem";
+import {
+  getElementColorHex,
+  getCovalentRadiusAng,
+  normalizeElementSymbol,
+} from "../lib/structure/chem";
 import { computeBonds } from "../lib/structure/bonds";
-
+import xyzText from "../assets/samples/mos2_cnt.xyz?raw";
+import { parseStructure } from "../lib/structure/parse";
 const canvasHostRef = ref<HTMLDivElement | null>(null);
 const fileInputRef = ref<HTMLInputElement | null>(null);
 
@@ -52,7 +59,7 @@ const hasModel = ref(false);
 
 // ------- 与压缩包(OpenMX Viewer.html)一致的默认系数 -------
 const ATOM_SIZE_FACTOR = 0.5; // OpenMX Viewer: var Atom_Size_factor = 0.5;
-const BOND_FACTOR = 1.05;     // OpenMX Viewer: var bond_factor = 1.05;
+const BOND_FACTOR = 1.05; // OpenMX Viewer: var bond_factor = 1.05;
 const BOND_THICKNESS_FACTOR = 1.0; // OpenMX Viewer: var Bond_Thickness_factor = 1.0;
 
 // 键的半径：OpenMX Viewer 中圆柱基准 r0 = 0.09*sfactor*Bond_Thickness_factor
@@ -165,8 +172,16 @@ function buildBondMeshesBicolor(atoms: Atom[]): THREE.InstancedMesh[] {
   for (let k = 0; k < bonds.length; k += 1) {
     const b = bonds[k];
 
-    pi.set(atoms[b.i].position[0], atoms[b.i].position[1], atoms[b.i].position[2]);
-    pj.set(atoms[b.j].position[0], atoms[b.j].position[1], atoms[b.j].position[2]);
+    pi.set(
+      atoms[b.i].position[0],
+      atoms[b.i].position[1],
+      atoms[b.i].position[2]
+    );
+    pj.set(
+      atoms[b.j].position[0],
+      atoms[b.j].position[1],
+      atoms[b.j].position[2]
+    );
 
     const d = b.length;
     if (d < 1.0e-9) continue;
@@ -174,19 +189,30 @@ function buildBondMeshesBicolor(atoms: Atom[]): THREE.InstancedMesh[] {
     const riSphere = getSphereRadiusByElement(atoms[b.i].element);
     const rjSphere = getSphereRadiusByElement(atoms[b.j].element);
 
-    const rat = 0.5 * (rjSphere - riSphere) / d;
-    const alpha = 0.5 + rat;      // 对 pi 的权重
-    const beta = 0.5 - rat;       // 对 pj 的权重
+    const rat = (0.5 * (rjSphere - riSphere)) / d;
+    const alpha = 0.5 + rat; // 对 pi 的权重
+    const beta = 0.5 - rat; // 对 pj 的权重
 
     // mid = alpha*pi + beta*pj
     mid.copy(pi).multiplyScalar(alpha).addScaledVector(pj, beta);
 
-    segments[k * 2] = { colorKey: atoms[b.i].element, p1: pi.clone(), p2: mid.clone() };
-    segments[k * 2 + 1] = { colorKey: atoms[b.j].element, p1: mid.clone(), p2: pj.clone() };
+    segments[k * 2] = {
+      colorKey: atoms[b.i].element,
+      p1: pi.clone(),
+      p2: mid.clone(),
+    };
+    segments[k * 2 + 1] = {
+      colorKey: atoms[b.j].element,
+      p1: mid.clone(),
+      p2: pj.clone(),
+    };
   }
 
   // 按颜色 key 分组（每个 mesh 单材质色，避免 instanceColor 的坑）
-  const groups = new Map<string, Array<{ p1: THREE.Vector3; p2: THREE.Vector3 }>>();
+  const groups = new Map<
+    string,
+    Array<{ p1: THREE.Vector3; p2: THREE.Vector3 }>
+  >();
   for (const seg of segments) {
     const arr = groups.get(seg.colorKey);
     if (arr) arr.push({ p1: seg.p1, p2: seg.p2 });
@@ -195,7 +221,14 @@ function buildBondMeshesBicolor(atoms: Atom[]): THREE.InstancedMesh[] {
 
   const meshes: THREE.InstancedMesh[] = [];
 
-  const geometry = new THREE.CylinderGeometry(BOND_RADIUS, BOND_RADIUS, 1.0, 12, 1, false);
+  const geometry = new THREE.CylinderGeometry(
+    BOND_RADIUS,
+    BOND_RADIUS,
+    1.0,
+    12,
+    1,
+    false
+  );
 
   const up = new THREE.Vector3(0, 1, 0);
   const dir = new THREE.Vector3();
@@ -250,7 +283,9 @@ function fitCameraToAtoms(atoms: Atom[]): void {
   let maxSphere = 0;
 
   for (const a of atoms) {
-    box.expandByPoint(new THREE.Vector3(a.position[0], a.position[1], a.position[2]));
+    box.expandByPoint(
+      new THREE.Vector3(a.position[0], a.position[1], a.position[2])
+    );
     maxSphere = Math.max(maxSphere, getSphereRadiusByElement(a.element));
   }
 
@@ -262,7 +297,7 @@ function fitCameraToAtoms(atoms: Atom[]): void {
 
   const maxSize = Math.max(size.x, size.y, size.z);
   const fov = (camera.fov * Math.PI) / 180.0;
-  const dist = (maxSize / 2) / Math.tan(fov / 2);
+  const dist = maxSize / 2 / Math.tan(fov / 2);
 
   camera.position.set(center.x, center.y, center.z + dist * 1.8);
   camera.near = Math.max(0.01, dist / 100);
@@ -272,11 +307,9 @@ function fitCameraToAtoms(atoms: Atom[]): void {
   controls.target.copy(center);
   controls.update();
 }
+import type { StructureModel } from "../lib/structure/types"; // 确保 types.ts 里导出了 StructureModel
 
-async function loadFile(file: File): Promise<void> {
-  const model = await loadStructureFromFile(file);
-
-  // 标准化元素符号：支持 c / C1 / Si2 等
+function renderModel(model: StructureModel): void {
   const atoms: Atom[] = model.atoms.map((a) => ({
     element: normalizeElementSymbol(a.element),
     position: a.position,
@@ -294,9 +327,16 @@ async function loadFile(file: File): Promise<void> {
 
   hasModel.value = true;
   fitCameraToAtoms(atoms);
+}
+
+async function loadFile(file: File): Promise<void> {
+  const model = await loadStructureFromFile(file);
+  renderModel(model);
 
   const bondSegCount = bondMeshes.reduce((acc, m) => acc + m.count, 0);
-  message.success(`已加载：${file.name}（${atoms.length} atoms，bondSegments=${bondSegCount}）`);
+  message.success(
+    `已加载：${file.name}（${model.atoms.length} atoms，bondSegments=${bondSegCount}）`
+  );
 }
 
 // drag handlers
@@ -360,7 +400,21 @@ function stopRenderLoop(): void {
   if (rafId) window.cancelAnimationFrame(rafId);
   rafId = 0;
 }
+function getHostSize(host: HTMLElement): { w: number; h: number } {
+  const rect = host.getBoundingClientRect();
+  const w = Math.max(1, Math.floor(rect.width));
+  const h = Math.max(1, Math.floor(rect.height));
+  return { w, h };
+}
+function resizeToHost(): void {
+  const host = canvasHostRef.value;
+  if (!host || !renderer || !camera) return;
 
+  const { w, h } = getHostSize(host);
+  renderer.setSize(w, h); // 不要传 false
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+}
 function initThree(): void {
   const host = canvasHostRef.value;
   if (!host) return;
@@ -373,6 +427,7 @@ function initThree(): void {
 
   renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setPixelRatio(window.devicePixelRatio);
+  // renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
   // 颜色管理（避免发暗）
   THREE.ColorManagement.enabled = true;
@@ -381,7 +436,7 @@ function initThree(): void {
   host.appendChild(renderer.domElement);
 
   // lights
-  scene.add(new THREE.AmbientLight(0xffffff, 0.70));
+  scene.add(new THREE.AmbientLight(0xffffff, 0.7));
   const dir = new THREE.DirectionalLight(0xffffff, 0.85);
   dir.position.set(5, 8, 10);
   scene.add(dir);
@@ -391,18 +446,11 @@ function initThree(): void {
   controls.dampingFactor = 0.08;
 
   resizeObserver = new ResizeObserver(() => {
-    if (!renderer || !camera || !host) return;
-    const w = host.clientWidth;
-    const h = host.clientHeight;
-    renderer.setSize(w, h, false);
-    camera.aspect = w / Math.max(1, h);
-    camera.updateProjectionMatrix();
+    resizeToHost();
   });
   resizeObserver.observe(host);
 
-  renderer.setSize(host.clientWidth, host.clientHeight, false);
-  camera.aspect = host.clientWidth / Math.max(1, host.clientHeight);
-  camera.updateProjectionMatrix();
+  resizeToHost();
 
   startRenderLoop();
 }
@@ -433,10 +481,22 @@ function preventWindowDropDefault(e: DragEvent): void {
   e.preventDefault();
 }
 
+function preloadDefault(): void {
+  const model = parseStructure(xyzText, "graphene.xyz");
+  renderModel(model);
+}
+
 onMounted(() => {
   initThree();
   window.addEventListener("dragover", preventWindowDropDefault);
   window.addEventListener("drop", preventWindowDropDefault);
+
+  try {
+    preloadDefault();
+  } catch (e) {
+    console.error("preload failed:", e);
+    message.error(`预加载失败：${(e as Error).message}`);
+  }
 });
 
 onBeforeUnmount(() => {

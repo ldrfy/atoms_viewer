@@ -1,0 +1,59 @@
+{
+    "locale": {
+        "selfName": "English"
+    },
+    "viewer": {
+        "locale": {
+            "current": "Current"
+        },
+        "links":{
+            "github": "GitHub"
+        },
+        "load": {
+            "success": "Loaded: {fileName} ({atomCount} atoms, bondSegments={bondSegCount})"
+        },
+        "empty": {
+            "title": "Drag and drop a .xyz file here",
+            "subtitle": "After loading, you can rotate/zoom to inspect the structure (atoms colored by element, size by covalent radius, bonds split into two colored segments).",
+            "pickFile": "Choose file"
+        },
+        "export": {
+            "button": "Export PNG",
+            "scaleTip": "Additional export scaling based on the current view. To avoid excessive scaling errors, zoom in on the model with the mouse wheel first.",
+            "scalePlaceholder": "Higher = clearer",
+            "pngSuccess": "Exported PNG (transparent background)",
+            "fail": "Export failed: {reason}"
+        }
+    },
+    "settings": {
+        "sidebar": {
+            "title": "Settings"
+        },
+        "panel": {
+            "display": {
+                "header": "Display"
+            },
+            "pose": {
+                "header": "Pose (model rotation, degrees)"
+            }
+        },
+        "display": {
+            "perspective": "Perspective",
+            "axes": "Axes",
+            "bonds": "Bonds",
+            "atomSize": "Atom size",
+            "background": {
+                "title": "Background",
+                "dark": "Dark",
+                "light": "Light"
+            }
+        },
+        "pose": {
+            "rotX": "Rotate X",
+            "rotY": "Rotate Y",
+            "rotZ": "Rotate Z",
+            "resetPose": "Reset rotation",
+            "resetView": "Reset view"
+        }
+    }
+}

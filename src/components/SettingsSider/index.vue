@@ -6,20 +6,22 @@
                 <MenuUnfoldOutlined v-if="collapsedModel" />
                 <MenuFoldOutlined v-else />
             </a-button>
-            <div v-if="!collapsedModel" class="sider-title">配置</div>
+
+            <div v-if="!collapsedModel" class="sider-title">
+                {{ t("settings.sidebar.title") }}
+            </div>
         </div>
 
         <div v-if="!collapsedModel" class="sider-body">
             <a-collapse v-model:activeKey="activeKeysModel" ghost>
                 <!-- 显示 / 视图 -->
-                <a-collapse-panel key="display" header="显示">
+                <a-collapse-panel key="display" :header="t('settings.panel.display.header')">
                     <a-form layout="vertical">
-
                         <!-- 投影：一行 -->
                         <a-form-item label="">
                             <div class="row">
                                 <div class="row-left">
-                                    <span>是否透视</span>
+                                    <span>{{ t("settings.display.perspective") }}</span>
                                 </div>
 
                                 <div class="row-right">
@@ -28,11 +30,11 @@
                             </div>
                         </a-form-item>
 
-                        <!-- 坐标轴：switch + 右侧按钮一行 -->
+                        <!-- 坐标轴：switch 一行 -->
                         <a-form-item>
                             <div class="row">
                                 <div class="row-left">
-                                    <span class="item-label">坐标轴</span>
+                                    <span class="item-label">{{ t("settings.display.axes") }}</span>
                                 </div>
                                 <div class="row-right">
                                     <a-switch v-model:checked="showAxesModel" />
@@ -44,7 +46,7 @@
                         <a-form-item>
                             <div class="row">
                                 <div class="row-left">
-                                    <span class="item-label">键</span>
+                                    <span class="item-label">{{ t("settings.display.bonds") }}</span>
                                 </div>
                                 <div class="row-right">
                                     <a-switch v-model:checked="showBondsModel" />
@@ -52,41 +54,31 @@
                             </div>
                         </a-form-item>
 
-                        <a-form-item label="原子大小">
+                        <a-form-item :label="t('settings.display.atomSize')">
                             <a-slider v-model:value="atomScaleModel" :min="0.2" :max="2" :step="0.05" />
                         </a-form-item>
 
-                        <a-form-item>
-                            <div class="row">
-                                <div class="row-left">
-                                    <span class="item-label">背景色</span>
-                                </div>
-                                <div class="row-right">
-                                    <a-select v-model:value="backgroundModel" :options="bgOptions" />
-                                </div>
-                            </div>
-                        </a-form-item>
                     </a-form>
                 </a-collapse-panel>
 
                 <!-- 姿态 -->
-                <a-collapse-panel key="display" header="姿态（模型旋转，单位：度）">
+                <a-collapse-panel key="display" :header="t('settings.panel.pose.header')">
                     <a-form layout="vertical">
-                        <a-form-item label="X 轴旋转">
+                        <a-form-item :label="t('settings.pose.rotX')">
                             <div class="angle-row">
                                 <a-slider v-model:value="rotXModel" :min="-180" :max="180" :step="1" />
                                 <a-input-number v-model:value="rotXModel" :min="-180" :max="180" :step="1" />
                             </div>
                         </a-form-item>
 
-                        <a-form-item label="Y 轴旋转">
+                        <a-form-item :label="t('settings.pose.rotY')">
                             <div class="angle-row">
                                 <a-slider v-model:value="rotYModel" :min="-180" :max="180" :step="1" />
                                 <a-input-number v-model:value="rotYModel" :min="-180" :max="180" :step="1" />
                             </div>
                         </a-form-item>
 
-                        <a-form-item label="Z 轴旋转">
+                        <a-form-item :label="t('settings.pose.rotZ')">
                             <div class="angle-row">
                                 <a-slider v-model:value="rotZModel" :min="-180" :max="180" :step="1" />
                                 <a-input-number v-model:value="rotZModel" :min="-180" :max="180" :step="1" />
@@ -96,15 +88,17 @@
                         <a-form-item>
                             <div class="row">
                                 <div class="row-left">
-                                    <a-button @click="resetPose">回到旋转前</a-button>
-
+                                    <a-button @click="resetPose">
+                                        {{ t("settings.pose.resetPose") }}
+                                    </a-button>
                                 </div>
                                 <div class="row-right">
-                                    <a-button @click="resetView">恢复原始方向</a-button>
+                                    <a-button @click="resetView">
+                                        {{ t("settings.pose.resetView") }}
+                                    </a-button>
                                 </div>
                             </div>
                         </a-form-item>
-
                     </a-form>
                 </a-collapse-panel>
             </a-collapse>
@@ -116,6 +110,10 @@
 import { computed } from "vue";
 import { MenuFoldOutlined, MenuUnfoldOutlined } from "@ant-design/icons-vue";
 import type { ViewerSettings } from "../../lib/viewer/settings";
+
+import { useI18n } from "vue-i18n";
+const { t } = useI18n();
+
 
 const props = defineProps<{
     collapsed: boolean;
@@ -175,10 +173,6 @@ const orthographicModel = computed({
     set: (v: boolean) => patchSettings({ orthographic: !v }),
 });
 
-const backgroundModel = computed({
-    get: () => props.settings.background,
-    set: (v: ViewerSettings["background"]) => patchSettings({ background: v }),
-});
 
 const rotXModel = computed({
     get: () => props.settings.rotationDeg.x,

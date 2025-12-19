@@ -1,0 +1,59 @@
+{
+    "locale": {
+        "selfName": "中文"
+    },
+    "viewer": {
+        "locale": {
+            "current": "当前"
+        },
+        "links": {
+            "github": "GitHub"
+        },
+        "load": {
+            "success": "已加载：{fileName}（{atomCount} atoms，bondSegments={bondSegCount}）"
+        },
+        "empty": {
+            "title": "拖拽 .xyz 文件到这里",
+            "subtitle": "加载后可旋转/缩放查看结构（原子按元素着色、大小按元素半径、键双色分段）",
+            "pickFile": "选择文件"
+        },
+        "export": {
+            "button": "导出 PNG",
+            "scaleTip": "下方模型基础上，再次放大的倍率。为避免放大过多导致错误，请先滑动鼠标放大下面的模型",
+            "scalePlaceholder": "越大越清晰",
+            "pngSuccess": "已导出 PNG（透明背景）",
+            "fail": "导出失败：{reason}"
+        }
+    },
+    "settings": {
+        "sidebar": {
+            "title": "配置"
+        },
+        "panel": {
+            "display": {
+                "header": "显示"
+            },
+            "pose": {
+                "header": "姿态（模型旋转，单位：度）"
+            }
+        },
+        "display": {
+            "perspective": "是否透视",
+            "axes": "坐标轴",
+            "bonds": "键",
+            "atomSize": "原子大小",
+            "background": {
+                "title": "背景色",
+                "dark": "白色",
+                "light": "黑色"
+            }
+        },
+        "pose": {
+            "rotX": "X 轴旋转",
+            "rotY": "Y 轴旋转",
+            "rotZ": "Z 轴旋转",
+            "resetPose": "回到旋转前",
+            "resetView": "恢复原始方向"
+        }
+    }
+}

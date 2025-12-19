@@ -1,15 +1,16 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref, computed } from "vue";
 import { theme } from "ant-design-vue";
 
 import SettingsSider from "./components/SettingsSider";
 import ViewerStage from "./components/ViewerStage";
-
+import { useI18n } from "vue-i18n";
 import {
-    BG_OPTIONS,
     DEFAULT_SETTINGS,
     type ViewerSettings,
 } from "./lib/viewer/settings";
+
+const { t } = useI18n();
 
 const antTheme = { algorithm: theme.darkAlgorithm };
 
@@ -21,13 +22,14 @@ const settings = ref<ViewerSettings>({
     ...DEFAULT_SETTINGS,
     rotationDeg: { ...DEFAULT_SETTINGS.rotationDeg },
 });
+
+
 </script>
 
 <template>
     <a-config-provider :theme="antTheme">
         <a-layout class="root">
-            <SettingsSider v-model:collapsed="collapsed" v-model:activeKeys="activeKeys" v-model:settings="settings"
-                :bg-options="BG_OPTIONS" />
+            <SettingsSider v-model:collapsed="collapsed" v-model:activeKeys="activeKeys" v-model:settings="settings" />
 
             <a-layout>
                 <a-layout-content class="content">

@@ -21,11 +21,11 @@ export type ViewerSettings = {
 
 export const DEFAULT_SETTINGS: ViewerSettings = {
   atomScale: 1,
-  showAxes: true,
+  showAxes: false,
   showBonds: true,
   background: "dark",
   rotationDeg: { x: 0, y: 0, z: 0 },
-  orthographic: false,
+  orthographic: true,
   resetViewSeq: 0,
 };
 

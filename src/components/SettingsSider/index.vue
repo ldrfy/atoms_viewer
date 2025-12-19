@@ -11,35 +11,65 @@
 
         <div v-if="!collapsedModel" class="sider-body">
             <a-collapse v-model:activeKey="activeKeysModel" ghost>
+                <!-- 显示 / 视图 -->
                 <a-collapse-panel key="display" header="显示">
                     <a-form layout="vertical">
+
+                        <!-- 投影：一行 -->
+                        <a-form-item label="">
+                            <div class="row">
+                                <div class="row-left">
+                                    <span class="hint">是否透视</span>
+                                </div>
+
+                                <div class="row-right">
+                                    <a-switch v-model:checked="orthographicModel" />
+                                </div>
+                            </div>
+                        </a-form-item>
+
+                        <!-- 坐标轴：switch + 右侧按钮一行 -->
+                        <a-form-item>
+                            <div class="row">
+                                <div class="row-left">
+                                    <span class="item-label">坐标轴</span>
+                                </div>
+                                <div class="row-right">
+                                    <a-switch v-model:checked="showAxesModel" />
+                                </div>
+                            </div>
+                        </a-form-item>
+
+                        <!-- Bonds：一行 -->
+                        <a-form-item>
+                            <div class="row">
+                                <div class="row-left">
+                                    <span class="item-label">键</span>
+                                </div>
+                                <div class="row-right">
+                                    <a-switch v-model:checked="showBondsModel" />
+                                </div>
+                            </div>
+                        </a-form-item>
+
                         <a-form-item label="原子大小">
                             <a-slider v-model:value="atomScaleModel" :min="0.2" :max="2" :step="0.05" />
                         </a-form-item>
 
-                        <a-form-item label="显示坐标轴">
-                            <a-switch v-model:checked="showAxesModel" />
-                        </a-form-item>
-
-                        <a-form-item label="显示键（Bonds）">
-                            <a-switch v-model:checked="showBondsModel" />
-                        </a-form-item>
-                    </a-form>
-                </a-collapse-panel>
-
-                <a-collapse-panel key="render" header="渲染"><a-form-item label="投影">
-                        <a-switch v-model:checked="orthographicModel" />
-                        <span style="margin-left: 8px; opacity: 0.85">正交（无透视）</span>
-                    </a-form-item>
-
-
-                    <a-form layout="vertical">
-                        <a-form-item label="背景">
-                            <a-select v-model:value="backgroundModel" :options="bgOptions" />
+                        <a-form-item>
+                            <div class="row">
+                                <div class="row-left">
+                                    <a-button @click="resetView">恢复原始位置</a-button>
+                                </div>
+                                <div class="row-right">
+                                    <a-select v-model:value="backgroundModel" :options="bgOptions" />
+                                </div>
+                            </div>
                         </a-form-item>
                     </a-form>
                 </a-collapse-panel>
 
+                <!-- 姿态 -->
                 <a-collapse-panel key="pose" header="姿态（模型旋转，单位：度）">
                     <a-form layout="vertical">
                         <a-form-item label="X 轴旋转">
@@ -65,7 +95,6 @@
 
                         <div class="pose-actions">
                             <a-button @click="resetPose">重置旋转</a-button>
-                            <a-button @click="resetView">恢复原始位置</a-button>
                         </div>
                     </a-form>
                 </a-collapse-panel>
@@ -77,22 +106,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { MenuFoldOutlined, MenuUnfoldOutlined } from "@ant-design/icons-vue";
-import type { ViewerSettings } from "@/lib/viewer/settings";
-
-
-const orthographicModel = computed({
-    get: () => props.settings.orthographic,
-    set: (v: boolean) => patchSettings({ orthographic: v }),
-});
-
-function resetView(): void {
-    // 1) 让模型姿态回到初始（和 Viewer 一致）
-    // 2) 触发 Viewer 执行 resetView()
-    patchSettings({
-        rotationDeg: { x: 0, y: 0, z: 0 },
-        resetViewSeq: (props.settings.resetViewSeq ?? 0) + 1,
-    });
-}
+import type { ViewerSettings } from "../../lib/viewer/settings";
 
 const props = defineProps<{
     collapsed: boolean;
@@ -147,6 +161,11 @@ const showBondsModel = computed({
     set: (v: boolean) => patchSettings({ showBonds: v }),
 });
 
+const orthographicModel = computed({
+    get: () => props.settings.orthographic,
+    set: (v: boolean) => patchSettings({ orthographic: v }),
+});
+
 const backgroundModel = computed({
     get: () => props.settings.background,
     set: (v: ViewerSettings["background"]) => patchSettings({ background: v }),
@@ -173,8 +192,14 @@ function resetPose(): void {
     patchSettings({ rotationDeg: { x: 0, y: 0, z: 0 } });
 }
 
+function resetView(): void {
+    patchSettings({
+        rotationDeg: { x: 0, y: 0, z: 0 },
+        resetViewSeq: (props.settings.resetViewSeq ?? 0) + 1,
+    });
+}
+
 function snapPose(deltaDeg: number): void {
-    // 默认给 Z 轴做增量；如果你想改为 X/Y，就在这里改
     patchSettings({ rotationDeg: { z: rotZModel.value + deltaDeg } });
 }
 </script>

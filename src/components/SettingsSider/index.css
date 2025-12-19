@@ -1,0 +1,39 @@
+.sider {
+  border-right: 1px solid #1f1f1f;
+}
+
+.sider-header {
+  height: 48px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 8px;
+  border-bottom: 1px solid #1f1f1f;
+}
+
+.collapse-btn {
+  width: 40px;
+  height: 40px;
+}
+
+.sider-title {
+  font-weight: 600;
+}
+
+.sider-body {
+  padding: 12px;
+  overflow: auto;
+  height: calc(100% - 48px);
+}
+
+.angle-row {
+  display: grid;
+  grid-template-columns: 1fr 92px;
+  gap: 10px;
+  align-items: center;
+}
+
+.pose-actions {
+  display: flex;
+  gap: 8px;
+}

@@ -1,0 +1,209 @@
+<template>
+  <a-layout-sider
+    class="sider"
+    :trigger="null"
+    collapsible
+    v-model:collapsed="collapsedModel"
+    :width="320"
+    :collapsedWidth="56"
+  >
+    <div class="sider-header">
+      <a-button
+        type="text"
+        class="collapse-btn"
+        @click="toggleCollapsed"
+        aria-label="toggle sidebar"
+      >
+        <MenuUnfoldOutlined v-if="collapsedModel" />
+        <MenuFoldOutlined v-else />
+      </a-button>
+      <div v-if="!collapsedModel" class="sider-title">配置</div>
+    </div>
+
+    <div v-if="!collapsedModel" class="sider-body">
+      <a-collapse v-model:activeKey="activeKeysModel" ghost>
+        <a-collapse-panel key="display" header="显示">
+          <a-form layout="vertical">
+            <a-form-item label="原子大小">
+              <a-slider
+                v-model:value="atomScaleModel"
+                :min="0.2"
+                :max="2"
+                :step="0.05"
+              />
+            </a-form-item>
+
+            <a-form-item label="显示坐标轴">
+              <a-switch v-model:checked="showAxesModel" />
+            </a-form-item>
+
+            <a-form-item label="显示键（Bonds）">
+              <a-switch v-model:checked="showBondsModel" />
+            </a-form-item>
+          </a-form>
+        </a-collapse-panel>
+
+        <a-collapse-panel key="render" header="渲染">
+          <a-form layout="vertical">
+            <a-form-item label="背景">
+              <a-select v-model:value="backgroundModel" :options="bgOptions" />
+            </a-form-item>
+          </a-form>
+        </a-collapse-panel>
+
+        <a-collapse-panel key="pose" header="姿态（模型旋转，单位：度）">
+          <a-form layout="vertical">
+            <a-form-item label="X 轴旋转">
+              <div class="angle-row">
+                <a-slider
+                  v-model:value="rotXModel"
+                  :min="-180"
+                  :max="180"
+                  :step="1"
+                />
+                <a-input-number
+                  v-model:value="rotXModel"
+                  :min="-180"
+                  :max="180"
+                  :step="1"
+                />
+              </div>
+            </a-form-item>
+
+            <a-form-item label="Y 轴旋转">
+              <div class="angle-row">
+                <a-slider
+                  v-model:value="rotYModel"
+                  :min="-180"
+                  :max="180"
+                  :step="1"
+                />
+                <a-input-number
+                  v-model:value="rotYModel"
+                  :min="-180"
+                  :max="180"
+                  :step="1"
+                />
+              </div>
+            </a-form-item>
+
+            <a-form-item label="Z 轴旋转">
+              <div class="angle-row">
+                <a-slider
+                  v-model:value="rotZModel"
+                  :min="-180"
+                  :max="180"
+                  :step="1"
+                />
+                <a-input-number
+                  v-model:value="rotZModel"
+                  :min="-180"
+                  :max="180"
+                  :step="1"
+                />
+              </div>
+            </a-form-item>
+
+            <div class="pose-actions">
+              <a-button @click="resetPose">重置</a-button>
+              <a-button @click="snapPose(90)">+90°</a-button>
+              <a-button @click="snapPose(-90)">-90°</a-button>
+            </div>
+          </a-form>
+        </a-collapse-panel>
+      </a-collapse>
+    </div>
+  </a-layout-sider>
+</template>
+
+<script setup lang="ts">
+import { computed } from "vue";
+import { MenuFoldOutlined, MenuUnfoldOutlined } from "@ant-design/icons-vue";
+import type { ViewerSettings } from "@/lib/viewer/settings";
+
+const props = defineProps<{
+  collapsed: boolean;
+  activeKeys: string[];
+  settings: ViewerSettings;
+  bgOptions: Array<{ value: ViewerSettings["background"]; label: string }>;
+}>();
+
+const emit = defineEmits<{
+  (e: "update:collapsed", v: boolean): void;
+  (e: "update:activeKeys", v: string[]): void;
+  (e: "update:settings", v: ViewerSettings): void;
+}>();
+
+const collapsedModel = computed({
+  get: () => props.collapsed,
+  set: (v) => emit("update:collapsed", v),
+});
+
+const activeKeysModel = computed({
+  get: () => props.activeKeys,
+  set: (v) => emit("update:activeKeys", v),
+});
+
+function patchSettings(
+  patch: Partial<ViewerSettings> & {
+    rotationDeg?: Partial<ViewerSettings["rotationDeg"]>;
+  }
+): void {
+  emit("update:settings", {
+    ...props.settings,
+    ...patch,
+    rotationDeg: {
+      ...props.settings.rotationDeg,
+      ...(patch.rotationDeg ?? {}),
+    },
+  });
+}
+
+const atomScaleModel = computed({
+  get: () => props.settings.atomScale,
+  set: (v: number) => patchSettings({ atomScale: v }),
+});
+
+const showAxesModel = computed({
+  get: () => props.settings.showAxes,
+  set: (v: boolean) => patchSettings({ showAxes: v }),
+});
+
+const showBondsModel = computed({
+  get: () => props.settings.showBonds,
+  set: (v: boolean) => patchSettings({ showBonds: v }),
+});
+
+const backgroundModel = computed({
+  get: () => props.settings.background,
+  set: (v: ViewerSettings["background"]) => patchSettings({ background: v }),
+});
+
+const rotXModel = computed({
+  get: () => props.settings.rotationDeg.x,
+  set: (v: number) => patchSettings({ rotationDeg: { x: v } }),
+});
+const rotYModel = computed({
+  get: () => props.settings.rotationDeg.y,
+  set: (v: number) => patchSettings({ rotationDeg: { y: v } }),
+});
+const rotZModel = computed({
+  get: () => props.settings.rotationDeg.z,
+  set: (v: number) => patchSettings({ rotationDeg: { z: v } }),
+});
+
+function toggleCollapsed(): void {
+  collapsedModel.value = !collapsedModel.value;
+}
+
+function resetPose(): void {
+  patchSettings({ rotationDeg: { x: 0, y: 0, z: 0 } });
+}
+
+function snapPose(deltaDeg: number): void {
+  // 默认给 Z 轴做增量；如果你想改为 X/Y，就在这里改
+  patchSettings({ rotationDeg: { z: rotZModel.value + deltaDeg } });
+}
+</script>
+
+<style scoped src="./index.css"></style>

@@ -60,13 +60,13 @@
       </a-layout-sider>
 
       <a-layout>
-        <a-layout-header class="header">
+        <!-- <a-layout-header class="header">
           <div class="header-left">ldr_atoms</div>
           <div class="header-right">
-            <!-- 先放占位：后续接“打开 xyz / 导入 CNT/graphene” -->
-            <!-- <a-button type="primary" @click="noop">打开 XYZ</a-button> -->
+            先放占位：后续接“打开 xyz / 导入 CNT/graphene”
+            <a-button type="primary" @click="noop">打开 XYZ</a-button>
           </div>
-        </a-layout-header>
+        </a-layout-header> -->
 
         <a-layout-content class="content">
           <ViewerStage />
@@ -79,7 +79,7 @@
 <script setup lang="ts">
 import { reactive, ref } from "vue";
 import { MenuFoldOutlined, MenuUnfoldOutlined } from "@ant-design/icons-vue";
-import ViewerStage from "./components/ViewerStage.vue";
+import ViewerStage from "./components/ViewerStage/index.vue";
 import { theme } from "ant-design-vue";
 const antTheme = {
   algorithm: theme.darkAlgorithm,

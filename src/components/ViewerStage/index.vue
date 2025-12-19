@@ -42,9 +42,13 @@
     />
   </div>
 </template>
-
 <script setup lang="ts">
-import { useViewerStage } from "./index";
+import { toRef } from "vue";
+import { useViewerStage } from "./useViewerStage";
+import type { ViewerSettings } from "../../lib/viewer/settings";
+
+const props = defineProps<{ settings: ViewerSettings }>();
+const settingsRef = toRef(props, "settings");
 
 const {
   canvasHostRef,
@@ -58,7 +62,7 @@ const {
   onDrop,
   onFilePicked,
   onExportPng,
-} = useViewerStage();
+} = useViewerStage(settingsRef);
 </script>
 
 <style scoped src="./index.css"></style>

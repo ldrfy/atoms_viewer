@@ -55,7 +55,7 @@ const isDragging = ref(false);
 const dragDepth = ref(0);
 const hasModel = ref(false);
 
-// three
+// three core
 let renderer: THREE.WebGLRenderer | null = null;
 let scene: THREE.Scene | null = null;
 let camera: THREE.PerspectiveCamera | null = null;
@@ -63,78 +63,86 @@ let controls: OrbitControls | null = null;
 let resizeObserver: ResizeObserver | null = null;
 let rafId = 0;
 
-// meshes
-let atomsMesh: THREE.InstancedMesh | null = null;
+// model meshes
+let atomMeshes: THREE.InstancedMesh[] = [];
 let bondsMesh: THREE.InstancedMesh | null = null;
 
 function openFilePicker(): void {
   fileInputRef.value?.click();
 }
 
+function disposeInstancedMesh(mesh: THREE.InstancedMesh): void {
+  mesh.geometry.dispose();
+  if (Array.isArray(mesh.material)) {
+    mesh.material.forEach((m) => m.dispose());
+  } else {
+    mesh.material.dispose();
+  }
+}
+
 function clearModel(): void {
   if (!scene) return;
 
-  if (atomsMesh) {
-    scene.remove(atomsMesh);
-    atomsMesh.geometry.dispose();
-    if (Array.isArray(atomsMesh.material))
-      atomsMesh.material.forEach((m) => m.dispose());
-    else atomsMesh.material.dispose();
-    atomsMesh = null;
+  for (const m of atomMeshes) {
+    scene.remove(m);
+    disposeInstancedMesh(m);
   }
+  atomMeshes = [];
 
   if (bondsMesh) {
     scene.remove(bondsMesh);
-    bondsMesh.geometry.dispose();
-    if (Array.isArray(bondsMesh.material))
-      bondsMesh.material.forEach((m) => m.dispose());
-    else bondsMesh.material.dispose();
+    disposeInstancedMesh(bondsMesh);
     bondsMesh = null;
   }
 
   hasModel.value = false;
 }
 
-function buildAtomsMesh(atoms: Atom[]): THREE.InstancedMesh {
-  const radius = 0.25; // 先固定；后续可接侧栏配置
+function buildAtomMeshesByElement(atoms: Atom[]): THREE.InstancedMesh[] {
+  const radius = 0.25; // 可后续接侧栏配置
   const geometry = new THREE.SphereGeometry(radius, 16, 16);
 
-  // 关键：开启 vertexColors，才能使用 InstancedMesh 的 instanceColor
-  const material = new THREE.MeshStandardMaterial({
-    metalness: 0.05,
-    roughness: 0.9,
-    vertexColors: true,
-  });
-
-  const mesh = new THREE.InstancedMesh(geometry, material, atoms.length);
-  const mat = new THREE.Matrix4();
-  const color = new THREE.Color();
-
+  // 元素 -> 原子索引
+  const elementToIndices = new Map<string, number[]>();
   for (let i = 0; i < atoms.length; i += 1) {
-    const a = atoms[i];
-    const [x, y, z] = a.position;
-
-    mat.makeTranslation(x, y, z);
-    mesh.setMatrixAt(i, mat);
-
-    const sym = normalizeElementSymbol(a.element);
-    color.set(getElementColorHex(sym));
-    mesh.setColorAt(i, color);
+    const el = atoms[i].element;
+    const arr = elementToIndices.get(el);
+    if (arr) arr.push(i);
+    else elementToIndices.set(el, [i]);
   }
 
-  mesh.instanceMatrix.needsUpdate = true;
-  if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+  const meshes: THREE.InstancedMesh[] = [];
+  const mat = new THREE.Matrix4();
 
-  return mesh;
+  for (const [el, indices] of elementToIndices.entries()) {
+    const colorHex = getElementColorHex(el);
+    const material = new THREE.MeshStandardMaterial({
+      color: new THREE.Color(colorHex),
+      metalness: 0.05,
+      roughness: 0.9,
+    });
+
+    const mesh = new THREE.InstancedMesh(geometry, material, indices.length);
+
+    for (let k = 0; k < indices.length; k += 1) {
+      const a = atoms[indices[k]];
+      const [x, y, z] = a.position;
+      mat.makeTranslation(x, y, z);
+      mesh.setMatrixAt(k, mat);
+    }
+    mesh.instanceMatrix.needsUpdate = true;
+
+    meshes.push(mesh);
+  }
+
+  return meshes;
 }
 
 function buildBondsMesh(atoms: Atom[]): THREE.InstancedMesh | null {
-  // 你压缩包里的默认 bond_factor=1.05
-  const bondFactor = 1.05;
+  const bondFactor = 1.05; // 与你压缩包逻辑一致
   const bonds = computeBonds(atoms, bondFactor);
   if (bonds.length === 0) return null;
 
-  // 圆柱沿 Y 轴，高度=1，通过 scale.y 拉伸到键长
   const bondRadius = 0.08;
   const geometry = new THREE.CylinderGeometry(
     bondRadius,
@@ -162,17 +170,24 @@ function buildBondsMesh(atoms: Atom[]): THREE.InstancedMesh | null {
   const m = new THREE.Matrix4();
 
   for (let k = 0; k < bonds.length; k += 1) {
-    const { i, j, length } = bonds[k];
+    const b = bonds[k];
 
-    p1.set(atoms[i].position[0], atoms[i].position[1], atoms[i].position[2]);
-    p2.set(atoms[j].position[0], atoms[j].position[1], atoms[j].position[2]);
+    p1.set(
+      atoms[b.i].position[0],
+      atoms[b.i].position[1],
+      atoms[b.i].position[2]
+    );
+    p2.set(
+      atoms[b.j].position[0],
+      atoms[b.j].position[1],
+      atoms[b.j].position[2]
+    );
 
     mid.addVectors(p1, p2).multiplyScalar(0.5);
-
     dir.subVectors(p2, p1).normalize();
-    q.setFromUnitVectors(up, dir);
 
-    s.set(1, length, 1);
+    q.setFromUnitVectors(up, dir);
+    s.set(1, b.length, 1); // cylinder 原始高度=1，沿 Y 拉伸到键长
 
     m.compose(mid, q, s);
     mesh.setMatrixAt(k, m);
@@ -211,7 +226,7 @@ function fitCameraToAtoms(atoms: Atom[]): void {
 async function loadFile(file: File): Promise<void> {
   const model = await loadStructureFromFile(file);
 
-  // 标准化一下元素符号，避免 xyz 里出现 "c" / "C1"
+  // 标准化元素符号：支持 c / C1 / Si2 等
   const atoms: Atom[] = model.atoms.map((a) => ({
     element: normalizeElementSymbol(a.element),
     position: a.position,
@@ -221,8 +236,8 @@ async function loadFile(file: File): Promise<void> {
 
   clearModel();
 
-  atomsMesh = buildAtomsMesh(atoms);
-  scene.add(atomsMesh);
+  atomMeshes = buildAtomMeshesByElement(atoms);
+  for (const m of atomMeshes) scene.add(m);
 
   bondsMesh = buildBondsMesh(atoms);
   if (bondsMesh) scene.add(bondsMesh);
@@ -282,7 +297,7 @@ async function onFilePicked(e: Event): Promise<void> {
   }
 }
 
-// three lifecycle
+// render loop
 function startRenderLoop(): void {
   if (!renderer || !scene || !camera || !controls) return;
 
@@ -311,6 +326,11 @@ function initThree(): void {
 
   renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setPixelRatio(window.devicePixelRatio);
+
+  // 建议：颜色管理（避免颜色偏暗）
+  THREE.ColorManagement.enabled = true;
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+
   host.appendChild(renderer.domElement);
 
   scene.add(new THREE.AmbientLight(0xffffff, 0.7));

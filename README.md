@@ -6,10 +6,17 @@
 
 </div>
 
-| Camera    | CNT                  | MoS2_NT                  |
-| ---- | -------------------- | ------------------------ |
-| Perspective | ![](readme/images/cnt1.png) | ![](readme/images/mos2_nt1.png) |
-| Orthographic | ![](readme/images/cnt0.png) | ![](readme/images/mos2_nt0.png) |
+## 🚀 Start
+
+- Download xyz file: [cnt.xyz](readme/samples/cnt.xyz) or [mos2.xyz](readme/samples/mos2.xyz)
+- Go [Web: Ldr-Atoms-Viewer](https://ldrfy.github.io/ldr_atoms_viewer/)
+- Upload the xyz file
+
+| Camera       | CNT                               | MoS2_NT                             |
+| ------------ | --------------------------------- | ----------------------------------- |
+| Perspective  | ![](readme/images/cnt1.png)       | ![](readme/images/mos2_nt1.png)     |
+| Orthographic | ![](readme/images/cnt0.png)       | ![](readme/images/mos2_nt0.png)     |
+| \*.xyz       | [cnt.xyz](readme/samples/cnt.xyz) | [mos2.xyz](readme/samples/mos2.xyz) |
 
 ## Overview
 
@@ -19,40 +26,43 @@ The implementation prioritizes performance and responsiveness, leveraging a cont
 
 ## Features
 
-* **XYZ file visualization**
+- **XYZ file visualization**
 
-  * Currently supports `.xyz` parsing and rendering
-* **Display & view controls**
+  - Currently supports `.xyz` parsing and rendering
 
-  * Dark/Light theme
-  * Multi-language (i18n)
-  * Precise rotation control (X/Y/Z)
-  * Atom size scaling
-  * Toggles for axes and bonds
-* **PNG export**
+- **Display & view controls**
 
-  * Transparent background
-  * Configurable output resolution (Custom scaling factor)
-  * **Automatic cropping** to a tight content bounding box
-* **Smooth user experience**
+  - Dark/Light theme
+  - Multi-language (i18n)
+  - Precise rotation control (X/Y/Z)
+  - Atom size scaling
+  - Toggles for axes and bonds
 
-  * Designed to be more responsive and fluid than typical structure viewers
+- **PNG export**
 
-## Tech Stack
+  - Transparent background
+  - Configurable output resolution (Custom scaling factor)
+  - **Automatic cropping** to a tight content bounding box
 
-* Vue3
-* Vite
-* TypeScript
-* Ant Design Vue
-* three.js
-* pnpm
+- **Smooth user experience**
 
-## Development Testing
+  - Designed to be more responsive and fluid than typical structure viewers
+
+## 📦 Tech Stack
+
+- Vue3
+- Vite
+- TypeScript
+- Ant Design Vue
+- three.js
+- pnpm
+
+## 🏗️ Development Testing
 
 ### Prerequisites
 
-* Node.js (recommended: a recent LTS version)
-* pnpm
+- Node.js (recommended: a recent LTS version)
+- pnpm
 
 ### Install & Run
 
@@ -82,6 +92,6 @@ This project is inspired by the following online viewer in terms of goals and UX
 
 ## Roadmap
 
-* [ ] Support more structure file formats (e.g., CIF, POSCAR/CONTCAR, PDB)
-* [ ] Improved bond detection/visualization
-* [ ] More rendering and annotation options (measurements, labels, slicing, etc.)
+- [ ] Support more structure file formats (e.g., CIF, POSCAR/CONTCAR, PDB)
+- [ ] Improved bond detection/visualization
+- [ ] More rendering and annotation options (measurements, labels, slicing, etc.)

@@ -231,20 +231,27 @@ function canonicalizeSymbol(raw: string): string {
   const trimmed = raw.trim();
   if (!trimmed) return "E";
 
-  // 允许 xyz 第一列是 "C1" / "Si2" 这种：去掉尾部数字
-  const noTailDigits = trimmed.replace(/[0-9]+$/g, "");
-
-  // 允许 xyz 第一列直接给原子序数："6"
-  if (/^\d+$/.test(noTailDigits)) {
-    const z = Number(noTailDigits);
-    if (Number.isInteger(z) && 0 <= z && z < ATOMIC_SYMBOLS.length)
-      return ATOMIC_SYMBOLS[z];
+  // 1) 如果整列就是纯数字：按原子序数处理（例如 "6"）
+  if (/^\d+$/.test(trimmed)) {
+    const z = Number(trimmed);
+    if (Number.isInteger(z) && z >= 0 && z < ATOMIC_SYMBOLS.length) {
+      const sym = ATOMIC_SYMBOLS[z];
+      if (sym) return sym; // 兼容 noUncheckedIndexedAccess
+    }
+    return "E";
   }
 
-  // 标准化大小写：Si / si / SI
-  const s = noTailDigits;
-  if (s.length === 1) return s.toUpperCase();
-  return s[0].toUpperCase() + s.slice(1).toLowerCase();
+  // 2) 否则允许像 "C1" / "Si2"：去掉尾部数字
+  const noTailDigits = trimmed.replace(/[0-9]+$/g, "");
+  if (!noTailDigits) return "E";
+
+  // 3) 标准化大小写：Si / si / SI
+  if (noTailDigits.length === 1) return noTailDigits.toUpperCase();
+
+  // 用 charAt 避免 s[0] 在严格索引下出现 undefined
+  const first = noTailDigits.charAt(0).toUpperCase();
+  const rest = noTailDigits.slice(1).toLowerCase();
+  return first + rest;
 }
 
 export function getAtomicNumber(raw: string): number {

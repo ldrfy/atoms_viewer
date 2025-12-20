@@ -37,6 +37,8 @@ export function findNonTransparentBounds(
     const row = y * width * 4;
     for (let x = 0; x < width; x += 1) {
       const a = data[row + x * 4 + 3];
+      if (!a) throw new Error(`data[${row + x * 4 + 3}] undefined`);
+
       if (a > alphaThreshold) {
         if (x < minX) minX = x;
         if (y < minY) minY = y;

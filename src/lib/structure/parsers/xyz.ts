@@ -8,12 +8,6 @@ function normalizeLines(text: string): string[] {
     .filter((s) => s.length > 0);
 }
 
-/**
- * 解析 XYZ 第一帧：
- * 1) 第 1 行：原子数 N
- * 2) 第 2 行：comment
- * 3) 后续 N 行：Element x y z（多余列忽略）
- */
 export function parseXyz(text: string): StructureModel {
   const lines = normalizeLines(text);
   if (lines.length < 2) {
@@ -40,18 +34,28 @@ export function parseXyz(text: string): StructureModel {
 
   const atoms: Atom[] = [];
   for (let i = start; i < end; i += 1) {
-    const parts = lines[i].split(/\s+/);
-    if (parts.length < 4) {
-      throw new Error(`第 ${i + 1} 行格式错误：${lines[i]}`);
+    const line = lines[i];
+    if (!line) {
+      // 理论上不会发生，但用于满足 TS 严格检查
+      throw new Error(`第 ${i + 1} 行缺失。`);
     }
 
+    const parts = line.split(/\s+/);
     const element = parts[0];
-    const x = Number(parts[1]);
-    const y = Number(parts[2]);
-    const z = Number(parts[3]);
+    const xStr = parts[1];
+    const yStr = parts[2];
+    const zStr = parts[3];
+
+    if (!element || !xStr || !yStr || !zStr) {
+      throw new Error(`第 ${i + 1} 行格式错误：${line}`);
+    }
+
+    const x = Number(xStr);
+    const y = Number(yStr);
+    const z = Number(zStr);
 
     if (![x, y, z].every((v) => Number.isFinite(v))) {
-      throw new Error(`第 ${i + 1} 行坐标不可解析：${lines[i]}`);
+      throw new Error(`第 ${i + 1} 行坐标不可解析：${line}`);
     }
 
     atoms.push({ element, position: [x, y, z] });

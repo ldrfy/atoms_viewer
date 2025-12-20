@@ -23,7 +23,8 @@
         "empty": {
             "title": "Drag and drop a .xyz file here",
             "subtitle": "After loading, you can rotate/zoom to inspect the structure (atoms colored by element, size by covalent radius, bonds split into two colored segments).",
-            "pickFile": "Choose file"
+            "pickFile": "Choose file",
+            "preloadDefault": "Test"
         },
         "export": {
             "button": "Export PNG",

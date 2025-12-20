@@ -11,7 +11,10 @@ import {
 } from "three/addons/renderers/CSS2DRenderer.js";
 
 import type { Atom, StructureModel } from "../../lib/structure/types";
-import { loadStructureFromFile } from "../../lib/structure/parse";
+import {
+  parseStructure,
+  loadStructureFromFile,
+} from "../../lib/structure/parse";
 import {
   getCovalentRadiusAng,
   getElementColorHex,
@@ -20,6 +23,7 @@ import {
 import { computeBonds } from "../../lib/structure/bonds";
 import { cropCanvasToPngBlob, downloadBlob } from "../../lib/image/cropPng";
 import { useI18n } from "vue-i18n";
+import xyzText from "../../assets/samples/mos2_cnt.xyz?raw";
 
 type ViewerStageBindings = {
   canvasHostRef: ReturnType<typeof ref<HTMLDivElement | null>>;
@@ -33,6 +37,7 @@ type ViewerStageBindings = {
   onDrop: (e: DragEvent) => Promise<void>;
   onFilePicked: (e: Event) => Promise<void>;
   onExportPng: (scale: number) => Promise<void>;
+  preloadDefault: () => void;
 };
 
 export function useViewerStage(
@@ -821,6 +826,11 @@ export function useViewerStage(
     disposeThree();
   });
 
+  function preloadDefault(): void {
+    const model = parseStructure(xyzText, "sample.xyz");
+    renderModel(model);
+  }
+
   return {
     canvasHostRef,
     fileInputRef,
@@ -833,5 +843,6 @@ export function useViewerStage(
     onDrop,
     onFilePicked,
     onExportPng,
+    preloadDefault,
   };
 }

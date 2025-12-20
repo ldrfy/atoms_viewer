@@ -505,7 +505,6 @@ export function useViewerStage(
     applyModelRotation();
 
     const size = box.getSize(new THREE.Vector3());
-    console.log(size);
 
     const axisLen = Math.max(size.x, size.y, size.z) * 0.6; // 可调
 

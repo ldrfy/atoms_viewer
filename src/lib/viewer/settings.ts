@@ -23,6 +23,6 @@ export const DEFAULT_SETTINGS: ViewerSettings = {
   showAxes: false,
   showBonds: true,
   rotationDeg: { x: 0, y: 0, z: 0 },
-  orthographic: true,
+  orthographic: false,
   resetViewSeq: 0,
 };

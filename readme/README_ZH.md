@@ -6,10 +6,17 @@
 
 </div>
 
-| 0    | CNT                  | MoS2_NT                  |
-| ---- | -------------------- | ------------------------ |
-| 透视 | ![](images/cnt1.png) | ![](images/mos2_nt1.png) |
-| 正交 | ![](images/cnt0.png) | ![](images/mos2_nt0.png) |
+## 🚀 开始使用
+
+- 下载 xyz 文件: [cnt.xyz](./samples/cnt.xyz) or [mos2.xyz](./samples/mos2.xyz)
+- 访问 [Web: Ldr-Atoms-Viewer](https://ldrfy.github.io/ldr_atoms_viewer/)
+- 上传你自己的 xyz 文件（或刚你下载的）
+
+| 0      | CNT                          | MoS2_NT                        |
+| ------ | ---------------------------- | ------------------------------ |
+| 透视   | ![](images/cnt1.png)         | ![](images/mos2_nt1.png)       |
+| 正交   | ![](images/cnt0.png)         | ![](images/mos2_nt0.png)       |
+| \*.xyz | [cnt.xyz](./samples/cnt.xyz) | [mos2.xyz](./samples/mos2.xyz) |
 
 ## 项目简介
 
@@ -41,7 +48,7 @@
 
   - 相比同类结构查看器，更注重渲染与交互流畅性
 
-## 技术栈
+## 📦 技术栈
 
 - Vue3
 - Vite
@@ -50,7 +57,7 @@
 - three.js
 - pnpm
 
-## 开发测试
+## 🏗️ 开发测试
 
 ### 环境要求
 

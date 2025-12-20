@@ -23,7 +23,8 @@
         "empty": {
             "title": "拖拽 .xyz 文件到这里",
             "subtitle": "加载后可旋转/缩放查看结构（原子按元素着色、大小按元素半径、键双色分段）",
-            "pickFile": "选择文件"
+            "pickFile": "选择文件",
+            "preloadDefault": "测试"
         },
         "export": {
             "button": "导出 PNG",

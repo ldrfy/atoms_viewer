@@ -110,6 +110,11 @@
                         {{ t("viewer.empty.pickFile") }}
                     </a-button>
                 </div>
+                    <div class="empty-actions">
+                    <a-button type="primary" @click="preloadDefault">
+                        {{ t("viewer.empty.preloadDefault") }}
+                    </a-button>
+                </div>
             </div>
         </div>
 
@@ -178,6 +183,7 @@ const {
     onDrop,
     onFilePicked,
     onExportPng,
+    preloadDefault,
 } = useViewerStage(settingsRef);
 void canvasHostRef;
 void fileInputRef;

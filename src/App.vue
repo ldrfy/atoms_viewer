@@ -1,21 +1,19 @@
 <script setup lang="ts">
-import { ref, computed } from "vue";
-import { theme } from "ant-design-vue";
-
+import { ref, computed, watchEffect } from "vue";
 import SettingsSider from "./components/SettingsSider";
 import ViewerStage from "./components/ViewerStage";
-import { useI18n } from "vue-i18n";
 import {
     DEFAULT_SETTINGS,
     type ViewerSettings,
 } from "./lib/viewer/settings";
+import { theme as antdTheme } from "ant-design-vue";
+import { isDark, applyThemeToDom } from "./theme/mode";
 
-const { t } = useI18n();
+const antdAlgorithm = computed(() =>
+    isDark.value ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm
+);
 
-const antTheme = { algorithm: theme.darkAlgorithm };
-
-const collapsed = ref(true);
-const activeKeys = ref<string[]>(["display"]);
+const settingsOpen = ref(true);
 
 // 关键：用 ref，而不是 reactive
 const settings = ref<ViewerSettings>({
@@ -24,18 +22,18 @@ const settings = ref<ViewerSettings>({
 });
 
 
+watchEffect(() => {
+    applyThemeToDom(isDark.value);
+});
 </script>
-
 <template>
-    <a-config-provider :theme="antTheme">
+    <a-config-provider :theme="{ algorithm: antdAlgorithm }">
         <a-layout class="root">
-            <SettingsSider v-model:collapsed="collapsed" v-model:activeKeys="activeKeys" v-model:settings="settings" />
+            <a-layout-content>
+                <ViewerStage :settings="settings" @open-settings="settingsOpen = true" />
+            </a-layout-content>
 
-            <a-layout>
-                <a-layout-content class="content">
-                    <ViewerStage :settings="settings" />
-                </a-layout-content>
-            </a-layout>
+            <SettingsSider v-model:open="settingsOpen" v-model:settings="settings" />
         </a-layout>
     </a-config-provider>
 </template>
@@ -43,10 +41,5 @@ const settings = ref<ViewerSettings>({
 <style scoped>
 .root {
     height: 100%;
-}
-
-.content {
-    height: 100%;
-    background: #000;
 }
 </style>

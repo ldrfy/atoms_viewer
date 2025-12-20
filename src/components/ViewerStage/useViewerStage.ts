@@ -672,10 +672,6 @@ export function useViewerStage(
   function makeAxisLabel(text: string): CSS2DObject {
     const div = document.createElement("div");
     div.textContent = text;
-    div.style.color = "white";
-    div.style.fontSize = "12px";
-    div.style.fontWeight = "600";
-    div.style.textShadow = "0 0 3px rgba(0,0,0,0.8)";
     return new CSS2DObject(div);
   }
 
@@ -684,6 +680,7 @@ export function useViewerStage(
     if (!host) return;
 
     scene = new THREE.Scene();
+    scene.background = null;
 
     pivotGroup = new THREE.Group();
 
@@ -698,8 +695,6 @@ export function useViewerStage(
 
     applyModelRotation();
 
-    scene.background = new THREE.Color(0x000000);
-
     camera = new THREE.PerspectiveCamera(45, 1, 0.01, 2000);
     camera.position.set(0, 0, 10);
 
@@ -709,7 +704,7 @@ export function useViewerStage(
       // preserveDrawingBuffer: true, // 如果导出偶尔空白/黑图，再打开
     });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.setClearColor(0x000000, 1); // 平时仍然显示黑底（不透明）
+    renderer.setClearColor(0x000000, 0);
 
     THREE.ColorManagement.enabled = true;
     renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -775,19 +770,9 @@ export function useViewerStage(
   ): Promise<void> {
     if (!renderer || !scene || !camera) throw new Error("渲染器未初始化");
 
-    // 1) 保存状态
-    const prevBg = scene.background;
-    const prevClearAlpha = renderer.getClearAlpha();
-    const prevClearColor = new THREE.Color();
-    renderer.getClearColor(prevClearColor);
-
     const prevSize = new THREE.Vector2();
     renderer.getSize(prevSize);
     const prevPixelRatio = renderer.getPixelRatio();
-
-    // 2) 切透明背景并放大渲染
-    scene.background = null;
-    renderer.setClearColor(0x000000, 0);
 
     const host = canvasHostRef.value!;
     const rect = host.getBoundingClientRect();
@@ -806,10 +791,6 @@ export function useViewerStage(
       padding: 3,
     });
     downloadBlob(blob, filename);
-
-    // 4) 恢复状态
-    scene.background = prevBg;
-    renderer.setClearColor(prevClearColor, prevClearAlpha);
 
     renderer.setPixelRatio(prevPixelRatio);
     renderer.setSize(prevSize.x, prevSize.y, false);

@@ -6,16 +6,8 @@ body,
   margin: 0;
 }
 
-body {
-  overflow: hidden;
-  /* 让内容区不要出现双滚动条 */
-}
 
 #app {
   padding: 0;
   max-width: none;
-}
-
-.root {
-  height: 100vh;
 }

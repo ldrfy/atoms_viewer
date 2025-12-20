@@ -3,10 +3,18 @@
         "selfName": "English"
     },
     "viewer": {
+        "theme": {
+            "current": "Current",
+            "mode": {
+                "system": "System",
+                "light": "Light",
+                "dark": "Dark"
+            }
+        },
         "locale": {
             "current": "Current"
         },
-        "links":{
+        "links": {
             "github": "GitHub"
         },
         "load": {
@@ -26,9 +34,7 @@
         }
     },
     "settings": {
-        "sidebar": {
-            "title": "Settings"
-        },
+        "title": "Settings",
         "panel": {
             "display": {
                 "header": "Display"

@@ -11,8 +11,9 @@
 
 
                     <template #overlay>
+                        <a-menu :selectedKeys="[curLocale]"
+                            @click="(e: { key: string | number }) => onSelectLocale(String(e.key))">
 
-                        <a-menu :selectedKeys="[curLocale]" @click="({ key }) => onSelectLocale(String(key))">
                             <!-- 顶部：显示当前选中 -->
                             <a-menu-item disabled key="__current">
                                 {{ t("viewer.locale.current") }}：{{ getLocaleSelfName(curLocale) }}
@@ -35,25 +36,32 @@
                     </a-button>
 
                     <template #overlay>
-                        <a-menu :selectedKeys="[themeMode]" @click="({ key }) => onSelectThemeMode(String(key))">
+                        <a-menu :selectedKeys="[themeMode]"
+                            @click="(e: { key: string | number }) => onSelectThemeMode(String(e.key))">
                             <a-menu-item disabled key="__current_theme">
                                 {{ t("viewer.theme.current") }}：{{ t(`viewer.theme.mode.${themeMode}`) }}
                             </a-menu-item>
                             <a-menu-divider />
 
                             <a-menu-item key="system">
-                                <DesktopOutlined />
-                                <span class="menu-text">{{ t("viewer.theme.mode.system") }}</span>
+                                <template #icon>
+                                    <DesktopOutlined />
+                                </template>
+                                {{ t("viewer.theme.mode.system") }}
                             </a-menu-item>
 
                             <a-menu-item key="light">
-                                <BulbOutlined />
-                                <span class="menu-text">{{ t("viewer.theme.mode.light") }}</span>
+                                <template #icon>
+                                    <BulbOutlined />
+                                </template>
+                                {{ t("viewer.theme.mode.light") }}
                             </a-menu-item>
 
                             <a-menu-item key="dark">
-                                <BulbFilled />
-                                <span class="menu-text">{{ t("viewer.theme.mode.dark") }}</span>
+                                <template #icon>
+                                    <BulbFilled />
+                                </template>
+                                {{ t("viewer.theme.mode.dark") }}
                             </a-menu-item>
                         </a-menu>
                     </template>
@@ -80,7 +88,7 @@
                 <template v-if="hasModel">
                     <a-tooltip :title="t('viewer.export.scaleTip')">
                         <a-input-number v-model:value="exportScale" :min="1" :max="5" :step="0.1" :precision="1"
-                            :placeholder="t('viewer.export.scalePlaceholder')" style="width: 140px" />
+                            :placeholder="t('viewer.export.scalePlaceholder')" />
                     </a-tooltip>
 
                     <a-button class="export-btn" type="primary" @click="onExportPng(exportScale)">
@@ -162,7 +170,6 @@ function openGithub() {
 const {
     canvasHostRef,
     fileInputRef,
-    isDragging,
     hasModel,
     openFilePicker,
     onDragEnter,
@@ -172,6 +179,8 @@ const {
     onFilePicked,
     onExportPng,
 } = useViewerStage(settingsRef);
+void canvasHostRef;
+void fileInputRef;
 </script>
 
 <style scoped src="./index.css"></style>

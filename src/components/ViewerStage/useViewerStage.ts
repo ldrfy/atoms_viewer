@@ -4,26 +4,21 @@ import type { ViewerSettings } from "../../lib/viewer/settings";
 
 import { message } from "ant-design-vue";
 import * as THREE from "three";
-import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import {
   CSS2DRenderer,
   CSS2DObject,
-} from "three/examples/jsm/renderers/CSS2DRenderer.js";
+} from "three/addons/renderers/CSS2DRenderer.js";
 
 import type { Atom, StructureModel } from "../../lib/structure/types";
-import {
-  loadStructureFromFile,
-  parseStructure,
-} from "../../lib/structure/parse";
+import { loadStructureFromFile } from "../../lib/structure/parse";
 import {
   getCovalentRadiusAng,
   getElementColorHex,
   normalizeElementSymbol,
 } from "../../lib/structure/chem";
 import { computeBonds } from "../../lib/structure/bonds";
-import { cropCanvasToPngBlob, downloadBlob } from "../../lib/image/cropPng"; // 路径按你的项目别名调整
-// 预加载示例（你可替换文件）
-import xyzText from "../../assets/samples/mos2_cnt.xyz?raw";
+import { cropCanvasToPngBlob, downloadBlob } from "../../lib/image/cropPng";
 import { useI18n } from "vue-i18n";
 
 type ViewerStageBindings = {
@@ -37,7 +32,7 @@ type ViewerStageBindings = {
   onDragLeave: () => void;
   onDrop: (e: DragEvent) => Promise<void>;
   onFilePicked: (e: Event) => Promise<void>;
-  onExportPng: (e: Event) => Promise<void>;
+  onExportPng: (scale: number) => Promise<void>;
 };
 
 export function useViewerStage(
@@ -86,8 +81,13 @@ export function useViewerStage(
 
   function disposeInstancedMesh(mesh: THREE.InstancedMesh): void {
     mesh.geometry.dispose();
-    if (Array.isArray(mesh.material)) mesh.material.forEach((m) => m.dispose());
-    else mesh.material.dispose();
+
+    const { material } = mesh;
+    if (Array.isArray(material)) {
+      material.forEach((m: THREE.Material) => m.dispose());
+    } else {
+      material.dispose();
+    }
   }
 
   function clearModel(): void {
@@ -115,7 +115,9 @@ export function useViewerStage(
   function buildAtomMeshesByElement(atoms: Atom[]): THREE.InstancedMesh[] {
     const elementToIndices = new Map<string, number[]>();
     for (let i = 0; i < atoms.length; i += 1) {
-      const el = atoms[i].element;
+      const a = atoms[i];
+      if (!a) throw new Error(`atoms[${i}] undefined`);
+      const el = a.element;
       const arr = elementToIndices.get(el);
       if (arr) arr.push(i);
       else elementToIndices.set(el, [i]);
@@ -140,7 +142,7 @@ export function useViewerStage(
       mesh.userData.baseRadius = baseRadius;
       mesh.userData.element = el;
       for (let k = 0; k < indices.length; k += 1) {
-        const a = atoms[indices[k]];
+        const a = atoms[indices[k]!]!;
         const [x, y, z] = a.position;
         mat.makeTranslation(x, y, z);
         mesh.setMatrixAt(k, mat);
@@ -167,24 +169,18 @@ export function useViewerStage(
     const mid = new THREE.Vector3();
 
     for (let k = 0; k < bonds.length; k += 1) {
-      const b = bonds[k];
+      const b = bonds[k]!;
+      const abi = atoms[b.i]!;
+      const abj = atoms[b.j]!;
 
-      pi.set(
-        atoms[b.i].position[0],
-        atoms[b.i].position[1],
-        atoms[b.i].position[2]
-      );
-      pj.set(
-        atoms[b.j].position[0],
-        atoms[b.j].position[1],
-        atoms[b.j].position[2]
-      );
+      pi.set(abi.position[0], abi.position[1], abi.position[2]);
+      pj.set(abj.position[0], abj.position[1], abj.position[2]);
 
       const d = b.length;
       if (d < 1.0e-9) continue;
 
-      const riSphere = getSphereRadiusByElement(atoms[b.i].element);
-      const rjSphere = getSphereRadiusByElement(atoms[b.j].element);
+      const riSphere = getSphereRadiusByElement(abi.element);
+      const rjSphere = getSphereRadiusByElement(abj.element);
 
       const rat = (0.5 * (rjSphere - riSphere)) / d;
       const alpha = 0.5 + rat;
@@ -193,12 +189,12 @@ export function useViewerStage(
       mid.copy(pi).multiplyScalar(alpha).addScaledVector(pj, beta);
 
       segments[k * 2] = {
-        colorKey: atoms[b.i].element,
+        colorKey: abi.element,
         p1: pi.clone(),
         p2: mid.clone(),
       };
       segments[k * 2 + 1] = {
-        colorKey: atoms[b.j].element,
+        colorKey: abj.element,
         p1: mid.clone(),
         p2: pj.clone(),
       };
@@ -242,6 +238,7 @@ export function useViewerStage(
 
       for (let i = 0; i < segs.length; i += 1) {
         const a = segs[i];
+        if (!a) throw new Error(`segs[${i}] undefined`);
 
         center.addVectors(a.p1, a.p2).multiplyScalar(0.5);
 
@@ -537,10 +534,6 @@ export function useViewerStage(
     return (cam as THREE.PerspectiveCamera).isPerspectiveCamera === true;
   }
 
-  function isOrthographic(cam: THREE.Camera): cam is THREE.OrthographicCamera {
-    return (cam as THREE.OrthographicCamera).isOrthographicCamera === true;
-  }
-
   function rebuildControls(): void {
     if (!camera || !renderer) return;
 
@@ -794,7 +787,10 @@ export function useViewerStage(
 
     renderer.setPixelRatio(prevPixelRatio);
     renderer.setSize(prevSize.x, prevSize.y, false);
-    camera.aspect = prevSize.x / Math.max(1, prevSize.y);
+
+    if (isPerspective(camera)) {
+      camera.aspect = prevSize.x / Math.max(1, prevSize.y);
+    }
     camera.updateProjectionMatrix();
     renderer.render(scene, camera);
   }
@@ -814,26 +810,10 @@ export function useViewerStage(
     e.preventDefault();
   }
 
-  function preloadDefault(): void {
-    const model = parseStructure(xyzText, "sample.xyz");
-    renderModel(model);
-  }
-
   onMounted(() => {
     initThree();
     window.addEventListener("dragover", preventWindowDropDefault);
     window.addEventListener("drop", preventWindowDropDefault);
-
-    // // 避免布局未稳定时预加载导致 fit 偏差
-    // requestAnimationFrame(() => {
-    //   try {
-    //     preloadDefault();
-    //   } catch (e) {
-    //     // eslint-disable-next-line no-console
-    //     console.error("preload failed:", e);
-    //     message.error(`预加载失败：${(e as Error).message}`);
-    //   }
-    // });
   });
 
   onBeforeUnmount(() => {

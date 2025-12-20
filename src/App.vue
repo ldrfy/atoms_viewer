@@ -13,7 +13,7 @@ const antdAlgorithm = computed(() =>
     isDark.value ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm
 );
 
-const settingsOpen = ref(true);
+const settingsOpen = ref(false);
 
 // 关键：用 ref，而不是 reactive
 const settings = ref<ViewerSettings>({

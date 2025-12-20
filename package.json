@@ -1,7 +1,7 @@
 {
-  "name": "ldr_atoms",
+  "name": "ldr_atoms_viewer",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.0.1",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -17,6 +17,7 @@
   },
   "devDependencies": {
     "@types/node": "^24.10.1",
+    "@types/three": "^0.182.0",
     "@vitejs/plugin-vue": "^6.0.1",
     "@vue/tsconfig": "^0.8.1",
     "typescript": "~5.9.3",

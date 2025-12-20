@@ -22,10 +22,6 @@ function onMediaChange(e: MediaQueryListEvent): void {
 
 if (media?.addEventListener) {
   media.addEventListener("change", onMediaChange);
-} else if (media) {
-  // 兼容旧浏览器
-  // @ts-expect-error legacy API
-  media.addListener(onMediaChange);
 }
 
 export const isDark = computed(() => {

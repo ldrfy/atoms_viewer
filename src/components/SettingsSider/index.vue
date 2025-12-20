@@ -102,7 +102,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref,computed } from "vue";
+import { ref, computed } from "vue";
 import type { ViewerSettings } from "../../lib/viewer/settings";
 import { useI18n } from "vue-i18n";
 
@@ -124,7 +124,7 @@ const openModel = computed({
 });
 
 function patchSettings(
-    patch: Partial<ViewerSettings> & {
+    patch: Omit<Partial<ViewerSettings>, "rotationDeg"> & {
         rotationDeg?: Partial<ViewerSettings["rotationDeg"]>;
     }
 ): void {

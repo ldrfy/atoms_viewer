@@ -3,6 +3,14 @@
         "selfName": "中文"
     },
     "viewer": {
+        "theme": {
+            "current": "当前",
+            "mode": {
+                "system": "跟随系统",
+                "light": "浅色",
+                "dark": "深色"
+            }
+        },
         "locale": {
             "current": "当前"
         },
@@ -26,9 +34,7 @@
         }
     },
     "settings": {
-        "sidebar": {
-            "title": "配置"
-        },
+        "title": "配置",
         "panel": {
             "display": {
                 "header": "显示"

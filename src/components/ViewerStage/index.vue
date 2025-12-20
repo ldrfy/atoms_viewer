@@ -1,9 +1,7 @@
 <template>
     <div class="stage" @dragenter.prevent="onDragEnter" @dragover.prevent="onDragOver" @dragleave.prevent="onDragLeave"
         @drop.prevent="onDrop">
-
-
-        <div class="top-left-bar">
+        <div class="top-right-bar">
             <a-space :size="6" align="center">
                 <a-dropdown trigger="click" placement="bottomLeft">
                     <a-button type="text" class="lang-btn" aria-label="language">
@@ -11,7 +9,9 @@
                         <GlobalOutlined />
                     </a-button>
 
+
                     <template #overlay>
+
                         <a-menu :selectedKeys="[curLocale]" @click="({ key }) => onSelectLocale(String(key))">
                             <!-- 顶部：显示当前选中 -->
                             <a-menu-item disabled key="__current">
@@ -28,17 +28,53 @@
                     </template>
                 </a-dropdown>
 
+                <!-- 主题（新增） -->
+                <a-dropdown trigger="click" placement="bottomLeft">
+                    <a-button type="text" class="icon-btn" aria-label="theme">
+                        <BgColorsOutlined />
+                    </a-button>
+
+                    <template #overlay>
+                        <a-menu :selectedKeys="[themeMode]" @click="({ key }) => onSelectThemeMode(String(key))">
+                            <a-menu-item disabled key="__current_theme">
+                                {{ t("viewer.theme.current") }}：{{ t(`viewer.theme.mode.${themeMode}`) }}
+                            </a-menu-item>
+                            <a-menu-divider />
+
+                            <a-menu-item key="system">
+                                <DesktopOutlined />
+                                <span class="menu-text">{{ t("viewer.theme.mode.system") }}</span>
+                            </a-menu-item>
+
+                            <a-menu-item key="light">
+                                <BulbOutlined />
+                                <span class="menu-text">{{ t("viewer.theme.mode.light") }}</span>
+                            </a-menu-item>
+
+                            <a-menu-item key="dark">
+                                <BulbFilled />
+                                <span class="menu-text">{{ t("viewer.theme.mode.dark") }}</span>
+                            </a-menu-item>
+                        </a-menu>
+                    </template>
+                </a-dropdown>
+
                 <!-- GitHub -->
                 <a-tooltip :title="t('viewer.links.github')">
                     <a-button type="text" class="icon-btn" aria-label="github" @click="openGithub">
                         <GithubOutlined />
                     </a-button>
                 </a-tooltip>
+
+                <a-button type="text" class="icon-btn" @click="$emit('open-settings')">
+                    <!-- 一个语言图标 -->
+                    <SettingOutlined />
+                </a-button>
             </a-space>
         </div>
 
         <!-- 右上角工具条：始终存在 -->
-        <div class="top-right-bar">
+        <div class="top-left-bar">
             <a-space align="center">
                 <!-- 导出相关：仅有模型时显示 -->
                 <template v-if="hasModel">
@@ -78,11 +114,21 @@
 import { ref, toRef, computed } from "vue";
 import { useViewerStage } from "./useViewerStage";
 import type { ViewerSettings } from "../../lib/viewer/settings";
-
-import { GlobalOutlined, GithubOutlined } from "@ant-design/icons-vue";
+import {
+    GlobalOutlined,
+    GithubOutlined,
+    BgColorsOutlined,
+    DesktopOutlined,
+    BulbOutlined,
+    BulbFilled, SettingOutlined,
+} from "@ant-design/icons-vue";
 import { i18n, SUPPORT_LOCALES, getLocaleSelfName, setLocale } from "../../i18n";
+import { getThemeMode, setThemeMode, type ThemeMode } from "../../theme/mode";
+import { useI18n } from "vue-i18n";
 
 const curLocale = computed(() => i18n.global.locale.value as any);
+
+const themeMode = computed(() => getThemeMode());
 
 const localeItems = computed(() =>
     SUPPORT_LOCALES.map((loc) => ({
@@ -92,11 +138,19 @@ const localeItems = computed(() =>
 );
 
 
+
+defineEmits<{
+    (e: "open-settings"): void;
+}>();
 const props = defineProps<{ settings: ViewerSettings }>();
 const settingsRef = toRef(props, "settings");
 const exportScale = ref<number>(2);
-import { useI18n } from "vue-i18n";
 const { t } = useI18n();
+
+
+function onSelectThemeMode(key: string): void {
+    setThemeMode(key as ThemeMode);
+}
 function onSelectLocale(key: string) {
     setLocale(key as any);
 }

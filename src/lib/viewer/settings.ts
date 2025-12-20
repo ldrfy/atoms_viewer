@@ -22,7 +22,6 @@ export const DEFAULT_SETTINGS: ViewerSettings = {
   atomScale: 1,
   showAxes: false,
   showBonds: true,
-  background: "dark",
   rotationDeg: { x: 0, y: 0, z: 0 },
   orthographic: true,
   resetViewSeq: 0,

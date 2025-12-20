@@ -57,7 +57,7 @@ const {
 /** hasModel 同步给 App，用于 TopHear 控制导出区显示 */
 watch(
     hasModel,
-    (v) => emit("model-state", v),
+    (v) => emit("model-state", v!),
     { immediate: true }
 );
 

@@ -62,13 +62,14 @@
 import { computed, toRef, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { useViewerStage } from "./useViewerStage";
-import type { ViewerSettings } from "../../lib/viewer/settings";
+import type { ViewerSettings, OpenSettingsPayload } from "../../lib/viewer/settings";
 
 const { t } = useI18n();
 
 const emit = defineEmits<{
     (e: "model-state", hasModel: boolean): void;
     (e: "update:settings", v: ViewerSettings): void;
+    (e: "open-settings", payload?: OpenSettingsPayload): void;
 }>();
 
 const props = defineProps<{ settings: ViewerSettings }>();
@@ -76,6 +77,8 @@ const settingsRef = toRef(props, "settings");
 
 /**
  * 统一的 settings patch：供 useViewerStage 在解析 LAMMPS 后自动补齐 typeId 映射使用
+ *
+ * Unified settings patch: used by useViewerStage to auto-fill typeId mapping for LAMMPS dump
  */
 function patchSettings(patch: Partial<ViewerSettings>): void {
     emit("update:settings", {
@@ -88,8 +91,17 @@ function patchSettings(patch: Partial<ViewerSettings>): void {
     });
 }
 
-/** 只调用一次 useViewerStage（关键修复点） */
-const stage = useViewerStage(settingsRef, patchSettings);
+/**
+ * 只调用一次 useViewerStage（关键修复点）
+ *
+ * Call useViewerStage only once (critical)
+ *
+ * 第三个参数：当加载 LAMMPS dump 并自动补齐/修改 typeId 映射时，触发打开设置面板
+ * Third argument: request opening Settings when LAMMPS dump triggers auto-fill/update of typeId map
+ */
+const stage = useViewerStage(settingsRef, patchSettings, (payload) =>
+    emit("open-settings", payload)
+);
 
 const {
     frameIndex,
@@ -116,14 +128,22 @@ const {
     preloadDefault,
 } = stage;
 
-/** hasModel 同步给 App，用于 TopHear 控制导出区显示 */
+/**
+ * hasModel 同步给 App，用于 TopHear 控制导出区显示
+ *
+ * Sync hasModel to App for showing export area in header
+ */
 watch(
     hasModel,
     (v) => emit("model-state", v!),
     { immediate: true }
 );
 
-/** slider / input-number 的 v-model 适配（避免 template 里 ref 赋值问题） */
+/**
+ * slider / input-number 的 v-model 适配（避免 template 里 ref 赋值问题）
+ *
+ * v-model adapters for slider/input-number (avoid direct ref assignment in template)
+ */
 const frameIndexModel = computed({
     get: () => frameIndex.value,
     set: (v: number) => setFrame(v),
@@ -137,12 +157,17 @@ const fpsModel = computed({
     },
 });
 
-/** 暴露给 App：App 通过 ref 调用导出 */
+/**
+ * 暴露给 App：App 通过 ref 调用导出
+ *
+ * Expose to App: App can call export via ref
+ */
 defineExpose({
     exportPng: onExportPng,
     stopPlay,
 });
 </script>
+
 
 <style scoped>
 .stage {

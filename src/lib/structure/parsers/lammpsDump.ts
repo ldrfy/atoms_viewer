@@ -291,3 +291,12 @@ function scaledToCartesian(
     zlo + zs * (zhi - zlo),
   ];
 }
+
+/**
+ * 判断文件格式是否属于 LAMMPS dump
+ *
+ * Check whether a format string indicates LAMMPS dump-like data.
+ */
+export function isLammpsDumpFormat(fmt: string): boolean {
+  return ["dump", "lammpstrj", "traj", "lammpsdump"].includes(fmt);
+}

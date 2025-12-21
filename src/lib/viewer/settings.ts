@@ -34,3 +34,49 @@ export const DEFAULT_SETTINGS: ViewerSettings = {
 
   lammpsTypeMap: [],
 };
+
+/**
+ * 判断元素映射是否为未知占位符（E）
+ *
+ * Check whether element mapping is an unknown placeholder ("E").
+ */
+function isUnknownElement(element: string | undefined | null): boolean {
+  return (element ?? "").trim().toUpperCase() === "E";
+}
+
+/**
+ * 判断“本次 dump 出现的 typeId”中，是否存在未完成映射（element="E"）
+ *
+ * Check whether any detected typeId is still mapped to "E" (unresolved).
+ *
+ * Args:
+ *   rows: 当前 typeId→element 映射表
+ *   typeIds: 本次 dump 第一帧检测到的 typeId 列表
+ *
+ * Returns:
+ *   boolean: true 表示存在未完成映射（需要用户补全）
+ */
+export function hasUnknownElementMappingForTypeIds(
+  rows: LammpsTypeMapItem[],
+  typeIds: number[]
+): boolean {
+  if (typeIds.length === 0) return false;
+
+  const set = new Set<number>(typeIds);
+  for (const r of rows) {
+    if (!set.has(r.typeId)) continue;
+    if (isUnknownElement(r.element)) return true;
+  }
+  return false;
+}
+
+/**
+ * 打开设置时可能携带的 payload
+ * Payload for opening settings
+ */
+export type OpenSettingsPayload = {
+  /** 需要聚焦（展开）的折叠面板 key / Collapse panel key to focus */
+  focusKey?: string;
+  /** 是否打开抽屉；false 表示只切换 activeKey，不改变 open 状态 */
+  open?: boolean;
+};

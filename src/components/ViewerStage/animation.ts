@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import type { Atom } from "../../lib/structure/types";
+import type { Ref } from "vue";
 
 export function computeMeanCenterInto(
   atoms: Atom[],
@@ -50,4 +51,20 @@ export function applyFrameAtomsToMeshes(params: {
     }
     mesh.instanceMatrix.needsUpdate = true;
   }
+}
+
+/**
+ * 同步动画状态（帧数、当前帧、是否有动画）。
+ *
+ * Sync animation state (frame index/count and whether animation exists).
+ */
+export function applyAnimationInfo(
+  info: { frameCount: number; hasAnimation: boolean },
+  frameIndex: Ref<number>,
+  frameCount: Ref<number>,
+  hasAnimation: Ref<boolean>
+): void {
+  frameIndex.value = 0;
+  frameCount.value = info.frameCount;
+  hasAnimation.value = info.hasAnimation;
 }

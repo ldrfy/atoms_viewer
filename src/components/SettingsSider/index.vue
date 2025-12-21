@@ -1,7 +1,8 @@
 <template>
     <a-drawer v-model:open="openModel" :title="t('settings.title')" placement="right" :width="360" :mask="true"
         :mask-closable="true" :destroy-on-close="false">
-        <a-collapse v-model:activeKey="activeKeys" ghost>
+        <!-- 关键：activeKey 由父组件控制 -->
+        <a-collapse v-model:activeKey="activeKeyModel" ghost accordion>
             <!-- 显示 / 视图 -->
             <a-collapse-panel key="display" :header="t('settings.panel.display.header')">
                 <a-form layout="vertical">
@@ -110,14 +111,14 @@
                             <a-row :gutter="8" align="middle">
                                 <a-col :span="8">
                                     <a-input-number :min="1" :step="1" :value="row.typeId" style="width: 100%;"
-                                        placeholder="type" @change="(v) => updateLammpsTypeId(idx, v)" />
+                                        placeholder="type" @change="onLammpsTypeId(idx, $event)" />
                                 </a-col>
 
                                 <a-col :span="10">
                                     <a-select show-search :value="row.element" style="width: 100%;"
                                         placeholder="元素（如 C / O / Fe）" :options="atomicOptions"
                                         :filter-option="filterAtomicOption"
-                                        @change="(v) => updateLammpsElement(idx, v)" />
+                                        @change="onLammpsElementChange(idx, $event)" />
                                 </a-col>
 
                                 <a-col :span="6">
@@ -146,12 +147,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from "vue";
+import { computed } from "vue";
 import type { ViewerSettings } from "../../lib/viewer/settings";
 import { ATOMIC_SYMBOLS, normalizeElementSymbol } from "../../lib/structure/chem";
 import { useI18n } from "vue-i18n";
 
-/** 本地类型：避免你 settings.ts 里导出名不一致造成报错
+/** 本地类型：避免 settings.ts 导出名不一致造成报错
  * Local type to avoid export-name mismatch in settings.ts
  */
 type LammpsTypeMapItem = { typeId: number; element: string };
@@ -161,19 +162,35 @@ const { t } = useI18n();
 const props = defineProps<{
     open: boolean;
     settings: ViewerSettings;
+    /**
+     * 折叠面板当前展开项（accordion 模式下为单 key）
+     * Current expanded panel key (single key under accordion)
+     */
+    activeKey: string;
 }>();
 
 const emit = defineEmits<{
     (e: "update:open", v: boolean): void;
     (e: "update:settings", v: ViewerSettings): void;
+    (e: "update:activeKey", v: string): void;
 }>();
 
-/** 折叠面板默认展开项 / Default expanded panels */
-const activeKeys = ref<string[]>(["display", "pose"]);
-
+/**
+ * Drawer open v-model
+ * 抽屉开关双向绑定
+ */
 const openModel = computed({
     get: () => props.open,
     set: (v: boolean) => emit("update:open", v),
+});
+
+/**
+ * Collapse activeKey v-model
+ * 折叠面板展开项双向绑定
+ */
+const activeKeyModel = computed<string>({
+    get: () => props.activeKey,
+    set: (v: string) => emit("update:activeKey", v),
 });
 
 /** 合并并回写 settings / Patch settings back to parent */
@@ -252,36 +269,22 @@ function resetView(): void {
  * LAMMPS type -> element mapping
  * ----------------------------- */
 
-/** 映射表 v-model / Mapping table v-model */
 const lammpsTypeMapModel = computed<LammpsTypeMapItem[]>({
     get: () => (props.settings.lammpsTypeMap as LammpsTypeMapItem[] | undefined) ?? [],
     set: (v) => patchSettings({ lammpsTypeMap: v }),
 });
 
-/** 当映射表非空时自动展开 lammps 面板 / Auto open lammps panel when populated */
-watch(
-    () => lammpsTypeMapModel.value.length,
-    (len) => {
-        if (len > 0 && !activeKeys.value.includes("lammps")) {
-            activeKeys.value = [...activeKeys.value, "lammps"];
-        }
-    },
-    { immediate: true }
-);
-
-/** 生成元素选项 / Build element options */
 const atomicOptions = computed(() =>
     ATOMIC_SYMBOLS.map((symRaw) => {
         const sym = normalizeElementSymbol(symRaw) || "E";
-        return {
-            value: sym,
-            label: sym === "E" ? "E (Unknown)" : sym,
-        };
+        return { value: sym, label: sym === "E" ? "E (Unknown)" : sym };
     })
 );
 
-/** 搜索过滤 / Filter options for search */
-function filterAtomicOption(input: string, option?: any): boolean {
+function filterAtomicOption(
+    input: string,
+    option?: { value?: unknown; label?: unknown }
+): boolean {
     const q = (input ?? "").trim().toLowerCase();
     if (!q) return true;
 
@@ -290,21 +293,18 @@ function filterAtomicOption(input: string, option?: any): boolean {
     return value.includes(q) || label.includes(q);
 }
 
-/** 安全转 int / Safe to int */
 function toInt(v: unknown, fallback: number): number {
     const n = typeof v === "number" ? v : Number.parseFloat(String(v ?? ""));
     if (!Number.isFinite(n)) return fallback;
     return Math.max(1, Math.floor(n));
 }
 
-/** 安全转元素符号 / Safe normalize element symbol */
 function toElement(v: unknown): string {
     return normalizeElementSymbol(String(v ?? "")) || "E";
 }
 
 function addLammpsRow(): void {
-    const next = [...lammpsTypeMapModel.value, { typeId: 1, element: "E" }];
-    lammpsTypeMapModel.value = next;
+    lammpsTypeMapModel.value = [...lammpsTypeMapModel.value, { typeId: 1, element: "E" }];
 }
 
 function removeLammpsRow(idx: number): void {
@@ -315,14 +315,14 @@ function clearLammpsRows(): void {
     lammpsTypeMapModel.value = [];
 }
 
-function updateLammpsTypeId(idx: number, v: unknown): void {
+function onLammpsTypeId(idx: number, v: unknown): void {
     const typeId = toInt(v, 1);
     lammpsTypeMapModel.value = lammpsTypeMapModel.value.map((row, i) =>
         i === idx ? { ...row, typeId } : row
     );
 }
 
-function updateLammpsElement(idx: number, v: unknown): void {
+function onLammpsElementChange(idx: number, v: unknown): void {
     const element = toElement(v);
     lammpsTypeMapModel.value = lammpsTypeMapModel.value.map((row, i) =>
         i === idx ? { ...row, element } : row

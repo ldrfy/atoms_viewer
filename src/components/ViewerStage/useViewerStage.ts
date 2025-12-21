@@ -1,10 +1,15 @@
 import { onBeforeUnmount, onMounted, ref } from "vue";
 import type { Ref } from "vue";
-import type { ViewerSettings } from "../../lib/viewer/settings";
+import type {
+  ViewerSettings,
+  LammpsTypeMapItem,
+  OpenSettingsPayload,
+} from "../../lib/viewer/settings";
+import { hasUnknownElementMappingForTypeIds } from "../../lib/viewer/settings";
+import type { StructureModel } from "../../lib/structure/types";
 
 import { message } from "ant-design-vue";
 import { useI18n } from "vue-i18n";
-
 import xyzText from "../../assets/samples/mos2_cnt.xyz?raw";
 import {
   parseStructure,
@@ -24,6 +29,8 @@ import { createThreeStage, type ThreeStage } from "../../lib/three/stage";
 
 import { bindViewerStageSettings } from "./bindSettings";
 import { createModelRuntime, type ModelRuntime } from "./modelRuntime";
+import { isLammpsDumpFormat } from "../../lib/structure/parsers/lammpsDump";
+import { applyAnimationInfo } from "./animation";
 
 /**
  * ViewerStage 对外 bindings。
@@ -70,7 +77,8 @@ type ViewerStageBindings = {
  */
 export function useViewerStage(
   settingsRef: Readonly<Ref<ViewerSettings>>,
-  patchSettings?: (patch: Partial<ViewerSettings>) => void
+  patchSettings?: (patch: Partial<ViewerSettings>) => void,
+  requestOpenSettings?: (payload?: OpenSettingsPayload) => void
 ): ViewerStageBindings {
   const canvasHostRef = ref<HTMLDivElement | null>(null);
   const fileInputRef = ref<HTMLInputElement | null>(null);
@@ -198,6 +206,83 @@ export function useViewerStage(
   }
 
   /**
+   * 针对 LAMMPS dump：自动补齐 typeId→element，并按需要打开/聚焦设置面板。
+   *
+   * For LAMMPS dump: auto-merge typeId→element mapping and focus Settings panels as needed.
+   */
+  function handleLammpsTypeMapAndSettings(model: StructureModel): void {
+    // 加载前的映射快照（用于判断是否新增/是否存在占位符 E）
+    // Snapshot before patching (for change detection)
+    const beforeRows = (
+      (getSettings().lammpsTypeMap ?? []) as LammpsTypeMapItem[]
+    ).map((r) => ({
+      typeId: r.typeId,
+      element: r.element,
+    }));
+
+    // 本次 dump 第一帧出现的 typeId
+    // TypeIds detected from the first frame of this dump
+    const atoms0 =
+      model.frames && model.frames[0] ? model.frames[0] : model.atoms;
+    const detectedTypeIds = collectTypeIdsFromAtoms(atoms0);
+
+    // 合并：只补缺（缺失的 typeId 默认 element="E"）
+    // Merge: append missing typeIds (placeholder element is "E")
+    const mergedRows = mergeTypeMap(
+      beforeRows,
+      detectedTypeIds
+    ) as LammpsTypeMapItem[];
+
+    // 是否发生变化（新增了 typeId）
+    // Whether we added missing typeIds
+    const typeMapAdded = !typeMapEquals(
+      normalizeTypeMapRows(beforeRows),
+      normalizeTypeMapRows(mergedRows)
+    );
+
+    // 是否仍存在未完成映射（对本次 dump 相关 typeId 判断）
+    // Whether unresolved mapping ("E") still exists for this dump
+    const hasUnknownForThisDump = hasUnknownElementMappingForTypeIds(
+      mergedRows,
+      detectedTypeIds
+    );
+
+    // 写回 settings（仅在确实发生变化时）
+    // Patch settings only when changed
+    if (patchSettings && typeMapAdded) {
+      patchSettings({ lammpsTypeMap: mergedRows });
+    }
+
+    // 自动打开/聚焦策略：
+    // - 需要用户补映射：打开抽屉并聚焦 lammps
+    // - 否则：不强制打开，只把下次聚焦设置为 display
+    //
+    // Auto-open/focus strategy:
+    // - If user action required: open drawer and focus lammps panel
+    // - Otherwise: do not force open, but preset focus back to display
+    if (typeMapAdded || hasUnknownForThisDump) {
+      requestOpenSettings?.({ focusKey: "lammps", open: true });
+    } else {
+      requestOpenSettings?.({ focusKey: "display", open: false });
+    }
+
+    // 提示：存在未完成映射时给 warning（走 i18n）
+    // Warn user when unresolved mapping exists (use i18n)
+    if (hasUnknownForThisDump) {
+      message.warning(t("viewer.lammps.mappingMissing"));
+    }
+  }
+
+  /**
+   * 非 LAMMPS 文件：不强制打开设置，但把默认展开面板切回 display。
+   *
+   * Non-LAMMPS file: do not force opening Settings, but reset focus to display.
+   */
+  function focusSettingsToDisplaySilently(): void {
+    requestOpenSettings?.({ focusKey: "display", open: false });
+  }
+
+  /**
    * 加载文件并渲染模型。
    *
    * Load a file and render the model.
@@ -217,52 +302,25 @@ export function useViewerStage(
         // 注意：这里要传当前 settings 的 rows，否则映射为空
         // NOTE: pass current settings rows; otherwise mapping is empty
         lammpsTypeToElement: buildLammpsTypeToElementMap(
-          getSettings().lammpsTypeMap ?? []
+          (getSettings().lammpsTypeMap ?? []) as LammpsTypeMapItem[]
         ),
         lammpsSortById: true,
       });
 
       const info = runtime.renderModel(model);
 
-      // 同步动画状态 / sync animation state
-      frameIndex.value = 0;
-      frameCount.value = info.frameCount;
-      hasAnimation.value = info.hasAnimation;
+      // 同步动画状态 / Sync animation state
+      applyAnimationInfo(info, frameIndex, frameCount, hasAnimation);
 
-      // 自动把 dump 中出现的 typeId 写到 Settings（只补缺）
-      // Auto-fill detected LAMMPS typeIds into settings (append-only)
-      if (patchSettings) {
-        const atoms0 =
-          model.frames && model.frames[0] ? model.frames[0] : model.atoms;
-        const detected = collectTypeIdsFromAtoms(atoms0);
-
-        if (detected.length > 0) {
-          const current = getSettings().lammpsTypeMap ?? [];
-          const merged = mergeTypeMap(current, detected);
-
-          if (
-            !typeMapEquals(
-              normalizeTypeMapRows(current),
-              normalizeTypeMapRows(merged)
-            )
-          ) {
-            patchSettings({ lammpsTypeMap: merged });
-          }
-        }
+      // 针对不同格式执行设置面板策略 / Apply settings focus strategy by format
+      const fmt = model.source?.format ?? "";
+      if (isLammpsDumpFormat(fmt)) {
+        handleLammpsTypeMapAndSettings(model);
+      } else {
+        focusSettingsToDisplaySilently();
       }
 
-      if (
-        model.source?.format &&
-        ["dump", "lammpstrj", "traj", "lammpsdump"].includes(
-          model.source.format
-        ) &&
-        (getSettings().lammpsTypeMap?.length ?? 0) === 0
-      ) {
-        message.warning(
-          "当前未配置 LAMMPS type→元素映射，元素将使用占位 E（颜色/半径可能不准确）。"
-        );
-      }
-
+      // 成功提示 / Success toast
       message.success(
         t("viewer.load.success", {
           fileName: file.name,
@@ -360,9 +418,7 @@ export function useViewerStage(
     const model = parseStructure(xyzText, "sample.xyz");
     const info = runtime.renderModel(model);
 
-    frameIndex.value = 0;
-    frameCount.value = info.frameCount;
-    hasAnimation.value = info.hasAnimation;
+    applyAnimationInfo(info, frameIndex, frameCount, hasAnimation);
   }
 
   onMounted(() => {

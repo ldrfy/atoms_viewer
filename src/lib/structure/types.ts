@@ -3,6 +3,10 @@ export type Vec3 = [number, number, number];
 export interface Atom {
   element: string;
   position: Vec3;
+
+  // 仅 LAMMPS dump 等格式会有
+  typeId?: number; // LAMMPS 的 type
+  id?: number; // LAMMPS 的 id（用于排序、动画稳定）
 }
 
 export interface StructureModel {

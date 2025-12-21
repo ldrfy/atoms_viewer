@@ -1,4 +1,8 @@
 export type BackgroundMode = "dark" | "light";
+export type LammpsTypeMapItem = {
+  typeId: number;
+  element: string;
+};
 
 export type RotationDeg = {
   x: number;
@@ -16,6 +20,8 @@ export type ViewerSettings = {
 
   // 新增：触发“恢复视角”的序号（每次 +1）
   resetViewSeq: number;
+
+  lammpsTypeMap: LammpsTypeMapItem[];
 };
 
 export const DEFAULT_SETTINGS: ViewerSettings = {
@@ -25,4 +31,6 @@ export const DEFAULT_SETTINGS: ViewerSettings = {
   rotationDeg: { x: 0, y: 0, z: 0 },
   orthographic: false,
   resetViewSeq: 0,
+
+  lammpsTypeMap: [],
 };

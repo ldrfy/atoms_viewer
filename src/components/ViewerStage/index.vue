@@ -8,7 +8,6 @@
             <a-spin size="large" />
         </div>
 
-
         <div v-if="!hasModel && !isDragging && !isLoading" class="empty-overlay">
             <div class="empty-card">
                 <a-empty>
@@ -37,41 +36,60 @@
             </div>
         </div>
 
+        <!-- 这里建议把 LAMMPS dump 扩展名也加上 -->
+        <input ref="fileInputRef" class="file-input" type="file" accept=".xyz,.pdb,.dump,.lammpstrj,.traj"
+            @change="onFilePicked" />
 
-        <input ref="fileInputRef" class="file-input" type="file" accept=".xyz,.pdb" @change="onFilePicked" />
+        <!-- 动画控制条：放在 stage 内，absolute 才会相对 stage 定位 -->
+        <div v-if="hasAnimation" class="anim-bar">
+            <a-space align="center" :size="8">
+                <a-button size="small" @click="togglePlay">
+                    {{ isPlaying ? "Pause" : "Play" }}
+                </a-button>
 
-    </div>
+                <span>{{ frameIndex + 1 }} / {{ frameCount }}</span>
 
+                <a-slider style="width: 260px" :min="0" :max="frameCount - 1" v-model:value="frameIndexModel" />
 
-    <div v-if="hasAnimation" class="anim-bar">
-        <a-space align="center" :size="8">
-            <a-button size="small" @click="togglePlay">
-                {{ isPlaying ? "Pause" : "Play" }}
-            </a-button>
-
-            <span>{{ frameIndex + 1 }} / {{ frameCount }}</span>
-
-            <a-slider style="width: 260px" :min="0" :max="frameCount - 1" :value="frameIndex"
-                @change="(v: number) => setFrame(v)" />
-
-            <span>FPS</span>
-            <a-input-number size="small" :min="1" :max="120" :value="fps" @change="(v: number) => fps = v" />
-        </a-space>
+                <span>FPS</span>
+                <a-input-number size="small" :min="1" :max="120" v-model:value="fpsModel" />
+            </a-space>
+        </div>
     </div>
 </template>
 
 <script setup lang="ts">
-import { toRef, watch } from "vue";
+import { computed, toRef, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { useViewerStage } from "./useViewerStage";
 import type { ViewerSettings } from "../../lib/viewer/settings";
+
+const { t } = useI18n();
+
 const emit = defineEmits<{
     (e: "model-state", hasModel: boolean): void;
+    (e: "update:settings", v: ViewerSettings): void;
 }>();
 
 const props = defineProps<{ settings: ViewerSettings }>();
 const settingsRef = toRef(props, "settings");
-const { t } = useI18n();
+
+/**
+ * 统一的 settings patch：供 useViewerStage 在解析 LAMMPS 后自动补齐 typeId 映射使用
+ */
+function patchSettings(patch: Partial<ViewerSettings>): void {
+    emit("update:settings", {
+        ...props.settings,
+        ...patch,
+        rotationDeg: {
+            ...props.settings.rotationDeg,
+            ...(patch.rotationDeg ?? {}),
+        },
+    });
+}
+
+/** 只调用一次 useViewerStage（关键修复点） */
+const stage = useViewerStage(settingsRef, patchSettings);
 
 const {
     frameIndex,
@@ -81,6 +99,8 @@ const {
     fps,
     setFrame,
     togglePlay,
+    stopPlay,
+
     canvasHostRef,
     fileInputRef,
     isLoading,
@@ -94,7 +114,7 @@ const {
     onFilePicked,
     onExportPng,
     preloadDefault,
-} = useViewerStage(settingsRef);
+} = stage;
 
 /** hasModel 同步给 App，用于 TopHear 控制导出区显示 */
 watch(
@@ -103,13 +123,25 @@ watch(
     { immediate: true }
 );
 
+/** slider / input-number 的 v-model 适配（避免 template 里 ref 赋值问题） */
+const frameIndexModel = computed({
+    get: () => frameIndex.value,
+    set: (v: number) => setFrame(v),
+});
+
+const fpsModel = computed({
+    get: () => fps.value,
+    set: (v: number) => {
+        const nv = Number(v);
+        fps.value = Number.isFinite(nv) ? Math.min(Math.max(1, nv), 120) : 6;
+    },
+});
+
 /** 暴露给 App：App 通过 ref 调用导出 */
 defineExpose({
     exportPng: onExportPng,
+    stopPlay,
 });
-
-void canvasHostRef;
-void fileInputRef;
 </script>
 
 <style scoped>
@@ -125,13 +157,11 @@ void fileInputRef;
     width: 100%;
 }
 
-
 .empty-overlay {
     position: absolute;
     inset: 0;
     display: grid;
     place-items: center;
-    /* 空白穿透给画布 */
 }
 
 .loading-overlay {
@@ -139,8 +169,6 @@ void fileInputRef;
     inset: 0;
     display: grid;
     place-items: center;
-
-    /* 不挡 drop/画布事件（你若希望加载时禁止交互，可改成 auto） */
     pointer-events: none;
     z-index: 30;
 }

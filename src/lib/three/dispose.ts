@@ -13,3 +13,16 @@ export function disposeInstancedMesh(mesh: THREE.InstancedMesh): void {
   mesh.geometry.dispose();
   disposeMaterial(mesh.material);
 }
+
+/** 从 group 中移除并释放一组 InstancedMesh。 */
+export function removeAndDisposeInstancedMeshes(
+  group: THREE.Group | null,
+  meshes: THREE.InstancedMesh[]
+): void {
+  if (!group) return;
+
+  for (const m of meshes) {
+    group.remove(m);
+    disposeInstancedMesh(m);
+  }
+}

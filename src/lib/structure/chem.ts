@@ -1,4 +1,4 @@
-const ATOMIC_SYMBOLS = [
+export const ATOMIC_SYMBOLS = [
   "E",
   "H",
   "He",

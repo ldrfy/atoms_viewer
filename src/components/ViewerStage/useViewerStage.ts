@@ -5,10 +5,7 @@ import type { ViewerSettings } from "../../lib/viewer/settings";
 import { message } from "ant-design-vue";
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
-import {
-  CSS2DRenderer,
-  CSS2DObject,
-} from "three/addons/renderers/CSS2DRenderer.js";
+import type { CSS2DRenderer } from "three/addons/renderers/CSS2DRenderer.js";
 
 import type { Atom, StructureModel } from "../../lib/structure/types";
 import {
@@ -20,16 +17,34 @@ import {
   getElementColorHex,
   normalizeElementSymbol,
 } from "../../lib/structure/chem";
-import { computeBonds } from "../../lib/structure/bonds";
-import { cropCanvasToPngBlob, downloadBlob } from "../../lib/image/cropPng";
 import { useI18n } from "vue-i18n";
 import xyzText from "../../assets/samples/mos2_cnt.xyz?raw";
+
+// 你已有 bondSegments.ts：这里假定导出 buildBicolorBondGroups
+import { buildBicolorBondGroups } from "../../lib/structure/bondSegments";
+
+import { createRafLoop, type RafLoop } from "../../lib/three/loop";
+import {
+  observeElementResize,
+  syncRenderersToHost,
+} from "../../lib/three/resize";
+import { attachCss2dRenderer, makeTextLabel } from "../../lib/three/labels2d";
+import {
+  fitCameraToAtoms,
+  switchProjectionMode,
+  updateCameraForSize,
+  isPerspective,
+  type AnyCamera,
+} from "../../lib/three/camera";
+import { exportTransparentCroppedPng } from "../../lib/three/exportPng";
 
 type ViewerStageBindings = {
   canvasHostRef: ReturnType<typeof ref<HTMLDivElement | null>>;
   fileInputRef: ReturnType<typeof ref<HTMLInputElement | null>>;
   isDragging: ReturnType<typeof ref<boolean>>;
   hasModel: ReturnType<typeof ref<boolean>>;
+  isLoading: ReturnType<typeof ref<boolean>>;
+
   openFilePicker: () => void;
   onDragEnter: () => void;
   onDragOver: (e: DragEvent) => void;
@@ -40,6 +55,8 @@ type ViewerStageBindings = {
   preloadDefault: () => void;
 };
 
+type BondBuildResult = { meshes: THREE.InstancedMesh[]; segCount: number };
+
 export function useViewerStage(
   settingsRef: Readonly<Ref<ViewerSettings>>
 ): ViewerStageBindings {
@@ -49,23 +66,26 @@ export function useViewerStage(
   const isDragging = ref(false);
   const dragDepth = ref(0);
   const hasModel = ref(false);
+  const isLoading = ref(false);
 
   // ------- 与压缩包(OpenMX Viewer.html)一致的默认系数 -------
   const ATOM_SIZE_FACTOR = 0.5;
   const BOND_FACTOR = 1.05;
   const BOND_THICKNESS_FACTOR = 1.0;
   const BOND_RADIUS = 0.09 * BOND_THICKNESS_FACTOR;
+
   const { t } = useI18n();
 
   // three core
   let renderer: THREE.WebGLRenderer | null = null;
   let scene: THREE.Scene | null = null;
-  let camera: THREE.PerspectiveCamera | THREE.OrthographicCamera | null = null;
+  let camera: AnyCamera | null = null;
   let controls: OrbitControls | null = null;
-  let resizeObserver: ResizeObserver | null = null;
-  let rafId = 0;
+
+  let disposeResize: (() => void) | null = null;
+  let rafLoop: RafLoop | null = null;
+
   let orthoHalfHeight = 5; // 正交相机 frustum 的半高，会随 fit/resize 更新
-  let lastAtoms: Atom[] = []; // 用于 resetView 重新 fit
 
   let pivotGroup: THREE.Group | null = null;
   let modelGroup: THREE.Group | null = null;
@@ -76,6 +96,8 @@ export function useViewerStage(
   // model meshes
   let atomMeshes: THREE.InstancedMesh[] = [];
   let bondMeshes: THREE.InstancedMesh[] = [];
+  let lastBondSegCount = 0;
+
   function getSettings(): ViewerSettings {
     return settingsRef.value;
   }
@@ -84,15 +106,17 @@ export function useViewerStage(
     fileInputRef.value?.click();
   }
 
+  function nextFrame(): Promise<void> {
+    return new Promise((resolve) => {
+      window.requestAnimationFrame(() => resolve());
+    });
+  }
+
   function disposeInstancedMesh(mesh: THREE.InstancedMesh): void {
     mesh.geometry.dispose();
-
     const { material } = mesh;
-    if (Array.isArray(material)) {
-      material.forEach((m: THREE.Material) => m.dispose());
-    } else {
-      material.dispose();
-    }
+    if (Array.isArray(material)) material.forEach((m) => m.dispose());
+    else material.dispose();
   }
 
   function clearModel(): void {
@@ -109,6 +133,7 @@ export function useViewerStage(
       disposeInstancedMesh(m);
     }
     bondMeshes = [];
+    lastBondSegCount = 0;
 
     hasModel.value = false;
   }
@@ -121,11 +146,10 @@ export function useViewerStage(
     const elementToIndices = new Map<string, number[]>();
     for (let i = 0; i < atoms.length; i += 1) {
       const a = atoms[i];
-      if (!a) throw new Error(`atoms[${i}] undefined`);
-      const el = a.element;
-      const arr = elementToIndices.get(el);
+      if (!a) continue;
+      const arr = elementToIndices.get(a.element);
       if (arr) arr.push(i);
-      else elementToIndices.set(el, [i]);
+      else elementToIndices.set(a.element, [i]);
     }
 
     const meshes: THREE.InstancedMesh[] = [];
@@ -136,7 +160,6 @@ export function useViewerStage(
       const rSphere = baseRadius * getSettings().atomScale;
 
       const geometry = new THREE.SphereGeometry(rSphere, 16, 16);
-
       const material = new THREE.MeshStandardMaterial({
         color: new THREE.Color(getElementColorHex(el)),
         metalness: 0.05,
@@ -146,6 +169,7 @@ export function useViewerStage(
       const mesh = new THREE.InstancedMesh(geometry, material, indices.length);
       mesh.userData.baseRadius = baseRadius;
       mesh.userData.element = el;
+
       for (let k = 0; k < indices.length; k += 1) {
         const a = atoms[indices[k]!]!;
         const [x, y, z] = a.position;
@@ -160,62 +184,17 @@ export function useViewerStage(
     return meshes;
   }
 
-  type BondSegment = { colorKey: string; p1: THREE.Vector3; p2: THREE.Vector3 };
+  function buildBondMeshesBicolor(atoms: Atom[]): BondBuildResult {
+    // 纯数据：由 lib/structure/bondSegments.ts 提供
+    const { groups, segCount } = buildBicolorBondGroups(atoms, {
+      bondFactor: BOND_FACTOR,
+      atomSizeFactor: ATOM_SIZE_FACTOR,
+    });
 
-  function buildBondMeshesBicolor(atoms: Atom[]): THREE.InstancedMesh[] {
-    const bonds = computeBonds(atoms, BOND_FACTOR);
-    if (bonds.length === 0) return [];
-
-    const segments: BondSegment[] = [];
-    segments.length = bonds.length * 2;
-
-    const pi = new THREE.Vector3();
-    const pj = new THREE.Vector3();
-    const mid = new THREE.Vector3();
-
-    for (let k = 0; k < bonds.length; k += 1) {
-      const b = bonds[k]!;
-      const abi = atoms[b.i]!;
-      const abj = atoms[b.j]!;
-
-      pi.set(abi.position[0], abi.position[1], abi.position[2]);
-      pj.set(abj.position[0], abj.position[1], abj.position[2]);
-
-      const d = b.length;
-      if (d < 1.0e-9) continue;
-
-      const riSphere = getSphereRadiusByElement(abi.element);
-      const rjSphere = getSphereRadiusByElement(abj.element);
-
-      const rat = (0.5 * (rjSphere - riSphere)) / d;
-      const alpha = 0.5 + rat;
-      const beta = 0.5 - rat;
-
-      mid.copy(pi).multiplyScalar(alpha).addScaledVector(pj, beta);
-
-      segments[k * 2] = {
-        colorKey: abi.element,
-        p1: pi.clone(),
-        p2: mid.clone(),
-      };
-      segments[k * 2 + 1] = {
-        colorKey: abj.element,
-        p1: mid.clone(),
-        p2: pj.clone(),
-      };
-    }
-
-    const groups = new Map<
-      string,
-      Array<{ p1: THREE.Vector3; p2: THREE.Vector3 }>
-    >();
-    for (const seg of segments) {
-      const arr = groups.get(seg.colorKey);
-      if (arr) arr.push({ p1: seg.p1, p2: seg.p2 });
-      else groups.set(seg.colorKey, [{ p1: seg.p1, p2: seg.p2 }]);
-    }
+    if (segCount === 0) return { meshes: [], segCount: 0 };
 
     const meshes: THREE.InstancedMesh[] = [];
+
     const geometry = new THREE.CylinderGeometry(
       BOND_RADIUS,
       BOND_RADIUS,
@@ -224,13 +203,14 @@ export function useViewerStage(
       1,
       false
     );
-
     const up = new THREE.Vector3(0, 1, 0);
     const dir = new THREE.Vector3();
     const q = new THREE.Quaternion();
     const s = new THREE.Vector3();
     const m = new THREE.Matrix4();
     const center = new THREE.Vector3();
+    const p1 = new THREE.Vector3();
+    const p2 = new THREE.Vector3();
 
     for (const [el, segs] of groups.entries()) {
       const material = new THREE.MeshStandardMaterial({
@@ -242,12 +222,13 @@ export function useViewerStage(
       const mesh = new THREE.InstancedMesh(geometry, material, segs.length);
 
       for (let i = 0; i < segs.length; i += 1) {
-        const a = segs[i];
-        if (!a) throw new Error(`segs[${i}] undefined`);
+        const seg = segs[i]!;
+        p1.set(seg.p1[0], seg.p1[1], seg.p1[2]);
+        p2.set(seg.p2[0], seg.p2[1], seg.p2[2]);
 
-        center.addVectors(a.p1, a.p2).multiplyScalar(0.5);
+        center.addVectors(p1, p2).multiplyScalar(0.5);
 
-        dir.subVectors(a.p2, a.p1);
+        dir.subVectors(p2, p1);
         const len = dir.length();
         if (len < 1.0e-7) {
           m.identity();
@@ -267,134 +248,7 @@ export function useViewerStage(
       meshes.push(mesh);
     }
 
-    return meshes;
-  }
-
-  function fitCameraToAtoms(atoms: Atom[]): void {
-    if (!camera || !controls) return;
-
-    const box = new THREE.Box3();
-    let maxSphere = 0;
-
-    for (const a of atoms) {
-      box.expandByPoint(
-        new THREE.Vector3(a.position[0], a.position[1], a.position[2])
-      );
-      maxSphere = Math.max(maxSphere, getSphereRadiusByElement(a.element));
-    }
-
-    box.expandByScalar(Math.max(0.5, maxSphere * 2.0));
-
-    const size = box.getSize(new THREE.Vector3());
-    const center = box.getCenter(new THREE.Vector3());
-    const maxSize = Math.max(size.x, size.y, size.z);
-
-    // 目标点
-    controls.target.copy(center);
-
-    if (isPerspective(camera)) {
-      const fov = (camera.fov * Math.PI) / 180.0;
-      const dist = maxSize / 2 / Math.tan(fov / 2);
-
-      camera.position.set(center.x, center.y, center.z + dist * 1.8);
-      camera.near = Math.max(0.01, dist / 100);
-      camera.far = dist * 100;
-      camera.updateProjectionMatrix();
-
-      controls.update();
-      controls.saveState();
-      return;
-    }
-
-    // Orthographic：用 box 尺度决定 frustum
-    const host = canvasHostRef.value;
-    const aspect = host
-      ? host.getBoundingClientRect().width /
-        Math.max(1, host.getBoundingClientRect().height)
-      : 1;
-
-    const margin = 1.15;
-    const halfH = (maxSize / 2) * margin;
-    orthoHalfHeight = Math.max(halfH, 0.1);
-
-    camera.left = -orthoHalfHeight * aspect;
-    camera.right = orthoHalfHeight * aspect;
-    camera.top = orthoHalfHeight;
-    camera.bottom = -orthoHalfHeight;
-
-    const dist = maxSize * 2.2;
-    camera.position.set(center.x, center.y, center.z + dist);
-    camera.near = Math.max(0.01, dist / 50);
-    camera.far = dist * 50;
-    camera.updateProjectionMatrix();
-
-    controls.update();
-    controls.saveState();
-  }
-
-  function resetView(): void {
-    if (lastAtoms.length > 0) {
-      fitCameraToAtoms(lastAtoms);
-      return;
-    }
-
-    // 没有模型时给个默认
-    controls?.target.set(0, 0, 0);
-    camera?.position.set(0, 0, 10);
-    controls?.update();
-    controls?.saveState();
-  }
-
-  function setProjectionMode(orthographic: boolean): void {
-    if (!scene || !renderer) return;
-
-    // 保留当前视角信息
-    const target = controls?.target?.clone() ?? new THREE.Vector3();
-    const pos = camera?.position?.clone() ?? new THREE.Vector3(0, 0, 10);
-
-    // 使用当前画布尺寸
-    const host = canvasHostRef.value;
-    const rect = host?.getBoundingClientRect();
-    const w = Math.max(1, Math.floor(rect?.width ?? 1));
-    const h = Math.max(1, Math.floor(rect?.height ?? 1));
-    const aspect = w / Math.max(1, h);
-
-    if (!orthographic) {
-      // Perspective
-      const cam = new THREE.PerspectiveCamera(45, aspect, 0.01, 2000);
-      cam.position.copy(pos);
-      camera = cam;
-      rebuildControls();
-      controls!.target.copy(target);
-      controls!.update();
-      updateCameraForSize(w, h);
-    } else {
-      // Orthographic（先给一个 frustum，后面 fit 会更新）
-      const halfH = orthoHalfHeight || 5;
-      const cam = new THREE.OrthographicCamera(
-        -halfH * aspect,
-        halfH * aspect,
-        halfH,
-        -halfH,
-        0.01,
-        2000
-      );
-      cam.position.copy(pos);
-      camera = cam;
-      rebuildControls();
-      controls!.target.copy(target);
-      controls!.update();
-      updateCameraForSize(w, h);
-    }
-
-    // 切换后对当前模型重新 fit 一次，保证画面正常
-    if (lastAtoms.length > 0) {
-      fitCameraToAtoms(lastAtoms);
-    }
-  }
-
-  function degToRad(d: number): number {
-    return (d * Math.PI) / 180;
+    return { meshes, segCount };
   }
 
   function applyShowAxes(): void {
@@ -407,9 +261,6 @@ export function useViewerStage(
     for (const m of bondMeshes) m.visible = flag;
   }
 
-  /**
-   * 原子大小缩放
-   */
   function applyAtomScale(): void {
     const scale = getSettings().atomScale;
 
@@ -418,10 +269,13 @@ export function useViewerStage(
       if (!baseRadius || baseRadius <= 0) continue;
 
       const r = baseRadius * scale;
-
       m.geometry.dispose();
       m.geometry = new THREE.SphereGeometry(r, 16, 16);
     }
+  }
+
+  function degToRad(d: number): number {
+    return (d * Math.PI) / 180;
   }
 
   function applyModelRotation(): void {
@@ -433,6 +287,69 @@ export function useViewerStage(
       degToRad(s.rotationDeg.z)
     );
   }
+
+  function resetView(): void {
+    if (!camera || !controls) return;
+
+    // 目标点保持不变（即当前 orbit 的中心）
+    const target = controls.target.clone();
+
+    // 保持当前“距离”，避免透视相机缩放变化
+    const radius = Math.max(1e-6, camera.position.distanceTo(target));
+
+    // 只恢复方向：从 +Z 方向看向 target（你也可换成 +Y/+X）
+    camera.up.set(0, 1, 0);
+    camera.position.set(target.x, target.y, target.z + radius);
+
+    camera.lookAt(target);
+    controls.update();
+    controls.saveState();
+  }
+
+  function setProjectionMode(orthographic: boolean): void {
+    if (!renderer || !camera || !controls) return;
+
+    const host = canvasHostRef.value;
+    if (!host) return;
+
+    const prevCamera = camera; // 记录切换前相机
+    const prevPos = prevCamera.position.clone();
+    const prevTarget = controls.target.clone();
+
+    const res = switchProjectionMode({
+      orthographic,
+      camera: prevCamera,
+      controls,
+      domElement: renderer.domElement,
+      host,
+      orthoHalfHeight,
+      fovDeg: 45,
+      dampingFactor: 0.08,
+    });
+
+    camera = res.camera;
+    controls = res.controls;
+    orthoHalfHeight = res.orthoHalfHeight;
+
+    // 不再 fit！
+
+    // 可选：透视 -> 正交时，保持“视觉缩放”接近一致
+    if (!isPerspective(camera) && isPerspective(prevCamera)) {
+      const dist = prevPos.distanceTo(prevTarget);
+      const fovRad = (prevCamera.fov * Math.PI) / 180;
+      orthoHalfHeight = dist * Math.tan(fovRad / 2);
+
+      // 更新一次投影矩阵
+      const rect = host.getBoundingClientRect();
+      updateCameraForSize(
+        camera,
+        Math.floor(rect.width),
+        Math.floor(rect.height),
+        orthoHalfHeight
+      );
+    }
+  }
+
   watch(
     () => getSettings().orthographic,
     (v) => setProjectionMode(v),
@@ -476,7 +393,7 @@ export function useViewerStage(
       position: a.position,
     }));
 
-    if (!scene || !pivotGroup || !modelGroup) return;
+    if (!scene || !pivotGroup || !modelGroup || !camera || !controls) return;
 
     clearModel();
 
@@ -496,33 +413,44 @@ export function useViewerStage(
     atomMeshes = buildAtomMeshesByElement(atoms);
     atomMeshes.forEach((m) => modelGroup!.add(m));
 
-    bondMeshes = buildBondMeshesBicolor(atoms);
+    const bondRes = buildBondMeshesBicolor(atoms);
+    bondMeshes = bondRes.meshes;
+    lastBondSegCount = bondRes.segCount;
     bondMeshes.forEach((m) => modelGroup!.add(m));
 
     hasModel.value = true;
 
-    // 相机仍按原 atoms fit（因为世界坐标最终仍等于原坐标）
-    fitCameraToAtoms(atoms);
+    // fit 相机
+    const host = canvasHostRef.value;
+    const newHalf = fitCameraToAtoms({
+      atoms,
+      camera,
+      controls,
+      host,
+      getSphereRadiusByElement,
+      orthoHalfHeight,
+    });
+    if (!isPerspective(camera)) orthoHalfHeight = newHalf;
 
     applyAtomScale();
     applyShowBonds();
     applyShowAxes();
     applyModelRotation();
 
+    // 轴标签 & axes helper
     const size = box.getSize(new THREE.Vector3());
-
-    const axisLen = Math.max(size.x, size.y, size.z) * 0.6; // 可调
+    const axisLen = Math.max(size.x, size.y, size.z) * 0.6;
 
     if (axesGroup) {
       if (axesHelper) axesGroup.remove(axesHelper);
 
-      const lx = makeAxisLabel("X");
+      const lx = makeTextLabel("X");
       lx.position.set(axisLen, 0, 0);
 
-      const ly = makeAxisLabel("Y");
+      const ly = makeTextLabel("Y");
       ly.position.set(0, axisLen, 0);
 
-      const lz = makeAxisLabel("Z");
+      const lz = makeTextLabel("Z");
       lz.position.set(0, 0, axisLen);
 
       axesGroup.add(lx, ly, lz);
@@ -532,37 +460,29 @@ export function useViewerStage(
       axesHelper.renderOrder = 999;
       axesGroup.add(axesHelper);
     }
-    lastAtoms = atoms;
-  }
-  function isPerspective(cam: THREE.Camera): cam is THREE.PerspectiveCamera {
-    return (cam as THREE.PerspectiveCamera).isPerspectiveCamera === true;
-  }
-
-  function rebuildControls(): void {
-    if (!camera || !renderer) return;
-
-    const oldTarget = controls?.target?.clone() ?? new THREE.Vector3();
-
-    controls?.dispose();
-    controls = new OrbitControls(camera, renderer.domElement);
-    controls.enableDamping = true;
-    controls.dampingFactor = 0.08;
-    controls.target.copy(oldTarget);
-    controls.update();
   }
 
   async function loadFile(file: File): Promise<void> {
-    const model = await loadStructureFromFile(file);
-    renderModel(model);
+    if (isLoading.value) return;
 
-    const bondSegCount = bondMeshes.reduce((acc, m) => acc + m.count, 0);
-    message.success(
-      t("viewer.load.success", {
-        fileName: file.name,
-        atomCount: model.atoms.length,
-        bondSegCount,
-      })
-    );
+    isLoading.value = true;
+    await nextFrame();
+
+    const t0 = performance.now();
+    try {
+      const model = await loadStructureFromFile(file);
+      renderModel(model);
+
+      message.success(
+        t("viewer.load.success", {
+          fileName: file.name,
+          atomCount: model.atoms.length,
+          bondSegCount: lastBondSegCount,
+        }) + `（${((performance.now() - t0) / 1000).toFixed(2)} s）`
+      );
+    } finally {
+      isLoading.value = false;
+    }
   }
 
   function onDragEnter(): void {
@@ -609,194 +529,27 @@ export function useViewerStage(
     }
   }
 
-  function startRenderLoop(): void {
-    if (!renderer || !scene || !camera || !controls) return;
-
-    const tick = () => {
-      controls!.update();
-      renderer!.render(scene!, camera!);
-      labelRenderer?.render(scene!, camera!);
-      rafId = window.requestAnimationFrame(tick);
-    };
-    tick();
-  }
-
-  function stopRenderLoop(): void {
-    if (rafId) window.cancelAnimationFrame(rafId);
-    rafId = 0;
-  }
-
-  function getHostSize(host: HTMLElement): { w: number; h: number } {
-    const rect = host.getBoundingClientRect();
-    return {
-      w: Math.max(1, Math.floor(rect.width)),
-      h: Math.max(1, Math.floor(rect.height)),
-    };
-  }
-
-  function updateCameraForSize(w: number, h: number): void {
-    if (!camera) return;
-
-    const aspect = w / Math.max(1, h);
-
-    if (isPerspective(camera)) {
-      camera.aspect = aspect;
-      camera.updateProjectionMatrix();
-      return;
-    }
-
-    // Orthographic
-    camera.left = -orthoHalfHeight * aspect;
-    camera.right = orthoHalfHeight * aspect;
-    camera.top = orthoHalfHeight;
-    camera.bottom = -orthoHalfHeight;
-    camera.updateProjectionMatrix();
-  }
-
-  function resizeToHost(): void {
-    const host = canvasHostRef.value;
-    if (!host || !renderer) return;
-
-    const { w, h } = getHostSize(host);
-    renderer.setSize(w, h);
-
-    // 关键：CSS2DRenderer 必须同步尺寸，否则标签层看不到
-    labelRenderer?.setSize(w, h);
-
-    updateCameraForSize(w, h);
-  }
-
-  function makeAxisLabel(text: string): CSS2DObject {
-    const div = document.createElement("div");
-    div.textContent = text;
-    return new CSS2DObject(div);
-  }
-
-  function initThree(): void {
-    const host = canvasHostRef.value;
-    if (!host) return;
-
-    scene = new THREE.Scene();
-    scene.background = null;
-
-    pivotGroup = new THREE.Group();
-
-    modelGroup = new THREE.Group();
-    pivotGroup.add(modelGroup);
-
-    axesGroup = new THREE.Group();
-
-    pivotGroup.add(axesGroup); // 关键：挂到 pivotGroup（模型中心）
-
-    scene.add(pivotGroup);
-
-    applyModelRotation();
-
-    camera = new THREE.PerspectiveCamera(45, 1, 0.01, 2000);
-    camera.position.set(0, 0, 10);
-
-    renderer = new THREE.WebGLRenderer({
-      antialias: true,
-      alpha: true, // 关键：允许透明背景导出
-      // preserveDrawingBuffer: true, // 如果导出偶尔空白/黑图，再打开
-    });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.setClearColor(0x000000, 0);
-
-    THREE.ColorManagement.enabled = true;
-    renderer.outputColorSpace = THREE.SRGBColorSpace;
-
-    host.appendChild(renderer.domElement);
-
-    labelRenderer = new CSS2DRenderer();
-    labelRenderer.domElement.style.position = "absolute";
-    labelRenderer.domElement.style.top = "0";
-    labelRenderer.domElement.style.left = "0";
-    labelRenderer.domElement.style.pointerEvents = "none";
-    labelRenderer.domElement.style.zIndex = "2"; // 确保压在 canvas 上面
-
-    host.style.position = "relative"; // 关键：让 absolute 叠加层对齐 host
-    host.appendChild(labelRenderer.domElement);
-
-    scene.add(new THREE.AmbientLight(0xffffff, 0.7));
-    const dir = new THREE.DirectionalLight(0xffffff, 0.85);
-    dir.position.set(5, 8, 10);
-    scene.add(dir);
-
-    controls = new OrbitControls(camera, renderer.domElement);
-    controls.enableDamping = true;
-    controls.dampingFactor = 0.08;
-
-    resizeObserver = new ResizeObserver(() => {
-      resizeToHost();
-    });
-    resizeObserver.observe(host);
-
-    resizeToHost();
-    startRenderLoop();
-
-    applyShowAxes();
-    setProjectionMode(getSettings().orthographic);
-  }
-
-  function disposeThree(): void {
-    stopRenderLoop();
-
-    resizeObserver?.disconnect();
-    resizeObserver = null;
-
-    clearModel();
-
-    controls?.dispose();
-    controls = null;
-
-    if (renderer) {
-      renderer.dispose();
-      const canvas = renderer.domElement;
-      canvas.parentElement?.removeChild(canvas);
-    }
-
-    renderer = null;
-    scene = null;
-    camera = null;
-  }
-
   async function exportPngTransparentCropped(
     filename = "snapshot.png",
     scale = 2
   ): Promise<void> {
     if (!renderer || !scene || !camera) throw new Error("渲染器未初始化");
+    const host = canvasHostRef.value;
+    if (!host) throw new Error("画布容器未初始化");
 
-    const prevSize = new THREE.Vector2();
-    renderer.getSize(prevSize);
-    const prevPixelRatio = renderer.getPixelRatio();
-
-    const host = canvasHostRef.value!;
-    const rect = host.getBoundingClientRect();
-    const w = Math.max(1, Math.floor(rect.width));
-    const h = Math.max(1, Math.floor(rect.height));
-
-    renderer.setPixelRatio(1);
-    renderer.setSize(w * scale, h * scale, false);
-    updateCameraForSize(w, h);
-
-    renderer.render(scene, camera);
-
-    // 3) 裁剪 + 导出（核心：交给 lib）
-    const { blob } = await cropCanvasToPngBlob(renderer.domElement, {
+    // 如果你不想引入 lib/three/exportPng.ts，也可继续用你原来的实现；
+    // 这里使用已抽离的封装（更短）
+    await exportTransparentCroppedPng({
+      renderer,
+      scene,
+      camera,
+      host,
+      filename,
+      scale,
+      orthoHalfHeight,
       alphaThreshold: 8,
       padding: 3,
     });
-    downloadBlob(blob, filename);
-
-    renderer.setPixelRatio(prevPixelRatio);
-    renderer.setSize(prevSize.x, prevSize.y, false);
-
-    if (isPerspective(camera)) {
-      camera.aspect = prevSize.x / Math.max(1, prevSize.y);
-    }
-    camera.updateProjectionMatrix();
-    renderer.render(scene, camera);
   }
 
   async function onExportPng(exportScale: number): Promise<void> {
@@ -812,6 +565,101 @@ export function useViewerStage(
 
   function preventWindowDropDefault(e: DragEvent): void {
     e.preventDefault();
+  }
+
+  function initThree(): void {
+    const host = canvasHostRef.value;
+    if (!host) return;
+
+    scene = new THREE.Scene();
+    scene.background = null;
+
+    pivotGroup = new THREE.Group();
+    modelGroup = new THREE.Group();
+    pivotGroup.add(modelGroup);
+
+    axesGroup = new THREE.Group();
+    pivotGroup.add(axesGroup);
+    scene.add(pivotGroup);
+
+    camera = new THREE.PerspectiveCamera(45, 1, 0.01, 2000);
+    camera.position.set(0, 0, 10);
+
+    renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      alpha: true,
+    });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setClearColor(0x000000, 0);
+
+    THREE.ColorManagement.enabled = true;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+    host.appendChild(renderer.domElement);
+
+    labelRenderer = attachCss2dRenderer(host, "2");
+
+    scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+    const dir = new THREE.DirectionalLight(0xffffff, 0.85);
+    dir.position.set(5, 8, 10);
+    scene.add(dir);
+
+    controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.08;
+
+    // resize
+    disposeResize = observeElementResize(host, () => {
+      if (!renderer || !camera) return;
+      const size = syncRenderersToHost(host, renderer, labelRenderer);
+      updateCameraForSize(camera, size.w, size.h, orthoHalfHeight);
+    });
+
+    // render loop
+    rafLoop = createRafLoop(() => {
+      if (!renderer || !scene || !camera || !controls) return;
+      controls.update();
+      renderer.render(scene, camera);
+      labelRenderer?.render(scene, camera);
+    });
+    rafLoop.start();
+
+    applyShowAxes();
+    setProjectionMode(getSettings().orthographic);
+  }
+
+  function disposeThree(): void {
+    rafLoop?.stop();
+    rafLoop = null;
+
+    disposeResize?.();
+    disposeResize = null;
+
+    clearModel();
+
+    controls?.dispose();
+    controls = null;
+
+    if (labelRenderer) {
+      labelRenderer.domElement.parentElement?.removeChild(
+        labelRenderer.domElement
+      );
+      labelRenderer = null;
+    }
+
+    if (renderer) {
+      renderer.dispose();
+      const canvas = renderer.domElement;
+      canvas.parentElement?.removeChild(canvas);
+      renderer = null;
+    }
+
+    scene = null;
+    camera = null;
+    pivotGroup = null;
+    modelGroup = null;
+    axesGroup = null;
+    axesHelper = null;
   }
 
   onMounted(() => {
@@ -836,6 +684,7 @@ export function useViewerStage(
     fileInputRef,
     isDragging,
     hasModel,
+    isLoading,
     openFilePicker,
     onDragEnter,
     onDragOver,

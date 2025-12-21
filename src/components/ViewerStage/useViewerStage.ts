@@ -237,63 +237,68 @@ export function useViewerStage(
    * For LAMMPS dump: auto-merge typeId→element mapping and focus Settings panels as needed.
    */
   function handleLammpsTypeMapAndSettings(model: StructureModel): void {
-    // 加载前的映射快照（用于判断是否新增/是否存在占位符 E）
-    // Snapshot before patching (for change detection)
     const beforeRows = (
       (getSettings().lammpsTypeMap ?? []) as LammpsTypeMapItem[]
-    ).map((r) => ({
-      typeId: r.typeId,
-      element: r.element,
-    }));
+    ).map((r) => ({ typeId: r.typeId, element: r.element }));
 
-    // 本次 dump 第一帧出现的 typeId
-    // TypeIds detected from the first frame of this dump
     const atoms0 =
       model.frames && model.frames[0] ? model.frames[0] : model.atoms;
     const detectedTypeIds = collectTypeIdsFromAtoms(atoms0);
 
-    // 合并：只补缺（缺失的 typeId 默认 element="E"）
-    // Merge: append missing typeIds (placeholder element is "E")
-    const mergedRows = mergeTypeMap(
-      beforeRows,
-      detectedTypeIds
-    ) as LammpsTypeMapItem[];
+    // NEW: extract default labels from parsed model (prefer non-"E")
+    const defaultsFromModel: Record<number, string> = {};
+    for (const a of atoms0) {
+      const tid = a.typeId;
+      const el = (a.element ?? "").toString().trim();
+      if (!tid || !Number.isFinite(tid)) continue;
+      if (!el || el === "E") continue;
+      if (!defaultsFromModel[tid]) defaultsFromModel[tid] = el;
+    }
 
-    // 是否发生变化（新增了 typeId）
-    // Whether we added missing typeIds
+    // NEW: merge rows with preference order:
+    // existing non-E > model default non-E > "E"
+    const rowById = new Map<number, { typeId: number; element: string }>();
+    for (const r of beforeRows) rowById.set(r.typeId, { ...r });
+
+    for (const tid of detectedTypeIds) {
+      const existing = rowById.get(tid);
+      if (!existing) {
+        rowById.set(tid, {
+          typeId: tid,
+          element: defaultsFromModel[tid] ?? "E",
+        });
+      } else {
+        const cur = (existing.element ?? "").toString().trim();
+        if (!cur || cur === "E") {
+          // only upgrade placeholders
+          const d = defaultsFromModel[tid];
+          if (d) existing.element = d;
+        }
+      }
+    }
+
+    const mergedRows = Array.from(rowById.values()) as LammpsTypeMapItem[];
+
     const typeMapAdded = !typeMapEquals(
       normalizeTypeMapRows(beforeRows),
       normalizeTypeMapRows(mergedRows)
     );
 
-    // 是否仍存在未完成映射（对本次 dump 相关 typeId 判断）
-    // Whether unresolved mapping ("E") still exists for this dump
     const hasUnknownForThisDump = hasUnknownElementMappingForTypeIds(
       mergedRows,
       detectedTypeIds
     );
 
-    // 写回 settings（仅在确实发生变化时）
-    // Patch settings only when changed
     if (patchSettings && typeMapAdded) {
       patchSettings({ lammpsTypeMap: mergedRows });
     }
 
-    // 自动打开/聚焦策略：
-    // - 需要用户补映射：打开抽屉并聚焦 lammps
-    // - 否则：不强制打开，只把下次聚焦设置为 display
-    //
-    // Auto-open/focus strategy:
-    // - If user action required: open drawer and focus lammps panel
-    // - Otherwise: do not force open, but preset focus back to display
     if (typeMapAdded || hasUnknownForThisDump) {
       requestOpenSettings?.({ focusKey: "lammps", open: true });
     } else {
       requestOpenSettings?.({ focusKey: "display", open: false });
     }
 
-    // 提示：存在未完成映射时给 warning（走 i18n）
-    // Warn user when unresolved mapping exists (use i18n)
     if (hasUnknownForThisDump) {
       message.warning(t("viewer.lammps.mappingMissing"));
     }

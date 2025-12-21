@@ -32,6 +32,9 @@
             "scalePlaceholder": "Higher = clearer",
             "pngSuccess": "Exported PNG (transparent background)",
             "fail": "Export failed: {reason}"
+        },
+        "lammps": {
+            "mappingMissing": "Unresolved LAMMPS type→element mappings found (placeholder 'E'). Please complete them in Settings for correct colors/radii/bond inference."
         }
     },
     "settings": {

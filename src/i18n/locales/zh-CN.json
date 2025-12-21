@@ -32,6 +32,9 @@
             "scalePlaceholder": "越大越清晰",
             "pngSuccess": "已导出 PNG（透明背景）",
             "fail": "导出失败：{reason}"
+        },
+        "lammps": {
+            "mappingMissing": "存在未配置的 LAMMPS type→元素映射（E 占位），请在设置中补全以获得正确颜色/半径/键推断。"
         }
     },
     "settings": {

@@ -41,6 +41,23 @@
         <input ref="fileInputRef" class="file-input" type="file" accept=".xyz,.pdb" @change="onFilePicked" />
 
     </div>
+
+
+    <div v-if="hasAnimation" class="anim-bar">
+        <a-space align="center" :size="8">
+            <a-button size="small" @click="togglePlay">
+                {{ isPlaying ? "Pause" : "Play" }}
+            </a-button>
+
+            <span>{{ frameIndex + 1 }} / {{ frameCount }}</span>
+
+            <a-slider style="width: 260px" :min="0" :max="frameCount - 1" :value="frameIndex"
+                @change="(v: number) => setFrame(v)" />
+
+            <span>FPS</span>
+            <a-input-number size="small" :min="1" :max="120" :value="fps" @change="(v: number) => fps = v" />
+        </a-space>
+    </div>
 </template>
 
 <script setup lang="ts">
@@ -57,6 +74,13 @@ const settingsRef = toRef(props, "settings");
 const { t } = useI18n();
 
 const {
+    frameIndex,
+    frameCount,
+    hasAnimation,
+    isPlaying,
+    fps,
+    setFrame,
+    togglePlay,
     canvasHostRef,
     fileInputRef,
     isLoading,
@@ -119,5 +143,13 @@ void fileInputRef;
     /* 不挡 drop/画布事件（你若希望加载时禁止交互，可改成 auto） */
     pointer-events: none;
     z-index: 30;
+}
+
+.anim-bar {
+    position: absolute;
+    left: 12px;
+    bottom: 12px;
+    z-index: 20;
+    pointer-events: auto;
 }
 </style>

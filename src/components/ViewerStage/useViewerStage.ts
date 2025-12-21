@@ -1,13 +1,30 @@
 import { watch, onBeforeUnmount, onMounted, ref } from "vue";
 import type { Ref } from "vue";
 import type { ViewerSettings } from "../../lib/viewer/settings";
+import { applyFrameAtomsToMeshes, computeMeanCenterInto } from "./animation";
 
 import { message } from "ant-design-vue";
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import type { CSS2DRenderer } from "three/addons/renderers/CSS2DRenderer.js";
-
+import { removeAndDisposeInstancedMeshes } from "../../lib/three/dispose";
 import type { Atom, StructureModel } from "../../lib/structure/types";
+import {
+  buildLammpsTypeToElementMap,
+  collectTypeIdsFromAtoms,
+  mergeTypeMap,
+  normalizeTypeMapRows,
+  remapElementByTypeId,
+  typeMapEquals,
+  type LammpsTypeMapRow,
+} from "./typeMap";
+
+import {
+  buildAtomMeshesByElement,
+  applyAtomScaleToMeshes,
+  getSphereBaseRadiusByElement,
+} from "../../lib/three/instancedAtoms";
+
 import {
   parseStructure,
   loadStructureFromFile,
@@ -68,7 +85,8 @@ type ViewerStageBindings = {
 type BondBuildResult = { meshes: THREE.InstancedMesh[]; segCount: number };
 
 export function useViewerStage(
-  settingsRef: Readonly<Ref<ViewerSettings>>
+  settingsRef: Readonly<Ref<ViewerSettings>>,
+  patchSettings?: (patch: Partial<ViewerSettings>) => void
 ): ViewerStageBindings {
   const canvasHostRef = ref<HTMLDivElement | null>(null);
   const fileInputRef = ref<HTMLInputElement | null>(null);
@@ -83,6 +101,7 @@ export function useViewerStage(
   const BOND_FACTOR = 1.05;
   const BOND_THICKNESS_FACTOR = 1.0;
   const BOND_RADIUS = 0.09 * BOND_THICKNESS_FACTOR;
+  const _mat = new THREE.Matrix4();
 
   const { t } = useI18n();
 
@@ -117,6 +136,7 @@ export function useViewerStage(
 
   let animFrames: Atom[][] = [];
   let baseCenter = new THREE.Vector3(); // 第一帧中心，用于“锁定模型不漂移”
+  const _centerTmp = new THREE.Vector3();
   let animLastMs = 0;
   let animAccMs = 0;
 
@@ -145,16 +165,10 @@ export function useViewerStage(
     stopPlay();
     if (!scene) return;
 
-    for (const m of atomMeshes) {
-      modelGroup?.remove(m);
-      disposeInstancedMesh(m);
-    }
+    removeAndDisposeInstancedMeshes(modelGroup, atomMeshes);
     atomMeshes = [];
 
-    for (const m of bondMeshes) {
-      modelGroup?.remove(m);
-      disposeInstancedMesh(m);
-    }
+    removeAndDisposeInstancedMeshes(modelGroup, bondMeshes);
     bondMeshes = [];
     lastBondSegCount = 0;
 
@@ -162,52 +176,7 @@ export function useViewerStage(
   }
 
   function getSphereRadiusByElement(el: string): number {
-    return ATOM_SIZE_FACTOR * getCovalentRadiusAng(el);
-  }
-
-  function buildAtomMeshesByElement(atoms: Atom[]): THREE.InstancedMesh[] {
-    const elementToIndices = new Map<string, number[]>();
-    for (let i = 0; i < atoms.length; i += 1) {
-      const a = atoms[i];
-      if (!a) continue;
-      const arr = elementToIndices.get(a.element);
-      if (arr) arr.push(i);
-      else elementToIndices.set(a.element, [i]);
-    }
-
-    const meshes: THREE.InstancedMesh[] = [];
-    const mat = new THREE.Matrix4();
-
-    for (const [el, indices] of elementToIndices.entries()) {
-      const baseRadius = getSphereRadiusByElement(el); // 不含 atomScale
-      const rSphere = baseRadius * getSettings().atomScale;
-
-      const geometry = new THREE.SphereGeometry(rSphere, 16, 16);
-      const material = new THREE.MeshStandardMaterial({
-        color: new THREE.Color(getElementColorHex(el)),
-        metalness: 0.05,
-        roughness: 0.9,
-      });
-
-      const mesh = new THREE.InstancedMesh(geometry, material, indices.length);
-      mesh.userData.baseRadius = baseRadius;
-      mesh.userData.element = el;
-
-      // 关键：保存 instanceIndex -> atomIndex 的映射
-      mesh.userData.atomIndices = indices;
-
-      for (let k = 0; k < indices.length; k += 1) {
-        const a = atoms[indices[k]!]!;
-        const [x, y, z] = a.position;
-        mat.makeTranslation(x, y, z);
-        mesh.setMatrixAt(k, mat);
-      }
-
-      mesh.instanceMatrix.needsUpdate = true;
-      meshes.push(mesh);
-    }
-
-    return meshes;
+    return getSphereBaseRadiusByElement(el, ATOM_SIZE_FACTOR);
   }
 
   function buildBondMeshesBicolor(atoms: Atom[]): BondBuildResult {
@@ -288,16 +257,7 @@ export function useViewerStage(
   }
 
   function applyAtomScale(): void {
-    const scale = getSettings().atomScale;
-
-    for (const m of atomMeshes) {
-      const baseRadius = m.userData.baseRadius as number | undefined;
-      if (!baseRadius || baseRadius <= 0) continue;
-
-      const r = baseRadius * scale;
-      m.geometry.dispose();
-      m.geometry = new THREE.SphereGeometry(r, 16, 16);
-    }
+    applyAtomScaleToMeshes(atomMeshes, getSettings().atomScale);
   }
 
   function degToRad(d: number): number {
@@ -412,18 +372,52 @@ export function useViewerStage(
     () => applyModelRotation(),
     { immediate: true }
   );
+  watch(
+    () => getSettings().lammpsTypeMap,
+    () => {
+      if (!hasModel.value) return;
+
+      // 只对含 typeId 的数据有意义；XYZ/PDB 不受影响
+      const hasAnyType = animFrames.some((fr) => fr.some((a) => a.typeId));
+      if (!hasAnyType) return;
+
+      // 重新映射 element
+      animFrames = remapElementByTypeId(
+        animFrames,
+        getSettings().lammpsTypeMap ?? []
+      );
+
+      // 重建当前帧 meshes（颜色/半径/bonds 立即更新）
+      const cur = animFrames[frameIndex.value] ?? animFrames[0];
+      if (!cur) return;
+
+      rebuildVisualsForFrame(cur);
+
+      // 重建完再应用一次当前帧位置（保持你“锁中心”逻辑一致）
+      applyFrameAtoms(cur);
+    },
+    { deep: true }
+  );
 
   function renderModel(model: StructureModel): void {
     // 取第一帧作为建模基准
     const frames =
       model.frames && model.frames.length > 0 ? model.frames : [model.atoms];
 
-    // 统一 normalize element（第一帧必须做；其余帧建议也做，避免元素大小写不一致）
-    animFrames = frames.map((fr) =>
+    // 注意：这里不要丢 typeId/id
+    const rawFrames: Atom[][] = frames.map((fr) =>
       fr.map((a) => ({
-        element: normalizeElementSymbol(a.element),
+        element: normalizeElementSymbol(a.element) || "E",
         position: a.position,
+        id: a.id,
+        typeId: a.typeId,
       }))
+    );
+
+    // animFrames 用 remap 后的结果（显示层）
+    animFrames = remapElementByTypeId(
+      rawFrames,
+      getSettings().lammpsTypeMap ?? []
     );
 
     // 基本校验：多帧必须原子数一致，否则无法用 instanceIndex 复用
@@ -454,14 +448,19 @@ export function useViewerStage(
         new THREE.Vector3(a.position[0], a.position[1], a.position[2])
       );
     }
-    const center = box.getCenter(new THREE.Vector3());
+    const center = computeMeanCenterInto(atoms, _centerTmp);
     baseCenter.copy(center);
 
-    // 让 pivot 位于模型中心，modelGroup 反向平移，使世界坐标不变
+    // pivot/modelGroup 也用同一个 center（推荐统一）
     pivotGroup.position.copy(center);
     modelGroup.position.set(-center.x, -center.y, -center.z);
 
-    atomMeshes = buildAtomMeshesByElement(atoms);
+    atomMeshes = buildAtomMeshesByElement({
+      atoms,
+      atomSizeFactor: ATOM_SIZE_FACTOR,
+      atomScale: getSettings().atomScale,
+    });
+
     atomMeshes.forEach((m) => modelGroup!.add(m));
 
     const bondRes = buildBondMeshesBicolor(atoms);
@@ -515,6 +514,41 @@ export function useViewerStage(
     }
   }
 
+  function rebuildVisualsForFrame(atoms: Atom[]): void {
+    if (!modelGroup) return;
+
+    // 清理旧 meshes
+    for (const m of atomMeshes) {
+      modelGroup.remove(m);
+      disposeInstancedMesh(m);
+    }
+    atomMeshes = [];
+
+    for (const m of bondMeshes) {
+      modelGroup.remove(m);
+      disposeInstancedMesh(m);
+    }
+    bondMeshes = [];
+    lastBondSegCount = 0;
+
+    // 重建（按 element 分组）
+    atomMeshes = atomMeshes = buildAtomMeshesByElement({
+      atoms,
+      atomSizeFactor: ATOM_SIZE_FACTOR,
+      atomScale: getSettings().atomScale,
+    });
+
+    atomMeshes.forEach((m) => modelGroup!.add(m));
+
+    const bondRes = buildBondMeshesBicolor(atoms);
+    bondMeshes = bondRes.meshes;
+    lastBondSegCount = bondRes.segCount;
+    bondMeshes.forEach((m) => modelGroup!.add(m));
+
+    applyAtomScale();
+    applyShowBonds();
+  }
+
   function setFrame(idx: number): void {
     if (!hasAnimation.value) return;
 
@@ -557,48 +591,14 @@ export function useViewerStage(
     }
   }
 
-  function computeMeanCenter(atoms: Atom[]): THREE.Vector3 {
-    let cx = 0;
-    let cy = 0;
-    let cz = 0;
-    for (const a of atoms) {
-      cx += a.position[0];
-      cy += a.position[1];
-      cz += a.position[2];
-    }
-    const n = Math.max(1, atoms.length);
-    return new THREE.Vector3(cx / n, cy / n, cz / n);
-  }
-
-  const _mat = new THREE.Matrix4();
-
   function applyFrameAtoms(frameAtoms: Atom[]): void {
-    // 锁定中心：用当前帧中心对齐第一帧中心，避免整体漂移导致相机“跟着跑”
-    const c = computeMeanCenter(frameAtoms);
-    const dx = c.x - baseCenter.x;
-    const dy = c.y - baseCenter.y;
-    const dz = c.z - baseCenter.z;
-
-    for (const mesh of atomMeshes) {
-      const indices = mesh.userData.atomIndices as number[] | undefined;
-      if (!indices) continue;
-
-      for (let k = 0; k < indices.length; k += 1) {
-        const ai = indices[k]!;
-        const a = frameAtoms[ai];
-        if (!a) continue;
-
-        const x = a.position[0] - dx;
-        const y = a.position[1] - dy;
-        const z = a.position[2] - dz;
-
-        _mat.makeTranslation(x, y, z);
-        mesh.setMatrixAt(k, _mat);
-      }
-      mesh.instanceMatrix.needsUpdate = true;
-    }
-
-    // bonds：先不随帧更新（最小改动、性能最好）
+    applyFrameAtomsToMeshes({
+      frameAtoms,
+      atomMeshes,
+      baseCenter,
+      centerTmp: _centerTmp,
+      matTmp: _mat,
+    });
   }
 
   async function loadFile(file: File): Promise<void> {
@@ -609,8 +609,46 @@ export function useViewerStage(
 
     const t0 = performance.now();
     try {
-      const model = await loadStructureFromFile(file);
+      const model = await loadStructureFromFile(file, {
+        lammpsTypeToElement: buildLammpsTypeToElementMap(),
+        lammpsSortById: true,
+      });
+
       renderModel(model);
+
+      // 自动把当前 dump 中出现的 typeId 写到 Settings（只补缺）
+      // Auto-fill detected LAMMPS typeIds into Settings (append-only)
+      if (patchSettings) {
+        const atoms0 =
+          model.frames && model.frames[0] ? model.frames[0] : model.atoms;
+        const detected = collectTypeIdsFromAtoms(atoms0);
+
+        if (detected.length > 0) {
+          const current = getSettings().lammpsTypeMap ?? [];
+          const merged = mergeTypeMap(current, detected);
+
+          if (
+            !typeMapEquals(
+              normalizeTypeMapRows(current),
+              normalizeTypeMapRows(merged)
+            )
+          ) {
+            patchSettings({ lammpsTypeMap: merged });
+          }
+        }
+      }
+
+      if (
+        model.source?.format &&
+        ["dump", "lammpstrj", "traj", "lammpsdump"].includes(
+          model.source.format
+        ) &&
+        (getSettings().lammpsTypeMap?.length ?? 0) === 0
+      ) {
+        message.warning(
+          "当前未配置 LAMMPS type→元素映射，元素将使用占位 E（颜色/半径可能不准确）。"
+        );
+      }
 
       message.success(
         t("viewer.load.success", {

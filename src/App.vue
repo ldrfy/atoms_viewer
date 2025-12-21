@@ -4,7 +4,7 @@
             <TopHear @open-settings="settingsOpen = true" />
 
             <a-layout-content>
-                <ViewerStage ref="viewerRef" :settings="settings" @model-state="hasModel = $event" />
+                <ViewerStage ref="viewerRef" v-model:settings="settings" @model-state="hasModel = $event" />
             </a-layout-content>
 
             <ExportFab :has-model="hasModel" v-model:exportScale="exportScale" @export-png="handleExportPng" />

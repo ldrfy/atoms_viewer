@@ -42,6 +42,13 @@ export function parseXyz(text: string): StructureModel {
     throw new Error("XYZ 解析失败：未读取到任何帧。");
   }
 
+  const n0 = atoms0.length;
+  for (let fi = 1; fi < frames.length; fi += 1) {
+    if (frames[fi]!.length !== n0) {
+      throw new Error("XYZ 多帧解析：每一帧原子数必须一致。");
+    }
+  }
+
   return {
     atoms: atoms0,
     frames,

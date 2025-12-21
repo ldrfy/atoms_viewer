@@ -37,7 +37,7 @@
         </div>
 
         <!-- 这里建议把 LAMMPS dump 扩展名也加上 -->
-        <input ref="fileInputRef" class="file-input" type="file" accept=".xyz,.pdb,.dump,.lammpstrj,.traj"
+        <input ref="fileInputRef" class="file-input" type="file" accept=".xyz,.pdb,.dump,.lammpstrj,.traj,.data,.lmp"
             @change="onFilePicked" />
 
         <!-- 动画控制条：放在 stage 内，absolute 才会相对 stage 定位 -->

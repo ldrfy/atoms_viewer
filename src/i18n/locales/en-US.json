@@ -2,6 +2,9 @@
     "locale": {
         "selfName": "English"
     },
+    "common": {
+        "delete": "Delete"
+    },
     "viewer": {
         "theme": {
             "current": "Current",
@@ -41,29 +44,35 @@
         "title": "Settings",
         "panel": {
             "display": {
-                "header": "Display"
+                "header": "Display",
+                "perspective": "Perspective",
+                "axes": "Axes",
+                "bonds": "Bonds",
+                "atomSize": "Atom size",
+                "background": {
+                    "title": "Background",
+                    "dark": "Dark",
+                    "light": "Light"
+                }
             },
             "pose": {
-                "header": "Pose (model rotation, degrees)"
+                "header": "Pose (model rotation, degrees)",
+                "rotX": "Rotate X",
+                "rotY": "Rotate Y",
+                "rotZ": "Rotate Z",
+                "resetPose": "Reset rotation",
+                "resetView": "Reset view"
+            },
+            "lammps": {
+                "header": "LAMMPS",
+                "alert": "When a LAMMPS dump or LAMMPS data file provides only numeric types, specify the element symbol for each type here to ensure correct color/radius, bond inference, and stable rendering.",
+                "mapLabel": "type id → element symbol (searchable)",
+                "typePlaceholder": "type",
+                "elementPlaceholder": "Element (e.g., C / O / Fe)",
+                "addMapping": "Add mapping",
+                "clear": "Clear",
+                "hint": "Recommended dump fields: id, type, x y z. If per-frame ordering is not fixed, the parser will sort by id to avoid animation jitter."
             }
-        },
-        "display": {
-            "perspective": "Perspective",
-            "axes": "Axes",
-            "bonds": "Bonds",
-            "atomSize": "Atom size",
-            "background": {
-                "title": "Background",
-                "dark": "Dark",
-                "light": "Light"
-            }
-        },
-        "pose": {
-            "rotX": "Rotate X",
-            "rotY": "Rotate Y",
-            "rotZ": "Rotate Z",
-            "resetPose": "Reset rotation",
-            "resetView": "Reset view"
         }
     }
 }

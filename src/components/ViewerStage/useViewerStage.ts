@@ -30,6 +30,7 @@ import { createThreeStage, type ThreeStage } from "../../lib/three/stage";
 import { bindViewerStageSettings } from "./bindSettings";
 import { createModelRuntime, type ModelRuntime } from "./modelRuntime";
 import { isLammpsDumpFormat } from "../../lib/structure/parsers/lammpsDump";
+import { isLammpsDataFormat } from "../../lib/structure/parsers/lammpsData";
 import { applyAnimationInfo } from "./animation";
 
 /**
@@ -314,7 +315,7 @@ export function useViewerStage(
 
       // 针对不同格式执行设置面板策略 / Apply settings focus strategy by format
       const fmt = model.source?.format ?? "";
-      if (isLammpsDumpFormat(fmt)) {
+      if (isLammpsDumpFormat(fmt) || isLammpsDataFormat(fmt)) {
         handleLammpsTypeMapAndSettings(model);
       } else {
         focusSettingsToDisplaySilently();

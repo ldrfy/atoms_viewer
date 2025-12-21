@@ -1,21 +1,39 @@
+// lib/structure/parse.ts
 import type { StructureModel } from "./types";
 import { parseXyz } from "./parsers/xyz";
+import { parsePdb } from "./parsers/pdb";
 
-function getExtLower(filename: string): string {
-  const idx = filename.lastIndexOf(".");
-  return idx >= 0 ? filename.slice(idx + 1).toLowerCase() : "";
+function getExt(filename?: string): string {
+  const name = (filename ?? "").toLowerCase();
+  const i = name.lastIndexOf(".");
+  return i >= 0 ? name.slice(i + 1) : "";
 }
 
-export function parseStructure(text: string, filename: string): StructureModel {
-  const ext = getExtLower(filename);
+function parseBySniff(text: string): StructureModel {
+  // 1) PDB：出现 ATOM/HETATM
+  if (/\n(?:ATOM  |HETATM)/.test("\n" + text)) return parsePdb(text);
 
-  if (ext === "xyz") {
-    const model = parseXyz(text);
-    model.source = { filename, format: "xyz" };
-    return model;
+  // 3) XYZ：第一行是整数原子数（很常见）
+  const firstLine = (text.split(/\r?\n/, 1)[0] ?? "").trim();
+  if (/^\d+$/.test(firstLine)) return parseXyz(text);
+
+  throw new Error("error");
+}
+
+export function parseStructure(
+  text: string,
+  filename?: string
+): StructureModel {
+  const ext = getExt(filename);
+
+  switch (ext) {
+    case "xyz":
+      return parseXyz(text);
+    case "pdb":
+      return parsePdb(text);
+    default:
+      return parseBySniff(text);
   }
-
-  throw new Error(`不支持的文件类型：${filename}`);
 }
 
 export async function loadStructureFromFile(

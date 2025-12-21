@@ -53,6 +53,16 @@ type ViewerStageBindings = {
   onFilePicked: (e: Event) => Promise<void>;
   onExportPng: (scale: number) => Promise<void>;
   preloadDefault: () => void;
+
+  // animation
+  hasAnimation: Ref<boolean>;
+  frameIndex: Ref<number>;
+  frameCount: Ref<number>;
+  isPlaying: Ref<boolean>;
+  fps: Ref<number>;
+  setFrame: (idx: number) => void;
+  togglePlay: () => void;
+  stopPlay: () => void;
 };
 
 type BondBuildResult = { meshes: THREE.InstancedMesh[]; segCount: number };
@@ -98,6 +108,18 @@ export function useViewerStage(
   let bondMeshes: THREE.InstancedMesh[] = [];
   let lastBondSegCount = 0;
 
+  // animation state（xyz 多帧）
+  const hasAnimation = ref(false);
+  const frameIndex = ref(0);
+  const frameCount = ref(1);
+  const isPlaying = ref(false);
+  const fps = ref(6);
+
+  let animFrames: Atom[][] = [];
+  let baseCenter = new THREE.Vector3(); // 第一帧中心，用于“锁定模型不漂移”
+  let animLastMs = 0;
+  let animAccMs = 0;
+
   function getSettings(): ViewerSettings {
     return settingsRef.value;
   }
@@ -120,6 +142,7 @@ export function useViewerStage(
   }
 
   function clearModel(): void {
+    stopPlay();
     if (!scene) return;
 
     for (const m of atomMeshes) {
@@ -169,6 +192,9 @@ export function useViewerStage(
       const mesh = new THREE.InstancedMesh(geometry, material, indices.length);
       mesh.userData.baseRadius = baseRadius;
       mesh.userData.element = el;
+
+      // 关键：保存 instanceIndex -> atomIndex 的映射
+      mesh.userData.atomIndices = indices;
 
       for (let k = 0; k < indices.length; k += 1) {
         const a = atoms[indices[k]!]!;
@@ -388,10 +414,34 @@ export function useViewerStage(
   );
 
   function renderModel(model: StructureModel): void {
-    const atoms: Atom[] = model.atoms.map((a) => ({
-      element: normalizeElementSymbol(a.element),
-      position: a.position,
-    }));
+    // 取第一帧作为建模基准
+    const frames =
+      model.frames && model.frames.length > 0 ? model.frames : [model.atoms];
+
+    // 统一 normalize element（第一帧必须做；其余帧建议也做，避免元素大小写不一致）
+    animFrames = frames.map((fr) =>
+      fr.map((a) => ({
+        element: normalizeElementSymbol(a.element),
+        position: a.position,
+      }))
+    );
+
+    // 基本校验：多帧必须原子数一致，否则无法用 instanceIndex 复用
+    const n0 = animFrames[0]!.length;
+    for (let fi = 1; fi < animFrames.length; fi += 1) {
+      if (animFrames[fi]!.length !== n0) {
+        throw new Error("XYZ 多帧动画要求每一帧原子数相同。");
+      }
+    }
+
+    // 动画状态
+    frameIndex.value = 0;
+    frameCount.value = animFrames.length;
+    hasAnimation.value = frameCount.value > 1;
+    stopPlay(); // 加载新模型时默认停止
+
+    // 用第一帧建 mesh / bonds / camera
+    const atoms: Atom[] = animFrames[0]!;
 
     if (!scene || !pivotGroup || !modelGroup || !camera || !controls) return;
 
@@ -405,6 +455,7 @@ export function useViewerStage(
       );
     }
     const center = box.getCenter(new THREE.Vector3());
+    baseCenter.copy(center);
 
     // 让 pivot 位于模型中心，modelGroup 反向平移，使世界坐标不变
     pivotGroup.position.copy(center);
@@ -437,6 +488,8 @@ export function useViewerStage(
     applyShowAxes();
     applyModelRotation();
 
+    applyFrameAtoms(animFrames[0]!);
+
     // 轴标签 & axes helper
     const size = box.getSize(new THREE.Vector3());
     const axisLen = Math.max(size.x, size.y, size.z) * 0.6;
@@ -460,6 +513,92 @@ export function useViewerStage(
       axesHelper.renderOrder = 999;
       axesGroup.add(axesHelper);
     }
+  }
+
+  function setFrame(idx: number): void {
+    if (!hasAnimation.value) return;
+
+    const n = animFrames.length;
+    const clamped = Math.min(Math.max(0, idx), n - 1);
+    frameIndex.value = clamped;
+
+    applyFrameAtoms(animFrames[clamped]!);
+  }
+
+  function stopPlay(): void {
+    isPlaying.value = false;
+    animLastMs = 0;
+    animAccMs = 0;
+  }
+
+  function togglePlay(): void {
+    if (!hasAnimation.value) return;
+    isPlaying.value = !isPlaying.value;
+    animLastMs = 0;
+    animAccMs = 0;
+  }
+
+  function tickAnimation(): void {
+    if (!isPlaying.value || !hasAnimation.value) return;
+
+    const now = performance.now();
+    if (!animLastMs) animLastMs = now;
+
+    const dt = now - animLastMs;
+    animLastMs = now;
+
+    const step = 1000 / Math.max(1, fps.value);
+    animAccMs += dt;
+
+    while (animAccMs >= step) {
+      const next = frameIndex.value + 1;
+      setFrame(next >= animFrames.length ? 0 : next);
+      animAccMs -= step;
+    }
+  }
+
+  function computeMeanCenter(atoms: Atom[]): THREE.Vector3 {
+    let cx = 0;
+    let cy = 0;
+    let cz = 0;
+    for (const a of atoms) {
+      cx += a.position[0];
+      cy += a.position[1];
+      cz += a.position[2];
+    }
+    const n = Math.max(1, atoms.length);
+    return new THREE.Vector3(cx / n, cy / n, cz / n);
+  }
+
+  const _mat = new THREE.Matrix4();
+
+  function applyFrameAtoms(frameAtoms: Atom[]): void {
+    // 锁定中心：用当前帧中心对齐第一帧中心，避免整体漂移导致相机“跟着跑”
+    const c = computeMeanCenter(frameAtoms);
+    const dx = c.x - baseCenter.x;
+    const dy = c.y - baseCenter.y;
+    const dz = c.z - baseCenter.z;
+
+    for (const mesh of atomMeshes) {
+      const indices = mesh.userData.atomIndices as number[] | undefined;
+      if (!indices) continue;
+
+      for (let k = 0; k < indices.length; k += 1) {
+        const ai = indices[k]!;
+        const a = frameAtoms[ai];
+        if (!a) continue;
+
+        const x = a.position[0] - dx;
+        const y = a.position[1] - dy;
+        const z = a.position[2] - dz;
+
+        _mat.makeTranslation(x, y, z);
+        mesh.setMatrixAt(k, _mat);
+      }
+      mesh.instanceMatrix.needsUpdate = true;
+    }
+
+    // bonds：先不随帧更新（最小改动、性能最好）
   }
 
   async function loadFile(file: File): Promise<void> {
@@ -618,6 +757,7 @@ export function useViewerStage(
     // render loop
     rafLoop = createRafLoop(() => {
       if (!renderer || !scene || !camera || !controls) return;
+      tickAnimation(); // <- 新增：推进动画帧
       controls.update();
       renderer.render(scene, camera);
       labelRenderer?.render(scene, camera);
@@ -680,12 +820,22 @@ export function useViewerStage(
   }
 
   return {
+    hasAnimation,
+    frameIndex,
+    frameCount,
+    isPlaying,
+    fps,
+    setFrame,
+    togglePlay,
+    stopPlay,
+
     canvasHostRef,
     fileInputRef,
     isDragging,
     hasModel,
     isLoading,
     openFilePicker,
+
     onDragEnter,
     onDragOver,
     onDragLeave,

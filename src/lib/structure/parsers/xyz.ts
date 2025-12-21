@@ -1,65 +1,55 @@
+// lib/structure/parsers/xyz.ts
 import type { Atom, StructureModel } from "../types";
-
-function normalizeLines(text: string): string[] {
-  return text
-    .replace(/\r\n?/g, "\n")
-    .split("\n")
-    .map((s) => s.trim())
-    .filter((s) => s.length > 0);
-}
+import { makeAtom } from "./common";
 
 export function parseXyz(text: string): StructureModel {
-  const lines = normalizeLines(text);
-  if (lines.length < 2) {
-    throw new Error("XYZ 内容过短，至少需要两行（N 与 comment）。");
-  }
+  const lines = text.split(/\r?\n/);
+  let i = 0;
 
-  const atomCount = Number(lines[0]);
-  if (!Number.isFinite(atomCount) || atomCount <= 0) {
-    throw new Error(`XYZ 第一行原子数无效：${lines[0]}`);
-  }
+  const frames: Atom[][] = [];
+  const comments: string[] = [];
 
-  const comment = lines[1] ?? "";
-  const start = 2;
-  const end = start + atomCount;
+  while (true) {
+    while (i < lines.length && (lines[i] ?? "").trim() === "") i += 1;
+    if (i >= lines.length) break;
 
-  if (lines.length < end) {
-    throw new Error(
-      `XYZ 原子行不足：需要 ${atomCount} 行，但实际只有 ${Math.max(
-        0,
-        lines.length - 2
-      )} 行。`
-    );
-  }
+    const nAtoms = Number.parseInt((lines[i] ?? "").trim(), 10);
+    if (!Number.isFinite(nAtoms) || nAtoms <= 0) break;
+    i += 1;
 
-  const atoms: Atom[] = [];
-  for (let i = start; i < end; i += 1) {
-    const line = lines[i];
-    if (!line) {
-      // 理论上不会发生，但用于满足 TS 严格检查
-      throw new Error(`第 ${i + 1} 行缺失。`);
+    const comment = (lines[i] ?? "").trim();
+    comments.push(comment);
+    i += 1;
+
+    const atoms: Atom[] = new Array(nAtoms);
+    for (let k = 0; k < nAtoms; k += 1) {
+      const parts = (lines[i + k] ?? "").trim().split(/\s+/);
+
+      const element = (parts[0] ?? "X").trim() || "X";
+      const x = parseFloatSafe(parts[1]);
+      const y = parseFloatSafe(parts[2]);
+      const z = parseFloatSafe(parts[3]);
+
+      atoms[k] = makeAtom(element, x, y, z);
     }
+    i += nAtoms;
 
-    const parts = line.split(/\s+/);
-    const element = parts[0];
-    const xStr = parts[1];
-    const yStr = parts[2];
-    const zStr = parts[3];
-
-    if (!element || !xStr || !yStr || !zStr) {
-      throw new Error(`第 ${i + 1} 行格式错误：${line}`);
-    }
-
-    const x = Number(xStr);
-    const y = Number(yStr);
-    const z = Number(zStr);
-
-    if (![x, y, z].every((v) => Number.isFinite(v))) {
-      throw new Error(`第 ${i + 1} 行坐标不可解析：${line}`);
-    }
-
-    atoms.push({ element, position: [x, y, z] });
+    frames.push(atoms);
   }
 
-  return { atoms, comment };
+  const atoms0 = frames[0];
+  if (!atoms0) {
+    throw new Error("XYZ 解析失败：未读取到任何帧。");
+  }
+
+  return {
+    atoms: atoms0,
+    frames,
+    comment: comments[0] || undefined,
+  };
+}
+
+function parseFloatSafe(s: string | undefined): number {
+  const v = Number.parseFloat((s ?? "").trim());
+  return Number.isFinite(v) ? v : 0;
 }

@@ -19,6 +19,6 @@ export function makeAtom(
   y: number,
   z: number
 ): Atom {
-  const pos: Vec3 = [x, y, z];
-  return { element, position: pos };
+  const position: Vec3 = [x, y, z];
+  return { element, position };
 }

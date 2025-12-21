@@ -4,32 +4,10 @@ import type { Atom } from "../structure/types";
 import { getElementSize } from "./resize";
 
 export type AnyCamera = THREE.PerspectiveCamera | THREE.OrthographicCamera;
-
 export function isPerspective(
   cam: THREE.Camera
 ): cam is THREE.PerspectiveCamera {
   return (cam as THREE.PerspectiveCamera).isPerspectiveCamera === true;
-}
-
-export function updateCameraForSize(
-  camera: AnyCamera,
-  w: number,
-  h: number,
-  orthoHalfHeight: number
-): void {
-  const aspect = w / Math.max(1, h);
-
-  if (isPerspective(camera)) {
-    camera.aspect = aspect;
-    camera.updateProjectionMatrix();
-    return;
-  }
-
-  camera.left = -orthoHalfHeight * aspect;
-  camera.right = orthoHalfHeight * aspect;
-  camera.top = orthoHalfHeight;
-  camera.bottom = -orthoHalfHeight;
-  camera.updateProjectionMatrix();
 }
 
 function createOrbitControls(params: {
@@ -47,9 +25,30 @@ function createOrbitControls(params: {
   return c;
 }
 
+export function updateCameraForSize(
+  camera: AnyCamera,
+  w: number,
+  h: number,
+  orthoHalfHeight: number
+): void {
+  const aspect = w / Math.max(1, h);
+
+  if (isPerspective(camera)) {
+    camera.aspect = aspect;
+    camera.updateProjectionMatrix();
+    return;
+  }
+
+  // 注意：不重置 zoom，只更新视锥边界
+  camera.left = -orthoHalfHeight * aspect;
+  camera.right = orthoHalfHeight * aspect;
+  camera.top = orthoHalfHeight;
+  camera.bottom = -orthoHalfHeight;
+  camera.updateProjectionMatrix();
+}
+
 /**
- * 切换投影模式：保留 position 与 controls.target。
- * 返回新 camera / controls，并基于 host 尺寸更新投影矩阵。
+ * 切换投影模式：保持 controls.target 与“屏幕尺度”连续（不跳变）。
  */
 export function switchProjectionMode(params: {
   orthographic: boolean;
@@ -58,7 +57,7 @@ export function switchProjectionMode(params: {
   domElement: HTMLElement;
   host: HTMLElement;
   orthoHalfHeight: number;
-  fovDeg?: number;
+  fovDeg?: number; // 目标透视 FOV
   dampingFactor?: number;
 }): { camera: AnyCamera; controls: OrbitControls; orthoHalfHeight: number } {
   const {
@@ -73,16 +72,47 @@ export function switchProjectionMode(params: {
   } = params;
 
   const target = controls.target.clone();
+
+  // 方向与距离（沿当前视线保持）
   const pos = camera.position.clone();
+  const up = camera.up.clone();
+  const viewDir = pos.clone().sub(target).normalize(); // 从 target 指向 camera
+  const dist = pos.distanceTo(target);
 
   const { w, h } = getElementSize(host);
   const aspect = w / Math.max(1, h);
 
   controls.dispose();
 
+  const fovRad = THREE.MathUtils.degToRad(
+    isPerspective(camera) ? camera.fov : fovDeg
+  );
+
+  // ---------- 切到透视 ----------
   if (!orthographic) {
+    // 若当前是正交，需要算一个匹配当前正交尺度的透视距离
+    let newPos = pos.clone();
+
+    if (!isPerspective(camera)) {
+      // 正交有效 halfHeight = orthoHalfHeight / zoom
+      // 如果你传入的 orthoHalfHeight 是“未缩放基准”，这里要除以 camera.zoom
+      const effectiveHalfH =
+        (orthoHalfHeight || 5) / Math.max(1e-6, camera.zoom);
+      const newDist = effectiveHalfH / Math.tan(fovRad / 2);
+      newPos = target.clone().add(viewDir.multiplyScalar(newDist));
+    }
+
     const cam = new THREE.PerspectiveCamera(fovDeg, aspect, 0.01, 2000);
-    cam.position.copy(pos);
+    cam.position.copy(newPos);
+    cam.up.copy(up);
+    cam.lookAt(target);
+
+    // near/far 建议按距离自适应，避免裁剪
+    const useDist = cam.position.distanceTo(target);
+    cam.near = Math.max(0.01, useDist / 100);
+    cam.far = useDist * 100;
+    cam.updateProjectionMatrix();
+
     const c = createOrbitControls({
       camera: cam,
       domElement,
@@ -90,19 +120,38 @@ export function switchProjectionMode(params: {
       dampingFactor,
     });
     updateCameraForSize(cam, w, h, orthoHalfHeight);
+
     return { camera: cam, controls: c, orthoHalfHeight };
   }
 
-  const halfH = orthoHalfHeight || 5;
+  // ---------- 切到正交 ----------
+  // 若当前是透视，需要算一个匹配当前透视尺度的 orthoHalfHeight
+  let newHalfH = orthoHalfHeight || 5;
+
+  if (isPerspective(camera)) {
+    // 在 target 平面处，透视视野 halfHeight = dist * tan(fov/2)
+    newHalfH = dist * Math.tan(fovRad / 2);
+    // 可选：给一点下限，避免数值过小
+    newHalfH = Math.max(newHalfH, 0.1);
+  }
+
   const cam = new THREE.OrthographicCamera(
-    -halfH * aspect,
-    halfH * aspect,
-    halfH,
-    -halfH,
+    -newHalfH * aspect,
+    newHalfH * aspect,
+    newHalfH,
+    -newHalfH,
     0.01,
     2000
   );
   cam.position.copy(pos);
+  cam.up.copy(up);
+  cam.lookAt(target);
+
+  // 如果原本就是正交，建议保留 zoom（否则用户缩放会丢失）
+  if (!isPerspective(camera)) {
+    cam.zoom = camera.zoom;
+  }
+  cam.updateProjectionMatrix();
 
   const c = createOrbitControls({
     camera: cam,
@@ -110,8 +159,9 @@ export function switchProjectionMode(params: {
     target,
     dampingFactor,
   });
-  updateCameraForSize(cam, w, h, halfH);
-  return { camera: cam, controls: c, orthoHalfHeight: halfH };
+  updateCameraForSize(cam, w, h, newHalfH);
+
+  return { camera: cam, controls: c, orthoHalfHeight: newHalfH };
 }
 
 /**

@@ -1,6 +1,6 @@
 <template>
     <div v-if="hasModel" class="export-fab">
-        <!-- 优先使用 Ant 的 FloatButton（若你版本支持） -->
+
         <a-float-button type="primary" @click="open = true" aria-label="export">
             <template #icon>
                 <DownloadOutlined />
@@ -30,8 +30,10 @@
 
 <script setup lang="ts">
 import { ref } from "vue";
-import { useI18n } from "vue-i18n";
 import { DownloadOutlined } from "@ant-design/icons-vue";
+
+import { useI18n } from "vue-i18n";
+const { t } = useI18n();
 
 const props = defineProps<{
     hasModel: boolean;
@@ -43,7 +45,6 @@ const emit = defineEmits<{
     (e: "update:exportScale", v: number): void;
 }>();
 
-const { t } = useI18n();
 const open = ref(false);
 
 function onUpdateExportScale(v: number | null): void {
@@ -61,9 +62,6 @@ function onExport(): void {
 <style scoped>
 /* 悬浮按钮固定在右下角，不影响布局 */
 .export-fab {
-    position: fixed;
-    right: 16px;
-    bottom: 16px;
     z-index: 60;
     pointer-events: auto;
 }

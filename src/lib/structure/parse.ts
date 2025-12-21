@@ -56,6 +56,7 @@ export function parseStructure(
       break;
 
     case "data":
+    case "lammpsdata":
       // 注意：read_data 的 data 文件通常是单帧
       // NOTE: LAMMPS data (read_data) is typically single-frame
       model = parseLammpsData(text, filename ?? "unknown", {
@@ -137,8 +138,8 @@ function detectFormat(
 
     // read_data 常见扩展名 / Common read_data extensions
     case "data":
-    case "lmp":
-      return { format: "data", extNormalized };
+    case "lammpsdata":
+      return { format: "lammpsdata", extNormalized };
 
     default:
       break;
@@ -155,7 +156,7 @@ function detectFormat(
   // LAMMPS data 特征：存在 Atoms 段（且不是 dump）
   // LAMMPS data signature: has an "Atoms" section (and not a dump)
   if (isLikelyLammpsData(text)) {
-    return { format: "data", extNormalized };
+    return { format: "lammpsdata", extNormalized };
   }
 
   return { format: "unknown", extNormalized };
@@ -177,4 +178,35 @@ function isLikelyLammpsData(text: string): boolean {
   // Line-level regex for better precision
   const re = /^\s*Atoms(\s*#.*)?\s*$/m;
   return re.test(text);
+}
+
+export type ParseMode = "auto" | "xyz" | "pdb" | "lammpsdump" | "lammpsdata";
+
+export type ParseInfo = {
+  fileName: string;
+  format: string;
+  atomCount: number;
+  frameCount: number;
+};
+
+function stripExt(name: string): string {
+  const i = name.lastIndexOf(".");
+  return i >= 0 ? name.slice(0, i) : name;
+}
+export function toForcedFilename(
+  originalName: string,
+  mode: ParseMode
+): string {
+  if (mode === "auto") return originalName;
+
+  const base = stripExt(originalName);
+  // 通过“伪造扩展名”强制 parseStructure 走对应 parser
+  // Force parser by a fake extension
+  const ext = (() => {
+    if (mode === "lammpsdump") return "dump";
+    if (mode === "lammpsdata") return "data";
+    return mode; // xyz/pdb
+  })();
+
+  return `${base}.__force__.${ext}`;
 }

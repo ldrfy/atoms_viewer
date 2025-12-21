@@ -1,5 +1,7 @@
 import type { Atom, StructureModel } from "../types";
 
+import { t } from "../../../i18n/tr";
+
 /**
  * LAMMPS data 文件解析选项。
  *
@@ -52,7 +54,7 @@ export function parseLammpsData(
   }
 
   if (i >= lines.length) {
-    throw new Error(`LAMMPS data: missing "Atoms" section in ${fileName}`);
+    throw new Error(t("errors.lammpsData.missingAtomsSection", { fileName }));
   }
 
   // 跳过 header 行后的空行
@@ -130,7 +132,7 @@ export function parseLammpsData(
     frames: [atoms],
     source: {
       filename: fileName,
-      format: "data", // 关键：让上层把它当作 LAMMPS 输入
+      format: "lammpsdata", // 关键：让上层把它当作 LAMMPS 输入
     },
   };
 
@@ -181,5 +183,5 @@ function inferTypeId(parts: string[]): number {
  * Check whether a format string indicates LAMMPS data-like data.
  */
 export function isLammpsDataFormat(fmt: string): boolean {
-  return ["data", "lmp"].includes(fmt);
+  return ["data", "lammpsdata"].includes(fmt);
 }

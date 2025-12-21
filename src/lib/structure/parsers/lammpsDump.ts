@@ -1,5 +1,6 @@
 // src/lib/structure/parsers/lammpsDump.ts
 import type { Atom, StructureModel } from "../types";
+import { t } from "../../../i18n/tr";
 
 /**
  * LAMMPS dump 解析选项 / Parse options for LAMMPS dump
@@ -101,7 +102,7 @@ export function parseLammpsDump(
     // -------------------------
     const header = lines[i] ?? "";
     if (!startsWith(header, "ITEM: ATOMS")) {
-      throw new Error("LAMMPS dump 解析失败：缺少 ITEM: ATOMS 段。");
+      throw new Error(t("errors.lammpsDump.missingAtomsSection"));
     }
 
     const cols = header.replace("ITEM: ATOMS", "").trim().split(/\s+/);
@@ -128,15 +129,15 @@ export function parseLammpsDump(
       // 你要做 type->element 映射，type 列是必须的
       // "type" is required if we want type->element mapping.
       throw new Error(
-        `LAMMPS dump：ATOMS 列缺少 "type"。columns=${cols.join(" ")}`
+        t("errors.lammpsDump.missingTypeColumn", { columns: cols.join(" ") })
       );
     }
 
     if (!hasAbs && !hasScaled) {
       throw new Error(
-        `LAMMPS dump：找不到坐标列（x y z 或 xs ys zs）。columns=${cols.join(
-          " "
-        )}`
+        t("errors.lammpsDump.missingCoordsColumns", {
+          columns: cols.join(" "),
+        })
       );
     }
 
@@ -200,7 +201,7 @@ export function parseLammpsDump(
 
   const atoms0 = frames[0];
   if (!atoms0) {
-    throw new Error("LAMMPS dump 解析失败：未读取到任何帧（ITEM: TIMESTEP）。");
+    throw new Error(t("errors.lammpsDump.noFrames"));
   }
 
   return { atoms: atoms0, frames, comment: "LAMMPS dump" };
@@ -217,14 +218,19 @@ function startsWith(line: string | undefined, prefix: string): boolean {
 function expectStartsWith(line: string | undefined, prefix: string): void {
   if (!startsWith(line, prefix)) {
     throw new Error(
-      `LAMMPS dump 解析失败：期望 "${prefix}"，实际为 "${line ?? ""}"`
+      t("errors.lammpsDump.unexpectedHeader", {
+        expected: prefix,
+        actual: line ?? "",
+      })
     );
   }
 }
 
 function parseIntStrict(s: string | undefined): number {
   const v = Number.parseInt((s ?? "").trim(), 10);
-  if (!Number.isFinite(v)) throw new Error(`无法解析整数：${s ?? ""}`);
+  if (!Number.isFinite(v)) {
+    throw new Error(t("errors.parseIntFailed", { value: s ?? "" }));
+  }
   return v;
 }
 
@@ -240,7 +246,10 @@ function parseFloatSafe(s: string | undefined): number {
 
 function parseTwoFloats(s: string | undefined): [number, number] {
   const parts = (s ?? "").trim().split(/\s+/);
-  if (parts.length < 2) throw new Error(`无法解析 BOX BOUNDS 行：${s ?? ""}`);
+
+  if (parts.length < 2) {
+    throw new Error(t("errors.lammpsDump.badBoxBoundsLine", { line: s ?? "" }));
+  }
   return [parseFloatSafe(parts[0]), parseFloatSafe(parts[1])];
 }
 

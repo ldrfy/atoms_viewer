@@ -1,6 +1,7 @@
 // lib/structure/parsers/xyz.ts
 import type { Atom, StructureModel } from "../types";
 import { makeAtom } from "./common";
+import { t } from "../../../i18n/tr";
 
 export function parseXyz(text: string): StructureModel {
   const lines = text.split(/\r?\n/);
@@ -38,14 +39,16 @@ export function parseXyz(text: string): StructureModel {
   }
 
   const atoms0 = frames[0];
+
   if (!atoms0) {
-    throw new Error("XYZ 解析失败：未读取到任何帧。");
+    throw new Error(t("errors.xyz.noFrames"));
   }
 
   const n0 = atoms0.length;
+
   for (let fi = 1; fi < frames.length; fi += 1) {
     if (frames[fi]!.length !== n0) {
-      throw new Error("XYZ 多帧解析：每一帧原子数必须一致。");
+      throw new Error(t("errors.xyz.inconsistentAtomCountPerFrame"));
     }
   }
 

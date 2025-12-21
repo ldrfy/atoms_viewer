@@ -6,6 +6,25 @@
         "delete": "删除"
     },
     "viewer": {
+        "play": "播放",
+        "pause": "暂停",
+        "fps": "帧率",
+        "parse": {
+            "mode": "解析方式",
+            "format": "格式",
+            "file": "文件",
+            "atoms": "原子数",
+            "frames": "帧数",
+            "modeOptions": {
+                "auto": "自动（推荐）",
+                "xyz": "XYZ",
+                "pdb": "PDB",
+                "lammpsdump": "LAMMPS dump（轨迹）",
+                "lammpsdata": "LAMMPS data（read_data）"
+            },
+            "reparseSuccess": "已按 {format} 重新解析",
+            "reparseFailed": "重新解析失败：{reason}"
+        },
         "theme": {
             "current": "当前",
             "mode": {
@@ -73,6 +92,28 @@
                 "clear": "清空",
                 "hint": "建议 dump 输出包含 id、type、x y z。若每帧顺序不固定，解析端会按 id 排序以保证动画不抖动。"
             }
+        }
+    },
+    "errors": {
+        "parseIntFailed": "无法解析整数：{value}",
+        "lammpsDump": {
+            "unexpectedHeader": "LAMMPS dump 解析失败：期望 \"{expected}\"，实际为 \"{actual}\"",
+            "badBoxBoundsLine": "无法解析 BOX BOUNDS 行：{line}",
+            "triclinicNotSupported": "LAMMPS dump：暂不支持 triclinic BOX（含 xy/xz/yz）。请使用正交盒，或导出 x y z（非 xs/ys/zs）。",
+            "missingAtomsSection": "LAMMPS dump 解析失败：缺少 ITEM: ATOMS 段。",
+            "missingTypeColumn": "LAMMPS dump：ATOMS 列缺少 \"type\"。columns={columns}",
+            "missingCoordsColumns": "LAMMPS dump：找不到坐标列（x y z 或 xs ys zs）。columns={columns}",
+            "noFrames": "LAMMPS dump 解析失败：未读取到任何帧（ITEM: TIMESTEP）。"
+        },
+        "lammpsData": {
+            "missingAtomsSection": "LAMMPS data 解析失败：文件 {fileName} 缺少 \"Atoms\" 段"
+        },
+        "pdb": {
+            "noAtomRecords": "PDB 文件中未找到 ATOM/HETATM 记录。"
+        },
+        "xyz": {
+            "noFrames": "XYZ 解析失败：未读取到任何帧。",
+            "inconsistentAtomCountPerFrame": "XYZ 多帧解析失败：每一帧原子数必须一致。"
         }
     }
 }

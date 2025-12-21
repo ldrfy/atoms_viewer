@@ -1,4 +1,4 @@
-import { onBeforeUnmount, onMounted, ref } from "vue";
+import { onBeforeUnmount, onMounted, ref, reactive } from "vue";
 import type { Ref } from "vue";
 import type {
   ViewerSettings,
@@ -11,11 +11,8 @@ import type { StructureModel } from "../../lib/structure/types";
 import { message } from "ant-design-vue";
 import { useI18n } from "vue-i18n";
 import xyzText from "../../assets/samples/mos2_cnt.xyz?raw";
-import {
-  parseStructure,
-  loadStructureFromFile,
-} from "../../lib/structure/parse";
-
+import { parseStructure, toForcedFilename } from "../../lib/structure/parse";
+import type { ParseMode, ParseInfo } from "../../lib/structure/parse";
 import {
   buildLammpsTypeToElementMap,
   collectTypeIdsFromAtoms,
@@ -23,6 +20,7 @@ import {
   normalizeTypeMapRows,
   typeMapEquals,
 } from "./typeMap";
+type RenderReason = "load" | "reparse";
 
 import { exportTransparentCroppedPng } from "../../lib/three/exportPng";
 import { createThreeStage, type ThreeStage } from "../../lib/three/stage";
@@ -63,6 +61,11 @@ type ViewerStageBindings = {
   setFrame: (idx: number) => void;
   togglePlay: () => void;
   stopPlay: () => void;
+
+  // parse info / reparse
+  parseInfo: ParseInfo;
+  parseMode: Ref<ParseMode>;
+  setParseMode: (mode: ParseMode) => void;
 };
 
 /**
@@ -111,6 +114,28 @@ export function useViewerStage(
   let stage: ThreeStage | null = null;
   let runtime: ModelRuntime | null = null;
   let stopBind: (() => void) | null = null;
+
+  const parseMode = ref<ParseMode>("auto");
+
+  /**
+   * 左上角显示用：解析结果摘要
+   *
+   * Parse summary for top-left overlay.
+   */
+  const parseInfo = reactive<ParseInfo>({
+    fileName: "",
+    format: "",
+    atomCount: 0,
+    frameCount: 1,
+  });
+
+  /**
+   * 缓存最近一次载入文件的源文本，供“手动选择格式后重新解析”
+   *
+   * Cache last loaded raw text for manual re-parse.
+   */
+  let lastRawText: string | null = null;
+  let lastRawFileName: string | null = null;
 
   const getSettings = (): ViewerSettings => settingsRef.value;
 
@@ -284,6 +309,97 @@ export function useViewerStage(
   }
 
   /**
+   * 更新 parseInfo（左上角显示）
+   *
+   * Update parseInfo for the overlay.
+   */
+  function updateParseInfo(
+    model: StructureModel,
+    displayFileName: string
+  ): void {
+    parseInfo.fileName = displayFileName;
+    parseInfo.format = model.source?.format ?? "unknown";
+    parseInfo.atomCount = model.atoms.length;
+    parseInfo.frameCount =
+      model.frames && model.frames.length > 0 ? model.frames.length : 1;
+  }
+
+  /**
+   * 从文本解析并渲染（公共逻辑），供 loadFile 与 setParseMode 复用。
+   *
+   * Parse + render pipeline shared by loadFile and setParseMode.
+   */
+  function renderFromText(
+    text: string,
+    fileName: string,
+    reason: RenderReason
+  ): void {
+    if (!stage || !runtime) return;
+
+    // 1) parse
+    const forcedName = toForcedFilename(fileName, parseMode.value);
+    const model = parseStructure(text, forcedName, {
+      lammpsTypeToElement: buildLammpsTypeToElementMap(
+        (getSettings().lammpsTypeMap ?? []) as LammpsTypeMapItem[]
+      ),
+      lammpsSortById: true,
+    });
+
+    // 2) render
+    const info = runtime.renderModel(model);
+
+    // 3) sync animation state
+    applyAnimationInfo(info, frameIndex, frameCount, hasAnimation);
+
+    // 4) update overlay parse info
+    updateParseInfo(model, fileName);
+
+    // 5) apply settings focus policy by format
+    const fmt = model.source?.format ?? "";
+    const isLmp = isLammpsDumpFormat(fmt) || isLammpsDataFormat(fmt);
+
+    if (isLmp) {
+      handleLammpsTypeMapAndSettings(model);
+    } else {
+      // 关键：从 LAMMPS 切回 XYZ/PDB 时，要把焦点切回 display
+      // Important: when switching back from LAMMPS to XYZ/PDB, focus display.
+      focusSettingsToDisplaySilently();
+    }
+
+    // 6) optional toast for manual re-parse
+    if (reason === "reparse") {
+      message.success(
+        t("viewer.parse.reparseSuccess", { format: parseInfo.format })
+      );
+    }
+  }
+
+  /**
+   * 用户手动选择解析器后重新解析并渲染（不读文件，只用缓存文本）。
+   *
+   * Re-parse and re-render after user selects a parser (no file IO; use cached text).
+   */
+  function setParseMode(mode: ParseMode): void {
+    // 如果没变就不做任何事，避免重复 render
+    // No-op if unchanged to avoid redundant render.
+    if (parseMode.value === mode) return;
+
+    parseMode.value = mode;
+
+    if (!lastRawText || !lastRawFileName) return;
+    if (!stage || !runtime) return;
+
+    try {
+      stopPlay();
+      renderFromText(lastRawText, lastRawFileName, "reparse");
+    } catch (err) {
+      message.error(
+        t("viewer.parse.reparseFailed", { reason: (err as Error).message })
+      );
+    }
+  }
+
+  /**
    * 加载文件并渲染模型。
    *
    * Load a file and render the model.
@@ -299,33 +415,25 @@ export function useViewerStage(
     try {
       stopPlay();
 
-      const model = await loadStructureFromFile(file, {
-        // 注意：这里要传当前 settings 的 rows，否则映射为空
-        // NOTE: pass current settings rows; otherwise mapping is empty
-        lammpsTypeToElement: buildLammpsTypeToElementMap(
-          (getSettings().lammpsTypeMap ?? []) as LammpsTypeMapItem[]
-        ),
-        lammpsSortById: true,
-      });
+      // 新文件默认回到自动解析（避免上次强制解析影响下一次）
+      // Reset to auto for each new file to avoid leaking previous forced mode.
+      parseMode.value = "auto";
 
-      const info = runtime.renderModel(model);
+      // 读取并缓存源文本，供 setParseMode 重新解析
+      // Read & cache raw text for setParseMode re-parse.
+      const text = await file.text();
+      lastRawText = text;
+      lastRawFileName = file.name;
 
-      // 同步动画状态 / Sync animation state
-      applyAnimationInfo(info, frameIndex, frameCount, hasAnimation);
-
-      // 针对不同格式执行设置面板策略 / Apply settings focus strategy by format
-      const fmt = model.source?.format ?? "";
-      if (isLammpsDumpFormat(fmt) || isLammpsDataFormat(fmt)) {
-        handleLammpsTypeMapAndSettings(model);
-      } else {
-        focusSettingsToDisplaySilently();
-      }
+      // 核心渲染管线
+      // Core rendering pipeline
+      renderFromText(text, file.name, "load");
 
       // 成功提示 / Success toast
       message.success(
         t("viewer.load.success", {
           fileName: file.name,
-          atomCount: model.atoms.length,
+          atomCount: parseInfo.atomCount,
           bondSegCount: runtime.getLastBondSegCount(),
         }) + `（${((performance.now() - t0) / 1000).toFixed(2)} s）`
       );
@@ -361,6 +469,8 @@ export function useViewerStage(
     try {
       await loadFile(file);
     } catch (err) {
+      console.log(err);
+
       message.error((err as Error).message);
     }
   }
@@ -487,6 +597,11 @@ export function useViewerStage(
   });
 
   return {
+    // parse
+    parseInfo,
+    parseMode,
+    setParseMode,
+
     hasAnimation,
     frameIndex,
     frameCount,

@@ -6,6 +6,25 @@
         "delete": "Delete"
     },
     "viewer": {
+        "play": "Play",
+        "pause": "Pause",
+        "fps": "FPS",
+        "parse": {
+            "mode": "Parse mode",
+            "format": "Format",
+            "file": "File",
+            "atoms": "Atoms",
+            "frames": "Frames",
+            "modeOptions": {
+                "auto": "Auto (recommended)",
+                "xyz": "XYZ",
+                "pdb": "PDB",
+                "lammpsdump": "LAMMPS dump (trajectory)",
+                "lammpsdata": "LAMMPS data (read_data)"
+            },
+            "reparseSuccess": "Re-parsed as {format}",
+            "reparseFailed": "Re-parse failed: {reason}"
+        },
         "theme": {
             "current": "Current",
             "mode": {
@@ -73,6 +92,28 @@
                 "clear": "Clear",
                 "hint": "Recommended dump fields: id, type, x y z. If per-frame ordering is not fixed, the parser will sort by id to avoid animation jitter."
             }
+        }
+    },
+    "errors": {
+        "parseIntFailed": "Failed to parse integer: {value}",
+        "lammpsDump": {
+            "unexpectedHeader": "LAMMPS dump parse failed: expected \"{expected}\", got \"{actual}\"",
+            "badBoxBoundsLine": "Failed to parse BOX BOUNDS line: {line}",
+            "triclinicNotSupported": "LAMMPS dump: triclinic BOX (xy/xz/yz) is not supported yet. Please use an orthogonal box or export x y z (not xs/ys/zs).",
+            "missingAtomsSection": "LAMMPS dump parse failed: missing ITEM: ATOMS section.",
+            "missingTypeColumn": "LAMMPS dump: missing \"type\" in ATOMS columns. columns={columns}",
+            "missingCoordsColumns": "LAMMPS dump: missing coordinate columns (x y z or xs ys zs). columns={columns}",
+            "noFrames": "LAMMPS dump parse failed: no frames were read (ITEM: TIMESTEP)."
+        },
+        "lammpsData": {
+            "missingAtomsSection": "LAMMPS data parse failed: missing \"Atoms\" section in {fileName}"
+        },
+        "pdb": {
+            "noAtomRecords": "No ATOM/HETATM records found in the PDB file."
+        },
+        "xyz": {
+            "noFrames": "XYZ parse failed: no frames were read.",
+            "inconsistentAtomCountPerFrame": "XYZ multi-frame parse failed: each frame must have the same atom count."
         }
     }
 }

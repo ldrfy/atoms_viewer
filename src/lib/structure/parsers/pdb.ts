@@ -1,6 +1,7 @@
 // lib/structure/parsers/pdb.ts
 import type { StructureModel } from "../types";
 import { makeAtom } from "./common";
+import { t } from "../../../i18n/tr";
 
 /**
  * 解析 PDB（ATOM/HETATM 坐标）。
@@ -30,7 +31,7 @@ export function parsePdb(text: string): StructureModel {
   }
 
   if (atoms.length === 0) {
-    throw new Error("PDB 文件中未找到 ATOM/HETATM 记录。");
+    throw new Error(t("errors.pdb.noAtomRecords"));
   }
 
   centerAtomsInPlace(atoms);

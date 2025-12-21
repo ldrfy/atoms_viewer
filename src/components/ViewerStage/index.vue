@@ -3,6 +3,53 @@
         @drop.prevent="onDrop">
         <div ref="canvasHostRef" class="canvas-host"></div>
 
+        <!-- 右侧：解析信息（可收起） -->
+        <div v-if="hasModel" class="parse-overlay">
+
+            <!-- 左侧侧把手：始终显示 -->
+            <a-button class="parse-handle" type="text" size="small" @click="toggleParsePanel"
+                :aria-label="parseCollapsed ? 'expand parse panel' : 'collapse parse panel'">
+                <component :is="parseCollapsed ? RightOutlined : LeftOutlined" />
+            </a-button>
+            <!-- 卡片容器：用于做收起动画 -->
+            <div class="parse-card-wrap" :class="{ collapsed: parseCollapsed }">
+                <a-card size="small" class="parse-card" :bordered="false">
+                    <a-space direction="vertical" :size="6">
+                        <a-space align="center" :size="8">
+                            <a-typography-text type="secondary">
+                                {{ t("viewer.parse.mode") }}
+                            </a-typography-text>
+
+                            <a-select size="small" style="width: 170px" v-model:value="parseModeModel"
+                                :options="parseModeOptions" />
+                        </a-space>
+
+                        <a-typography-text>
+                            <span class="k">{{ t("viewer.parse.format") }}:</span>
+                            <a-tag style="margin-left: 6px">{{ parseInfo.format || "-" }}</a-tag>
+                        </a-typography-text>
+
+                        <a-typography-text>
+                            <span class="k">{{ t("viewer.parse.file") }}:</span>
+                            <span style="margin-left: 6px">{{ parseInfo.fileName || "-" }}</span>
+                        </a-typography-text>
+
+                        <a-typography-text>
+                            <span class="k">{{ t("viewer.parse.atoms") }}:</span>
+                            <span style="margin-left: 6px">{{ parseInfo.atomCount }}</span>
+                        </a-typography-text>
+
+                        <a-typography-text v-if="parseInfo.frameCount > 1">
+                            <span class="k">{{ t("viewer.parse.frames") }}:</span>
+                            <span style="margin-left: 6px">{{ parseInfo.frameCount }}</span>
+                        </a-typography-text>
+                    </a-space>
+                </a-card>
+            </div>
+
+        </div>
+
+
         <!-- 放下后开始加载：旋转图标 -->
         <div v-if="isLoading" class="loading-overlay">
             <a-spin size="large" />
@@ -36,22 +83,21 @@
             </div>
         </div>
 
-        <!-- 这里建议把 LAMMPS dump 扩展名也加上 -->
         <input ref="fileInputRef" class="file-input" type="file" accept=".xyz,.pdb,.dump,.lammpstrj,.traj,.data,.lmp"
             @change="onFilePicked" />
 
-        <!-- 动画控制条：放在 stage 内，absolute 才会相对 stage 定位 -->
+        <!-- 动画控制条 -->
         <div v-if="hasAnimation" class="anim-bar">
             <a-space align="center" :size="8">
                 <a-button size="small" @click="togglePlay">
-                    {{ isPlaying ? "Pause" : "Play" }}
+                    {{ isPlaying ? t("viewer.pause") : t("viewer.play") }}
                 </a-button>
 
                 <span>{{ frameIndex + 1 }} / {{ frameCount }}</span>
 
-                <a-slider style="width: 260px" :min="0" :max="frameCount - 1" v-model:value="frameIndexModel" />
+                <a-slider style="width: 120px" :min="0" :max="frameCount - 1" v-model:value="frameIndexModel" />
 
-                <span>FPS</span>
+                <span>{{ t("viewer.fps") }}</span>
                 <a-input-number size="small" :min="1" :max="120" v-model:value="fpsModel" />
             </a-space>
         </div>
@@ -59,11 +105,18 @@
 </template>
 
 <script setup lang="ts">
-import { computed, toRef, watch } from "vue";
+import { computed, toRef, watch, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import { useViewerStage } from "./useViewerStage";
 import type { ViewerSettings, OpenSettingsPayload } from "../../lib/viewer/settings";
+import type { ParseMode } from "../../lib/structure/parse";
+import { LeftOutlined, RightOutlined } from "@ant-design/icons-vue";
 
+const parseCollapsed = ref(false);
+
+function toggleParsePanel(): void {
+    parseCollapsed.value = !parseCollapsed.value;
+}
 const { t } = useI18n();
 
 const emit = defineEmits<{
@@ -75,11 +128,7 @@ const emit = defineEmits<{
 const props = defineProps<{ settings: ViewerSettings }>();
 const settingsRef = toRef(props, "settings");
 
-/**
- * 统一的 settings patch：供 useViewerStage 在解析 LAMMPS 后自动补齐 typeId 映射使用
- *
- * Unified settings patch: used by useViewerStage to auto-fill typeId mapping for LAMMPS dump
- */
+/** 统一 patch settings / Unified patch settings */
 function patchSettings(patch: Partial<ViewerSettings>): void {
     emit("update:settings", {
         ...props.settings,
@@ -91,19 +140,17 @@ function patchSettings(patch: Partial<ViewerSettings>): void {
     });
 }
 
-/**
- * 只调用一次 useViewerStage（关键修复点）
- *
- * Call useViewerStage only once (critical)
- *
- * 第三个参数：当加载 LAMMPS dump 并自动补齐/修改 typeId 映射时，触发打开设置面板
- * Third argument: request opening Settings when LAMMPS dump triggers auto-fill/update of typeId map
- */
 const stage = useViewerStage(settingsRef, patchSettings, (payload) =>
     emit("open-settings", payload)
 );
 
 const {
+    // parse info
+    parseInfo,
+    parseMode,
+    setParseMode,
+
+    // animation
     frameIndex,
     frameCount,
     hasAnimation,
@@ -113,6 +160,7 @@ const {
     togglePlay,
     stopPlay,
 
+    // stage basics
     canvasHostRef,
     fileInputRef,
     isLoading,
@@ -128,22 +176,15 @@ const {
     preloadDefault,
 } = stage;
 
-/**
- * hasModel 同步给 App，用于 TopHear 控制导出区显示
- *
- * Sync hasModel to App for showing export area in header
- */
+void fileInputRef
+void canvasHostRef
+
 watch(
     hasModel,
     (v) => emit("model-state", v!),
     { immediate: true }
 );
 
-/**
- * slider / input-number 的 v-model 适配（避免 template 里 ref 赋值问题）
- *
- * v-model adapters for slider/input-number (avoid direct ref assignment in template)
- */
 const frameIndexModel = computed({
     get: () => frameIndex.value,
     set: (v: number) => setFrame(v),
@@ -157,17 +198,25 @@ const fpsModel = computed({
     },
 });
 
-/**
- * 暴露给 App：App 通过 ref 调用导出
- *
- * Expose to App: App can call export via ref
- */
+/** 左上角格式选择：切换即触发重新解析 */
+const parseModeModel = computed<ParseMode>({
+    get: () => parseMode.value,
+    set: (v) => setParseMode(v),
+});
+
+const parseModeOptions = computed(() => [
+    { value: "auto", label: t("viewer.parse.modeOptions.auto") },
+    { value: "xyz", label: t("viewer.parse.modeOptions.xyz") },
+    { value: "pdb", label: t("viewer.parse.modeOptions.pdb") },
+    { value: "lammpsdump", label: t("viewer.parse.modeOptions.lammpsdump") },
+    { value: "lammpsdata", label: t("viewer.parse.modeOptions.lammpsdata") },
+]);
+
 defineExpose({
     exportPng: onExportPng,
     stopPlay,
 });
 </script>
-
 
 <style scoped>
 .stage {
@@ -180,6 +229,51 @@ defineExpose({
 .canvas-host {
     height: 100%;
     width: 100%;
+}
+
+/* 右侧垂直居中 */
+.parse-overlay {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 25;
+
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    pointer-events: auto;
+}
+
+/* 卡片固定宽度，便于动画稳定 */
+.parse-card {
+    width: 270px;
+    /* 你可按需要改 */
+}
+
+/* 用 max-width 做“收起”动画：把卡片压缩到 0 */
+.parse-card-wrap {
+    overflow: hidden;
+    max-width: 340px;
+    /* >= parse-card 宽度即可 */
+    opacity: 1;
+    transition: max-width 0.2s ease, opacity 0.2s ease;
+}
+
+.parse-card-wrap.collapsed {
+    max-width: 0;
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* 把手按钮视觉上像“贴边把手” */
+.parse-handle {
+    width: 28px;
+    height: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .empty-overlay {

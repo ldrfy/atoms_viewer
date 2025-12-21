@@ -158,6 +158,9 @@ export function createThreeStage(params: {
    * Switch between perspective and orthographic camera.
    */
   const setProjectionMode = (orthographic: boolean): void => {
+    const currentlyOrtho = !isPerspective(camera);
+    if (orthographic === currentlyOrtho) return;
+
     const prevCamera = camera;
     const prevControls = controls;
 

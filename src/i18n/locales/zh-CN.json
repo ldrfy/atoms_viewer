@@ -2,6 +2,9 @@
     "locale": {
         "selfName": "中文"
     },
+    "common": {
+        "delete": "删除"
+    },
     "viewer": {
         "theme": {
             "current": "当前",
@@ -41,29 +44,35 @@
         "title": "配置",
         "panel": {
             "display": {
-                "header": "显示"
+                "header": "显示",
+                "perspective": "是否透视",
+                "axes": "坐标轴",
+                "bonds": "键",
+                "atomSize": "原子大小",
+                "background": {
+                    "title": "背景色",
+                    "dark": "白色",
+                    "light": "黑色"
+                }
             },
             "pose": {
-                "header": "姿态（模型旋转，单位：度）"
+                "header": "姿态（模型旋转，单位：度）",
+                "rotX": "X 轴旋转",
+                "rotY": "Y 轴旋转",
+                "rotZ": "Z 轴旋转",
+                "resetPose": "回到旋转前",
+                "resetView": "恢复原始方向"
+            },
+            "lammps": {
+                "header": "LAMMPS",
+                "alert": "当 LAMMPS dump 以及 LAMMPS data 只提供 type（数字）时，需要在这里指定 type 对应元素符号，用于颜色/半径/键推断与稳定显示。",
+                "mapLabel": "type id → 元素符号（支持搜索）",
+                "typePlaceholder": "type",
+                "elementPlaceholder": "元素（如 C / O / Fe）",
+                "addMapping": "添加映射",
+                "clear": "清空",
+                "hint": "建议 dump 输出包含 id、type、x y z。若每帧顺序不固定，解析端会按 id 排序以保证动画不抖动。"
             }
-        },
-        "display": {
-            "perspective": "是否透视",
-            "axes": "坐标轴",
-            "bonds": "键",
-            "atomSize": "原子大小",
-            "background": {
-                "title": "背景色",
-                "dark": "白色",
-                "light": "黑色"
-            }
-        },
-        "pose": {
-            "rotX": "X 轴旋转",
-            "rotY": "Y 轴旋转",
-            "rotZ": "Z 轴旋转",
-            "resetPose": "回到旋转前",
-            "resetView": "恢复原始方向"
         }
     }
 }

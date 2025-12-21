@@ -9,7 +9,7 @@
                     <!-- 投影 -->
                     <a-form-item>
                         <a-row justify="space-between" align="middle">
-                            <a-col>{{ t("settings.display.perspective") }}</a-col>
+                            <a-col>{{ t("settings.panel.display.perspective") }}</a-col>
                             <a-col>
                                 <a-switch v-model:checked="orthographicModel" />
                             </a-col>
@@ -19,7 +19,7 @@
                     <!-- 坐标轴 -->
                     <a-form-item>
                         <a-row justify="space-between" align="middle">
-                            <a-col>{{ t("settings.display.axes") }}</a-col>
+                            <a-col>{{ t("settings.panel.display.axes") }}</a-col>
                             <a-col>
                                 <a-switch v-model:checked="showAxesModel" />
                             </a-col>
@@ -29,7 +29,7 @@
                     <!-- Bonds -->
                     <a-form-item>
                         <a-row justify="space-between" align="middle">
-                            <a-col>{{ t("settings.display.bonds") }}</a-col>
+                            <a-col>{{ t("settings.panel.display.bonds") }}</a-col>
                             <a-col>
                                 <a-switch v-model:checked="showBondsModel" />
                             </a-col>
@@ -37,7 +37,7 @@
                     </a-form-item>
 
                     <!-- 原子大小 -->
-                    <a-form-item :label="t('settings.display.atomSize')">
+                    <a-form-item :label="t('settings.panel.display.atomSize')">
                         <a-slider v-model:value="atomScaleModel" :min="0.2" :max="2" :step="0.05" />
                     </a-form-item>
                 </a-form>
@@ -46,7 +46,7 @@
             <!-- 姿态 -->
             <a-collapse-panel key="pose" :header="t('settings.panel.pose.header')">
                 <a-form layout="vertical">
-                    <a-form-item :label="t('settings.pose.rotX')">
+                    <a-form-item :label="t('settings.panel.pose.rotX')">
                         <a-row :gutter="8" align="middle">
                             <a-col :flex="1">
                                 <a-slider v-model:value="rotXModel" :min="-180" :max="180" :step="1" />
@@ -58,7 +58,7 @@
                         </a-row>
                     </a-form-item>
 
-                    <a-form-item :label="t('settings.pose.rotY')">
+                    <a-form-item :label="t('settings.panel.pose.rotY')">
                         <a-row :gutter="8" align="middle">
                             <a-col :flex="1">
                                 <a-slider v-model:value="rotYModel" :min="-180" :max="180" :step="1" />
@@ -70,7 +70,7 @@
                         </a-row>
                     </a-form-item>
 
-                    <a-form-item :label="t('settings.pose.rotZ')">
+                    <a-form-item :label="t('settings.panel.pose.rotZ')">
                         <a-row :gutter="8" align="middle">
                             <a-col :flex="1">
                                 <a-slider v-model:value="rotZModel" :min="-180" :max="180" :step="1" />
@@ -86,12 +86,12 @@
                         <a-row :gutter="8">
                             <a-col :span="12">
                                 <a-button block @click="resetPose">
-                                    {{ t("settings.pose.resetPose") }}
+                                    {{ t("settings.panel.pose.resetPose") }}
                                 </a-button>
                             </a-col>
                             <a-col :span="12">
                                 <a-button block @click="resetView">
-                                    {{ t("settings.pose.resetView") }}
+                                    {{ t("settings.panel.pose.resetView") }}
                                 </a-button>
                             </a-col>
                         </a-row>
@@ -99,49 +99,56 @@
                 </a-form>
             </a-collapse-panel>
 
-            <!-- LAMMPS dump -->
-            <a-collapse-panel key="lammps" header="LAMMPS dump">
+            <!-- LAMMPS dump data -->
+            <a-collapse-panel key="lammps" :header="t('settings.panel.lammps.header')">
                 <a-form layout="vertical">
-                    <a-alert type="info" show-icon
-                        message="当 dump 只提供 type（数字）时，需要在这里指定 type 对应元素符号，用于颜色/半径/键推断与稳定显示。" />
+                    <a-alert type="info" show-icon :message="t('settings.panel.lammps.alert')" />
 
-                    <a-form-item label="type id → 元素符号（支持搜索）" style="margin-top: 12px;">
+                    <a-form-item :label="t('settings.panel.lammps.mapLabel')" style="margin-top: 12px;">
                         <div v-for="(row, idx) in lammpsTypeMapModel" :key="`${row.typeId}-${idx}`"
                             style="margin-bottom: 8px;">
                             <a-row :gutter="8" align="middle">
                                 <a-col :span="8">
                                     <a-input-number :min="1" :step="1" :value="row.typeId" style="width: 100%;"
-                                        placeholder="type" @change="onLammpsTypeId(idx, $event)" />
+                                        :placeholder="t('settings.panel.lammps.typePlaceholder')"
+                                        @change="onLammpsTypeId(idx, $event)" />
                                 </a-col>
 
                                 <a-col :span="10">
                                     <a-select show-search :value="row.element" style="width: 100%;"
-                                        placeholder="元素（如 C / O / Fe）" :options="atomicOptions"
-                                        :filter-option="filterAtomicOption"
+                                        :placeholder="t('settings.panel.lammps.elementPlaceholder')"
+                                        :options="atomicOptions" :filter-option="filterAtomicOption"
                                         @change="onLammpsElementChange(idx, $event)" />
                                 </a-col>
 
                                 <a-col :span="6">
-                                    <a-button danger block @click="removeLammpsRow(idx)">删除</a-button>
+                                    <a-button danger block @click="removeLammpsRow(idx)">
+                                        {{ t("common.delete") }}
+                                    </a-button>
                                 </a-col>
                             </a-row>
                         </div>
 
                         <a-row :gutter="8">
                             <a-col :span="12">
-                                <a-button block @click="addLammpsRow">添加映射</a-button>
+                                <a-button block @click="addLammpsRow">
+                                    {{ t("settings.panel.lammps.addMapping") }}
+                                </a-button>
                             </a-col>
                             <a-col :span="12">
-                                <a-button block @click="clearLammpsRows">清空</a-button>
+                                <a-button block @click="clearLammpsRows">
+                                    {{ t("settings.panel.lammps.clear") }}
+                                </a-button>
                             </a-col>
                         </a-row>
 
                         <a-typography-text type="secondary" style="display:block;margin-top:8px;">
-                            建议 dump 输出包含 id、type、x y z。若每帧顺序不固定，解析端会按 id 排序以保证动画不抖动。
+                            {{ t("settings.panel.lammps.hint") }}
                         </a-typography-text>
                     </a-form-item>
                 </a-form>
             </a-collapse-panel>
+
         </a-collapse>
     </a-drawer>
 </template>

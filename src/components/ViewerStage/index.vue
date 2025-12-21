@@ -3,26 +3,43 @@
         @drop.prevent="onDrop">
         <div ref="canvasHostRef" class="canvas-host"></div>
 
-        <div v-if="!hasModel" class="empty-overlay">
+        <!-- 放下后开始加载：旋转图标 -->
+        <div v-if="isLoading" class="loading-overlay">
+            <a-spin size="large" />
+        </div>
+
+
+        <div v-if="!hasModel && !isDragging && !isLoading" class="empty-overlay">
             <div class="empty-card">
-                <div class="empty-title">{{ t("viewer.empty.title") }}</div>
-                <div class="empty-sub">{{ t("viewer.empty.subtitle") }}</div>
+                <a-empty>
+                    <template #description>
+                        <a-typography style="text-align: center">
+                            <a-typography-title :level="4" style="margin: 0">
+                                {{ t("viewer.empty.title") }}
+                            </a-typography-title>
 
-                <div class="empty-actions">
-                    <a-button type="primary" @click="openFilePicker">
-                        {{ t("viewer.empty.pickFile") }}
-                    </a-button>
-                </div>
+                            <a-typography-text type="secondary">
+                                {{ t("viewer.empty.subtitle") }}
+                            </a-typography-text>
+                        </a-typography>
+                    </template>
 
-                <div class="empty-actions">
-                    <a-button type="primary" @click="preloadDefault">
-                        {{ t("viewer.empty.preloadDefault") }}
-                    </a-button>
-                </div>
+                    <a-space direction="vertical" :size="12" class="empty-actions">
+                        <a-button type="primary" @click="openFilePicker">
+                            {{ t("viewer.empty.pickFile") }}
+                        </a-button>
+
+                        <a-button @click="preloadDefault">
+                            {{ t("viewer.empty.preloadDefault") }}
+                        </a-button>
+                    </a-space>
+                </a-empty>
             </div>
         </div>
 
+
         <input ref="fileInputRef" class="file-input" type="file" accept=".xyz" @change="onFilePicked" />
+
     </div>
 </template>
 
@@ -31,7 +48,6 @@ import { toRef, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { useViewerStage } from "./useViewerStage";
 import type { ViewerSettings } from "../../lib/viewer/settings";
-
 const emit = defineEmits<{
     (e: "model-state", hasModel: boolean): void;
 }>();
@@ -43,8 +59,10 @@ const { t } = useI18n();
 const {
     canvasHostRef,
     fileInputRef,
+    isLoading,
     hasModel,
     openFilePicker,
+    isDragging,
     onDragEnter,
     onDragOver,
     onDragLeave,
@@ -83,48 +101,23 @@ void fileInputRef;
     width: 100%;
 }
 
-.drop-overlay {
-    position: absolute;
-    inset: 0;
-    display: grid;
-    place-items: center;
-    backdrop-filter: blur(2px);
-}
-
-.drop-card {
-    padding: 16px 18px;
-    border-radius: 12px;
-}
 
 .empty-overlay {
     position: absolute;
     inset: 0;
     display: grid;
     place-items: center;
+    /* 空白穿透给画布 */
+}
+
+.loading-overlay {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+
+    /* 不挡 drop/画布事件（你若希望加载时禁止交互，可改成 auto） */
     pointer-events: none;
-}
-
-.empty-card {
-    pointer-events: auto;
-    padding: 16px 18px;
-    border-radius: 12px;
-    max-width: 520px;
-}
-
-.empty-title {
-    font-weight: 600;
-    margin-bottom: 6px;
-}
-
-.empty-sub {
-    opacity: 0.85;
-}
-
-.empty-actions {
-    margin-top: 12px;
-}
-
-.file-input {
-    display: none;
+    z-index: 30;
 }
 </style>

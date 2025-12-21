@@ -21,8 +21,8 @@
             "success": "Loaded: {fileName} ({atomCount} atoms, bondSegments={bondSegCount})"
         },
         "empty": {
-            "title": "Drag and drop a .xyz file here",
-            "subtitle": "After loading, you can rotate/zoom to inspect the structure (atoms colored by element, size by covalent radius, bonds split into two colored segments).",
+            "title": "Drag and drop a file here",
+            "subtitle": "Or simply select the file, the 'Test' button can load some built-in model tests",
             "pickFile": "Choose file",
             "preloadDefault": "Test"
         },

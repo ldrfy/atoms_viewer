@@ -21,8 +21,8 @@
             "success": "已加载：{fileName}（{atomCount} atoms，bondSegments={bondSegCount}）"
         },
         "empty": {
-            "title": "拖拽 .xyz 文件到这里",
-            "subtitle": "加载后可旋转/缩放查看结构（原子按元素着色、大小按元素半径、键双色分段）",
+            "title": "拖拽文件到这里",
+            "subtitle": "或直接选择文件，“测试”按钮可以加载一些内置模型测试",
             "pickFile": "选择文件",
             "preloadDefault": "测试"
         },

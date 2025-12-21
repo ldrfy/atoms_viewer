@@ -10,6 +10,7 @@
         "pause": "Pause",
         "fps": "FPS",
         "parse": {
+            "notice": "Please manually select the parsing method",
             "mode": "Parse mode",
             "format": "Format",
             "file": "File",

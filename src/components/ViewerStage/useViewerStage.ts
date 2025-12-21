@@ -430,14 +430,11 @@ export function useViewerStage(
       renderFromText(text, file.name, "load");
 
       // 成功提示 / Success toast
-      message.success(
-        t("viewer.load.success", {
-          fileName: file.name,
-          atomCount: parseInfo.atomCount,
-          bondSegCount: runtime.getLastBondSegCount(),
-        }) + `（${((performance.now() - t0) / 1000).toFixed(2)} s）`
-      );
+      message.success(`${((performance.now() - t0) / 1000).toFixed(2)} s`);
     } finally {
+      hasModel.value = true;
+      parseMode.value = "auto";
+      parseInfo.fileName = file.name;
       isLoading.value = false;
     }
   }
@@ -471,7 +468,7 @@ export function useViewerStage(
     } catch (err) {
       console.log(err);
 
-      message.error((err as Error).message);
+      message.error(`${t("viewer.parse.notice")}: ${(err as Error).message}`);
     }
   }
 

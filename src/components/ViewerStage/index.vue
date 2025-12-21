@@ -10,42 +10,39 @@
             <a-button class="parse-handle" type="text" size="small" @click="toggleParsePanel"
                 :aria-label="parseCollapsed ? 'expand parse panel' : 'collapse parse panel'">
                 <component :is="parseCollapsed ? RightOutlined : LeftOutlined" />
-            </a-button>
-            <!-- 卡片容器：用于做收起动画 -->
+            </a-button><!-- 卡片容器：用于做收起动画 -->
             <div class="parse-card-wrap" :class="{ collapsed: parseCollapsed }">
                 <a-card size="small" class="parse-card" :bordered="false">
-                    <a-space direction="vertical" :size="6">
-                        <a-space align="center" :size="8">
-                            <a-typography-text type="secondary">
-                                {{ t("viewer.parse.mode") }}
-                            </a-typography-text>
+                    <template #title>
+                        {{ t("viewer.parse.mode") }}
+                    </template>
 
-                            <a-select size="small" style="width: 170px" v-model:value="parseModeModel"
-                                :options="parseModeOptions" />
-                        </a-space>
+                    <a-space direction="vertical" :size="6" style="width: 100%">
+                        <a-select size="small" v-model:value="parseModeModel" :options="parseModeOptions"
+                            style="width: 100%" />
 
-                        <a-typography-text>
-                            <span class="k">{{ t("viewer.parse.format") }}:</span>
-                            <a-tag style="margin-left: 6px">{{ parseInfo.format || "-" }}</a-tag>
-                        </a-typography-text>
+                        <a-descriptions size="small" :column="1" class="parse-desc" bordered>
+                            <a-descriptions-item :label="t('viewer.parse.format')">
+                                <a-tag>{{ parseInfo.format || "-" }}</a-tag>
+                            </a-descriptions-item>
 
-                        <a-typography-text>
-                            <span class="k">{{ t("viewer.parse.file") }}:</span>
-                            <span style="margin-left: 6px">{{ parseInfo.fileName || "-" }}</span>
-                        </a-typography-text>
+                            <a-descriptions-item :label="t('viewer.parse.file')">
+                                <span class="parse-filename">{{ parseInfo.fileName || "-" }}</span>
+                            </a-descriptions-item>
 
-                        <a-typography-text>
-                            <span class="k">{{ t("viewer.parse.atoms") }}:</span>
-                            <span style="margin-left: 6px">{{ parseInfo.atomCount }}</span>
-                        </a-typography-text>
+                            <a-descriptions-item :label="t('viewer.parse.atoms')">
+                                {{ parseInfo.atomCount }}
+                            </a-descriptions-item>
 
-                        <a-typography-text v-if="parseInfo.frameCount > 1">
-                            <span class="k">{{ t("viewer.parse.frames") }}:</span>
-                            <span style="margin-left: 6px">{{ parseInfo.frameCount }}</span>
-                        </a-typography-text>
+                            <a-descriptions-item v-if="parseInfo.frameCount > 1" :label="t('viewer.parse.frames')">
+                                {{ parseInfo.frameCount }}
+                            </a-descriptions-item>
+                        </a-descriptions>
                     </a-space>
                 </a-card>
             </div>
+
+
 
         </div>
 
@@ -234,28 +231,28 @@ defineExpose({
 /* 右侧垂直居中 */
 .parse-overlay {
     position: absolute;
-    left: 12px;
+    left: 0px;
     top: 50%;
     transform: translateY(-50%);
     z-index: 25;
 
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 2px;
 
     pointer-events: auto;
 }
 
 /* 卡片固定宽度，便于动画稳定 */
 .parse-card {
-    width: 270px;
+    width: 240px;
     /* 你可按需要改 */
 }
 
 /* 用 max-width 做“收起”动画：把卡片压缩到 0 */
 .parse-card-wrap {
     overflow: hidden;
-    max-width: 340px;
+    max-width: 320px;
     /* >= parse-card 宽度即可 */
     opacity: 1;
     transition: max-width 0.2s ease, opacity 0.2s ease;
@@ -267,10 +264,10 @@ defineExpose({
     pointer-events: none;
 }
 
-/* 把手按钮视觉上像“贴边把手” */
+/* 把手按钮 */
 .parse-handle {
-    width: 28px;
-    height: 28px;
+    width: 32px;
+    height: 48px;
     display: inline-flex;
     align-items: center;
     justify-content: center;

@@ -38,7 +38,7 @@
         </div>
 
 
-        <input ref="fileInputRef" class="file-input" type="file" accept=".xyz" @change="onFilePicked" />
+        <input ref="fileInputRef" class="file-input" type="file" accept=".xyz,.pdb" @change="onFilePicked" />
 
     </div>
 </template>

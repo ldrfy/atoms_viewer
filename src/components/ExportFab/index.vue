@@ -1,12 +1,13 @@
 <template>
     <div v-if="hasModel" class="export-fab">
-        <a-float-button type="primary" @click="open = true" aria-label="export">
+        <a-float-button type="primary" @click="open = true" aria-label="export"
+            :style="{ right: '40px', bottom: '50%' }">
             <template #icon>
                 <DownloadOutlined />
             </template>
         </a-float-button>
 
-        <a-drawer :open="open" placement="bottom" :height="260" @close="open = false">
+        <a-drawer :open="open" placement="bottom" :height="320" @close="open = false">
             <template #title>
                 {{ t("viewer.export.button") }}
             </template>

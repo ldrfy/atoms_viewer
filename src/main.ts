@@ -5,4 +5,8 @@ import Antd from "ant-design-vue";
 import "ant-design-vue/dist/reset.css";
 import "./style.css"; // 加上这一行（或改成你实际的全局css路径）
 
-createApp(App).use(i18n).use(Antd).mount("#app");
+const app = createApp(App);
+app.use(i18n);
+
+app.use(Antd);
+app.mount("#app");

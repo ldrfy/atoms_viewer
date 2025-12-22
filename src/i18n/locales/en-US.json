@@ -6,9 +6,18 @@
         "delete": "Delete"
     },
     "viewer": {
-        "play": "Play",
-        "pause": "Pause",
-        "fps": "FPS",
+        "play": {
+            "stop": "Pause",
+            "start": "Play",
+            "fps": "FPS"
+        },
+        "record": {
+            "bg": "Background",
+            "start": "Record",
+            "stop": "Stop",
+            "resume": "Resume",
+            "pause": "Pause"
+        },
         "parse": {
             "notice": "Please manually select the parsing method",
             "mode": "Parse mode",

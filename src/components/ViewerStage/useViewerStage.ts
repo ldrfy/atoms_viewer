@@ -1,5 +1,7 @@
-import { onBeforeUnmount, onMounted, ref, reactive } from "vue";
-import type { Ref } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref, reactive } from "vue";
+import type { Ref, ComputedRef } from "vue";
+import * as THREE from "three";
+
 import type {
   ViewerSettings,
   LammpsTypeMapItem,
@@ -60,12 +62,21 @@ type ViewerStageBindings = {
   fps: Ref<number>;
   setFrame: (idx: number) => void;
   togglePlay: () => void;
-  stopPlay: () => void;
 
   // parse info / reparse
   parseInfo: ParseInfo;
   parseMode: Ref<ParseMode>;
   setParseMode: (mode: ParseMode) => void;
+
+  // recording
+  recordBgColor: Ref<string>;
+  isRecording: Ref<boolean>;
+  isRecordPaused: Ref<boolean>;
+  recordElapsedMs: Ref<number>;
+  recordTimeText: ComputedRef<string>;
+
+  toggleRecord: () => void;
+  togglePause: () => void;
 };
 
 /**
@@ -117,6 +128,28 @@ export function useViewerStage(
 
   const parseMode = ref<ParseMode>("auto");
 
+  // recording
+
+  const recordBgColor = ref<string>("#ffffff");
+
+  const isRecording = ref(false);
+  const isRecordPaused = ref(false);
+
+  // MediaRecorder
+  let mediaRecorder: MediaRecorder | null = null;
+  let recordedChunks: Blob[] = [];
+
+  // renderer background backup
+  let prevClearColor = new THREE.Color();
+  let prevClearAlpha = 0;
+
+  // timer
+  const recordElapsedMs = ref(0);
+
+  let recordTimerId: number | null = null;
+  let recordStartTs = 0;
+  let recordAccumulated = 0;
+
   /**
    * 左上角显示用：解析结果摘要
    *
@@ -138,6 +171,131 @@ export function useViewerStage(
   let lastRawFileName: string | null = null;
 
   const getSettings = (): ViewerSettings => settingsRef.value;
+
+  function startRecordTimer(): void {
+    recordAccumulated = 0;
+    recordStartTs = performance.now();
+    recordElapsedMs.value = 0;
+
+    recordTimerId = window.setInterval(() => {
+      recordElapsedMs.value =
+        recordAccumulated + (performance.now() - recordStartTs);
+    }, 200);
+  }
+
+  function pauseRecordTimer(): void {
+    if (!recordTimerId) return;
+
+    recordAccumulated += performance.now() - recordStartTs;
+    clearInterval(recordTimerId);
+    recordTimerId = null;
+  }
+
+  function resumeRecordTimer(): void {
+    if (recordTimerId) return;
+
+    recordStartTs = performance.now();
+    recordTimerId = window.setInterval(() => {
+      recordElapsedMs.value =
+        recordAccumulated + (performance.now() - recordStartTs);
+    }, 200);
+  }
+
+  function stopRecordTimer(): void {
+    if (recordTimerId) {
+      clearInterval(recordTimerId);
+      recordTimerId = null;
+    }
+    recordElapsedMs.value = 0;
+    recordAccumulated = 0;
+  }
+  function togglePause(): void {
+    if (!mediaRecorder) return;
+
+    if (mediaRecorder.state === "recording") {
+      mediaRecorder.pause();
+      pauseRecordTimer();
+      isRecordPaused.value = true;
+    } else if (mediaRecorder.state === "paused") {
+      mediaRecorder.resume();
+      resumeRecordTimer();
+      isRecordPaused.value = false;
+    }
+  }
+  function toggleRecord(): void {
+    if (!isRecording.value) {
+      startRecord();
+    } else {
+      stopRecord();
+    }
+  }
+
+  function startRecord(fps = 60): void {
+    if (!stage || isRecording.value) return;
+
+    const renderer = stage.renderer;
+
+    // backup transparent background
+    renderer.getClearColor(prevClearColor);
+    prevClearAlpha = renderer.getClearAlpha();
+
+    // Ant ColorPicker → hex
+    const hex = recordBgColor.value;
+
+    // set solid background for recording
+    renderer.setClearColor(new THREE.Color(hex), 1);
+
+    const stream = renderer.domElement.captureStream(fps);
+
+    recordedChunks = [];
+    mediaRecorder = new MediaRecorder(stream, {
+      mimeType: "video/webm; codecs=vp9",
+      videoBitsPerSecond: 8_000_000,
+    });
+
+    mediaRecorder.ondataavailable = (e) => {
+      if (e.data.size > 0) recordedChunks.push(e.data);
+    };
+
+    mediaRecorder.start();
+    startRecordTimer();
+
+    isRecording.value = true;
+    isRecordPaused.value = false;
+  }
+  function stopRecord(): void {
+    if (!mediaRecorder || !stage) return;
+
+    mediaRecorder.stop();
+
+    mediaRecorder.onstop = () => {
+      const blob = new Blob(recordedChunks, {
+        type: "video/webm",
+      });
+      const url = URL.createObjectURL(blob);
+
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "three-record.webm";
+      a.click();
+      URL.revokeObjectURL(url);
+
+      // restore transparent background
+      stage!.renderer.setClearColor(prevClearColor, prevClearAlpha);
+
+      stopRecordTimer();
+
+      mediaRecorder = null;
+      isRecording.value = false;
+      isRecordPaused.value = false;
+    };
+  }
+  const recordTimeText = computed(() => {
+    const s = Math.floor(recordElapsedMs.value / 1000);
+    const mm = String(Math.floor(s / 60)).padStart(2, "0");
+    const ss = String(s % 60).padStart(2, "0");
+    return `${mm}:${ss}`;
+  });
 
   function openFilePicker(): void {
     fileInputRef.value?.click();
@@ -569,9 +727,22 @@ export function useViewerStage(
 
     stage?.dispose();
     stage = null;
+
+    mediaRecorder?.stop();
+    stopRecordTimer();
   });
 
   return {
+    // recording
+    recordBgColor,
+    isRecording,
+    isRecordPaused,
+    recordElapsedMs,
+    recordTimeText,
+
+    toggleRecord,
+    togglePause,
+
     // parse
     parseInfo,
     parseMode,
@@ -584,7 +755,6 @@ export function useViewerStage(
     fps,
     setFrame,
     togglePlay,
-    stopPlay,
 
     canvasHostRef,
     fileInputRef,

@@ -56,6 +56,7 @@ export type ModelRuntime = {
   getFrameCount: () => number;
   hasAnyTypeId: () => boolean;
   getLastBondSegCount: () => number;
+  applyBackgroundColor: () => void;
 };
 
 /**
@@ -360,6 +361,14 @@ export function createModelRuntime(params: {
     applyFrameAtoms(cur);
   };
 
+  const applyBackgroundColor = (): void => {
+    if (!stage) return;
+    stage.renderer.setClearColor(
+      new THREE.Color(getSettings().backgroundColor ?? "#ffffff"),
+      1
+    );
+  };
+
   return {
     clearModel,
     renderModel,
@@ -373,5 +382,6 @@ export function createModelRuntime(params: {
     getFrameCount: () => animFrames.length,
     hasAnyTypeId: () => hasAnyType,
     getLastBondSegCount: () => lastBondSegCount,
+    applyBackgroundColor,
   };
 }

@@ -7,7 +7,7 @@
     },
     "viewer": {
         "play": {
-            "stop": "Pause",
+            "pause": "Pause",
             "start": "Play",
             "fps": "FPS"
         },

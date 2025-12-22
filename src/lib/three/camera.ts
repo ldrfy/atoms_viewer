@@ -170,6 +170,7 @@ export function switchProjectionMode(params: {
  * 设计目标：
  * - 透视/正交“同一 margin 语义”：margin < 1 => 物体更大（更紧），margin > 1 => 物体更小（更松）
  * - 正交返回新的 orthoHalfHeight（作为状态保存），透视则原样返回传入的 orthoHalfHeight
+ * - near/far 基于包围球，旋转不裁剪，同时保证深度精度
  */
 export function fitCameraToAtoms(params: {
   atoms: Atom[];
@@ -179,17 +180,13 @@ export function fitCameraToAtoms(params: {
   getSphereRadiusByElement: (el: string) => number;
   orthoHalfHeight: number;
 
-  /**
-   * 紧凑系数（统一控制透视与正交）：
-   * - < 1：更紧（物体更大）
-   * - > 1：更松（物体更小）
-   */
+  /** 紧凑系数：<1 更紧，>1 更松 */
   margin?: number;
 
-  /** 最小 near，避免过小导致深度精度问题 */
+  /** near 下限，防止为 0 */
   minNear?: number;
 
-  /** near/far 余量倍数（越大越不容易裁剪） */
+  /** 包围球裁剪余量倍数（3~5 推荐） */
   clipPaddingMul?: number;
 }): number {
   const {
@@ -201,12 +198,15 @@ export function fitCameraToAtoms(params: {
     orthoHalfHeight,
     margin = 1.2,
     minNear = 0.01,
-    clipPaddingMul = 3.5, // 3~6 都常见；越大越不容易“旋转裁剪”
+    clipPaddingMul = 4,
   } = params;
 
   if (!atoms || atoms.length === 0) return orthoHalfHeight;
 
-  // 1) 3D 包围盒（用于中心、包围球）
+  /* ------------------------------------------------------------------ */
+  /* 1) 包围盒 + 包围球 */
+  /* ------------------------------------------------------------------ */
+
   const box = new THREE.Box3();
   let maxSphere = 0;
 
@@ -217,7 +217,7 @@ export function fitCameraToAtoms(params: {
     maxSphere = Math.max(maxSphere, getSphereRadiusByElement(a.element));
   }
 
-  // 扩边，避免球体贴边
+  // 给球体留边，避免贴边
   const pad = Math.max(0.5, maxSphere * 2.0);
   box.expandByScalar(pad);
 
@@ -226,25 +226,50 @@ export function fitCameraToAtoms(params: {
 
   controls.target.copy(center);
 
-  // 2) aspect
-  const rect = host?.getBoundingClientRect();
-  const aspect = rect ? rect.width / Math.max(1, rect.height) : 1;
-
-  // 3) 关键：屏幕“大小”只用 XY（你的坐标约定：Z 代表 CNT 轴向/石墨烯法向）
-  const halfW = size.x / 2;
-  const halfH = size.y / 2;
-
-  // 4) 用包围球控制裁剪面（旋转不敏感）
   const sphere = new THREE.Sphere();
   box.getBoundingSphere(sphere);
   const r = sphere.radius;
+
+  /* ------------------------------------------------------------------ */
+  /* 2) aspect */
+  /* ------------------------------------------------------------------ */
+
+  const rect = host?.getBoundingClientRect();
+  const aspect = rect ? rect.width / Math.max(1, rect.height) : 1;
+
+  /* ------------------------------------------------------------------ */
+  /* 3) 只用 XY 控制屏幕尺寸 */
+  /* ------------------------------------------------------------------ */
+
+  const halfW = size.x / 2;
+  const halfH = size.y / 2;
+
+  /* ------------------------------------------------------------------ */
+  /* 4) 统一的 near / far 设置（核心改动） */
+  /* ------------------------------------------------------------------ */
+
+  function setClippingBySphere(dist: number) {
+    // 基于包围球，保证旋转不裁剪
+    const nearBySphere = dist - r * clipPaddingMul;
+    const farBySphere = dist + r * clipPaddingMul;
+
+    // 关键：near 随距离自适应抬高，保证深度精度
+    const nearAdaptive = dist * 0.02; // 2% 距离，经验稳定值
+
+    camera.near = Math.max(minNear, nearBySphere, nearAdaptive);
+
+    camera.far = Math.max(camera.near + 1e-3, farBySphere);
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* 5) 透视相机 */
+  /* ------------------------------------------------------------------ */
 
   if (isPerspective(camera)) {
     const vFov = THREE.MathUtils.degToRad(camera.fov);
     const tanV = Math.tan(vFov / 2);
     const tanH = tanV * aspect;
 
-    // 同时满足宽/高都装得下（避免窄屏时石墨烯过大）
     const distV = halfH / Math.max(1e-6, tanV);
     const distH = halfW / Math.max(1e-6, tanH);
     const baseDist = Math.max(distV, distH);
@@ -252,20 +277,22 @@ export function fitCameraToAtoms(params: {
     // margin < 1 => 更近 => 物体更大
     const dist = Math.max(0.05, baseDist * margin);
 
-    // 仍沿 +Z 放置（与你现有体系一致）
+    // 沿 +Z 放置（与你当前坐标约定一致）
     camera.position.set(center.x, center.y, center.z + dist);
 
-    // 关键修复：near/far 用包围球半径给足余量，防止旋转后裁剪
-    camera.near = Math.max(minNear, dist - r * clipPaddingMul);
-    camera.far = dist + r * clipPaddingMul;
+    setClippingBySphere(dist);
 
     camera.updateProjectionMatrix();
     controls.update();
     controls.saveState();
+
     return orthoHalfHeight;
   }
 
-  // 正交：halfHeight 既要容纳高度，也要容纳宽度（按 aspect 折算）
+  /* ------------------------------------------------------------------ */
+  /* 6) 正交相机 */
+  /* ------------------------------------------------------------------ */
+
   const baseHalf = Math.max(halfH, halfW / Math.max(1e-6, aspect));
   const newHalf = Math.max(0.1, baseHalf * margin);
 
@@ -274,16 +301,16 @@ export function fitCameraToAtoms(params: {
   camera.top = newHalf;
   camera.bottom = -newHalf;
 
-  // 正交相机距离不影响屏幕大小，但仍放远一点更稳
+  // 正交下距离不影响大小，但放远一点数值更稳
   const dist = Math.max(0.05, r * 2.2);
+
   camera.position.set(center.x, center.y, center.z + dist);
 
-  // 同样用包围球设置裁剪面，旋转不敏感
-  camera.near = Math.max(minNear, dist - r * clipPaddingMul);
-  camera.far = dist + r * clipPaddingMul;
+  setClippingBySphere(dist);
 
   camera.updateProjectionMatrix();
   controls.update();
   controls.saveState();
+
   return newHalf;
 }

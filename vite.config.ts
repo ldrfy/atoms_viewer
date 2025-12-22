@@ -20,5 +20,5 @@ export default defineConfig({
       // deleteOriginalAssets: false, // 默认就是 false，不建议删源文件
     }),
   ],
-  base: "/ldr_atoms_viewer/",
+  base: "/atoms_viewer/",
 });

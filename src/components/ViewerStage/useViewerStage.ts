@@ -1,5 +1,6 @@
-import { computed, onBeforeUnmount, onMounted, ref, reactive } from "vue";
-import type { Ref, ComputedRef } from "vue";
+// src/components/ViewerStage/useViewerStage.ts
+import { onBeforeUnmount, onMounted, ref, reactive } from "vue";
+import type { Ref } from "vue";
 import * as THREE from "three";
 
 import type {
@@ -32,6 +33,8 @@ import { createModelRuntime, type ModelRuntime } from "./modelRuntime";
 import { isLammpsDumpFormat } from "../../lib/structure/parsers/lammpsDump";
 import { isLammpsDataFormat } from "../../lib/structure/parsers/lammpsData";
 import { applyAnimationInfo } from "./animation";
+
+import { createRecordingController, type RecordingBindings } from "./recording";
 
 /**
  * ViewerStage 对外 bindings。
@@ -70,16 +73,7 @@ type ViewerStageBindings = {
   parseInfo: ParseInfo;
   parseMode: Ref<ParseMode>;
   setParseMode: (mode: ParseMode) => void;
-
-  // recording
-  isRecording: Ref<boolean>;
-  isRecordPaused: Ref<boolean>;
-  recordElapsedMs: Ref<number>;
-  recordTimeText: ComputedRef<string>;
-
-  toggleRecord: () => void;
-  togglePause: () => void;
-};
+} & RecordingBindings;
 
 /**
  * ViewerStage 主 composable：
@@ -130,21 +124,12 @@ export function useViewerStage(
 
   const parseMode = ref<ParseMode>("auto");
 
-  // recording
-
-  const isRecording = ref(false);
-  const isRecordPaused = ref(false);
-
-  // MediaRecorder
-  let mediaRecorder: MediaRecorder | null = null;
-  let recordedChunks: Blob[] = [];
-
-  // timer
-  const recordElapsedMs = ref(0);
-
-  let recordTimerId: number | null = null;
-  let recordStartTs = 0;
-  let recordAccumulated = 0;
+  // ✅ recording: moved out to recording.ts
+  const recording = createRecordingController({
+    getStage: () => stage,
+    patchSettings,
+    t,
+  });
 
   /**
    * 左上角显示用：解析结果摘要
@@ -167,120 +152,6 @@ export function useViewerStage(
   let lastRawFileName: string | null = null;
 
   const getSettings = (): ViewerSettings => settingsRef.value;
-
-  function startRecordTimer(): void {
-    recordAccumulated = 0;
-    recordStartTs = performance.now();
-    recordElapsedMs.value = 0;
-
-    recordTimerId = window.setInterval(() => {
-      recordElapsedMs.value =
-        recordAccumulated + (performance.now() - recordStartTs);
-    }, 200);
-  }
-
-  function pauseRecordTimer(): void {
-    if (!recordTimerId) return;
-
-    recordAccumulated += performance.now() - recordStartTs;
-    clearInterval(recordTimerId);
-    recordTimerId = null;
-  }
-
-  function resumeRecordTimer(): void {
-    if (recordTimerId) return;
-
-    recordStartTs = performance.now();
-    recordTimerId = window.setInterval(() => {
-      recordElapsedMs.value =
-        recordAccumulated + (performance.now() - recordStartTs);
-    }, 200);
-  }
-
-  function stopRecordTimer(): void {
-    if (recordTimerId) {
-      clearInterval(recordTimerId);
-      recordTimerId = null;
-    }
-    recordElapsedMs.value = 0;
-    recordAccumulated = 0;
-  }
-  function togglePause(): void {
-    if (!mediaRecorder) return;
-
-    if (mediaRecorder.state === "recording") {
-      mediaRecorder.pause();
-      pauseRecordTimer();
-      isRecordPaused.value = true;
-    } else if (mediaRecorder.state === "paused") {
-      mediaRecorder.resume();
-      resumeRecordTimer();
-      isRecordPaused.value = false;
-    }
-  }
-  function toggleRecord(): void {
-    if (!isRecording.value) {
-      startRecord();
-    } else {
-      stopRecord();
-    }
-  }
-
-  function startRecord(fps = 60): void {
-    if (!stage || isRecording.value) return;
-
-    // 录制时强制不透明背景（否则透明背景会导致视频底色不可控）
-    patchSettings?.({ backgroundTransparent: false });
-    runtime?.applyBackgroundColor();
-
-    const stream = stage.renderer.domElement.captureStream(fps);
-
-    recordedChunks = [];
-    mediaRecorder = new MediaRecorder(stream, {
-      mimeType: "video/webm; codecs=vp9",
-      videoBitsPerSecond: 8_000_000,
-    });
-
-    mediaRecorder.ondataavailable = (e) => {
-      if (e.data.size > 0) recordedChunks.push(e.data);
-    };
-
-    mediaRecorder.start();
-    startRecordTimer();
-
-    isRecording.value = true;
-    isRecordPaused.value = false;
-  }
-  function stopRecord(): void {
-    if (!mediaRecorder || !stage) return;
-
-    mediaRecorder.stop();
-
-    mediaRecorder.onstop = () => {
-      const blob = new Blob(recordedChunks, {
-        type: "video/webm",
-      });
-      const url = URL.createObjectURL(blob);
-
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "three-record.webm";
-      a.click();
-      URL.revokeObjectURL(url);
-
-      stopRecordTimer();
-
-      mediaRecorder = null;
-      isRecording.value = false;
-      isRecordPaused.value = false;
-    };
-  }
-  const recordTimeText = computed(() => {
-    const s = Math.floor(recordElapsedMs.value / 1000);
-    const mm = String(Math.floor(s / 60)).padStart(2, "0");
-    const ss = String(s % 60).padStart(2, "0");
-    return `${mm}:${ss}`;
-  });
 
   function openFilePicker(): void {
     fileInputRef.value?.click();
@@ -389,23 +260,21 @@ export function useViewerStage(
     const { typeIds: detectedTypeIds, defaults } =
       collectTypeIdsAndElementDefaultsFromAtoms(atoms0);
 
-    const mergedRows = mergeTypeMap(
-      beforeRows,
-      detectedTypeIds,
-      defaults
-    ) as LammpsTypeMapItem[];
+    const mergedRows = mergeTypeMap(beforeRows, detectedTypeIds, defaults) as
+      | LammpsTypeMapItem[]
+      | undefined;
 
     const typeMapAdded = !typeMapEquals(
       normalizeTypeMapRows(beforeRows),
-      normalizeTypeMapRows(mergedRows)
+      normalizeTypeMapRows(mergedRows ?? [])
     );
 
     const hasUnknownForThisDump = hasUnknownElementMappingForTypeIds(
-      mergedRows,
+      mergedRows ?? [],
       detectedTypeIds
     );
 
-    if (patchSettings && typeMapAdded) {
+    if (patchSettings && typeMapAdded && mergedRows) {
       patchSettings({ lammpsTypeMap: mergedRows });
     }
 
@@ -482,7 +351,6 @@ export function useViewerStage(
     if (isLmp) {
       handleLammpsTypeMapAndSettings(model);
     } else {
-      // 关键：从 LAMMPS 切回 XYZ/PDB 时，要把焦点切回 display
       // Important: when switching back from LAMMPS to XYZ/PDB, focus display.
       focusSettingsToDisplaySilently();
     }
@@ -501,8 +369,6 @@ export function useViewerStage(
    * Re-parse and re-render after user selects a parser (no file IO; use cached text).
    */
   function setParseMode(mode: ParseMode): void {
-    // 如果没变就不做任何事，避免重复 render
-    // No-op if unchanged to avoid redundant render.
     if (parseMode.value === mode) return;
 
     parseMode.value = mode;
@@ -536,21 +402,17 @@ export function useViewerStage(
     try {
       stopPlay();
 
-      // 新文件默认回到自动解析（避免上次强制解析影响下一次）
       // Reset to auto for each new file to avoid leaking previous forced mode.
       parseMode.value = "auto";
 
-      // 读取并缓存源文本，供 setParseMode 重新解析
       // Read & cache raw text for setParseMode re-parse.
       const text = await file.text();
       lastRawText = text;
       lastRawFileName = file.name;
 
-      // 核心渲染管线
       // Core rendering pipeline
       renderFromText(text, file.name, "load");
 
-      // 成功提示 / Success toast
       message.success(`${((performance.now() - t0) / 1000).toFixed(2)} s`);
     } finally {
       hasModel.value = true;
@@ -588,7 +450,6 @@ export function useViewerStage(
       await loadFile(file);
     } catch (err) {
       console.log(err);
-
       message.error(`${t("viewer.parse.notice")}: ${(err as Error).message}`);
     }
   }
@@ -672,7 +533,6 @@ export function useViewerStage(
     const host = canvasHostRef.value;
     if (!host) return;
 
-    // 1) 创建 three 舞台（含 raf loop、resize、projection 切换）
     // 1) Create Three stage (raf loop, resize, projection switch)
     stage = createThreeStage({
       host,
@@ -680,7 +540,6 @@ export function useViewerStage(
       onBeforeRender: () => tickAnimation(),
     });
 
-    // 2) 创建模型运行时（负责 mesh/frames/fit）
     // 2) Create model runtime (meshes/frames/fit)
     runtime = createModelRuntime({
       stage,
@@ -691,7 +550,6 @@ export function useViewerStage(
       bondRadius: BOND_RADIUS,
     });
 
-    // 3) 绑定 settings watchers
     // 3) Bind settings watchers
     stopBind = bindViewerStageSettings({
       settingsRef,
@@ -708,10 +566,10 @@ export function useViewerStage(
       onTypeMapChanged: () => runtime?.onTypeMapChanged(frameIndex.value),
       applyBackgroundColor: () => runtime?.applyBackgroundColor(),
     });
+
     runtime?.applyBackgroundColor();
     stage.start();
 
-    // 全局阻止浏览器默认 drop（避免打开文件替换页面）
     // Prevent default browser drop behavior (avoid replacing current page)
     window.addEventListener("dragover", preventWindowDropDefault);
     window.addEventListener("drop", preventWindowDropDefault);
@@ -732,25 +590,20 @@ export function useViewerStage(
     stage?.dispose();
     stage = null;
 
-    mediaRecorder?.stop();
-    stopRecordTimer();
+    // best-effort recording cleanup (if you added dispose() in recording.ts)
+    (recording as any)?.dispose?.();
   });
 
   return {
-    // recording
-    isRecording,
-    isRecordPaused,
-    recordElapsedMs,
-    recordTimeText,
-
-    toggleRecord,
-    togglePause,
+    // ✅ recording bindings
+    ...recording,
 
     // parse
     parseInfo,
     parseMode,
     setParseMode,
 
+    // animation
     hasAnimation,
     frameIndex,
     frameCount,
@@ -759,6 +612,7 @@ export function useViewerStage(
     setFrame,
     togglePlay,
 
+    // stage basics
     canvasHostRef,
     fileInputRef,
     isDragging,

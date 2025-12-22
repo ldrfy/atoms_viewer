@@ -1,6 +1,47 @@
 <template>
     <div class="stage" @dragenter.prevent="onDragEnter" @dragover.prevent="onDragOver" @dragleave.prevent="onDragLeave"
         @drop.prevent="onDrop">
+
+        <!-- 录制框选/编辑遮罩 -->
+        <div v-if="isSelectingRecordArea" class="record-select-overlay" @pointerdown.prevent="onRecordOverlayDown"
+            @pointermove.prevent="onRecordOverlayMove" @pointerup.prevent="onRecordOverlayUp"
+            @pointercancel.prevent="onRecordOverlayCancel">
+            <div class="record-select-hint" @pointerdown.stop>
+                {{ t("viewer.record.selectHint") }}
+            </div>
+
+            <!-- 草稿框（可编辑） -->
+            <div v-if="recordDraftBox" class="record-draft-box" :style="{
+                left: recordDraftBox.x + 'px',
+                top: recordDraftBox.y + 'px',
+                width: recordDraftBox.w + 'px',
+                height: recordDraftBox.h + 'px',
+            }">
+                <!-- 8 个缩放点 -->
+                <span class="rh rh-nw" data-h="nw"></span>
+                <span class="rh rh-n" data-h="n"></span>
+                <span class="rh rh-ne" data-h="ne"></span>
+                <span class="rh rh-e" data-h="e"></span>
+                <span class="rh rh-se" data-h="se"></span>
+                <span class="rh rh-s" data-h="s"></span>
+                <span class="rh rh-sw" data-h="sw"></span>
+                <span class="rh rh-w" data-h="w"></span>
+            </div>
+
+            <!-- 底部操作 -->
+            <div class="record-select-actions" @pointerdown.stop @pointerup.stop>
+                <a-space :size="8">
+                    <a-button size="small" @click="cancelRecordSelect">
+                        {{ t("viewer.record.selectCancel") }}
+                    </a-button>
+                    <a-button size="small" type="primary" :disabled="!recordDraftBox" @click="confirmRecordSelect">
+                        {{ t("viewer.record.selectConfirm") }}
+                    </a-button>
+                </a-space>
+            </div>
+        </div>
+
+
         <div ref="canvasHostRef" class="canvas-host"></div>
 
         <!-- 右侧：解析信息（可收起） -->
@@ -110,7 +151,7 @@
 
                 <!-- 右：不压缩 -->
                 <a-col flex="none">
-                    <a-button size="small" class="anim-action-btn" @click="togglePlay">
+                    <a-button type="primary" size="small" class="anim-action-btn" @click="togglePlay">
                         {{ isPlaying ? t("viewer.play.pause") : t("viewer.play.start") }}
                     </a-button>
                 </a-col>
@@ -140,7 +181,8 @@
                         </a-tag>
                         <a-button v-if="isRecording" size="small" class="anim-action-btn" @click="togglePause">
                             {{ isRecordPaused ? t("viewer.record.resume") : t("viewer.record.pause") }}
-                        </a-button> <a-button size="small" class="anim-action-btn" @click="toggleRecord">
+                        </a-button>
+                        <a-button type="primary" size="small" class="anim-action-btn" @click="toggleRecord">
                             {{ isRecording ? t("viewer.record.stop") : t("viewer.record.start") }}
                         </a-button>
 
@@ -149,6 +191,13 @@
             </a-row>
         </div>
 
+        <!-- 录制中：显示裁剪虚线框（不影响操作） -->
+        <div v-if="isRecording && recordCropBox" class="record-crop-dash" :style="{
+            left: recordCropBox.x + 'px',
+            top: recordCropBox.y + 'px',
+            width: recordCropBox.w + 'px',
+            height: recordCropBox.h + 'px',
+        }" />
 
     </div>
 </template>
@@ -231,6 +280,17 @@ const {
     onFilePicked,
     onExportPng,
     preloadDefault,
+
+    // Select
+    isSelectingRecordArea,
+    recordDraftBox,
+    onRecordOverlayDown,
+    onRecordOverlayMove,
+    onRecordOverlayUp,
+    onRecordOverlayCancel,
+    cancelRecordSelect,
+    confirmRecordSelect,
+    recordCropBox,
 } = stage;
 
 void fileInputRef
@@ -280,242 +340,4 @@ defineExpose({
 
 </script>
 
-<style scoped>
-.stage {
-    position: relative;
-    height: 100%;
-    width: 100%;
-    overflow: hidden;
-    /* 容器显式禁止浏览器触控行为 */
-    touch-action: none;
-}
-
-.canvas-host {
-    /* 容器显式禁止浏览器触控行为 */
-    touch-action: none;
-    height: 100%;
-    width: 100%;
-}
-
-/* 右侧垂直居中 */
-.parse-overlay {
-    position: absolute;
-    left: 0px;
-    top: 50%;
-    transform: translateY(-50%);
-    z-index: 25;
-
-    display: flex;
-    align-items: center;
-    gap: 2px;
-
-    pointer-events: auto;
-}
-
-/* 卡片固定宽度，便于动画稳定 */
-.parse-card {
-    width: 240px;
-    /* 你可按需要改 */
-}
-
-/* 用 max-width 做“收起”动画：把卡片压缩到 0 */
-.parse-card-wrap {
-    overflow: hidden;
-    max-width: 320px;
-    /* >= parse-card 宽度即可 */
-    opacity: 1;
-    transition: max-width 0.2s ease, opacity 0.2s ease;
-}
-
-.parse-card-wrap.collapsed {
-    max-width: 0;
-    opacity: 0;
-    pointer-events: none;
-}
-
-/* 把手按钮 */
-.parse-handle {
-    width: 32px;
-    height: 48px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.empty-overlay {
-    position: absolute;
-    inset: 0;
-    display: grid;
-    place-items: center;
-}
-
-.loading-overlay {
-    position: absolute;
-    inset: 0;
-    display: grid;
-    place-items: center;
-    pointer-events: none;
-    z-index: 30;
-}
-
-
-/* ===============================
-   动画控制条：不换行 & 不溢出
-   =============================== */
-.anim-bar {
-    position: absolute;
-    left: 12px;
-    bottom: 12px;
-    z-index: 20;
-    pointer-events: auto;
-
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-
-    /* 桌面不太宽 + 手机不超出横向宽度 */
-    width: min(340px, calc(100vw - 24px));
-    max-width: calc(100vw - 24px);
-    overflow: hidden;
-}
-
-/* 第一行/第二行/第三行：通用行容器 */
-.anim-row {
-    width: 100%;
-}
-
-/* 第一行：帧序号 + slider（flex） */
-.anim-left-full {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    min-width: 0;
-    /* 允许 slider 收缩 */
-}
-
-/* 第二/三行：两列布局（不换行时推荐用 a-row :wrap="false"，CSS 只做配合） */
-.anim-left {
-    min-width: 0;
-    display: flex;
-    align-items: center;
-}
-
-/* 右侧区域（当你用 a-space 包按钮时，这里主要负责不被撑爆） */
-.anim-right {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 8px;
-    max-width: 100%;
-}
-
-/* 帧序号 */
-.anim-frame-text {
-    min-width: 72px;
-    text-align: right;
-    font-variant-numeric: tabular-nums;
-}
-
-/* slider：自适应宽度（不要固定像素宽） */
-.anim-slider {
-    width: 100%;
-    min-width: 0;
-}
-
-/* label 通用（原来的 anim-label 也保留） */
-.anim-label {
-    opacity: 0.85;
-}
-
-/* 左侧字段：label + 输入挨着，并允许整体被压缩 */
-.anim-field {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    /* “词”和输入框挨着：关键 */
-    min-width: 0;
-    /* 允许压缩 */
-}
-
-/* 第三行更紧凑一点（可选） */
-.anim-field-tight {
-    gap: 4px;
-}
-
-/* 为了 fps 和 bg 两行左侧对齐：给 label 固定宽度 */
-.anim-field-label {
-    width: 72px;
-    /* 需要更齐可以调 64~90 */
-    opacity: 0.85;
-    text-align: left;
-    white-space: nowrap;
-    flex: 0 0 auto;
-}
-
-/* fps 输入框宽度（紧凑） */
-.anim-field-input {
-    width: 80px;
-}
-
-/* 颜色输入控件 */
-.native-color {
-    width: 34px;
-    height: 26px;
-    padding: 0;
-    border: 1px solid rgba(0, 0, 0, 0.15);
-    border-radius: 6px;
-    background: transparent;
-    flex: 0 0 auto;
-}
-
-/* 颜色 hex：必须能省略，否则手机会横向溢出 */
-.color-hex {
-    min-width: 0;
-    max-width: 80px;
-    /* 手机关键：控制住 */
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-
-    min-width: 72px;
-    /* 若你想更紧，可删掉这一行 */
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
-        "Courier New", monospace;
-    font-variant-numeric: tabular-nums;
-    opacity: 0.85;
-}
-
-/* 按钮文字不折行（不然会把高度撑得很怪） */
-.anim-action-btn {
-    white-space: nowrap;
-}
-
-/* REC tag */
-.anim-rec-tag {
-    margin-left: 2px;
-}
-
-/* 超小屏进一步收紧，避免任何溢出 */
-@media (max-width: 360px) {
-    .anim-bar {
-        width: min(320px, calc(100vw - 24px));
-    }
-
-    .anim-frame-text {
-        min-width: 64px;
-    }
-
-    .anim-field-label {
-        width: 64px;
-    }
-
-    .anim-field-input {
-        width: 72px;
-    }
-
-    .color-hex {
-        max-width: 64px;
-        min-width: 0;
-    }
-}
-</style>
+<style scoped src="./index.css"></style>

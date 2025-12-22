@@ -8,9 +8,10 @@
 
 ## 🚀 Start
 
-- Download xyz file: [cnt.xyz](readme/samples/cnt.xyz) or [mos2.xyz](readme/samples/mos2.xyz)
+![start](readme/images/start.jpg)
+
 - Go [Web: Ldr-Atoms-Viewer](https://ldrfy.github.io/atoms_viewer/)
-- Upload the xyz file
+- Upload your file (`lammps-data`, `lammps-dump`, `pdb`, `xyz`)
 
 | Camera       | CNT                               | MoS2_NT                             |
 | ------------ | --------------------------------- | ----------------------------------- |
@@ -26,32 +27,25 @@ The implementation prioritizes performance and responsiveness, leveraging a cont
 
 ## Features
 
-- **3D structure building (single-frame)**
+- Video Recording
 
-  - Supports **LAMMPS data** (`lammps-data`), **XYZ** (single frame), and **PDB** for constructing and rendering a static 3D structure.
+> Allows recording of rotation processes or trajectories, with customizable recording regions and different background colors.
 
-- **3D animation playback (multi-frame)**
+- PNG Export
 
-  * Supports **LAMMPS dump** (`lammps-dump`) and **XYZ** (multi-frame) for time-series 3D animation playback.
+> Supports transparent or colored backgrounds, adjustable output resolution, and automatic cropping to the compact content bounding box.
 
-- **Display & view controls**
+- Smooth Performance & Multi-Device Support
 
-  * Dark/Light theme
-  * Multi-language (i18n)
-  * Precise rotation control (X/Y/Z)
-  * Atom size scaling
-  * Toggles for axes and bonds
+> Capable of loading hundreds of thousands of atoms, and usable on various platforms including mobile and desktop.
 
-- **PNG export**
+- Multi-Format Support
 
-  * Transparent background
-  * Configurable output resolution (custom scaling factor)
-  * Automatic cropping to a tight content bounding box
+> `lammps-data`, `lammps-dump`, `pdb`, `xyz`; `xyz` and `lammps-dump` support trajectory playback.
 
-- **Smooth user experience**
+- Customization
 
-  * Designed to be more responsive and fluid than typical structure viewers
-
+> Multiple languages, dark/light themes, precise rotation control, atom size scaling, and toggle display for axes and bonds.
 
 ## 📦 Tech Stack
 

@@ -6,9 +6,23 @@
         <div v-if="isSelectingRecordArea" class="record-select-overlay" @pointerdown.prevent="onRecordOverlayDown"
             @pointermove.prevent="onRecordOverlayMove" @pointerup.prevent="onRecordOverlayUp"
             @pointercancel.prevent="onRecordOverlayCancel">
-            <div class="record-select-hint" @pointerdown.stop>
-                {{ t("viewer.record.selectHint") }}
+
+            <div class="record-select">
+                <div class="record-select-hint" @pointerdown.stop>
+                    {{ t("viewer.record.selectHint") }}
+                </div>
+                <div class="record-select-actions" @pointerdown.stop @pointerup.stop>
+                    <a-space :size="8">
+                        <a-button @click="cancelRecordSelect">
+                            {{ t("viewer.record.selectCancel") }}
+                        </a-button>
+                        <a-button type="primary" :disabled="!recordDraftBox" @click="confirmRecordSelect">
+                            {{ t("viewer.record.selectConfirm") }}
+                        </a-button>
+                    </a-space>
+                </div>
             </div>
+
 
             <!-- 草稿框（可编辑） -->
             <div v-if="recordDraftBox" class="record-draft-box" :style="{
@@ -28,17 +42,6 @@
                 <span class="rh rh-w" data-h="w"></span>
             </div>
 
-            <!-- 底部操作 -->
-            <div class="record-select-actions" @pointerdown.stop @pointerup.stop>
-                <a-space :size="8">
-                    <a-button size="small" @click="cancelRecordSelect">
-                        {{ t("viewer.record.selectCancel") }}
-                    </a-button>
-                    <a-button size="small" type="primary" :disabled="!recordDraftBox" @click="confirmRecordSelect">
-                        {{ t("viewer.record.selectConfirm") }}
-                    </a-button>
-                </a-space>
-            </div>
         </div>
 
 
@@ -151,7 +154,7 @@
 
                 <!-- 右：不压缩 -->
                 <a-col flex="none">
-                    <a-button type="primary" size="small" class="anim-action-btn" @click="togglePlay">
+                    <a-button type="primary" class="anim-action-btn" @click="togglePlay">
                         {{ isPlaying ? t("viewer.play.pause") : t("viewer.play.start") }}
                     </a-button>
                 </a-col>
@@ -166,7 +169,7 @@
 
                         <input class="native-color" type="color" v-model="bgColorModel" :disabled="isRecording" />
 
-                        <a-typography-text v-if="!isRecording" class="color-hex" :ellipsis="{ tooltip: bgColorModel }">
+                        <a-typography-text v-if="!isRecording" class="color-hex" :content="{ tooltip: bgColorModel }">
                             {{ bgColorModel }}
                         </a-typography-text>
                     </div>
@@ -179,10 +182,10 @@
                         <a-tag v-if="isRecording" color="red" class="anim-rec-tag">
                             ● REC {{ recordTimeText }}
                         </a-tag>
-                        <a-button v-if="isRecording" size="small" class="anim-action-btn" @click="togglePause">
+                        <a-button v-if="isRecording" class="anim-action-btn" @click="togglePause">
                             {{ isRecordPaused ? t("viewer.record.resume") : t("viewer.record.pause") }}
                         </a-button>
-                        <a-button type="primary" size="small" class="anim-action-btn" @click="toggleRecord">
+                        <a-button type="primary" class="anim-action-btn" @click="toggleRecord">
                             {{ isRecording ? t("viewer.record.stop") : t("viewer.record.start") }}
                         </a-button>
 

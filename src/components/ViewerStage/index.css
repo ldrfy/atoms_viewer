@@ -249,16 +249,27 @@
   background: rgba(0, 0, 0, 0.08);
 }
 
-.record-select-hint {
+.record-select {
   position: absolute;
-  left: 12px;
-  top: 12px;
+
+  display: flex;
+  flex-direction: column;
+  margin-left: 12px;
+  margin-top: 12px;
+}
+.record-select-hint {
+  margin-bottom: 12px;
   padding: 6px 10px;
   border-radius: 8px;
   background: rgba(0, 0, 0, 0.55);
   color: #fff;
   font-size: 12px;
   user-select: none;
+}
+
+.record-select-actions {
+  z-index: 55;
+  pointer-events: auto;
 }
 
 .record-select-box {
@@ -280,14 +291,6 @@
   box-sizing: border-box;
   /* 可选：轻微外发光，暗背景更明显 */
   filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.5));
-}
-
-.record-select-actions {
-  position: absolute;
-  right: 12px;
-  bottom: 12px;
-  z-index: 55;
-  pointer-events: auto;
 }
 
 /* 可编辑框 */

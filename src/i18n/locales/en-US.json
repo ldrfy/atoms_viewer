@@ -16,7 +16,11 @@
             "start": "Record",
             "stop": "Stop",
             "resume": "Resume",
-            "pause": "Pause"
+            "pause": "Pause",
+            "selectHint": "Drag to draw a box. After drawing, you can move/resize it. Click Confirm to start recording.",
+            "selectCancel": "Cancel",
+            "selectConfirm": "Confirm recording",
+            "tooSmall": "Selected area is too small"
         },
         "parse": {
             "notice": "Please manually select the parsing method",

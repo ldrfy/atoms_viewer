@@ -16,7 +16,11 @@
             "start": "录制",
             "stop": "结束",
             "resume": "恢复",
-            "pause": "暂停"
+            "pause": "暂停",
+            "selectHint": "拖拽画框；画完后可拖动/拉伸微调；点击确认开始录制",
+            "selectCancel": "取消",
+            "selectConfirm": "确认录制",
+            "tooSmall": "框选区域太小"
         },
         "parse": {
             "notice": "请手动选择解析方式",

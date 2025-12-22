@@ -15,7 +15,7 @@ import { parseStructure, toForcedFilename } from "../../lib/structure/parse";
 import type { ParseMode, ParseInfo } from "../../lib/structure/parse";
 import {
   buildLammpsTypeToElementMap,
-  collectTypeIdsFromAtoms,
+  collectTypeIdsAndElementDefaultsFromAtoms,
   mergeTypeMap,
   normalizeTypeMapRows,
   typeMapEquals,
@@ -243,41 +243,14 @@ export function useViewerStage(
 
     const atoms0 =
       model.frames && model.frames[0] ? model.frames[0] : model.atoms;
-    const detectedTypeIds = collectTypeIdsFromAtoms(atoms0);
+    const { typeIds: detectedTypeIds, defaults } =
+      collectTypeIdsAndElementDefaultsFromAtoms(atoms0);
 
-    // NEW: extract default labels from parsed model (prefer non-"E")
-    const defaultsFromModel: Record<number, string> = {};
-    for (const a of atoms0) {
-      const tid = a.typeId;
-      const el = (a.element ?? "").toString().trim();
-      if (!tid || !Number.isFinite(tid)) continue;
-      if (!el || el === "E") continue;
-      if (!defaultsFromModel[tid]) defaultsFromModel[tid] = el;
-    }
-
-    // NEW: merge rows with preference order:
-    // existing non-E > model default non-E > "E"
-    const rowById = new Map<number, { typeId: number; element: string }>();
-    for (const r of beforeRows) rowById.set(r.typeId, { ...r });
-
-    for (const tid of detectedTypeIds) {
-      const existing = rowById.get(tid);
-      if (!existing) {
-        rowById.set(tid, {
-          typeId: tid,
-          element: defaultsFromModel[tid] ?? "E",
-        });
-      } else {
-        const cur = (existing.element ?? "").toString().trim();
-        if (!cur || cur === "E") {
-          // only upgrade placeholders
-          const d = defaultsFromModel[tid];
-          if (d) existing.element = d;
-        }
-      }
-    }
-
-    const mergedRows = Array.from(rowById.values()) as LammpsTypeMapItem[];
+    const mergedRows = mergeTypeMap(
+      beforeRows,
+      detectedTypeIds,
+      defaults
+    ) as LammpsTypeMapItem[];
 
     const typeMapAdded = !typeMapEquals(
       normalizeTypeMapRows(beforeRows),

@@ -15,16 +15,6 @@ export function buildLammpsTypeToElementMap(
   return out;
 }
 
-export function collectTypeIdsFromAtoms(atoms: Atom[]): number[] {
-  const set = new Set<number>();
-  for (const a of atoms) {
-    const tid = a.typeId;
-    if (typeof tid === "number" && Number.isFinite(tid) && tid > 0)
-      set.add(tid);
-  }
-  return Array.from(set).sort((a, b) => a - b);
-}
-
 export function normalizeTypeMapRows(
   rows: LammpsTypeMapRow[]
 ): LammpsTypeMapRow[] {
@@ -42,19 +32,46 @@ export function normalizeTypeMapRows(
 
 export function mergeTypeMap(
   existing: LammpsTypeMapRow[],
-  detected: number[]
+  detected: number[],
+  defaults?: Record<number, string>
 ): LammpsTypeMapRow[] {
   const base = normalizeTypeMapRows(existing);
-  const seen = new Set<number>(base.map((r) => r.typeId));
 
-  const appended: LammpsTypeMapRow[] = [...base];
-  for (const tid of detected) {
-    if (seen.has(tid)) continue;
-    seen.add(tid);
-    appended.push({ typeId: tid, element: "E" });
+  // 用 Map 便于升级/插入
+  const map = new Map<number, LammpsTypeMapRow>();
+  for (const r of base) {
+    const tid = Math.max(1, Math.floor(r.typeId));
+    map.set(tid, { typeId: tid, element: r.element });
   }
-  appended.sort((a, b) => a.typeId - b.typeId);
-  return appended;
+
+  const def = defaults ?? {};
+
+  for (const tid0 of detected) {
+    const tid = Math.max(1, Math.floor(tid0));
+    if (!Number.isFinite(tid) || tid <= 0) continue;
+
+    const row = map.get(tid);
+    const d = normalizeElementSymbol(def[tid] ?? "");
+
+    if (!row) {
+      // 新增：优先 defaults，否则 E
+      map.set(tid, { typeId: tid, element: d && d !== "E" ? d : "E" });
+      continue;
+    }
+
+    // 升级：仅当现有是空或 E 时，才用 defaults 覆盖
+    const cur0 = (row.element ?? "").toString().trim();
+    const cur = normalizeElementSymbol(cur0) || (cur0 ? cur0 : "");
+    const isPlaceholder = !cur || cur === "E";
+
+    if (isPlaceholder && d && d !== "E") {
+      row.element = d;
+    }
+  }
+
+  const out = Array.from(map.values());
+  out.sort((a, b) => a.typeId - b.typeId);
+  return out;
 }
 
 export function typeMapEquals(
@@ -68,7 +85,6 @@ export function typeMapEquals(
   }
   return true;
 }
-
 
 export function remapElementByTypeId(
   frames: Atom[][],
@@ -85,4 +101,29 @@ export function remapElementByTypeId(
       };
     })
   );
+}
+
+export function collectTypeIdsAndElementDefaultsFromAtoms(atoms: Atom[]): {
+  typeIds: number[];
+  defaults: Record<number, string>;
+} {
+  const set = new Set<number>();
+  const defaults: Record<number, string> = {};
+
+  for (const a of atoms) {
+    const tid = a.typeId;
+    if (typeof tid === "number" && Number.isFinite(tid) && tid > 0) {
+      set.add(tid);
+
+      const el0 = (a.element ?? "").toString().trim();
+      const el = normalizeElementSymbol(el0);
+      // 只接受非占位符的默认值
+      if (el && el !== "E" && defaults[tid] == null) {
+        defaults[tid] = el;
+      }
+    }
+  }
+
+  const typeIds = Array.from(set).sort((x, y) => x - y);
+  return { typeIds, defaults };
 }

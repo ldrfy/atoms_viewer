@@ -365,7 +365,7 @@ export function createModelRuntime(params: {
     if (!stage) return;
     stage.renderer.setClearColor(
       new THREE.Color(getSettings().backgroundColor ?? "#ffffff"),
-      1
+      getSettings().backgroundTransparent ? 0 : 1
     );
   };
 

@@ -1,13 +1,12 @@
 <template>
     <div v-if="hasModel" class="export-fab">
-
         <a-float-button type="primary" @click="open = true" aria-label="export">
             <template #icon>
                 <DownloadOutlined />
             </template>
         </a-float-button>
 
-        <a-drawer :open="open" placement="bottom" :height="220" @close="open = false">
+        <a-drawer :open="open" placement="bottom" :height="260" @close="open = false">
             <template #title>
                 {{ t("viewer.export.button") }}
             </template>
@@ -16,6 +15,12 @@
                 <a-form-item :label="t('viewer.export.scaleTip')">
                     <a-input-number :value="exportScale" :min="1" :max="5" :step="0.1" :precision="1" :controls="false"
                         style="width: 100%" @update:value="onUpdateExportScale" />
+                </a-form-item>
+
+                <a-form-item>
+                    <a-checkbox :checked="exportTransparent" @update:checked="onUpdateTransparent">
+                        {{ t("viewer.export.transparent") }}
+                    </a-checkbox>
                 </a-form-item>
 
                 <a-form-item>
@@ -31,36 +36,38 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import { DownloadOutlined } from "@ant-design/icons-vue";
-
 import { useI18n } from "vue-i18n";
 const { t } = useI18n();
 
 const props = defineProps<{
     hasModel: boolean;
     exportScale: number;
+    exportTransparent: boolean;
 }>();
 
 const emit = defineEmits<{
-    (e: "export-png", scale: number): void;
+    (e: "export-png", payload: { scale: number; transparent: boolean }): void;
     (e: "update:exportScale", v: number): void;
+    (e: "update:exportTransparent", v: boolean): void;
 }>();
 
 const open = ref(false);
 
 function onUpdateExportScale(v: number | null): void {
-    if (typeof v === "number") {
-        emit("update:exportScale", v);
-    }
+    if (typeof v === "number") emit("update:exportScale", v);
+}
+
+function onUpdateTransparent(v: boolean): void {
+    emit("update:exportTransparent", v);
 }
 
 function onExport(): void {
-    emit("export-png", props.exportScale);
+    emit("export-png", { scale: props.exportScale, transparent: props.exportTransparent });
     open.value = false;
 }
 </script>
 
 <style scoped>
-/* 悬浮按钮固定在右下角，不影响布局 */
 .export-fab {
     z-index: 60;
     pointer-events: auto;

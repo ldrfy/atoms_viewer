@@ -1,5 +1,6 @@
 import { computed, onBeforeUnmount, onMounted, ref, reactive } from "vue";
 import type { Ref, ComputedRef } from "vue";
+import * as THREE from "three";
 
 import type {
   ViewerSettings,
@@ -50,7 +51,10 @@ type ViewerStageBindings = {
   onDragLeave: () => void;
   onDrop: (e: DragEvent) => Promise<void>;
   onFilePicked: (e: Event) => Promise<void>;
-  onExportPng: (scale: number) => Promise<void>;
+  onExportPng: (payload: {
+    scale: number;
+    transparent: boolean;
+  }) => Promise<void>;
   preloadDefault: () => void;
 
   // animation
@@ -68,7 +72,6 @@ type ViewerStageBindings = {
   setParseMode: (mode: ParseMode) => void;
 
   // recording
-  recordBgColor: Ref<string>;
   isRecording: Ref<boolean>;
   isRecordPaused: Ref<boolean>;
   recordElapsedMs: Ref<number>;
@@ -128,8 +131,6 @@ export function useViewerStage(
   const parseMode = ref<ParseMode>("auto");
 
   // recording
-
-  const recordBgColor = ref<string>("#ffffff");
 
   const isRecording = ref(false);
   const isRecordPaused = ref(false);
@@ -227,6 +228,10 @@ export function useViewerStage(
 
   function startRecord(fps = 60): void {
     if (!stage || isRecording.value) return;
+
+    // 录制时强制不透明背景（否则透明背景会导致视频底色不可控）
+    patchSettings?.({ backgroundTransparent: false });
+    runtime?.applyBackgroundColor();
 
     const stream = stage.renderer.domElement.captureStream(fps);
 
@@ -606,17 +611,33 @@ export function useViewerStage(
    *
    * Export a transparent, cropped PNG.
    */
-  async function onExportPng(exportScale: number): Promise<void> {
+  async function onExportPng(payload: {
+    scale: number;
+    transparent: boolean;
+  }): Promise<void> {
     if (!stage) return;
 
+    const { scale, transparent } = payload;
+
+    // 记录导出前的 renderer 背景（颜色 + alpha）
+    const prevColor = new THREE.Color();
+    stage.renderer.getClearColor(prevColor);
+    const prevAlpha = stage.renderer.getClearAlpha();
+
     try {
+      // 导出期：按勾选临时切到透明或不透明
+      stage.renderer.setClearColor(
+        new THREE.Color(getSettings().backgroundColor ?? "#ffffff"),
+        transparent ? 0 : 1
+      );
+
       await exportTransparentCroppedPng({
         renderer: stage.renderer,
         scene: stage.scene,
         camera: stage.getCamera(),
         host: stage.host,
         filename: "snapshot.png",
-        scale: exportScale,
+        scale,
         orthoHalfHeight: stage.getOrthoHalfHeight(),
         alphaThreshold: 8,
         padding: 3,
@@ -624,9 +645,11 @@ export function useViewerStage(
 
       message.success(t("viewer.export.pngSuccess"));
     } catch (e) {
-      // eslint-disable-next-line no-console
       console.error("export png failed:", e);
       message.error(t("viewer.export.fail", { reason: (e as Error).message }));
+    } finally {
+      // 导出后恢复（保持日常显示不变）
+      stage.renderer.setClearColor(prevColor, prevAlpha);
     }
   }
 
@@ -715,7 +738,6 @@ export function useViewerStage(
 
   return {
     // recording
-    recordBgColor,
     isRecording,
     isRecordPaused,
     recordElapsedMs,

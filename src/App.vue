@@ -9,7 +9,9 @@
                     @open-settings="onOpenSettings" />
             </a-layout-content>
 
-            <ExportFab :has-model="hasModel" v-model:exportScale="exportScale" @export-png="handleExportPng" />
+            <ExportFab :has-model="hasModel" v-model:exportScale="exportScale"
+                v-model:exportTransparent="exportTransparent" @export-png="handleExportPng" />
+
 
             <!-- 关键：把 activeKey 也交给 App 管 -->
             <SettingsSider v-model:open="settingsOpen" v-model:settings="settings"
@@ -27,10 +29,6 @@ import ExportFab from "./components/ExportFab";
 import { DEFAULT_SETTINGS, type ViewerSettings, type OpenSettingsPayload } from "./lib/viewer/settings";
 import { theme as antdTheme } from "ant-design-vue";
 import { isDark, applyThemeToDom } from "./theme/mode";
-
-type ViewerStageExpose = {
-    exportPng: (scale: number) => void | Promise<void>;
-};
 
 
 const antdAlgorithm = computed(() =>
@@ -56,12 +54,29 @@ watchEffect(() => {
 
 /* 导出与模型状态上提 / Lift model state & export */
 const hasModel = ref(false);
+
+type ViewerStageExpose = {
+    exportPng: (payload: { scale: number; transparent: boolean }) => void | Promise<void>;
+};
+
 const exportScale = ref<number>(2);
+const exportTransparent = ref<boolean>(false);
+
+// 让导出面板的勾选与 viewer settings 同步（勾选即把背景变透明）
+
+// watch(
+//     exportTransparent,
+//     (v) => {
+//         settings.value.backgroundTransparent = v;
+//     },
+//     { immediate: true }
+// );
+
 
 const viewerRef = ref<ViewerStageExpose | null>(null);
 
-function handleExportPng(scale: number): void {
-    void viewerRef.value?.exportPng(scale);
+function handleExportPng(payload: { scale: number; transparent: boolean }): void {
+    void viewerRef.value?.exportPng(payload);
 }
 
 /**

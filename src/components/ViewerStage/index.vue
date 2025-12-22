@@ -125,7 +125,7 @@
 
                         <input class="native-color" type="color" v-model="bgColorModel" :disabled="isRecording" />
 
-                        <a-typography-text v-if="!isRecording" class="color-hex" :ellipsis="{ tooltip: recordBgColor }">
+                        <a-typography-text v-if="!isRecording" class="color-hex" :ellipsis="{ tooltip: bgColorModel }">
                             {{ bgColorModel }}
                         </a-typography-text>
                     </div>
@@ -196,7 +196,6 @@ const stage = useViewerStage(settingsRef, patchSettings, (payload) =>
 
 const {
     // record
-    recordBgColor,
     isRecording,
     isRecordPaused,
     recordTimeText,
@@ -274,10 +273,11 @@ const parseModeOptions = computed(() => [
     { value: "lammpsdump", label: t("viewer.parse.modeOptions.lammpsdump") },
     { value: "lammpsdata", label: t("viewer.parse.modeOptions.lammpsdata") },
 ]);
-
 defineExpose({
     exportPng: onExportPng,
 });
+
+
 </script>
 
 <style scoped>

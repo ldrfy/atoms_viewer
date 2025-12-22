@@ -9,7 +9,7 @@
 ## 🚀 Start
 
 - Download xyz file: [cnt.xyz](readme/samples/cnt.xyz) or [mos2.xyz](readme/samples/mos2.xyz)
-- Go [Web: Ldr-Atoms-Viewer](https://ldrfy.github.io/ldr_atoms_viewer/)
+- Go [Web: Ldr-Atoms-Viewer](https://ldrfy.github.io/atoms_viewer/)
 - Upload the xyz file
 
 | Camera       | CNT                               | MoS2_NT                             |

@@ -9,7 +9,7 @@
 ## 🚀 开始使用
 
 - 下载 xyz 文件: [cnt.xyz](./samples/cnt.xyz) or [mos2.xyz](./samples/mos2.xyz)
-- 访问 [Web: Ldr-Atoms-Viewer](https://ldrfy.github.io/ldr_atoms_viewer/)
+- 访问 [Web: Ldr-Atoms-Viewer](https://ldrfy.github.io/atoms_viewer/)
 - 上传你自己的 xyz 文件（或刚你下载的）
 
 | 0      | CNT                          | MoS2_NT                        |

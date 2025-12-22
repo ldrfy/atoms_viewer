@@ -108,7 +108,7 @@ function onSelectLocale(key: string): void {
     setLocale(key as any);
 }
 
-const GITHUB_URL = "https://github.com/ldrfy/ldr_atoms_viewer";
+const GITHUB_URL = "https://github.com/ldrfy/atoms_viewer";
 function openGithub(): void {
     window.open(GITHUB_URL, "_blank", "noopener,noreferrer");
 }

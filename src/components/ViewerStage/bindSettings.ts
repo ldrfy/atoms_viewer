@@ -112,7 +112,10 @@ export function bindViewerStageSettings(params: {
 
   stops.push(
     watch(
-      () => settingsRef.value.backgroundColor,
+      () => [
+        settingsRef.value.backgroundColor,
+        settingsRef.value.backgroundTransparent,
+      ],
       () => applyBackgroundColor(),
       { immediate: true }
     )

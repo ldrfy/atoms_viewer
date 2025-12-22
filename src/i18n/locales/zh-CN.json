@@ -6,7 +6,7 @@
         "delete": "删除"
     },
     "viewer": {
-        "play":{
+        "play": {
             "pause": "暂停",
             "start": "播放",
             "fps": "帧率"
@@ -59,6 +59,7 @@
             "preloadDefault": "测试"
         },
         "export": {
+            "transparent": "透明背景",
             "button": "导出 PNG",
             "scaleTip": "下方模型基础上，再次放大的倍率。为避免放大过多导致错误，请先滑动鼠标放大下面的模型",
             "scalePlaceholder": "越大越清晰",

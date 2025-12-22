@@ -59,6 +59,7 @@
             "preloadDefault": "Test"
         },
         "export": {
+            "transparent": "Transparent Background",
             "button": "Export PNG",
             "scaleTip": "Additional export scaling based on the current view. To avoid excessive scaling errors, zoom in on the model with the mouse wheel first.",
             "scalePlaceholder": "Higher = clearer",

@@ -23,6 +23,7 @@ export type ViewerSettings = {
 
   lammpsTypeMap: LammpsTypeMapItem[];
   backgroundColor: string;
+  backgroundTransparent?: boolean;
 };
 
 export const DEFAULT_SETTINGS: ViewerSettings = {
@@ -35,6 +36,7 @@ export const DEFAULT_SETTINGS: ViewerSettings = {
 
   lammpsTypeMap: [],
   backgroundColor: "#ffffff",
+  backgroundTransparent: false,
 };
 
 /**

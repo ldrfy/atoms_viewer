@@ -221,9 +221,13 @@ defineExpose({
     height: 100%;
     width: 100%;
     overflow: hidden;
+    /* 容器显式禁止浏览器触控行为 */
+    touch-action: none;
 }
 
 .canvas-host {
+    /* 容器显式禁止浏览器触控行为 */
+    touch-action: none;
     height: 100%;
     width: 100%;
 }

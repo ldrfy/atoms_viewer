@@ -6,9 +6,18 @@
         "delete": "删除"
     },
     "viewer": {
-        "play": "播放",
-        "pause": "暂停",
-        "fps": "帧率",
+        "play":{
+            "stop": "暂停",
+            "start": "播放",
+            "fps": "帧率"
+        },
+        "record": {
+            "bg": "背景",
+            "start": "录制",
+            "stop": "结束",
+            "resume": "恢复",
+            "pause": "暂停"
+        },
         "parse": {
             "notice": "请手动选择解析方式",
             "mode": "解析方式",

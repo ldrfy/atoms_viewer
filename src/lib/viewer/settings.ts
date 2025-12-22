@@ -22,6 +22,7 @@ export type ViewerSettings = {
   resetViewSeq: number;
 
   lammpsTypeMap: LammpsTypeMapItem[];
+  backgroundColor: string;
 };
 
 export const DEFAULT_SETTINGS: ViewerSettings = {
@@ -33,6 +34,7 @@ export const DEFAULT_SETTINGS: ViewerSettings = {
   resetViewSeq: 0,
 
   lammpsTypeMap: [],
+  backgroundColor: "#ffffff",
 };
 
 /**

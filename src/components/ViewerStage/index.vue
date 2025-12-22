@@ -86,9 +86,9 @@
         <!-- 动画控制条 -->
 
         <!-- 动画控制条：三行布局（修改版） -->
-        <div v-if="hasAnimation" class="anim-bar">
+        <div class="anim-bar" v-if="hasModel">
             <!-- 第一行：帧序号 + slider（不固定宽，slider 自适应） -->
-            <a-row :gutter="[8, 8]" align="middle" :wrap="false">
+            <a-row v-if="hasAnimation" :gutter="[8, 8]" align="middle" :wrap="false">
                 <a-col flex="none">
                     <span class="anim-frame-text">{{ frameIndex + 1 }} / {{ frameCount }}</span>
                 </a-col>
@@ -98,11 +98,11 @@
                 </a-col>
             </a-row>
 
-            <a-row :gutter="8" align="middle" justify="space-between" :wrap="false">
+            <a-row v-if="hasAnimation" :gutter="8" align="middle" justify="space-between" :wrap="false">
                 <!-- 左：允许被压缩 -->
                 <a-col flex="auto" style="min-width: 0">
                     <div class="anim-field">
-                        <span class="anim-field-label">{{ t("viewer.fps") }}</span>
+                        <span class="anim-field-label">{{ t("viewer.play.fps") }}</span>
                         <a-input-number class="anim-field-input" size="small" :min="1" :max="120"
                             v-model:value="fpsModel" />
                     </div>
@@ -111,7 +111,7 @@
                 <!-- 右：不压缩 -->
                 <a-col flex="none">
                     <a-button size="small" class="anim-action-btn" @click="togglePlay">
-                        {{ isPlaying ? t("viewer.stop") : t("viewer.start") }}
+                        {{ isPlaying ? t("viewer.play.pause") : t("viewer.play.start") }}
                     </a-button>
                 </a-col>
             </a-row>
@@ -123,10 +123,10 @@
                     <div class="anim-field anim-field-tight">
                         <span class="anim-field-label">{{ t("viewer.record.bg") }}</span>
 
-                        <input class="native-color" type="color" v-model="recordBgColor" :disabled="isRecording" />
+                        <input class="native-color" type="color" v-model="bgColorModel" :disabled="isRecording" />
 
                         <a-typography-text v-if="!isRecording" class="color-hex" :ellipsis="{ tooltip: recordBgColor }">
-                            {{ recordBgColor }}
+                            {{ bgColorModel }}
                         </a-typography-text>
                     </div>
                 </a-col>
@@ -246,6 +246,11 @@ watch(
 const frameIndexModel = computed({
     get: () => frameIndex.value,
     set: (v: number) => setFrame(v),
+});
+
+const bgColorModel = computed({
+    get: () => props.settings.backgroundColor ?? "#ffffff",
+    set: (v: string) => patchSettings({ backgroundColor: v }),
 });
 
 const fpsModel = computed({

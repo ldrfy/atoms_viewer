@@ -7,7 +7,7 @@
     },
     "viewer": {
         "play":{
-            "stop": "暂停",
+            "pause": "暂停",
             "start": "播放",
             "fps": "帧率"
         },

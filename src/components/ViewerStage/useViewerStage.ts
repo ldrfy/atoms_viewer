@@ -1,6 +1,5 @@
 import { computed, onBeforeUnmount, onMounted, ref, reactive } from "vue";
 import type { Ref, ComputedRef } from "vue";
-import * as THREE from "three";
 
 import type {
   ViewerSettings,
@@ -139,10 +138,6 @@ export function useViewerStage(
   let mediaRecorder: MediaRecorder | null = null;
   let recordedChunks: Blob[] = [];
 
-  // renderer background backup
-  let prevClearColor = new THREE.Color();
-  let prevClearAlpha = 0;
-
   // timer
   const recordElapsedMs = ref(0);
 
@@ -233,19 +228,7 @@ export function useViewerStage(
   function startRecord(fps = 60): void {
     if (!stage || isRecording.value) return;
 
-    const renderer = stage.renderer;
-
-    // backup transparent background
-    renderer.getClearColor(prevClearColor);
-    prevClearAlpha = renderer.getClearAlpha();
-
-    // Ant ColorPicker → hex
-    const hex = recordBgColor.value;
-
-    // set solid background for recording
-    renderer.setClearColor(new THREE.Color(hex), 1);
-
-    const stream = renderer.domElement.captureStream(fps);
+    const stream = stage.renderer.domElement.captureStream(fps);
 
     recordedChunks = [];
     mediaRecorder = new MediaRecorder(stream, {
@@ -279,9 +262,6 @@ export function useViewerStage(
       a.download = "three-record.webm";
       a.click();
       URL.revokeObjectURL(url);
-
-      // restore transparent background
-      stage!.renderer.setClearColor(prevClearColor, prevClearAlpha);
 
       stopRecordTimer();
 
@@ -703,8 +683,9 @@ export function useViewerStage(
       hasModel,
       hasAnyTypeId: () => runtime?.hasAnyTypeId() ?? false,
       onTypeMapChanged: () => runtime?.onTypeMapChanged(frameIndex.value),
+      applyBackgroundColor: () => runtime?.applyBackgroundColor(),
     });
-
+    runtime?.applyBackgroundColor();
     stage.start();
 
     // 全局阻止浏览器默认 drop（避免打开文件替换页面）

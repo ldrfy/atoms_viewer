@@ -23,6 +23,7 @@ export function bindViewerStageSettings(params: {
   hasModel: Ref<boolean>;
   hasAnyTypeId: () => boolean;
   onTypeMapChanged: () => void;
+  applyBackgroundColor: () => void;
 }): () => void {
   const {
     settingsRef,
@@ -35,6 +36,7 @@ export function bindViewerStageSettings(params: {
     hasModel,
     hasAnyTypeId,
     onTypeMapChanged,
+    applyBackgroundColor,
   } = params;
 
   const stops: Array<() => void> = [];
@@ -105,6 +107,14 @@ export function bindViewerStageSettings(params: {
         onTypeMapChanged();
       },
       { deep: true }
+    )
+  );
+
+  stops.push(
+    watch(
+      () => settingsRef.value.backgroundColor,
+      () => applyBackgroundColor(),
+      { immediate: true }
     )
   );
 

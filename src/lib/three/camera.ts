@@ -21,6 +21,16 @@ function createOrbitControls(params: {
   c.enableDamping = true;
   c.dampingFactor = dampingFactor;
   c.target.copy(target);
+
+  c.enableZoom = true;
+  c.enablePan = true;
+  c.enableRotate = true;
+
+  c.touches = {
+    ONE: THREE.TOUCH.ROTATE,
+    TWO: THREE.TOUCH.DOLLY_PAN,
+  };
+
   c.update();
   return c;
 }

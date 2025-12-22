@@ -1,4 +1,4 @@
-export type BackgroundMode = "dark" | "light";
+import { isDark } from "../../theme/mode";
 export type LammpsTypeMapItem = {
   typeId: number;
   element: string;
@@ -35,8 +35,8 @@ export const DEFAULT_SETTINGS: ViewerSettings = {
   resetViewSeq: 0,
 
   lammpsTypeMap: [],
-  backgroundColor: "#ffffff",
-  backgroundTransparent: false,
+  backgroundColor: isDark.value ? "#000000" : "#ffffff",
+  backgroundTransparent: true,
 };
 
 /**

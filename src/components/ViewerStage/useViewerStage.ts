@@ -488,7 +488,7 @@ export function useViewerStage(
     try {
       // 导出期：按勾选临时切到透明或不透明
       stage.renderer.setClearColor(
-        new THREE.Color(getSettings().backgroundColor ?? "#ffffff"),
+        new THREE.Color(getSettings().backgroundColor),
         transparent ? 0 : 1
       );
 

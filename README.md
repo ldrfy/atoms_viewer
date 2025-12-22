@@ -26,27 +26,32 @@ The implementation prioritizes performance and responsiveness, leveraging a cont
 
 ## Features
 
-- **XYZ file visualization**
+- **3D structure building (single-frame)**
 
-  - Currently supports `.xyz` parsing and rendering
+  - Supports **LAMMPS data** (`lammps-data`), **XYZ** (single frame), and **PDB** for constructing and rendering a static 3D structure.
+
+- **3D animation playback (multi-frame)**
+
+  * Supports **LAMMPS dump** (`lammps-dump`) and **XYZ** (multi-frame) for time-series 3D animation playback.
 
 - **Display & view controls**
 
-  - Dark/Light theme
-  - Multi-language (i18n)
-  - Precise rotation control (X/Y/Z)
-  - Atom size scaling
-  - Toggles for axes and bonds
+  * Dark/Light theme
+  * Multi-language (i18n)
+  * Precise rotation control (X/Y/Z)
+  * Atom size scaling
+  * Toggles for axes and bonds
 
 - **PNG export**
 
-  - Transparent background
-  - Configurable output resolution (Custom scaling factor)
-  - **Automatic cropping** to a tight content bounding box
+  * Transparent background
+  * Configurable output resolution (custom scaling factor)
+  * Automatic cropping to a tight content bounding box
 
 - **Smooth user experience**
 
-  - Designed to be more responsive and fluid than typical structure viewers
+  * Designed to be more responsive and fluid than typical structure viewers
+
 
 ## 📦 Tech Stack
 

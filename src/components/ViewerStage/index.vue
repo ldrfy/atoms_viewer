@@ -169,9 +169,8 @@
 
                         <input class="native-color" type="color" v-model="bgColorModel" :disabled="isRecording" />
 
-                        <a-typography-text v-if="!isRecording" class="color-hex" :content="{ tooltip: bgColorModel }">
-                            {{ bgColorModel }}
-                        </a-typography-text>
+                        <a-typography-text v-if="!isRecording" class="color-hex" :content="bgColorModel" ellipsis />
+
                     </div>
                 </a-col>
 
@@ -212,6 +211,7 @@ import { useViewerStage } from "./useViewerStage";
 import type { ViewerSettings, OpenSettingsPayload } from "../../lib/viewer/settings";
 import type { ParseMode } from "../../lib/structure/parse";
 import { LeftOutlined, RightOutlined } from "@ant-design/icons-vue";
+import { setThemeMode, isDarkColor } from "../../theme/mode";
 
 
 const parseCollapsed = ref(false);
@@ -311,8 +311,18 @@ const frameIndexModel = computed({
 });
 
 const bgColorModel = computed({
-    get: () => props.settings.backgroundColor ?? "#ffffff",
-    set: (v: string) => patchSettings({ backgroundColor: v }),
+    get: () => props.settings.backgroundColor,
+    set: (v: string) => patchSettings({
+        backgroundColor: v,
+        // 默认为了适应深色和亮色主题，背景用了透明
+        // 手动设置时，关掉
+        backgroundTransparent: false,
+    }),
+});
+
+watch(bgColorModel, (color) => {
+    if (!color) return;
+    setThemeMode(isDarkColor(color) ? "dark" : "light");
 });
 
 const fpsModel = computed({

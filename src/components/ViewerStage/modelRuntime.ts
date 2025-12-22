@@ -363,8 +363,17 @@ export function createModelRuntime(params: {
 
   const applyBackgroundColor = (): void => {
     if (!stage) return;
+
+    let bgc = getSettings().backgroundColor;
+    let bgt = getSettings().backgroundTransparent;
+    console.log(`----|${bgc}|---|${bgt}|---`);
+
+    if (!bgc) {
+      return;
+    }
+
     stage.renderer.setClearColor(
-      new THREE.Color(getSettings().backgroundColor ?? "#ffffff"),
+      new THREE.Color(bgc),
       getSettings().backgroundTransparent ? 0 : 1
     );
   };

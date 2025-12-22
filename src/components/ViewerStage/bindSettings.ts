@@ -117,7 +117,6 @@ export function bindViewerStageSettings(params: {
         settingsRef.value.backgroundTransparent,
       ],
       () => applyBackgroundColor(),
-      { immediate: true }
     )
   );
 

@@ -6,11 +6,8 @@
             </template>
         </a-float-button>
 
-        <a-drawer :open="open" placement="bottom" :height="320" @close="open = false">
-            <template #title>
-                {{ t("viewer.export.button") }}
-            </template>
-
+        <a-modal v-model:open="open" :title="t('viewer.export.button')" :destroyOnClose="false" :maskClosable="true"
+            :centered="true" :width="360">
             <a-form layout="vertical">
                 <a-form-item :label="t('viewer.export.scaleTip')">
                     <a-input-number :value="exportScale" :min="1" :max="5" :step="0.1" :precision="1" :controls="false"
@@ -22,14 +19,19 @@
                         {{ t("viewer.export.transparent") }}
                     </a-checkbox>
                 </a-form-item>
+            </a-form>
 
-                <a-form-item>
-                    <a-button type="primary" block @click="onExport">
+            <template #footer>
+                <a-space style="width: 100%; justify-content: flex-end">
+                    <a-button @click="open = false">
+                        {{ t("common.cancel") }}
+                    </a-button>
+                    <a-button type="primary" @click="onExport">
                         {{ t("viewer.export.button") }}
                     </a-button>
-                </a-form-item>
-            </a-form>
-        </a-drawer>
+                </a-space>
+            </template>
+        </a-modal>
     </div>
 </template>
 
@@ -37,6 +39,7 @@
 import { ref } from "vue";
 import { DownloadOutlined } from "@ant-design/icons-vue";
 import { useI18n } from "vue-i18n";
+
 const { t } = useI18n();
 
 const props = defineProps<{

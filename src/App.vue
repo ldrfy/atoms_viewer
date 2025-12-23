@@ -60,7 +60,7 @@ type ViewerStageExpose = {
 };
 
 const exportScale = ref<number>(2);
-const exportTransparent = ref<boolean>(false);
+const exportTransparent = ref<boolean>(true);
 
 // 让导出面板的勾选与 viewer settings 同步（勾选即把背景变透明）
 

@@ -3,7 +3,8 @@
         "selfName": "English"
     },
     "common": {
-        "delete": "Delete"
+        "delete": "Delete",
+        "cancel": "Cancel"
     },
     "viewer": {
         "play": {

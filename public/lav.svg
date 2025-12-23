@@ -1,0 +1,947 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   width="256"
+   height="256"
+   viewBox="0 0 256 256"
+   role="img"
+   aria-label="Atoms Viewer Logo (Inkscape edit, no feDropShadow)"
+   version="1.1"
+   id="svg56"
+   sodipodi:docname="lav.svg"
+   inkscape:version="1.4.2 (ebf0e940d0, 2025-05-08)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:xlink="http://www.w3.org/1999/xlink"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview56"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:zoom="3.1054688"
+     inkscape:cx="142.81258"
+     inkscape:cy="111.25534"
+     inkscape:window-width="1536"
+     inkscape:window-height="887"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="g56"
+     showguides="true" />
+  <defs
+     id="defs33">
+    <linearGradient
+       id="linearGradient33"
+       x1="0"
+       y1="0"
+       x2="1"
+       y2="1">
+      <stop
+         offset="0"
+         stop-color="#1677ff"
+         id="stop31" />
+      <stop
+         offset="0.46785507"
+         stop-color="#2f93ff"
+         id="stop32" />
+      <stop
+         offset="1"
+         stop-color="#13c2c2"
+         id="stop33" />
+    </linearGradient>
+    <linearGradient
+       id="linearGradient30"
+       x1="0"
+       y1="0"
+       x2="1"
+       y2="1">
+      <stop
+         offset="0"
+         stop-color="#1677ff"
+         id="stop28" />
+      <stop
+         offset="0.53627229"
+         stop-color="#2f93ff"
+         id="stop29" />
+      <stop
+         offset="1"
+         stop-color="#13c2c2"
+         id="stop30" />
+    </linearGradient>
+    <!-- (保留你原有 defs：我不改动内容，只原样放回) -->
+    <linearGradient
+       id="linearGradient83"
+       x1="0"
+       y1="0"
+       x2="1"
+       y2="1">
+      <stop
+         offset="0"
+         stop-color="#1677ff"
+         id="stop81" />
+      <stop
+         offset="0.55113834"
+         stop-color="#2f93ff"
+         id="stop82" />
+      <stop
+         offset="1"
+         stop-color="#13c2c2"
+         id="stop83" />
+    </linearGradient>
+    <linearGradient
+       id="linearGradient80"
+       x1="0"
+       y1="0"
+       x2="1"
+       y2="1">
+      <stop
+         offset="0"
+         stop-color="#1677ff"
+         id="stop78" />
+      <stop
+         offset="1"
+         stop-color="#13c2c2"
+         id="stop80" />
+    </linearGradient>
+    <linearGradient
+       id="strokeG"
+       x1="0"
+       y1="0"
+       x2="1"
+       y2="1">
+      <stop
+         offset="0"
+         stop-color="#1677ff"
+         id="stop1" />
+      <stop
+         offset="0.55"
+         stop-color="#2f93ff"
+         id="stop2" />
+      <stop
+         offset="1"
+         stop-color="#13c2c2"
+         id="stop3" />
+    </linearGradient>
+    <linearGradient
+       id="frameFill"
+       x1="0"
+       y1="0"
+       x2="1"
+       y2="1">
+      <stop
+         offset="0"
+         stop-color="#1677ff"
+         stop-opacity="0.18"
+         id="stop4" />
+      <stop
+         offset="0.55"
+         stop-color="#2f93ff"
+         stop-opacity="0.10"
+         id="stop5" />
+      <stop
+         offset="1"
+         stop-color="#13c2c2"
+         stop-opacity="0.16"
+         id="stop6" />
+    </linearGradient>
+    <linearGradient
+       id="bevelHi"
+       x1="0"
+       y1="0"
+       x2="1"
+       y2="1">
+      <stop
+         offset="0"
+         stop-color="#ffffff"
+         stop-opacity="0.60"
+         id="stop7" />
+      <stop
+         offset="0.35"
+         stop-color="#ffffff"
+         stop-opacity="0.18"
+         id="stop8" />
+      <stop
+         offset="1"
+         stop-color="#ffffff"
+         stop-opacity="0"
+         id="stop9" />
+    </linearGradient>
+    <linearGradient
+       id="bevelLo"
+       x1="0"
+       y1="0"
+       x2="1"
+       y2="1">
+      <stop
+         offset="0"
+         stop-color="#000000"
+         stop-opacity="0"
+         id="stop10" />
+      <stop
+         offset="0.55"
+         stop-color="#000000"
+         stop-opacity="0.10"
+         id="stop11" />
+      <stop
+         offset="1"
+         stop-color="#000000"
+         stop-opacity="0.22"
+         id="stop12" />
+    </linearGradient>
+    <radialGradient
+       id="bgDeep"
+       cx="50%"
+       cy="46%"
+       r="88%">
+      <stop
+         offset="0"
+         stop-color="#0b1a3a"
+         stop-opacity="0.38"
+         id="stop13" />
+      <stop
+         offset="0.55"
+         stop-color="#081632"
+         stop-opacity="0.52"
+         id="stop14" />
+      <stop
+         offset="1"
+         stop-color="#061128"
+         stop-opacity="0.62"
+         id="stop15" />
+    </radialGradient>
+    <radialGradient
+       id="bgGlowA"
+       cx="34%"
+       cy="30%"
+       r="85%">
+      <stop
+         offset="0"
+         stop-color="#1677ff"
+         stop-opacity="0.72"
+         id="stop16" />
+      <stop
+         offset="0.45"
+         stop-color="#2f93ff"
+         stop-opacity="0.34"
+         id="stop17" />
+      <stop
+         offset="1"
+         stop-color="#ffffff"
+         stop-opacity="0"
+         id="stop18" />
+    </radialGradient>
+    <radialGradient
+       id="bgGlowB"
+       cx="78%"
+       cy="68%"
+       r="78%">
+      <stop
+         offset="0"
+         stop-color="#13c2c2"
+         stop-opacity="0.52"
+         id="stop19" />
+      <stop
+         offset="0.55"
+         stop-color="#36cfc9"
+         stop-opacity="0.26"
+         id="stop20" />
+      <stop
+         offset="1"
+         stop-color="#ffffff"
+         stop-opacity="0"
+         id="stop21" />
+    </radialGradient>
+    <radialGradient
+       id="bgGlowC"
+       cx="62%"
+       cy="28%"
+       r="72%">
+      <stop
+         offset="0"
+         stop-color="#52c41a"
+         stop-opacity="0.14"
+         id="stop22" />
+      <stop
+         offset="0.55"
+         stop-color="#13c2c2"
+         stop-opacity="0.12"
+         id="stop23" />
+      <stop
+         offset="1"
+         stop-color="#ffffff"
+         stop-opacity="0"
+         id="stop24" />
+    </radialGradient>
+    <linearGradient
+       id="bgWash"
+       x1="0"
+       y1="0"
+       x2="1"
+       y2="1">
+      <stop
+         offset="0"
+         stop-color="#1677ff"
+         stop-opacity="0.22"
+         id="stop25" />
+      <stop
+         offset="0.55"
+         stop-color="#2f93ff"
+         stop-opacity="0.12"
+         id="stop26" />
+      <stop
+         offset="1"
+         stop-color="#13c2c2"
+         stop-opacity="0.24"
+         id="stop27" />
+    </linearGradient>
+    <filter
+       id="frameShadow"
+       filterUnits="userSpaceOnUse"
+       x="-80"
+       y="-80"
+       width="416"
+       height="416">
+      <feGaussianBlur
+         in="SourceAlpha"
+         stdDeviation="7"
+         result="b"
+         id="feGaussianBlur27" />
+      <feOffset
+         in="b"
+         dx="0"
+         dy="10"
+         result="o"
+         id="feOffset27" />
+      <feColorMatrix
+         in="o"
+         type="matrix"
+         values="0 0 0 0 0                 0 0 0 0 0                 0 0 0 0 0                 0 0 0 0.18 0"
+         result="s"
+         id="feColorMatrix27" />
+      <feMerge
+         id="feMerge28">
+        <feMergeNode
+           in="s"
+           id="feMergeNode27" />
+        <feMergeNode
+           in="SourceGraphic"
+           id="feMergeNode28" />
+      </feMerge>
+    </filter>
+    <filter
+       id="soft"
+       filterUnits="userSpaceOnUse"
+       x="-80"
+       y="-80"
+       width="416"
+       height="416">
+      <feGaussianBlur
+         in="SourceAlpha"
+         stdDeviation="2.2"
+         result="b"
+         id="feGaussianBlur28" />
+      <feOffset
+         in="b"
+         dx="0"
+         dy="2"
+         result="o"
+         id="feOffset28" />
+      <feColorMatrix
+         in="o"
+         type="matrix"
+         values="0 0 0 0 0                 0 0 0 0 0                 0 0 0 0 0                 0 0 0 0.14 0"
+         result="s"
+         id="feColorMatrix28" />
+      <feMerge
+         id="feMerge30">
+        <feMergeNode
+           in="s"
+           id="feMergeNode29" />
+        <feMergeNode
+           in="SourceGraphic"
+           id="feMergeNode30" />
+      </feMerge>
+    </filter>
+    <filter
+       id="nodeShadow"
+       filterUnits="userSpaceOnUse"
+       x="-80"
+       y="-80"
+       width="416"
+       height="416">
+      <feGaussianBlur
+         in="SourceAlpha"
+         stdDeviation="4.2"
+         result="b"
+         id="feGaussianBlur30" />
+      <feOffset
+         in="b"
+         dx="0"
+         dy="4"
+         result="o"
+         id="feOffset30" />
+      <feColorMatrix
+         in="o"
+         type="matrix"
+         values="0 0 0 0 0                 0 0 0 0 0                 0 0 0 0 0                 0 0 0 0.24 0"
+         result="s"
+         id="feColorMatrix30" />
+      <feMerge
+         id="feMerge32">
+        <feMergeNode
+           in="s"
+           id="feMergeNode31" />
+        <feMergeNode
+           in="SourceGraphic"
+           id="feMergeNode32" />
+      </feMerge>
+    </filter>
+    <filter
+       id="innerShadow"
+       filterUnits="userSpaceOnUse"
+       x="-80"
+       y="-80"
+       width="416"
+       height="416">
+      <feOffset
+         dx="0"
+         dy="3"
+         in="SourceAlpha"
+         result="off"
+         id="feOffset32" />
+      <feGaussianBlur
+         in="off"
+         stdDeviation="4"
+         result="blur"
+         id="feGaussianBlur32" />
+      <feComposite
+         in="blur"
+         in2="SourceAlpha"
+         operator="arithmetic"
+         k2="-1"
+         k3="1"
+         result="inner"
+         id="feComposite32" />
+      <feColorMatrix
+         in="inner"
+         type="matrix"
+         values="0 0 0 0 0                 0 0 0 0 0                 0 0 0 0 0                 0 0 0 0.18 0"
+         result="shadowColor"
+         id="feColorMatrix32" />
+      <feComposite
+         in="shadowColor"
+         in2="SourceGraphic"
+         operator="over"
+         id="feComposite33" />
+    </filter>
+    <linearGradient
+       inkscape:collect="always"
+       xlink:href="#strokeG"
+       id="linearGradient63"
+       x1="173"
+       y1="161"
+       x2="209"
+       y2="197"
+       gradientUnits="userSpaceOnUse"
+       gradientTransform="translate(25.438994,25.116981)" />
+    <linearGradient
+       inkscape:collect="always"
+       xlink:href="#strokeG"
+       id="linearGradient64"
+       x1="47"
+       y1="161"
+       x2="83"
+       y2="197"
+       gradientUnits="userSpaceOnUse"
+       gradientTransform="translate(-22.862892,23.506918)" />
+    <linearGradient
+       inkscape:collect="always"
+       xlink:href="#strokeG"
+       id="linearGradient65"
+       x1="173"
+       y1="59"
+       x2="209"
+       y2="95"
+       gradientUnits="userSpaceOnUse"
+       gradientTransform="translate(25.116981,-31.879247)" />
+    <linearGradient
+       inkscape:collect="always"
+       xlink:href="#strokeG"
+       id="linearGradient66"
+       x1="47"
+       y1="59"
+       x2="83"
+       y2="95"
+       gradientUnits="userSpaceOnUse"
+       gradientTransform="translate(-23.506919,-31.557232)" />
+    <filter
+       id="soft-1"
+       filterUnits="userSpaceOnUse"
+       x="-80"
+       y="-80"
+       width="416"
+       height="416">
+      <feGaussianBlur
+         in="SourceAlpha"
+         stdDeviation="1.313 2.2"
+         result="b"
+         id="feGaussianBlur28-2" />
+      <feOffset
+         in="b"
+         dx="0"
+         dy="2"
+         result="o"
+         id="feOffset28-7" />
+      <feColorMatrix
+         in="o"
+         type="matrix"
+         values="0 0 0 0 0                 0 0 0 0 0                 0 0 0 0 0                 0 0 0 0.14 0"
+         result="s"
+         id="feColorMatrix28-0" />
+      <feMerge
+         id="feMerge30-9">
+        <feMergeNode
+           in="s"
+           id="feMergeNode29-3" />
+        <feMergeNode
+           in="SourceGraphic"
+           id="feMergeNode30-6" />
+      </feMerge>
+    </filter>
+    <filter
+       id="soft-1-9"
+       filterUnits="userSpaceOnUse"
+       x="-80"
+       y="-80"
+       width="416"
+       height="416">
+      <feGaussianBlur
+         in="SourceAlpha"
+         stdDeviation="1.313 2.2"
+         result="b"
+         id="feGaussianBlur28-2-4" />
+      <feOffset
+         in="b"
+         dx="0"
+         dy="2"
+         result="o"
+         id="feOffset28-7-7" />
+      <feColorMatrix
+         in="o"
+         type="matrix"
+         values="0 0 0 0 0                 0 0 0 0 0                 0 0 0 0 0                 0 0 0 0.14 0"
+         result="s"
+         id="feColorMatrix28-0-8" />
+      <feMerge
+         id="feMerge30-9-4">
+        <feMergeNode
+           in="s"
+           id="feMergeNode29-3-5" />
+        <feMergeNode
+           in="SourceGraphic"
+           id="feMergeNode30-6-0" />
+      </feMerge>
+    </filter>
+    <linearGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient83"
+       id="linearGradient78"
+       x1="127.99999"
+       y1="-80.000015"
+       x2="127.99999"
+       y2="335.99994"
+       gradientUnits="userSpaceOnUse"
+       spreadMethod="pad"
+       gradientTransform="translate(-0.23677395,-0.23677395)" />
+    <linearGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient83"
+       id="linearGradient88"
+       gradientUnits="userSpaceOnUse"
+       gradientTransform="translate(-4.5869451,5.4334077)"
+       x1="127.99999"
+       y1="-80.000015"
+       x2="127.99999"
+       y2="335.99994"
+       spreadMethod="pad" />
+    <linearGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient83"
+       id="linearGradient89"
+       gradientUnits="userSpaceOnUse"
+       gradientTransform="translate(-4.5869451,5.4334077)"
+       x1="127.99999"
+       y1="-80.000015"
+       x2="127.99999"
+       y2="335.99994"
+       spreadMethod="pad" />
+    <linearGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient83"
+       id="linearGradient93"
+       gradientUnits="userSpaceOnUse"
+       gradientTransform="translate(1.1838698,-21.309656)"
+       x1="127.99999"
+       y1="-80.000015"
+       x2="127.99999"
+       y2="335.99994"
+       spreadMethod="pad" />
+    <linearGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient33"
+       id="linearGradient1"
+       x1="187.81497"
+       y1="158.95839"
+       x2="173.83881"
+       y2="174.19034"
+       gradientTransform="matrix(0.99886084,0.01016702,-0.01487497,0.82088491,-4.2671926,38.271975)"
+       gradientUnits="userSpaceOnUse" />
+    <linearGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient30"
+       id="linearGradient2"
+       x1="46.988636"
+       y1="207.76323"
+       x2="94.211998"
+       y2="258.53635"
+       gradientTransform="matrix(1.0469297,0,0,0.57965148,29.147603,41.60657)"
+       gradientUnits="userSpaceOnUse" />
+    <linearGradient
+       inkscape:collect="always"
+       xlink:href="#strokeG"
+       id="linearGradient3"
+       x1="120.42337"
+       y1="89.322281"
+       x2="75.078773"
+       y2="134.84512"
+       gradientTransform="matrix(0.97727971,0,0,1.0177796,-1.7894764,1.5054358)"
+       gradientUnits="userSpaceOnUse" />
+    <linearGradient
+       inkscape:collect="always"
+       xlink:href="#strokeG"
+       id="linearGradient4"
+       x1="150.0972"
+       y1="84.196091"
+       x2="196.66425"
+       y2="133.57138"
+       gradientTransform="matrix(0.97910584,0,0,1.0070968,-7.380375,5.3335381)"
+       gradientUnits="userSpaceOnUse" />
+    <linearGradient
+       inkscape:collect="always"
+       xlink:href="#strokeG"
+       id="linearGradient5"
+       x1="283.2493"
+       y1="36.318047"
+       x2="325.08908"
+       y2="81.066429"
+       gradientTransform="matrix(0.38637579,0,0,1.8138426,21.419587,30.881427)"
+       gradientUnits="userSpaceOnUse" />
+    <linearGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient83"
+       id="linearGradient9"
+       gradientUnits="userSpaceOnUse"
+       gradientTransform="translate(-0.23677395,-0.23677395)"
+       x1="127.99999"
+       y1="-80.000015"
+       x2="127.99999"
+       y2="335.99994"
+       spreadMethod="pad" />
+    <linearGradient
+       inkscape:collect="always"
+       xlink:href="#strokeG"
+       id="linearGradient10"
+       x1="10.648655"
+       y1="827.56151"
+       x2="35.338583"
+       y2="852.25144"
+       gradientTransform="scale(5.4740848,0.18267894)"
+       gradientUnits="userSpaceOnUse" />
+    <linearGradient
+       inkscape:collect="always"
+       xlink:href="#strokeG"
+       id="linearGradient11"
+       x1="-80"
+       y1="-80"
+       x2="336"
+       y2="336"
+       gradientUnits="userSpaceOnUse" />
+    <linearGradient
+       inkscape:collect="always"
+       xlink:href="#strokeG"
+       id="linearGradient12"
+       x1="27.180484"
+       y1="28.261028"
+       x2="224.67084"
+       y2="225.75138"
+       gradientTransform="scale(1.0420444,0.95965203)"
+       gradientUnits="userSpaceOnUse" />
+  </defs>
+  <!-- corner marks (保留你的) -->
+  <g
+     fill="none"
+     stroke="url(#strokeG)"
+     stroke-width="10"
+     stroke-linecap="round"
+     stroke-linejoin="round"
+     opacity="0.95"
+     id="g44"
+     inkscape:label="g44"
+     style="stroke:url(#linearGradient12)"
+     transform="translate(1.4560994,-4.12)">
+    <path
+       d="m 203.43898,217.11699 h 14 q 12,0 12,-12 v -14"
+       id="path44"
+       style="stroke:url(#linearGradient63);stroke-width:15;stroke-miterlimit:6;stroke-dasharray:none"
+       inkscape:label="角右下" />
+    <path
+       d="m 55.137108,215.50692 h -14 q -12,0 -12,-12 v -14"
+       id="path43"
+       style="stroke:url(#linearGradient64);stroke-width:15;stroke-dasharray:none"
+       inkscape:label="角左下" />
+    <path
+       d="m 203.11698,32.120753 h 14 c 8,0 12,4 12,12 v 14"
+       id="path42"
+       sodipodi:nodetypes="cssc"
+       style="stroke:url(#linearGradient65);stroke-width:15;stroke-dasharray:none;stroke-miterlimit:4"
+       inkscape:label="角右上" />
+    <path
+       d="m 54.493081,32.442768 h -14 q -12,0 -12,12 v 14"
+       id="path41"
+       style="stroke:url(#linearGradient66);stroke-width:15;stroke-dasharray:none"
+       inkscape:label="角左上" />
+  </g>
+  <!-- tetra network -->
+  <g
+     stroke-linecap="round"
+     stroke-linejoin="round"
+     transform="matrix(1.36,0,0,1.36,-44.623899,-72.2)"
+     id="g56"
+     style="display:inline">
+    <!-- 主“实体管线”（你的原始路径），我只把 join/cap 明确为 round 让边缘更圆润 -->
+    <a
+       id="a73"
+       transform="translate(-1.8941916,0.23677395)"
+       style="display:inline">
+      <path
+         style="display:inline;overflow:visible;opacity:1;vector-effect:none;fill:url(#linearGradient93);stroke:none;stroke-linecap:round;stroke-linejoin:round;filter:url(#soft-1);enable-background:accumulate;stop-color:#000000;stop-opacity:1"
+         d="m 129.07921,76.638908 c -5.0654,4.490341 -1.58291,-2.12662 -1.94751,4.26505 l 13.73334,118.227322 c -0.006,3.04565 7.66728,2.44136 11.18648,1.26345 4.46705,-0.70432 7.4147,-2.933 7.41959,-5.97941 L 132.36596,78.178532 c -5.44103,-4.308296 2.73068,-0.277979 -3.28675,-1.539624 z"
+         id="path52"
+         sodipodi:nodetypes="ccccccc" />
+      <path
+         style="display:inline;overflow:visible;vector-effect:none;fill:url(#linearGradient88);stroke:none;stroke-linecap:round;stroke-linejoin:round;filter:url(#soft-1-9);enable-background:accumulate;stop-color:#000000"
+         d="m 61.063099,153.52305 c -3.755972,2.12497 0.636688,4.58923 2.52493,6.68778 l 75.294571,47.43191 c -0.006,3.04565 7.66728,-4.42509 9.76583,-6.5501 2.57286,-2.36174 2.20568,-7.4317 2.21057,-10.47811 L 71.539248,147.20974 c -2.835287,-1.86177 -8.851153,2.05737 -10.476149,6.31331 z"
+         id="path52-6"
+         sodipodi:nodetypes="ccccccc" />
+      <path
+         style="display:inline;overflow:visible;vector-effect:none;fill:url(#linearGradient89);stroke:none;stroke-linecap:round;stroke-linejoin:round;filter:url(#soft-1-9);enable-background:accumulate;stop-color:#000000"
+         d="m 57.274716,155.65402 c -3.755972,2.12497 -5.282662,2.22148 -3.39442,4.32003 l 41.199129,41.74934 c 5.676575,0.44113 6.483415,-0.16315 8.581965,-2.28816 2.57286,-2.36174 5.5205,-7.43171 5.52539,-10.47812 L 64.909578,152.89233 c -2.835287,-1.86177 -6.009866,-1.49428 -7.634862,2.76169 z"
+         id="path88"
+         sodipodi:nodetypes="ccccccc"
+         transform="matrix(-1,0,0,1,256,0)" />
+      <path
+         style="display:inline;overflow:visible;opacity:1;vector-effect:none;fill:url(#linearGradient9);stroke:none;stroke-linecap:round;stroke-linejoin:round;filter:url(#soft-1);enable-background:accumulate;stop-color:#000000;stop-opacity:1"
+         d="m 130.05256,78.004565 c -5.41339,4.729579 -2.44134,-3.461088 -0.31637,4.083262 l 59.4307,68.741553 c -0.006,3.04565 5.53632,1.0207 8.10843,-1.34104 5.65092,-3.30884 2.67921,-4.11687 2.68411,-7.16328 L 133.66228,78.557701 c -8.04432,-3.992738 2.51399,-3.625236 -3.60972,-0.553136 z"
+         id="path89"
+         sodipodi:nodetypes="ccccccc" />
+      <path
+         style="display:inline;overflow:visible;opacity:1;vector-effect:none;fill:url(#linearGradient78);stroke:none;stroke-linecap:round;stroke-linejoin:round;filter:url(#soft-1);enable-background:accumulate;stop-color:#000000;stop-opacity:1"
+         d="m 127.21128,81.792948 c -0.91468,-1.426544 -4.33557,-1.80367 -4.34152,1.241975 L 61.072208,143.25262 c -1.18987,4.70307 -3.697864,-0.39992 1.952295,7.41958 8.018663,6.3989 2.915992,2.27602 7.656361,0.17667 L 126.79583,87.555111 c 0.006,-3.045643 1.80367,-2.914914 0.41545,-5.762163 z"
+         id="path90"
+         sodipodi:nodetypes="ccccccc" />
+    </a>
+    <!-- 叠加的“描边线”用于体现远近粗细（不破坏你原本的实体渐变管线） -->
+    <!-- 原理：用 stroke 覆盖在管线上，近的 stroke 宽，远的 stroke 窄；端点/连接圆角 -->
+    <g
+       id="gDepthStrokes"
+       fill="none"
+       stroke="url(#strokeG)"
+       stroke-linecap="round"
+       stroke-linejoin="round"
+       opacity="0.95"
+       filter="url(#soft)"
+       style="display:inline;stroke:url(#linearGradient11)">
+      <!-- 远：上->左 / 上->右（更细） -->
+      <path
+         d="M 116.16613,91.813898 71.551973,138.63967"
+         stroke-width="3.59037"
+         id="path1"
+         style="stroke:url(#linearGradient3);stroke-width:2.94118;stroke-dasharray:none"
+         sodipodi:nodetypes="cc" />
+      <path
+         d="m 140.06288,90.622251 44.86645,47.788419"
+         stroke-width="3.57481"
+         id="path2"
+         style="stroke:url(#linearGradient4);stroke-width:3.67647059;stroke-dasharray:none"
+         sodipodi:nodetypes="cc" />
+      <!-- 中：左->右 背边（虚线那条的“实体感”可加一条更细的实线底） -->
+      <path
+         d="M 60.191639,153.78839 191.5464,153.07806"
+         stroke-width="3.8"
+         opacity="0.55"
+         id="path3"
+         style="display:none;stroke:url(#linearGradient10)" />
+      <!-- 近：左->下 / 右->下（更粗） -->
+      <path
+         d="m 77.094136,160.74638 55.076234,33.10658"
+         stroke-width="4.36245"
+         id="path4"
+         style="stroke:url(#linearGradient2);stroke-width:7.35294;stroke-dasharray:none"
+         sodipodi:nodetypes="cc" />
+      <path
+         d="m 180.99328,170.38231 -14.73763,12.88763"
+         stroke-width="5.07133"
+         id="path5"
+         style="display:inline;stroke:url(#linearGradient1);stroke-width:5.88235294;stroke-dasharray:none"
+         sodipodi:nodetypes="cc" />
+      <!-- 深度：上->下（中等偏粗） -->
+      <path
+         d="m 130.68723,96.636909 15.69841,81.124251"
+         stroke-width="4.01833"
+         id="path6"
+         style="display:inline;stroke:url(#linearGradient5)"
+         sodipodi:nodetypes="cc" />
+    </g>
+    <!-- 你原来的虚线（保留），我只把 linecap/linejoin 统一并稍微做远近透明度区分 -->
+    <g
+       stroke-linecap="round"
+       stroke-linejoin="round"
+       id="g50"
+       style="display:inline">
+      <path
+         d="m 113.68622,120.35716 -53.605031,33.1881"
+         fill="none"
+         stroke="#2f93ff"
+         stroke-width="1.15"
+         stroke-dasharray="2, 3"
+         opacity="0.72"
+         id="path50"
+         sodipodi:nodetypes="cc"
+         inkscape:label="虚线远(左下)"
+         style="display:inline;stroke-width:2.94118;stroke-dasharray:2.94118, 5.88235;stroke-dashoffset:0" />
+      <path
+         d="m 117.26735,118.63447 79.71827,38.51462"
+         fill="none"
+         stroke="#2f93ff"
+         stroke-width="1.22"
+         stroke-dasharray="2, 3"
+         opacity="0.72"
+         id="path50-0"
+         sodipodi:nodetypes="cc"
+         inkscape:label="虚线远(右下)"
+         style="display:inline;stroke-width:2.94118;stroke-dasharray:2.94118, 5.88235;stroke-dashoffset:0" />
+      <path
+         d="m 117.09584,120.18816 34.24181,80.9659"
+         fill="none"
+         stroke="#2f93ff"
+         stroke-width="1.32"
+         stroke-dasharray="2, 3"
+         opacity="0.85"
+         id="path50-0-0"
+         sodipodi:nodetypes="cc"
+         inkscape:label="虚线近(向下)"
+         style="display:inline;stroke-width:2.94118;stroke-dasharray:2.94118, 5.88235;stroke-dashoffset:0" />
+      <path
+         d="m 128.80228,78.18149 -12.5362,41.17476"
+         fill="none"
+         stroke="#2f93ff"
+         stroke-width="0.82"
+         stroke-dasharray="2, 3"
+         opacity="0.62"
+         id="path50-0-3"
+         sodipodi:nodetypes="cc"
+         inkscape:label="虚线最远(上)"
+         style="display:inline;stroke-width:2.94118;stroke-dasharray:2.94118, 5.88235;stroke-dashoffset:0" />
+    </g>
+    <!-- nodes：按远近改大小 + 加轻高光（仍是纯色圆，不加外描边） -->
+    <g
+       filter="url(#nodeShadow)"
+       id="g55"
+       style="display:inline">
+      <!-- 下：最近，更大 -->
+      <ellipse
+         cx="150.01996"
+         cy="199.15353"
+         fill="#fa8c16"
+         id="circle55"
+         inkscape:label="圆下"
+         rx="27.825157"
+         ry="27.414837"
+         style="display:inline" />
+      <ellipse
+         cx="144.31033"
+         cy="191.60001"
+         rx="8.1838694"
+         ry="8.5206432"
+         fill="#ffffff"
+         opacity="0.18"
+         style="display:inline"
+         inkscape:label="高光下"
+         id="ellipse6" />
+      <!-- 右：中等 -->
+      <ellipse
+         cx="195.33479"
+         cy="156.62967"
+         fill="#9254de"
+         id="circle54"
+         inkscape:label="圆右"
+         rx="20.841286"
+         ry="20.678062"
+         style="display:inline" />
+      <ellipse
+         cx="190.34355"
+         cy="150.24129"
+         rx="6.7022567"
+         ry="6.8574176"
+         fill="#ffffff"
+         opacity="0.16"
+         style="display:inline;stroke-width:1.00895"
+         inkscape:label="高光右"
+         id="ellipse7" />
+      <!-- 左：中等（略大于右也可以，保持你原本风格） -->
+      <circle
+         cx="60.191639"
+         cy="153.78839"
+         fill="#13c2c2"
+         id="circle53"
+         inkscape:label="圆左"
+         style="display:inline"
+         r="21.204514" />
+      <ellipse
+         cx="55.710323"
+         cy="148.57355"
+         rx="6.5470958"
+         ry="6.6838698"
+         fill="#ffffff"
+         opacity="0.16"
+         style="display:inline"
+         inkscape:label="高光左"
+         id="ellipse8" />
+      <!-- 上：最远，更小 -->
+      <ellipse
+         fill="#1677ff"
+         id="circle52"
+         inkscape:label="圆上"
+         cy="79.50647"
+         cx="128.9471"
+         rx="20.335478"
+         ry="20.372252"
+         style="display:inline;stroke-width:0.852941;stroke-dasharray:none" />
+      <ellipse
+         cx="125.88387"
+         cy="74.963226"
+         rx="6.220644"
+         ry="6.3574176"
+         fill="#ffffff"
+         opacity="0.14"
+         style="display:inline"
+         inkscape:label="高光上"
+         id="ellipse9" />
+    </g>
+  </g>
+</svg>

@@ -355,10 +355,23 @@
 .app-title {
   position: absolute;
   left: 24px;
-  top: 15px;
+  top: 13px;
   z-index: 30;
   pointer-events: none;
   color: var(--ant-colorPrimary);
+}
+
+.app-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.app-logo {
+  margin-right: 6px;
+  width: 32px;
+  height: 32px;
+  display: block;
 }
 
 /* 右侧 top60% 悬浮打开按钮 */

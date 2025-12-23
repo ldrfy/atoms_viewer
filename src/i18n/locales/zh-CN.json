@@ -3,7 +3,8 @@
         "selfName": "中文"
     },
     "common": {
-        "delete": "删除"
+        "delete": "删除",
+        "cancel": "取消"
     },
     "viewer": {
         "play": {

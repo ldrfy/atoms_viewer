@@ -47,47 +47,47 @@
 
         <div ref="canvasHostRef" class="canvas-host"></div>
 
-        <!-- 右侧：解析信息（可收起） -->
+        <!-- 左侧：解析信息（贴边弹框） -->
         <div v-if="hasModel" class="parse-overlay">
+            <a-popover :arrow="false" v-model:open="parsePopoverOpen" trigger="click" placement="rightTop"
+                :overlayClassName="'parse-popover'" :destroyTooltipOnHide="true">
+                <template #content>
+                    <div class="parse-pop-content">
+                        <div class="parse-pop-title">{{ t("viewer.parse.mode") }}</div>
 
-            <!-- 左侧侧把手：始终显示 -->
-            <a-button class="parse-handle" type="text" size="small" @click="toggleParsePanel"
-                :aria-label="parseCollapsed ? 'expand parse panel' : 'collapse parse panel'">
-                <component :is="parseCollapsed ? RightOutlined : LeftOutlined" />
-            </a-button><!-- 卡片容器：用于做收起动画 -->
-            <div class="parse-card-wrap" :class="{ collapsed: parseCollapsed }">
-                <a-card size="small" class="parse-card" :bordered="false">
-                    <template #title>
-                        {{ t("viewer.parse.mode") }}
-                    </template>
+                        <a-space direction="vertical" :size="6" style="width: 100%">
+                            <a-select size="small" v-model:value="parseModeModel" :options="parseModeOptions"
+                                style="width: 100%" />
 
-                    <a-space direction="vertical" :size="6" style="width: 100%">
-                        <a-select size="small" v-model:value="parseModeModel" :options="parseModeOptions"
-                            style="width: 100%" />
-
-                        <a-descriptions size="small" :column="1" class="parse-desc" bordered>
-                            <a-descriptions-item :label="t('viewer.parse.format')">
-                                <a-tag>{{ parseInfo.format || "-" }}</a-tag>
-                            </a-descriptions-item>
-
-                            <a-descriptions-item :label="t('viewer.parse.file')">
-                                <span class="parse-filename">{{ parseInfo.fileName || "-" }}</span>
-                            </a-descriptions-item>
-
-                            <a-descriptions-item :label="t('viewer.parse.atoms')">
-                                {{ parseInfo.atomCount }}
-                            </a-descriptions-item>
-
-                            <a-descriptions-item v-if="parseInfo.frameCount > 1" :label="t('viewer.parse.frames')">
-                                {{ parseInfo.frameCount }}
-                            </a-descriptions-item>
-                        </a-descriptions>
-                    </a-space>
-                </a-card>
-            </div>
+                            <a-alert v-if="parseInfo.success === false" type="error" show-icon
+                                :description="parseInfo.errorMsg || '-'" />
 
 
+                            <a-descriptions size="small" :column="1" class="parse-desc" bordered>
+                                <a-descriptions-item :label="t('viewer.parse.format')">
+                                    <a-tag>{{ parseInfo.format || "-" }}</a-tag>
+                                </a-descriptions-item>
 
+                                <a-descriptions-item :label="t('viewer.parse.file')">
+                                    <span class="parse-filename">{{ parseInfo.fileName || "-" }}</span>
+                                </a-descriptions-item>
+
+                                <a-descriptions-item :label="t('viewer.parse.atoms')">
+                                    {{ parseInfo.atomCount }}
+                                </a-descriptions-item>
+
+                                <a-descriptions-item v-if="parseInfo.frameCount > 1" :label="t('viewer.parse.frames')">
+                                    {{ parseInfo.frameCount }}
+                                </a-descriptions-item>
+                            </a-descriptions>
+                        </a-space>
+                    </div>
+                </template>
+
+                <a-button class="parse-handle" type="text" :aria-label="t('viewer.parse.mode')">
+                    <ExclamationCircleOutlined />
+                </a-button>
+            </a-popover>
         </div>
 
 
@@ -95,6 +95,47 @@
         <div v-if="isLoading" class="loading-overlay">
             <a-spin size="large" />
         </div>
+
+        <!-- 无模型：左上角显示项目名 -->
+        <div v-if="!hasModel" class="app-title">
+            <a-typography-title :level="5" :style="{ margin: 0, color: token.colorPrimary }">
+                {{ APP_DISPLAY_NAME }}
+            </a-typography-title>
+        </div>
+
+        <!-- 无模型：右侧 top60% 悬浮打开按钮 -->
+        <a-float-button v-if="hasModel && !isLoading" class="open-file-fab" type="primary"
+            :style="{ right: '24px', top: '60%' }" @click="openFilePicker" :aria-label="t('viewer.empty.pickFile')">
+            <template #icon>
+                <FolderOpenOutlined />
+            </template>
+        </a-float-button>
+
+        <!-- 无模型：底部中间版本号 + 开发者 -->
+        <div v-if="!hasModel" class="app-footer">
+            <a v-if="APP_GITHUB_URL" class="app-footer-link" :href="APP_GITHUB_URL" target="_blank"
+                rel="noopener noreferrer" :aria-label="t('viewer.about.openGithub')">
+                <span class="app-footer-name">{{ APP_DISPLAY_NAME }}</span>
+                <span class="app-footer-sep">·</span>
+                <span class="app-footer-ver">v{{ APP_VERSION }}</span>
+                <template v-if="APP_AUTHOR">
+                    <span class="app-footer-sep">·</span>
+                    <span class="app-footer-author">{{ APP_AUTHOR }}</span>
+                </template>
+            </a>
+
+            <!-- 没有 github url 的兜底（不可点击） -->
+            <template v-else>
+                <span class="app-footer-name">{{ APP_DISPLAY_NAME }}</span>
+                <span class="app-footer-sep">·</span>
+                <span class="app-footer-ver">v{{ APP_VERSION }}</span>
+                <template v-if="APP_AUTHOR">
+                    <span class="app-footer-sep">·</span>
+                    <span class="app-footer-author">{{ APP_AUTHOR }}</span>
+                </template>
+            </template>
+        </div>
+
 
         <div v-if="!hasModel && !isDragging && !isLoading" class="empty-overlay">
             <div class="empty-card">
@@ -210,16 +251,22 @@ import { useI18n } from "vue-i18n";
 import { useViewerStage } from "./useViewerStage";
 import type { ViewerSettings, OpenSettingsPayload } from "../../lib/viewer/settings";
 import type { ParseMode } from "../../lib/structure/parse";
-import { LeftOutlined, RightOutlined } from "@ant-design/icons-vue";
+import { ExclamationCircleOutlined, FolderOpenOutlined } from "@ant-design/icons-vue";
 import { setThemeMode, isDarkColor } from "../../theme/mode";
 
+import { APP_DISPLAY_NAME, APP_VERSION, APP_AUTHOR, APP_GITHUB_URL } from "../../lib/appMeta";
 
-const parseCollapsed = ref(false);
+import { theme } from "ant-design-vue";
 
-function toggleParsePanel(): void {
-    parseCollapsed.value = !parseCollapsed.value;
-}
+const { token } = theme.useToken(); // token 是响应式的
 const { t } = useI18n();
+
+
+
+const props = defineProps<{ settings: ViewerSettings }>();
+const settingsRef = toRef(props, "settings");
+const parsePopoverOpen = ref(false);
+
 
 const emit = defineEmits<{
     (e: "model-state", hasModel: boolean): void;
@@ -227,24 +274,10 @@ const emit = defineEmits<{
     (e: "open-settings", payload?: OpenSettingsPayload): void;
 }>();
 
-const props = defineProps<{ settings: ViewerSettings }>();
-const settingsRef = toRef(props, "settings");
-
-/** 统一 patch settings / Unified patch settings */
-function patchSettings(patch: Partial<ViewerSettings>): void {
-    emit("update:settings", {
-        ...props.settings,
-        ...patch,
-        rotationDeg: {
-            ...props.settings.rotationDeg,
-            ...(patch.rotationDeg ?? {}),
-        },
-    });
-}
-
 const stage = useViewerStage(settingsRef, patchSettings, (payload) =>
     emit("open-settings", payload)
 );
+
 
 const {
     // record
@@ -296,14 +329,6 @@ const {
     recordCropBox,
 } = stage;
 
-void fileInputRef
-void canvasHostRef
-
-watch(
-    hasModel,
-    (v) => emit("model-state", v!),
-    { immediate: true }
-);
 
 const frameIndexModel = computed({
     get: () => frameIndex.value,
@@ -320,10 +345,6 @@ const bgColorModel = computed({
     }),
 });
 
-watch(bgColorModel, (color) => {
-    if (!color) return;
-    setThemeMode(isDarkColor(color) ? "dark" : "light");
-});
 
 const fpsModel = computed({
     get: () => fps.value,
@@ -339,6 +360,8 @@ const parseModeModel = computed<ParseMode>({
     set: (v) => setParseMode(v),
 });
 
+
+
 const parseModeOptions = computed(() => [
     { value: "auto", label: t("viewer.parse.modeOptions.auto") },
     { value: "xyz", label: t("viewer.parse.modeOptions.xyz") },
@@ -346,9 +369,42 @@ const parseModeOptions = computed(() => [
     { value: "lammpsdump", label: t("viewer.parse.modeOptions.lammpsdump") },
     { value: "lammpsdata", label: t("viewer.parse.modeOptions.lammpsdata") },
 ]);
+
 defineExpose({
     exportPng: onExportPng,
 });
+
+void fileInputRef
+void canvasHostRef
+
+/** 统一 patch settings / Unified patch settings */
+function patchSettings(patch: Partial<ViewerSettings>): void {
+    emit("update:settings", {
+        ...props.settings,
+        ...patch,
+        rotationDeg: {
+            ...props.settings.rotationDeg,
+            ...(patch.rotationDeg ?? {}),
+        },
+    });
+}
+
+
+watch(hasModel, (v) => emit("model-state", v!),
+    { immediate: true }
+);
+
+watch(bgColorModel, (color) => {
+    if (!color) return;
+    setThemeMode(isDarkColor(color) ? "dark" : "light");
+});
+
+watch(
+    () => parseInfo.errorSeq,
+    (n, prev) => {
+        if (n > (prev ?? 0)) parsePopoverOpen.value = true;
+    }
+);
 
 
 </script>

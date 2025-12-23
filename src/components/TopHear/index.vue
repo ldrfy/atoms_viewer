@@ -55,12 +55,6 @@
                     </template>
                 </a-dropdown>
 
-                <a-tooltip :title="t('viewer.links.github')">
-                    <a-button type="text" class="top-btn" aria-label="github" @click="openGithub">
-                        <GithubOutlined />
-                    </a-button>
-                </a-tooltip>
-
                 <a-button type="text" class="top-btn" aria-label="settings" @click="emit('open-settings')">
                     <SettingOutlined />
                 </a-button>
@@ -74,7 +68,6 @@ import { computed } from "vue";
 import { useI18n } from "vue-i18n";
 import {
     GlobalOutlined,
-    GithubOutlined,
     BgColorsOutlined,
     DesktopOutlined,
     BulbOutlined,
@@ -108,10 +101,6 @@ function onSelectLocale(key: string): void {
     setLocale(key as any);
 }
 
-const GITHUB_URL = "https://github.com/ldrfy/atoms_viewer";
-function openGithub(): void {
-    window.open(GITHUB_URL, "_blank", "noopener,noreferrer");
-}
 </script>
 
 <style scoped>

@@ -7,6 +7,9 @@
         "cancel": "取消"
     },
     "viewer": {
+        "about": {
+            "openGithub": "打开GitHub"
+        },
         "play": {
             "pause": "暂停",
             "start": "播放",

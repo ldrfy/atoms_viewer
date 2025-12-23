@@ -187,6 +187,9 @@ export type ParseInfo = {
   format: string;
   atomCount: number;
   frameCount: number;
+  success: boolean;
+  errorMsg: string;
+  errorSeq: number;
 };
 
 function stripExt(name: string): string {

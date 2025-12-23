@@ -7,6 +7,9 @@
         "cancel": "Cancel"
     },
     "viewer": {
+        "about":{
+            "openGithub": "Open GitHub"
+        },
         "play": {
             "pause": "Pause",
             "start": "Play",

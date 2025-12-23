@@ -122,14 +122,14 @@ export function useViewerStage(
   let runtime: ModelRuntime | null = null;
   let stopBind: (() => void) | null = null;
 
-  const parseMode = ref<ParseMode>("auto");
-
   // ✅ recording: moved out to recording.ts
   const recording = createRecordingController({
     getStage: () => stage,
     patchSettings,
     t,
   });
+
+  const parseMode = ref<ParseMode>("auto");
 
   /**
    * 左上角显示用：解析结果摘要
@@ -141,6 +141,9 @@ export function useViewerStage(
     format: "",
     atomCount: 0,
     frameCount: 1,
+    success: true,
+    errorMsg: "",
+    errorSeq: 0,
   });
 
   /**
@@ -402,9 +405,6 @@ export function useViewerStage(
     try {
       stopPlay();
 
-      // Reset to auto for each new file to avoid leaking previous forced mode.
-      parseMode.value = "auto";
-
       // Read & cache raw text for setParseMode re-parse.
       const text = await file.text();
       lastRawText = text;
@@ -414,12 +414,19 @@ export function useViewerStage(
       renderFromText(text, file.name, "load");
 
       message.success(`${((performance.now() - t0) / 1000).toFixed(2)} s`);
-    } finally {
-      hasModel.value = true;
-      parseMode.value = "auto";
-      parseInfo.fileName = file.name;
-      isLoading.value = false;
+      parseInfo.success = true;
+      parseInfo.errorMsg = "";
+    } catch (err) {
+      parseInfo.success = false;
+      parseInfo.errorMsg = (err as Error).message;
+      parseInfo.errorSeq += 1;
+      console.log(err);
+      message.error(`${t("viewer.parse.notice")}: ${parseInfo.errorMsg}`);
     }
+    isLoading.value = false;
+    hasModel.value = true;
+    parseMode.value = "auto";
+    parseInfo.fileName = file.name;
   }
 
   function onDragEnter(): void {
@@ -446,12 +453,7 @@ export function useViewerStage(
     const file = e.dataTransfer?.files?.[0];
     if (!file) return;
 
-    try {
-      await loadFile(file);
-    } catch (err) {
-      console.log(err);
-      message.error(`${t("viewer.parse.notice")}: ${(err as Error).message}`);
-    }
+    await loadFile(file);
   }
 
   async function onFilePicked(e: Event): Promise<void> {
@@ -460,11 +462,7 @@ export function useViewerStage(
     input.value = "";
     if (!file) return;
 
-    try {
-      await loadFile(file);
-    } catch (err) {
-      message.error((err as Error).message);
-    }
+    await loadFile(file);
   }
 
   /**

@@ -98,10 +98,14 @@
 
         <!-- 无模型：左上角显示项目名 -->
         <div v-if="!hasModel" class="app-title">
-            <a-typography-title :level="5" :style="{ margin: 0, color: token.colorPrimary }">
-                {{ APP_DISPLAY_NAME }}
-            </a-typography-title>
+            <div class="app-title-row">
+                <img class="app-logo" src="/lav.svg" alt="logo" />
+                <a-typography-title :level="5" :style="{ margin: 0, color: token.colorPrimary }">
+                    {{ APP_DISPLAY_NAME }}
+                </a-typography-title>
+            </div>
         </div>
+
 
         <!-- 无模型：右侧 top60% 悬浮打开按钮 -->
         <a-float-button v-if="hasModel && !isLoading" class="open-file-fab" type="primary"

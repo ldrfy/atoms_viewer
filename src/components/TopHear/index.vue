@@ -113,7 +113,7 @@ function onSelectLocale(key: string): void {
     z-index: 50;
     background: transparent !important;
     pointer-events: none;
-    padding: 8px;
+    padding: 12px;
 }
 
 /* 一行布局；这里只放右侧 */

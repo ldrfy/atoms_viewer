@@ -1,14 +1,21 @@
-# Ldr-Atoms-Viewer
-
 <div align="center">
+  <a href="https://github.com/ldrfy/atoms_viewer">
+    <img alt="Ldr Atoms Viewer Logo" width="200" src="./public/lav.svg">
+  </a>
+  <br>
+  <br>
+
+[![license](https://img.shields.io/github/license/ldrfy/atoms_viewer.svg)](LICENSE)
+
+  <h1>Ldr Atoms Viewer</h1>
 
 [![CHI](https://img.shields.io/badge/CHI-中文-red?style=for-the-badge)](readme/README_ZH.md) [![ENG](https://img.shields.io/badge/ENG-English-blue?style=for-the-badge)](README.md)
 
 </div>
 
-## 🚀 Start
-
 ![start](readme/images/start.jpg)
+
+## 🚀 Start
 
 - Go [Web: Ldr-Atoms-Viewer](https://ldrfy.github.io/atoms_viewer/)
 - Upload your file (`lammps-data`, `lammps-dump`, `pdb`, `xyz`)

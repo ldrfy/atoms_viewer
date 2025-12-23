@@ -1,4 +1,5 @@
 # Logs
+atoms_viewer
 logs
 *.log
 npm-debug.log*

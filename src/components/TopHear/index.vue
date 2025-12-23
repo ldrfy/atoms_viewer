@@ -132,6 +132,6 @@ function onSelectLocale(key: string): void {
 
 /* 图标按钮略放大（不改 Ant 响应式体系） */
 .top-btn {
-    font-size: 16px;
+    font-size: 20px;
 }
 </style>

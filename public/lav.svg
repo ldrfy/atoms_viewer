@@ -23,18 +23,56 @@
      inkscape:pageopacity="0.0"
      inkscape:pagecheckerboard="0"
      inkscape:deskcolor="#d1d1d1"
-     inkscape:zoom="3.1054688"
-     inkscape:cx="142.81258"
-     inkscape:cy="111.25534"
-     inkscape:window-width="1536"
-     inkscape:window-height="887"
+     inkscape:zoom="1.9504341"
+     inkscape:cx="61.268412"
+     inkscape:cy="103.82304"
+     inkscape:window-width="1440"
+     inkscape:window-height="823"
      inkscape:window-x="0"
      inkscape:window-y="0"
      inkscape:window-maximized="1"
-     inkscape:current-layer="g56"
+     inkscape:current-layer="g44"
      showguides="true" />
   <defs
      id="defs33">
+    <linearGradient
+       id="linearGradient39"
+       x1="0"
+       y1="0"
+       x2="1"
+       y2="1">
+      <stop
+         offset="0"
+         stop-color="#1677ff"
+         id="stop37" />
+      <stop
+         offset="0.48851997"
+         stop-color="#2f93ff"
+         id="stop38" />
+      <stop
+         offset="1"
+         stop-color="#13c2c2"
+         id="stop39" />
+    </linearGradient>
+    <linearGradient
+       id="linearGradient36"
+       x1="0"
+       y1="0"
+       x2="1"
+       y2="1">
+      <stop
+         offset="0"
+         stop-color="#1677ff"
+         id="stop34" />
+      <stop
+         offset="0.47416091"
+         stop-color="#2f93ff"
+         id="stop35" />
+      <stop
+         offset="1"
+         stop-color="#13c2c2"
+         id="stop36" />
+    </linearGradient>
     <linearGradient
        id="linearGradient33"
        x1="0"
@@ -448,17 +486,17 @@
        x2="209"
        y2="197"
        gradientUnits="userSpaceOnUse"
-       gradientTransform="translate(25.438994,25.116981)" />
+       gradientTransform="translate(28.503539,22.607655)" />
     <linearGradient
        inkscape:collect="always"
-       xlink:href="#strokeG"
+       xlink:href="#linearGradient39"
        id="linearGradient64"
        x1="47"
        y1="161"
        x2="83"
        y2="197"
        gradientUnits="userSpaceOnUse"
-       gradientTransform="translate(-22.862892,23.506918)" />
+       gradientTransform="translate(-24.905921,22.019108)" />
     <linearGradient
        inkscape:collect="always"
        xlink:href="#strokeG"
@@ -468,7 +506,7 @@
        x2="209"
        y2="95"
        gradientUnits="userSpaceOnUse"
-       gradientTransform="translate(25.116981,-31.879247)" />
+       gradientTransform="translate(28.52203,-35.876384)" />
     <linearGradient
        inkscape:collect="always"
        xlink:href="#strokeG"
@@ -478,7 +516,7 @@
        x2="83"
        y2="95"
        gradientUnits="userSpaceOnUse"
-       gradientTransform="translate(-23.506919,-31.557232)" />
+       gradientTransform="translate(-24.994731,-35.769082)" />
     <filter
        id="soft-1"
        filterUnits="userSpaceOnUse"
@@ -488,7 +526,7 @@
        height="416">
       <feGaussianBlur
          in="SourceAlpha"
-         stdDeviation="1.313 2.2"
+         stdDeviation="0.843 3.227"
          result="b"
          id="feGaussianBlur28-2" />
       <feOffset
@@ -522,7 +560,7 @@
        height="416">
       <feGaussianBlur
          in="SourceAlpha"
-         stdDeviation="1.313 2.2"
+         stdDeviation="0.001 2.2"
          result="b"
          id="feGaussianBlur28-2-4" />
       <feOffset
@@ -595,50 +633,50 @@
        inkscape:collect="always"
        xlink:href="#linearGradient33"
        id="linearGradient1"
-       x1="187.81497"
-       y1="158.95839"
-       x2="173.83881"
-       y2="174.19034"
+       x1="191.85977"
+       y1="158.90829"
+       x2="176.22882"
+       y2="176.21184"
        gradientTransform="matrix(0.99886084,0.01016702,-0.01487497,0.82088491,-4.2671926,38.271975)"
        gradientUnits="userSpaceOnUse" />
     <linearGradient
        inkscape:collect="always"
        xlink:href="#linearGradient30"
        id="linearGradient2"
-       x1="46.988636"
-       y1="207.76323"
-       x2="94.211998"
-       y2="258.53635"
+       x1="44.415436"
+       y1="208.34418"
+       x2="93.938805"
+       y2="253.27202"
        gradientTransform="matrix(1.0469297,0,0,0.57965148,29.147603,41.60657)"
        gradientUnits="userSpaceOnUse" />
     <linearGradient
        inkscape:collect="always"
        xlink:href="#strokeG"
        id="linearGradient3"
-       x1="120.42337"
-       y1="89.322281"
-       x2="75.078773"
-       y2="134.84512"
+       x1="120.67352"
+       y1="88.689987"
+       x2="77.908531"
+       y2="134.35335"
        gradientTransform="matrix(0.97727971,0,0,1.0177796,-1.7894764,1.5054358)"
        gradientUnits="userSpaceOnUse" />
     <linearGradient
        inkscape:collect="always"
-       xlink:href="#strokeG"
+       xlink:href="#linearGradient36"
        id="linearGradient4"
-       x1="150.0972"
-       y1="84.196091"
-       x2="196.66425"
-       y2="133.57138"
+       x1="151.81685"
+       y1="85.867958"
+       x2="194.60066"
+       y2="135.24326"
        gradientTransform="matrix(0.97910584,0,0,1.0070968,-7.380375,5.3335381)"
        gradientUnits="userSpaceOnUse" />
     <linearGradient
        inkscape:collect="always"
        xlink:href="#strokeG"
        id="linearGradient5"
-       x1="283.2493"
-       y1="36.318047"
-       x2="325.08908"
-       y2="81.066429"
+       x1="289.11133"
+       y1="35.614857"
+       x2="322.47446"
+       y2="79.395554"
        gradientTransform="matrix(0.38637579,0,0,1.8138426,21.419587,30.881427)"
        gradientUnits="userSpaceOnUse" />
     <linearGradient
@@ -652,16 +690,6 @@
        x2="127.99999"
        y2="335.99994"
        spreadMethod="pad" />
-    <linearGradient
-       inkscape:collect="always"
-       xlink:href="#strokeG"
-       id="linearGradient10"
-       x1="10.648655"
-       y1="827.56151"
-       x2="35.338583"
-       y2="852.25144"
-       gradientTransform="scale(5.4740848,0.18267894)"
-       gradientUnits="userSpaceOnUse" />
     <linearGradient
        inkscape:collect="always"
        xlink:href="#strokeG"
@@ -683,77 +711,50 @@
        gradientUnits="userSpaceOnUse" />
   </defs>
   <!-- corner marks (保留你的) -->
-  <g
-     fill="none"
-     stroke="url(#strokeG)"
-     stroke-width="10"
-     stroke-linecap="round"
-     stroke-linejoin="round"
-     opacity="0.95"
-     id="g44"
-     inkscape:label="g44"
-     style="stroke:url(#linearGradient12)"
-     transform="translate(1.4560994,-4.12)">
-    <path
-       d="m 203.43898,217.11699 h 14 q 12,0 12,-12 v -14"
-       id="path44"
-       style="stroke:url(#linearGradient63);stroke-width:15;stroke-miterlimit:6;stroke-dasharray:none"
-       inkscape:label="角右下" />
-    <path
-       d="m 55.137108,215.50692 h -14 q -12,0 -12,-12 v -14"
-       id="path43"
-       style="stroke:url(#linearGradient64);stroke-width:15;stroke-dasharray:none"
-       inkscape:label="角左下" />
-    <path
-       d="m 203.11698,32.120753 h 14 c 8,0 12,4 12,12 v 14"
-       id="path42"
-       sodipodi:nodetypes="cssc"
-       style="stroke:url(#linearGradient65);stroke-width:15;stroke-dasharray:none;stroke-miterlimit:4"
-       inkscape:label="角右上" />
-    <path
-       d="m 54.493081,32.442768 h -14 q -12,0 -12,12 v 14"
-       id="path41"
-       style="stroke:url(#linearGradient66);stroke-width:15;stroke-dasharray:none"
-       inkscape:label="角左上" />
-  </g>
   <!-- tetra network -->
   <g
      stroke-linecap="round"
      stroke-linejoin="round"
-     transform="matrix(1.36,0,0,1.36,-44.623899,-72.2)"
+     transform="matrix(1.36,0,0,1.36,-47.623899,-66.2)"
      id="g56"
      style="display:inline">
     <!-- 主“实体管线”（你的原始路径），我只把 join/cap 明确为 round 让边缘更圆润 -->
     <a
        id="a73"
        transform="translate(-1.8941916,0.23677395)"
-       style="display:inline">
-      <path
-         style="display:inline;overflow:visible;opacity:1;vector-effect:none;fill:url(#linearGradient93);stroke:none;stroke-linecap:round;stroke-linejoin:round;filter:url(#soft-1);enable-background:accumulate;stop-color:#000000;stop-opacity:1"
-         d="m 129.07921,76.638908 c -5.0654,4.490341 -1.58291,-2.12662 -1.94751,4.26505 l 13.73334,118.227322 c -0.006,3.04565 7.66728,2.44136 11.18648,1.26345 4.46705,-0.70432 7.4147,-2.933 7.41959,-5.97941 L 132.36596,78.178532 c -5.44103,-4.308296 2.73068,-0.277979 -3.28675,-1.539624 z"
-         id="path52"
-         sodipodi:nodetypes="ccccccc" />
-      <path
-         style="display:inline;overflow:visible;vector-effect:none;fill:url(#linearGradient88);stroke:none;stroke-linecap:round;stroke-linejoin:round;filter:url(#soft-1-9);enable-background:accumulate;stop-color:#000000"
-         d="m 61.063099,153.52305 c -3.755972,2.12497 0.636688,4.58923 2.52493,6.68778 l 75.294571,47.43191 c -0.006,3.04565 7.66728,-4.42509 9.76583,-6.5501 2.57286,-2.36174 2.20568,-7.4317 2.21057,-10.47811 L 71.539248,147.20974 c -2.835287,-1.86177 -8.851153,2.05737 -10.476149,6.31331 z"
-         id="path52-6"
-         sodipodi:nodetypes="ccccccc" />
+       style="display:inline"
+       inkscape:label="梯形">
       <path
          style="display:inline;overflow:visible;vector-effect:none;fill:url(#linearGradient89);stroke:none;stroke-linecap:round;stroke-linejoin:round;filter:url(#soft-1-9);enable-background:accumulate;stop-color:#000000"
-         d="m 57.274716,155.65402 c -3.755972,2.12497 -5.282662,2.22148 -3.39442,4.32003 l 41.199129,41.74934 c 5.676575,0.44113 6.483415,-0.16315 8.581965,-2.28816 2.57286,-2.36174 5.5205,-7.43171 5.52539,-10.47812 L 64.909578,152.89233 c -2.835287,-1.86177 -6.009866,-1.49428 -7.634862,2.76169 z"
+         d="m 56.911003,166.03546 32.107009,37.70839 C 80.1812,211.56462 113.63394,177.84088 104.89238,187.08044 L 64.572833,156.59652 c 6.625399,-7.44377 -15.317465,17.47028 -7.66183,9.43894 z"
          id="path88"
-         sodipodi:nodetypes="ccccccc"
-         transform="matrix(-1,0,0,1,256,0)" />
+         sodipodi:nodetypes="ccccc"
+         transform="matrix(-1,0,0,1,256,0)"
+         inkscape:label="右下" />
+      <path
+         style="display:inline;overflow:visible;vector-effect:none;fill:url(#linearGradient88);stroke:none;stroke-linecap:round;stroke-linejoin:round;filter:url(#soft-1-9);enable-background:accumulate;stop-color:#000000"
+         d="m 63.360947,162.2313 74.988343,43.22078 c -5.72966,10.59102 17.26934,-33.04788 11.34066,-19.38543 L 68.845287,150.57719 c 5.817779,-10.2117 -10.731118,22.39848 -5.48434,11.65411 z"
+         id="path52-6"
+         sodipodi:nodetypes="ccccc"
+         inkscape:label="左下" />
       <path
          style="display:inline;overflow:visible;opacity:1;vector-effect:none;fill:url(#linearGradient9);stroke:none;stroke-linecap:round;stroke-linejoin:round;filter:url(#soft-1);enable-background:accumulate;stop-color:#000000;stop-opacity:1"
-         d="m 130.05256,78.004565 c -5.41339,4.729579 -2.44134,-3.461088 -0.31637,4.083262 l 59.4307,68.741553 c -0.006,3.04565 5.53632,1.0207 8.10843,-1.34104 5.65092,-3.30884 2.67921,-4.11687 2.68411,-7.16328 L 133.66228,78.557701 c -8.04432,-3.992738 2.51399,-3.625236 -3.60972,-0.553136 z"
+         d="m 132.20096,86.587153 53.11641,68.392957 c -7.44475,6.37794 21.41908,-19.61274 13.94549,-12.66196 L 138.3767,80.578172 c 6.00319,-5.554066 -14.35287,14.303065 -6.17574,6.008981 z"
          id="path89"
-         sodipodi:nodetypes="ccccccc" />
+         sodipodi:nodetypes="ccccc"
+         inkscape:label="右上" />
       <path
          style="display:inline;overflow:visible;opacity:1;vector-effect:none;fill:url(#linearGradient78);stroke:none;stroke-linecap:round;stroke-linejoin:round;filter:url(#soft-1);enable-background:accumulate;stop-color:#000000;stop-opacity:1"
-         d="m 127.21128,81.792948 c -0.91468,-1.426544 -4.33557,-1.80367 -4.34152,1.241975 L 61.072208,143.25262 c -1.18987,4.70307 -3.697864,-0.39992 1.952295,7.41958 8.018663,6.3989 2.915992,2.27602 7.656361,0.17667 L 126.79583,87.555111 c 0.006,-3.045643 1.80367,-2.914914 0.41545,-5.762163 z"
+         d="M 122.54922,80.637334 60.092029,143.92101 c -5.483901,-5.9095 20.108409,16.68045 12.272561,10.29532 l 55.8999,-69.137371 c 6.06941,6.769101 -10.41955,-9.637719 -5.71527,-4.441625 z"
          id="path90"
-         sodipodi:nodetypes="ccccccc" />
+         sodipodi:nodetypes="ccccc"
+         inkscape:label="左上" />
+      <path
+         style="display:inline;overflow:visible;opacity:1;vector-effect:none;fill:url(#linearGradient93);stroke:none;stroke-linecap:round;stroke-linejoin:round;filter:url(#soft-1);enable-background:accumulate;stop-color:#000000;stop-opacity:1"
+         d="m 127.67426,86.923025 10.27332,102.432995 c -13.14106,1.89713 34.85148,-5.93344 22.40108,-3.22504 L 136.43051,85.018628 c 9.45173,-1.112489 -19.63305,3.500203 -8.75625,1.904397 z"
+         id="path52"
+         sodipodi:nodetypes="ccccc"
+         inkscape:label="上下" />
     </a>
     <!-- 叠加的“描边线”用于体现远近粗细（不破坏你原本的实体渐变管线） -->
     <!-- 原理：用 stroke 覆盖在管线上，近的 stroke 宽，远的 stroke 窄；端点/连接圆角 -->
@@ -765,56 +766,57 @@
        stroke-linejoin="round"
        opacity="0.95"
        filter="url(#soft)"
-       style="display:inline;stroke:url(#linearGradient11)">
+       style="display:inline;stroke:url(#linearGradient11)"
+       inkscape:label="线">
       <!-- 远：上->左 / 上->右（更细） -->
-      <path
-         d="M 116.16613,91.813898 71.551973,138.63967"
-         stroke-width="3.59037"
-         id="path1"
-         style="stroke:url(#linearGradient3);stroke-width:2.94118;stroke-dasharray:none"
-         sodipodi:nodetypes="cc" />
-      <path
-         d="m 140.06288,90.622251 44.86645,47.788419"
-         stroke-width="3.57481"
-         id="path2"
-         style="stroke:url(#linearGradient4);stroke-width:3.67647059;stroke-dasharray:none"
-         sodipodi:nodetypes="cc" />
       <!-- 中：左->右 背边（虚线那条的“实体感”可加一条更细的实线底） -->
-      <path
-         d="M 60.191639,153.78839 191.5464,153.07806"
-         stroke-width="3.8"
-         opacity="0.55"
-         id="path3"
-         style="display:none;stroke:url(#linearGradient10)" />
       <!-- 近：左->下 / 右->下（更粗） -->
       <path
-         d="m 77.094136,160.74638 55.076234,33.10658"
-         stroke-width="4.36245"
-         id="path4"
-         style="stroke:url(#linearGradient2);stroke-width:7.35294;stroke-dasharray:none"
-         sodipodi:nodetypes="cc" />
-      <path
-         d="m 180.99328,170.38231 -14.73763,12.88763"
+         d="m 197.15705,158.25948 -45.38144,41.17423"
          stroke-width="5.07133"
          id="path5"
-         style="display:inline;stroke:url(#linearGradient1);stroke-width:5.88235294;stroke-dasharray:none"
-         sodipodi:nodetypes="cc" />
+         style="display:inline;stroke:url(#linearGradient1);stroke-width:7.35294118;stroke-dasharray:none"
+         sodipodi:nodetypes="cc"
+         inkscape:label="右下" />
+      <path
+         d="m 61.603857,155.02171 88.414003,44.21918"
+         stroke-width="4.36245"
+         id="path4"
+         style="display:inline;stroke:url(#linearGradient2);stroke-width:6.61764706;stroke-dasharray:none"
+         sodipodi:nodetypes="cc"
+         inkscape:label="左下" />
+      <path
+         d="m 129.66774,77.789177 66.71093,77.795493"
+         stroke-width="3.57481"
+         id="path2"
+         style="display:inline;stroke:url(#linearGradient4);stroke-width:3.67647;stroke-dasharray:none"
+         sodipodi:nodetypes="cc"
+         inkscape:label="右上" />
       <!-- 深度：上->下（中等偏粗） -->
       <path
-         d="m 130.68723,96.636909 15.69841,81.124251"
+         d="M 127.95221,77.6706 60.102638,153.7932"
+         stroke-width="3.59037"
+         id="path1"
+         style="display:inline;stroke:url(#linearGradient3);stroke-width:2.94118;stroke-dasharray:none"
+         sodipodi:nodetypes="cc"
+         inkscape:label="左上" />
+      <path
+         d="m 128.98565,77.805242 20.4307,120.834118"
          stroke-width="4.01833"
          id="path6"
-         style="display:inline;stroke:url(#linearGradient5)"
-         sodipodi:nodetypes="cc" />
+         style="display:inline;stroke:url(#linearGradient5);stroke-width:4.41176471;stroke-dasharray:none"
+         sodipodi:nodetypes="cc"
+         inkscape:label="上下" />
     </g>
     <!-- 你原来的虚线（保留），我只把 linecap/linejoin 统一并稍微做远近透明度区分 -->
     <g
        stroke-linecap="round"
        stroke-linejoin="round"
        id="g50"
-       style="display:inline">
+       style="display:inline"
+       inkscape:label="虚线">
       <path
-         d="m 113.68622,120.35716 -53.605031,33.1881"
+         d="M 113.68622,120.35716 60.417934,154.5555"
          fill="none"
          stroke="#2f93ff"
          stroke-width="1.15"
@@ -822,7 +824,7 @@
          opacity="0.72"
          id="path50"
          sodipodi:nodetypes="cc"
-         inkscape:label="虚线远(左下)"
+         inkscape:label="左下"
          style="display:inline;stroke-width:2.94118;stroke-dasharray:2.94118, 5.88235;stroke-dashoffset:0" />
       <path
          d="m 117.26735,118.63447 79.71827,38.51462"
@@ -833,7 +835,7 @@
          opacity="0.72"
          id="path50-0"
          sodipodi:nodetypes="cc"
-         inkscape:label="虚线远(右下)"
+         inkscape:label="右下"
          style="display:inline;stroke-width:2.94118;stroke-dasharray:2.94118, 5.88235;stroke-dashoffset:0" />
       <path
          d="m 117.09584,120.18816 34.24181,80.9659"
@@ -844,7 +846,7 @@
          opacity="0.85"
          id="path50-0-0"
          sodipodi:nodetypes="cc"
-         inkscape:label="虚线近(向下)"
+         inkscape:label="向下"
          style="display:inline;stroke-width:2.94118;stroke-dasharray:2.94118, 5.88235;stroke-dashoffset:0" />
       <path
          d="m 128.80228,78.18149 -12.5362,41.17476"
@@ -855,54 +857,51 @@
          opacity="0.62"
          id="path50-0-3"
          sodipodi:nodetypes="cc"
-         inkscape:label="虚线最远(上)"
+         inkscape:label="上"
          style="display:inline;stroke-width:2.94118;stroke-dasharray:2.94118, 5.88235;stroke-dashoffset:0" />
     </g>
     <!-- nodes：按远近改大小 + 加轻高光（仍是纯色圆，不加外描边） -->
     <g
        filter="url(#nodeShadow)"
        id="g55"
-       style="display:inline">
+       style="display:inline"
+       inkscape:label="圆">
       <!-- 下：最近，更大 -->
-      <ellipse
+      <circle
          cx="150.01996"
          cy="199.15353"
          fill="#fa8c16"
          id="circle55"
          inkscape:label="圆下"
-         rx="27.825157"
-         ry="27.414837"
-         style="display:inline" />
-      <ellipse
+         style="display:inline"
+         r="26.470589" />
+      <circle
          cx="144.31033"
          cy="191.60001"
-         rx="8.1838694"
-         ry="8.5206432"
          fill="#ffffff"
          opacity="0.18"
          style="display:inline"
          inkscape:label="高光下"
-         id="ellipse6" />
+         id="ellipse6"
+         r="8.8235292" />
       <!-- 右：中等 -->
-      <ellipse
-         cx="195.33479"
-         cy="156.62967"
+      <circle
+         cx="197.83067"
+         cy="157.09764"
          fill="#9254de"
          id="circle54"
          inkscape:label="圆右"
-         rx="20.841286"
-         ry="20.678062"
-         style="display:inline" />
-      <ellipse
+         style="display:inline"
+         r="21.32353" />
+      <circle
          cx="190.34355"
          cy="150.24129"
-         rx="6.7022567"
-         ry="6.8574176"
          fill="#ffffff"
          opacity="0.16"
          style="display:inline;stroke-width:1.00895"
          inkscape:label="高光右"
-         id="ellipse7" />
+         id="ellipse7"
+         r="7.352941" />
       <!-- 左：中等（略大于右也可以，保持你原本风格） -->
       <circle
          cx="60.191639"
@@ -911,37 +910,69 @@
          id="circle53"
          inkscape:label="圆左"
          style="display:inline"
-         r="21.204514" />
-      <ellipse
+         r="19.852942" />
+      <circle
          cx="55.710323"
          cy="148.57355"
-         rx="6.5470958"
-         ry="6.6838698"
          fill="#ffffff"
          opacity="0.16"
          style="display:inline"
          inkscape:label="高光左"
-         id="ellipse8" />
+         id="ellipse8"
+         r="6.6176472" />
       <!-- 上：最远，更小 -->
-      <ellipse
+      <circle
          fill="#1677ff"
          id="circle52"
          inkscape:label="圆上"
-         cy="79.50647"
-         cx="128.9471"
-         rx="20.335478"
-         ry="20.372252"
-         style="display:inline;stroke-width:0.852941;stroke-dasharray:none" />
-      <ellipse
+         cy="76.906593"
+         cx="129.36307"
+         style="display:inline;mix-blend-mode:normal;stroke-width:0.852941;stroke-dasharray:none"
+         r="20.588236" />
+      <circle
          cx="125.88387"
          cy="74.963226"
-         rx="6.220644"
-         ry="6.3574176"
          fill="#ffffff"
          opacity="0.14"
          style="display:inline"
          inkscape:label="高光上"
-         id="ellipse9" />
+         id="ellipse9"
+         r="7.352941" />
+    </g>
+    <g
+       fill="none"
+       stroke="url(#strokeG)"
+       stroke-width="10"
+       stroke-linecap="round"
+       stroke-linejoin="round"
+       opacity="0.95"
+       id="g44"
+       inkscape:label="直角"
+       style="display:inline;stroke:url(#linearGradient12)"
+       transform="matrix(0.73529412,0,0,0.73529412,33.882352,50.058824)">
+      <path
+         d="m 206.50352,214.60766 h 14 c 8,0 12,-4 12,-12 v -14"
+         id="path44"
+         style="stroke:url(#linearGradient63);stroke-width:18;stroke-miterlimit:6;stroke-dasharray:none"
+         inkscape:label="角右下"
+         sodipodi:nodetypes="cssc" />
+      <path
+         d="m 53.094079,214.01911 h -14 c -11.538839,0 -12,-4.39986 -12,-12 v -14"
+         id="path43"
+         style="stroke:url(#linearGradient64);stroke-width:18;stroke-dasharray:none"
+         inkscape:label="角左下"
+         sodipodi:nodetypes="cssc" />
+      <path
+         d="m 206.52203,28.123616 h 14 c 8,0 12,4 12,12 v 14"
+         id="path42"
+         sodipodi:nodetypes="cssc"
+         style="stroke:url(#linearGradient65);stroke-width:18;stroke-miterlimit:4;stroke-dasharray:none"
+         inkscape:label="角右上" />
+      <path
+         d="m 53.005269,28.230918 h -14 q -12,0 -12,12 v 14"
+         id="path41"
+         style="stroke:url(#linearGradient66);stroke-width:18;stroke-dasharray:none"
+         inkscape:label="角左上" />
     </g>
   </g>
 </svg>

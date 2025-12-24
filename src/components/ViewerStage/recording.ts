@@ -191,7 +191,6 @@ export function createRecordingController(
     cropCtx = cropCanvas.getContext("2d", { alpha: true });
     if (!cropCtx) return;
 
-    const src = stage.renderer.domElement;
     const dpr = window.devicePixelRatio || 1;
 
     // 选择框是 CSS 像素，src 实际像素乘 dpr

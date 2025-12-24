@@ -36,7 +36,8 @@
                             {{ t("viewer.empty.preloadDefault") }}
                             <DownOutlined class="down-icon" />
                         </a-button>
-                        <template #overlay><a-menu @click="onSampleMenuClick">
+                        <template #overlay>
+                            <a-menu @click="onSampleMenuClick">
                                 <a-menu-item v-if="loadingSamples" disabled key="__loading">
                                     Loading…
                                 </a-menu-item>
@@ -50,7 +51,7 @@
                                 </a-menu-item>
 
                                 <a-menu-item v-else v-for="s in sampleOptions" :key="s.url">
-                                    {{ s.label }}
+                                    {{ s.label }} ({{ s.size }}MB)
                                 </a-menu-item>
                             </a-menu>
                         </template>

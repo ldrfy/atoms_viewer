@@ -36,6 +36,19 @@ import { applyAnimationInfo } from "./animation";
 
 import { createRecordingController, type RecordingBindings } from "./recording";
 
+import {
+  createRecordSelectCtx,
+  createCropDashCtx,
+  createParseCtx,
+  createEmptyCtx,
+  createAnimCtx,
+  type RecordSelectCtx,
+  type CropDashCtx,
+  type ParseCtx,
+  type EmptyCtx,
+  type AnimCtx,
+} from "./ctx";
+
 /**
  * ViewerStage 对外 bindings。
  *
@@ -73,6 +86,13 @@ type ViewerStageBindings = {
   parseInfo: ParseInfo;
   parseMode: Ref<ParseMode>;
   setParseMode: (mode: ParseMode) => void;
+
+  // ctx groups for parts components
+  recordSelectCtx: RecordSelectCtx;
+  parseCtx: ParseCtx;
+  emptyCtx: EmptyCtx;
+  animCtx: AnimCtx;
+  cropDashCtx: CropDashCtx;
 } & RecordingBindings;
 
 /**
@@ -593,9 +613,52 @@ export function useViewerStage(
     (recording as any)?.dispose?.();
   });
 
+  // -----------------------------
+  // ctx groups (parts props)
+  // Build once and reuse; avoid reconstructing in index.vue.
+  // -----------------------------
+  const recordSelectCtx = createRecordSelectCtx(recording);
+  const cropDashCtx = createCropDashCtx(recording);
+
+  const parseCtx = createParseCtx({
+    hasModel,
+    parseInfo,
+    parseMode,
+    setParseMode,
+  });
+
+  const emptyCtx = createEmptyCtx({
+    hasModel,
+    isDragging,
+    isLoading,
+    openFilePicker,
+    preloadDefault,
+  });
+
+  const animCtx = createAnimCtx({
+    hasModel,
+    hasAnimation,
+    frameIndex,
+    frameCount,
+    isPlaying,
+    fps,
+    setFrame,
+    togglePlay,
+    recording,
+    settingsRef,
+    patchSettings,
+  });
+
   return {
     // ✅ recording bindings
     ...recording,
+
+    // ctx groups
+    recordSelectCtx,
+    parseCtx,
+    emptyCtx,
+    animCtx,
+    cropDashCtx,
 
     // parse
     parseInfo,

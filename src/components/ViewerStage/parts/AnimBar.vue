@@ -11,7 +11,7 @@
             </a-col>
 
             <a-col flex="none" style="width: 96px">
-                <a-input-number v-model:value="frameIndexModel" :min="1" :max="frameCountMax" :step="1"
+                <a-input-number size="small" v-model:value="frameIndexModel" :min="1" :max="frameCountMax" :step="1"
                     style="width: 100%" />
             </a-col>
         </a-row>

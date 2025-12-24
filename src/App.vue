@@ -2,16 +2,14 @@
     <a-config-provider :theme="{ algorithm: antdAlgorithm }">
         <a-layout class="root">
             <!-- 手动打开设置：不改变折叠项 -->
-            <TopHear @open-settings="onOpenSettings" />
+            <TopHear :can-go-home="page === 'viewer'" @go-home="goHome" @open-settings="onOpenSettings" />
 
             <a-layout-content>
-                <ViewerStage ref="viewerRef" v-model:settings="settings" @model-state="hasModel = $event"
-                    @open-settings="onOpenSettings" />
+                <EmptyPage v-if="page === 'empty'" @load-file="openWithFile" @preload-default="preloadDefault" />
+
+                <ViewerPage v-else v-model:settings="settings" :loadRequest="loadRequest"
+                    @consume-load="loadRequest = null" @open-settings="onOpenSettings" />
             </a-layout-content>
-
-            <ExportFab :has-model="hasModel" v-model:exportScale="exportScale"
-                v-model:exportTransparent="exportTransparent" @export-png="handleExportPng" />
-
 
             <!-- 关键：把 activeKey 也交给 App 管 -->
             <SettingsSider v-model:open="settingsOpen" v-model:settings="settings"
@@ -21,16 +19,18 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watchEffect } from "vue";
+import { ref, computed, watchEffect, defineAsyncComponent } from "vue";
 import SettingsSider from "./components/SettingsSider";
-import ViewerStage from "./components/ViewerStage";
 import TopHear from "./components/TopHear";
-import ExportFab from "./components/ExportFab";
+import EmptyPage from "./pages/EmptyPage.vue";
 import { DEFAULT_SETTINGS, type ViewerSettings, type OpenSettingsPayload } from "./lib/viewer/settings";
 import { theme as antdTheme } from "ant-design-vue";
 import { isDark, applyThemeToDom } from "./theme/mode";
+import xyzText from "./assets/samples/mos2_cnt.xyz?raw";
+import type { LoadRequest } from "./pages/types";
 
 
+const ViewerPage = defineAsyncComponent(() => import("./pages/ViewerPage.vue"));
 const antdAlgorithm = computed(() =>
     isDark.value ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm
 );
@@ -52,31 +52,23 @@ watchEffect(() => {
     applyThemeToDom(isDark.value);
 });
 
-/* 导出与模型状态上提 / Lift model state & export */
-const hasModel = ref(false);
+// 页面流程控制（空页 / viewer）
+const page = ref<"empty" | "viewer">("empty");
+const loadRequest = ref<LoadRequest | null>(null);
 
-type ViewerStageExpose = {
-    exportPng: (payload: { scale: number; transparent: boolean }) => void | Promise<void>;
-};
+function openWithFile(file: File): void {
+    loadRequest.value = { kind: "file", file };
+    page.value = "viewer";
+}
 
-const exportScale = ref<number>(2);
-const exportTransparent = ref<boolean>(true);
+function preloadDefault(): void {
+    loadRequest.value = { kind: "text", text: xyzText, fileName: "sample.xyz" };
+    page.value = "viewer";
+}
 
-// 让导出面板的勾选与 viewer settings 同步（勾选即把背景变透明）
-
-// watch(
-//     exportTransparent,
-//     (v) => {
-//         settings.value.backgroundTransparent = v;
-//     },
-//     { immediate: true }
-// );
-
-
-const viewerRef = ref<ViewerStageExpose | null>(null);
-
-function handleExportPng(payload: { scale: number; transparent: boolean }): void {
-    void viewerRef.value?.exportPng(payload);
+function goHome(): void {
+    page.value = "empty";
+    loadRequest.value = null;
 }
 
 /**

@@ -6,8 +6,5 @@ export { createRecordSelectCtx, createCropDashCtx } from "./recording";
 export type { ParseCtx } from "./parse";
 export { createParseCtx } from "./parse";
 
-export type { EmptyCtx } from "./empty";
-export { createEmptyCtx } from "./empty";
-
 export type { AnimCtx } from "./anim";
 export { createAnimCtx } from "./anim";

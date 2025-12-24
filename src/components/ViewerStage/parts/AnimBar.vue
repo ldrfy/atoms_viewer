@@ -7,12 +7,11 @@
             </a-col>
 
             <a-col flex="auto" style="min-width: 0">
-                <a-slider class="anim-slider" :min="1" :max="Math.max(1, ctx.frameCount)" :step="1"
-                    v-model:value="frameIndexModel" />
+                <a-slider class="anim-slider" :min="1" :max="frameCountMax" :step="1" v-model:value="frameIndexModel" />
             </a-col>
 
             <a-col flex="none" style="width: 96px">
-                <a-input-number v-model:value="frameIndexModel" :min="1" :max="Math.max(1, ctx.frameCount)" :step="1"
+                <a-input-number v-model:value="frameIndexModel" :min="1" :max="frameCountMax" :step="1"
                     style="width: 100%" />
             </a-col>
         </a-row>
@@ -77,6 +76,7 @@ const isPlaying = computed(() => !!unref(props.ctx.isPlaying));
 const isRecording = computed(() => !!unref(props.ctx.isRecording));
 const isRecordPaused = computed(() => !!unref(props.ctx.isRecordPaused));
 const recordTimeText = computed(() => unref(props.ctx.recordTimeText));
+const frameCountMax = computed(() => Math.max(1, props.ctx.frameCount.value));
 
 /** UI 1-based <-> 内部 0-based */
 const frameIndexModel = computed<number>({
@@ -92,8 +92,8 @@ const frameIndexModel = computed<number>({
 const fpsModel = computed<number>({
     get: () => props.ctx.fps.value,
     set: (v: number) => {
-        const nv = Number(v);
-        props.ctx.fps.value = Number.isFinite(nv) ? Math.min(Math.max(1, nv), 120) : 6;
+        const n = Number(v);
+        props.ctx.fps.value = isFinite(n) ? Math.min(Math.max(1, n), 120) : 6;
     },
 });
 

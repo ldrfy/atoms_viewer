@@ -1,6 +1,6 @@
 <template>
     <div v-if="hasModel" class="export-fab">
-        <a-float-button type="primary" @click="open = true" aria-label="export" :style="{ right: '24px', top: '40%' }">
+        <a-float-button type="primary" @click="open = true" aria-label="export" :style="{ left: '24px', top: '40%' }">
             <template #icon>
                 <DownloadOutlined />
             </template>

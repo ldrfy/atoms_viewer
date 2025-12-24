@@ -49,7 +49,7 @@ type ViewerStageExpose = {
     exportPng: (payload: { scale: number; transparent: boolean }) => void | Promise<void>;
     openFilePicker: () => void;
     loadFile: (file: File) => Promise<void>;
-    loadText: (text: string, fileName: string) => Promise<void>;
+    loadUrl: (url: string, fileName: string) => Promise<void>;
 };
 
 const viewerRef = ref<ViewerStageExpose | null>(null);
@@ -74,8 +74,10 @@ watch(
 
         if (req.kind === "file") {
             await api.loadFile(req.file);
+        } else if (req.kind === "url") {
+            await api.loadUrl(req.url, req.fileName);
         } else {
-            await api.loadText(req.text, req.fileName);
+            throw new Error("unknow");
         }
 
         emit("consume-load");

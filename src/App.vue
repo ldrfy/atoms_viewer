@@ -5,7 +5,7 @@
             <TopHear :can-go-home="page === 'viewer'" @go-home="goHome" @open-settings="onOpenSettings" />
 
             <a-layout-content>
-                <EmptyPage v-if="page === 'empty'" @load-file="openWithFile" @preload-default="preloadDefault" />
+                <EmptyPage v-if="page === 'empty'" @load-file="openWithFile" @preload-sample="preloadSample" />
 
                 <ViewerPage v-else v-model:settings="settings" :loadRequest="loadRequest"
                     @consume-load="loadRequest = null" @open-settings="onOpenSettings" />
@@ -26,8 +26,8 @@ import EmptyPage from "./pages/EmptyPage.vue";
 import { DEFAULT_SETTINGS, type ViewerSettings, type OpenSettingsPayload } from "./lib/viewer/settings";
 import { theme as antdTheme } from "ant-design-vue";
 import { isDark, applyThemeToDom } from "./theme/mode";
-import xyzText from "./assets/samples/mos2_cnt.xyz?raw";
 import type { LoadRequest } from "./pages/types";
+import type { SampleManifestItem } from "./lib/structure/types";
 
 
 const ViewerPage = defineAsyncComponent(() => import("./pages/ViewerPage.vue"));
@@ -61,8 +61,9 @@ function openWithFile(file: File): void {
     page.value = "viewer";
 }
 
-function preloadDefault(): void {
-    loadRequest.value = { kind: "text", text: xyzText, fileName: "sample.xyz" };
+async function preloadSample(sample: SampleManifestItem): Promise<void> {
+    const { url, fileName } = sample
+    loadRequest.value = { kind: "url", url, fileName };
     page.value = "viewer";
 }
 

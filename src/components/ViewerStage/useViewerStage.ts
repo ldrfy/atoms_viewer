@@ -13,7 +13,6 @@ import type { StructureModel } from "../../lib/structure/types";
 
 import { message } from "ant-design-vue";
 import { useI18n } from "vue-i18n";
-import xyzText from "../../assets/samples/mos2_cnt.xyz?raw";
 import { parseStructure, toForcedFilename } from "../../lib/structure/parse";
 import type { ParseMode, ParseInfo } from "../../lib/structure/parse";
 import {
@@ -66,12 +65,11 @@ type ViewerStageBindings = {
   onDrop: (e: DragEvent) => Promise<void>;
   onFilePicked: (e: Event) => Promise<void>;
   loadFile: (file: File) => Promise<void>;
-  loadText: (text: string, fileName: string) => Promise<void>;
+  loadUrl: (url: string, fileName: string) => Promise<void>;
   onExportPng: (payload: {
     scale: number;
     transparent: boolean;
   }) => Promise<void>;
-  preloadDefault: () => void;
 
   // animation
   hasAnimation: Ref<boolean>;
@@ -415,51 +413,36 @@ export function useViewerStage(
    * Load a file and render the model.
    */
   async function loadFile(file: File): Promise<void> {
-    if (!stage || !runtime) return;
-    if (isLoading.value) return;
-
-    isLoading.value = true;
-    await nextFrame();
-
+    loadInit();
     const t0 = performance.now();
-    try {
-      stopPlay();
 
-      // Read & cache raw text for setParseMode re-parse.
-      const text = await file.text();
-      lastRawText = text;
-      lastRawFileName = file.name;
+    const text = await file.text();
+    loadText(t0, text, file.name);
+  }
+  async function loadUrl(url: string, fileName: string): Promise<void> {
+    loadInit();
+    const t0 = performance.now();
 
-      // Core rendering pipeline
-      renderFromText(text, file.name, "load");
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
+    const text = await res.text();
 
-      message.success(`${((performance.now() - t0) / 1000).toFixed(2)} s`);
-      parseInfo.success = true;
-      parseInfo.errorMsg = "";
-    } catch (err) {
-      parseInfo.success = false;
-      parseInfo.errorMsg = (err as Error).message;
-      parseInfo.errorSeq += 1;
-      console.log(err);
-      message.error(`${t("viewer.parse.notice")}: ${parseInfo.errorMsg}`);
-    }
-    isLoading.value = false;
-    hasModel.value = true;
-    parseMode.value = "auto";
-    parseInfo.fileName = file.name;
+    loadText(t0, text, fileName);
   }
 
-  /**
-   * 直接从文本加载并渲染（用于 EmptyPage 的内置 sample 或外部调用）。
-   */
-  async function loadText(text: string, fileName: string): Promise<void> {
+  async function loadInit() {
     if (!stage || !runtime) return;
     if (isLoading.value) return;
 
     isLoading.value = true;
     await nextFrame();
+  }
 
-    const t0 = performance.now();
+  async function loadText(
+    t0: number,
+    text: string,
+    fileName: string
+  ): Promise<void> {
     try {
       stopPlay();
 
@@ -566,21 +549,6 @@ export function useViewerStage(
       // 导出后恢复（保持日常显示不变）
       stage.renderer.setClearColor(prevColor, prevAlpha);
     }
-  }
-
-  /**
-   * 预加载内置样例（mos2_cnt.xyz）。
-   *
-   * Preload embedded sample (mos2_cnt.xyz).
-   */
-  function preloadDefault(): void {
-    if (!runtime) return;
-    stopPlay();
-
-    const model = parseStructure(xyzText, "sample.xyz");
-    const info = runtime.renderModel(model);
-
-    applyAnimationInfo(info, frameIndex, frameCount, hasAnimation);
   }
 
   onMounted(() => {
@@ -714,8 +682,7 @@ export function useViewerStage(
     onDrop,
     onFilePicked,
     loadFile,
-    loadText,
+    loadUrl,
     onExportPng,
-    preloadDefault,
   };
 }

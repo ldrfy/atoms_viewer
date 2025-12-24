@@ -2,8 +2,8 @@
     <div class="tophear-overlay">
         <div class="tophear-inner">
             <div class="top-left-bar">
-                <a-button type="text" class="brand-btn" :class="{ clickable: props.canGoHome }" aria-label="home"
-                    @click="onClickBrand">
+                <a-button type="text" class="brand-btn btn-icon" :class="{ clickable: props.canGoHome }"
+                    aria-label="home" @click="onClickBrand">
                     <HomeOutlined v-if="props.canGoHome" />
                     <span class="brand-text">{{ APP_DISPLAY_NAME }}</span>
                 </a-button>

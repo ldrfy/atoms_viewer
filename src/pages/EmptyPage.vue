@@ -31,9 +31,30 @@
                     <a-button type="primary" block @click="openFilePicker">
                         {{ t("viewer.empty.pickFile") }}
                     </a-button>
-                    <a-button block @click="emit('preload-default')">
-                        {{ t("viewer.empty.preloadDefault") }}
-                    </a-button>
+                    <a-dropdown :trigger="['click']">
+                        <a-button block>
+                            {{ t("viewer.empty.preloadDefault") }}
+                            <DownOutlined class="down-icon" />
+                        </a-button>
+                        <template #overlay><a-menu @click="onSampleMenuClick">
+                                <a-menu-item v-if="loadingSamples" disabled key="__loading">
+                                    Loading…
+                                </a-menu-item>
+
+                                <a-menu-item v-else-if="sampleLoadError" disabled key="__error">
+                                    加载失败：{{ sampleLoadError }}
+                                </a-menu-item>
+
+                                <a-menu-item v-else-if="sampleOptions.length === 0" disabled key="__empty">
+                                    无可用样例
+                                </a-menu-item>
+
+                                <a-menu-item v-else v-for="s in sampleOptions" :key="s.url">
+                                    {{ s.label }}
+                                </a-menu-item>
+                            </a-menu>
+                        </template>
+                    </a-dropdown>
                 </a-space>
             </div>
         </div>
@@ -57,8 +78,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref, onMounted } from "vue";
 import { useI18n } from "vue-i18n";
+import { APP_SAMPLES_URL } from "../lib/appMeta"
+import type { SampleManifestItem } from "../lib/structure/types";
+import { DownOutlined } from "@ant-design/icons-vue";
 import { APP_AUTHOR, APP_DISPLAY_NAME, APP_GITHUB_URL, APP_VERSION } from "../lib/appMeta";
 
 const { t } = useI18n();
@@ -68,15 +92,42 @@ const props = withDefaults(
         logoSrc?: string;
     }>(),
     {
-        // ✅ public/lav.svg -> 运行时路径用 BASE_URL 拼接，dev/生产都稳
         logoSrc: import.meta.env.BASE_URL + "lav.svg",
     }
 );
 
+
 const emit = defineEmits<{
     (e: "load-file", file: File): void;
-    (e: "preload-default"): void;
+    (e: "preload-sample", item: SampleManifestItem): void; // ✅ 改成传对象
 }>();
+
+const sampleOptions = ref<SampleManifestItem[]>([]);
+const loadingSamples = ref(false);
+const sampleLoadError = ref<string | null>(null);
+
+async function loadSampleManifest(): Promise<void> {
+    loadingSamples.value = true;
+    sampleLoadError.value = null;
+
+    try {
+        const res = await fetch(APP_SAMPLES_URL, { cache: "no-store" });
+        if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
+
+        const data = (await res.json()) as unknown;
+        if (!Array.isArray(data)) throw new Error("manifest JSON 不是数组");
+
+        const parsed: SampleManifestItem[] = data
+            .filter((x) => x.fileName && x.url);
+
+        sampleOptions.value = parsed;
+    } catch (e: any) {
+        sampleOptions.value = [];
+        sampleLoadError.value = e?.message ? String(e.message) : String(e);
+    } finally {
+        loadingSamples.value = false;
+    }
+}
 
 const fileInputRef = ref<HTMLInputElement | null>(null);
 const isDragging = ref(false);
@@ -120,8 +171,20 @@ function onFilePicked(e: Event): void {
     emit("load-file", file);
 }
 
+function onSampleMenuClick(info: { key: string | number }): void {
+    const url = String(info.key);
+    const item = sampleOptions.value.find((s) => s.url === url);
+    if (!item) return;
+    emit("preload-sample", item);
+}
+
+onMounted(() => {
+    void loadSampleManifest();
+});
+
 const logoSrc = props.logoSrc;
 </script>
+
 
 <style scoped>
 /* 页面：上中下布局 */
@@ -191,6 +254,12 @@ const logoSrc = props.logoSrc;
 .actions {
     margin-top: 14px;
     width: 100%;
+}
+
+.down-icon {
+    margin-left: 8px;
+    font-size: 12px;
+    opacity: 0.85;
 }
 
 /* 页面底部 footer */

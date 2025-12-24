@@ -73,7 +73,7 @@ defineExpose({
     exportPng: stage.onExportPng,
     openFilePicker: stage.openFilePicker,
     loadFile: stage.loadFile,
-    loadText: stage.loadText,
+    loadUrl: stage.loadUrl,
 });
 
 watch(

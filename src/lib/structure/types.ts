@@ -22,3 +22,9 @@ export interface StructureModel {
     format: string;
   };
 }
+
+export interface SampleManifestItem {
+  fileName: string;
+  label: string;
+  url: string;
+}

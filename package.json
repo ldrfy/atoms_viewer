@@ -5,7 +5,8 @@
     "author": "yuhldr",
     "urls": {
         "github": "https://github.com/ldrfy/atoms_viewer",
-        "yuhldr": "https://github.com/yuhldr"
+        "yuhldr": "https://github.com/yuhldr",
+        "samples": "https://raw.githubusercontent.com/ldrfy/atoms_viewer_docs/refs/heads/main/data/data.json"
     },
     "version": "0.1.0",
     "type": "module",

@@ -6,8 +6,27 @@ body,
   margin: 0;
 }
 
-
 #app {
   padding: 0;
   max-width: none;
+}
+
+
+/* 只显示icon的ant-btn模仿vitepress效果 */
+.ant-btn.btn-icon {
+  font-size: 20px;
+}
+
+.ant-btn.btn-icon:hover {
+  background-color: var(--ant-control-item-bg-hover);
+}
+
+.ant-btn.btn-icon .anticon {
+  opacity: 0.7;
+  transition: opacity 0.15s ease, color 0.15s ease;
+}
+
+.ant-btn.btn-icon:hover .anticon {
+  opacity: 1;
+  color: var(--ant-color-text);
 }

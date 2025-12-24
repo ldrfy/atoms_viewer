@@ -6,7 +6,7 @@
                 <template v-if="!isMobile">
                     <!-- 语言 -->
                     <a-dropdown trigger="click" placement="bottomLeft">
-                        <a-button type="text" class="top-btn" aria-label="language">
+                        <a-button type="text" class="btn-icon" aria-label="language">
                             <GlobalOutlined />
                         </a-button>
                         <template #overlay>
@@ -20,9 +20,8 @@
                     </a-dropdown>
 
                     <!-- 主题 -->
-                    <!-- 主题 -->
                     <a-dropdown trigger="click" placement="bottomLeft">
-                        <a-button type="text" class="top-btn" aria-label="theme">
+                        <a-button type="text" class="btn-icon" aria-label="theme">
                             <BgColorsOutlined />
                         </a-button>
 
@@ -37,24 +36,25 @@
                     </a-dropdown>
 
                     <!-- GitHub -->
-                    <a-button type="text" class="top-btn" aria-label="github" @click="openGithub">
+                    <a-button type="text" class="btn-icon" aria-label="github" @click="openGithub">
                         <GithubOutlined />
                     </a-button>
 
                     <!-- 设置 -->
-                    <a-button type="text" class="top-btn" aria-label="settings" @click="emit('open-settings')">
+                    <a-button type="text" class="btn-icon" aria-label="settings" @click="emit('open-settings')">
                         <SettingOutlined />
                     </a-button>
                 </template>
 
                 <!-- ===== 移动端 ===== -->
                 <template v-else>
-                    <a-button type="text" class="top-btn" aria-label="menu" @click="mobileOpen = true">
+                    <a-button type="text" class="btn-icon" aria-label="menu" @click="mobileOpen = true">
                         <MenuOutlined />
                     </a-button>
                 </template>
             </div>
         </div>
+
 
         <!-- ===== 移动端 Drawer ===== -->
         <a-drawer placement="top" height="auto" :open="mobileOpen" :closable="false" @close="closeDrawer">
@@ -73,7 +73,7 @@
 
                     <a-radio-group v-model:value="curLocaleProxy" @change="onSelectLocale(curLocaleProxy)"
                         class="lang_radio_group">
-                        <a-radio v-for="item in localeItems" :key="item.key" :value="item.key" style="display: block; ">
+                        <a-radio v-for="item in localeItems" :key="item.key" :value="item.key" class="lang-radio-item">
                             {{ item.label }}
                         </a-radio>
                     </a-radio-group>
@@ -97,18 +97,19 @@
             </a-collapse>
 
             <a-space direction="vertical" style="width: 100%">
-                <a-button type="text" block @click="openGithub" style="justify-content: flex-start">
+                <a-typography-text class="plain-click" @click="openGithub">
                     <GithubOutlined />
-                    <span>GitHub</span>
-                </a-button>
+                    <span style="margin-left: 8px">GitHub</span>
+                </a-typography-text>
 
-                <a-button type="text" block @click="openSettings" style="justify-content: flex-start">
+                <a-typography-text class="plain-click" @click="openSettings">
                     <SettingOutlined />
-                    <span>
+                    <span style="margin-left: 8px">
                         {{ t("viewer.settings") }}
                     </span>
-                </a-button>
+                </a-typography-text>
             </a-space>
+
         </a-drawer>
     </div>
 </template>
@@ -226,10 +227,6 @@ function onSelectThemeMode(key: string) {
     align-items: center;
 }
 
-.top-btn {
-    font-size: 20px;
-}
-
 .collapse-header {
     display: flex;
     justify-content: space-between;
@@ -254,9 +251,36 @@ function onSelectThemeMode(key: string) {
     margin-top: -12px;
 }
 
+.lang-radio-item {
+    display: block;
+    margin-bottom: 8px;
+    /* 控制“每一条之间的间距” */
+}
+
+.lang-radio-item:last-child {
+    margin-bottom: 0;
+}
+
 .theme_segmented {
     margin-left: 24px;
     margin-top: -8px;
     margin-bottom: 8px;
+}
+
+.plain-click {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* 水平居中 */
+    gap: 8px;
+    cursor: pointer;
+    padding: 8px;
+}
+
+
+/* Ant Typography 默认不会给 hover / active 上色，这里只是兜底 */
+.plain-click:hover,
+.plain-click:active {
+    color: inherit;
 }
 </style>

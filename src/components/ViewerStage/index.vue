@@ -84,7 +84,7 @@
                     </div>
                 </template>
 
-                <a-button class="parse-handle" type="text" :aria-label="t('viewer.parse.mode')">
+                <a-button class="btn-icon parse-handle" type="text" :aria-label="t('viewer.parse.mode')">
                     <ExclamationCircleOutlined />
                 </a-button>
             </a-popover>

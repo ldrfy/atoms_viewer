@@ -27,4 +27,6 @@ export interface SampleManifestItem {
   fileName: string;
   label: string;
   url: string;
+  //   MB
+  size: number;
 }

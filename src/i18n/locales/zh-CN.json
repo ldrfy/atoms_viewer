@@ -6,6 +6,9 @@
         "delete": "删除",
         "cancel": "取消"
     },
+    "net":{
+        "timeout": "请求超时"
+    },
     "viewer": {
         "settings": "设置",
         "about": {
@@ -67,7 +70,13 @@
             "title": "拖拽文件到这里",
             "subtitle": "或直接选择文件，“测试”按钮可以加载一些内置模型测试",
             "pickFile": "选择文件",
-            "preloadDefault": "测试"
+            "preloadDefault": "加载样例",
+            "samples": {
+                "loading": "加载中…",
+                "loadFailed": "加载失败：{error}（已切换到内置样例）",
+                "empty": "无可用样例",
+                "builtinSuffix": "（内置）"
+            }
         },
         "export": {
             "transparent": "透明背景",

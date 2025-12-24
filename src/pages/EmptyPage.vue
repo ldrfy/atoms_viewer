@@ -1,9 +1,9 @@
 <template>
-    <div class="empty-page" :class="{ dragging: isDragging }" @dragenter.prevent="onDragEnter"
-        @dragover.prevent="onDragOver" @dragleave.prevent="onDragLeave" @drop.prevent="onDrop">
+    <div class="empty-page" @dragenter.prevent="onDragEnter" @dragover.prevent="onDragOver"
+        @dragleave.prevent="onDragLeave" @drop.prevent="onDrop">
         <!-- 中间：卡片 -->
-        <div class="empty-center">
-            <div class="empty-card">
+        <div class="empty-center" :class="{ dragging: isDragging }">
+            <a-card>
                 <a-empty class="empty-block">
                     <template #image>
                         <img :src="logoSrc" alt="logo" />
@@ -32,32 +32,41 @@
                         {{ t("viewer.empty.pickFile") }}
                     </a-button>
                     <a-dropdown :trigger="['click']">
-                        <a-button block>
-                            {{ t("viewer.empty.preloadDefault") }}
-                            <DownOutlined class="down-icon" />
+                        <a-button block class="dropdown-btn">
+                            <span class="dropdown-btn__text">
+                                {{ t("viewer.empty.preloadDefault") }}
+                            </span>
+                            <DownOutlined class="dropdown-btn__icon" />
                         </a-button>
                         <template #overlay>
+
                             <a-menu @click="onSampleMenuClick">
                                 <a-menu-item v-if="loadingSamples" disabled key="__loading">
-                                    Loading…
+                                    {{ t("viewer.empty.samples.loading") }}
                                 </a-menu-item>
 
-                                <a-menu-item v-else-if="sampleLoadError" disabled key="__error">
-                                    加载失败：{{ sampleLoadError }}
-                                </a-menu-item>
+                                <template v-else>
+                                    <!-- 失败提示：展示，但不阻断下面的样例列表 -->
+                                    <a-menu-item v-if="sampleLoadError" disabled key="__error">
+                                        {{ t("viewer.empty.samples.loadFailed", { error: sampleLoadError }) }}
+                                    </a-menu-item>
+                                    <a-menu-divider v-if="sampleLoadError" />
 
-                                <a-menu-item v-else-if="sampleOptions.length === 0" disabled key="__empty">
-                                    无可用样例
-                                </a-menu-item>
+                                    <!-- 空状态 -->
+                                    <a-menu-item v-if="sampleOptions.length === 0" disabled key="__empty">
+                                        {{ t("viewer.empty.samples.empty") }}
+                                    </a-menu-item>
 
-                                <a-menu-item v-else v-for="s in sampleOptions" :key="s.url">
-                                    {{ s.label }} ({{ s.size }}MB)
-                                </a-menu-item>
+                                    <!-- 正常列表（包含 fallback 内置样例） -->
+                                    <a-menu-item v-else v-for="s in sampleOptions" :key="s.url">
+                                        {{ s.label }} ({{ s.size }}MB)
+                                    </a-menu-item>
+                                </template>
                             </a-menu>
                         </template>
                     </a-dropdown>
                 </a-space>
-            </div>
+            </a-card>
         </div>
 
         <!-- 底部：Footer（页面底部） -->
@@ -85,6 +94,7 @@ import { APP_SAMPLES_URL } from "../lib/appMeta"
 import type { SampleManifestItem } from "../lib/structure/types";
 import { DownOutlined } from "@ant-design/icons-vue";
 import { APP_AUTHOR, APP_DISPLAY_NAME, APP_GITHUB_URL, APP_VERSION } from "../lib/appMeta";
+import { fetchWithTimeout } from "../lib/net/index.ts";
 
 const { t } = useI18n();
 
@@ -106,13 +116,28 @@ const emit = defineEmits<{
 const sampleOptions = ref<SampleManifestItem[]>([]);
 const loadingSamples = ref(false);
 const sampleLoadError = ref<string | null>(null);
+const FALLBACK_SAMPLES: SampleManifestItem[] = [
+    {
+        fileName: "graphene.xyz",
+        label: "graphene.xyz",
+        url: import.meta.env.BASE_URL + "samples/graphene.xyz",
+        size: 0.003,
+    },
+    {
+        fileName: "cnt.data",
+        label: "cnt.data",
+        url: import.meta.env.BASE_URL + "samples/cnt.data",
+        size: 0.009,
+    },
+];
+
 
 async function loadSampleManifest(): Promise<void> {
     loadingSamples.value = true;
     sampleLoadError.value = null;
 
     try {
-        const res = await fetch(APP_SAMPLES_URL, { cache: "no-store" });
+        const res = await fetchWithTimeout(APP_SAMPLES_URL, { cache: "no-store" }, 8000);
         if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
 
         const data = (await res.json()) as unknown;
@@ -123,8 +148,12 @@ async function loadSampleManifest(): Promise<void> {
 
         sampleOptions.value = parsed;
     } catch (e: any) {
-        sampleOptions.value = [];
-        sampleLoadError.value = e?.message ? String(e.message) : String(e);
+        if (e?.name === "AbortError") {
+            sampleLoadError.value = t("net.timeout");
+        } else {
+            sampleLoadError.value = e?.message ? String(e.message) : String(e);
+        }
+        sampleOptions.value = FALLBACK_SAMPLES;
     } finally {
         loadingSamples.value = false;
     }
@@ -188,52 +217,50 @@ const logoSrc = props.logoSrc;
 
 
 <style scoped>
-/* 页面：上中下布局 */
+/* 页面负责把内容整体居中（中间区域） */
 .empty-page {
     position: relative;
-    min-height: 100vh;
-    /* 关键：撑满视口，footer 才能沉底 */
     width: 100%;
+    min-height: 100vh;
+    /* 兼容旧浏览器 */
+    min-height: 100dvh;
+    /* 现代移动端推荐 */
     display: flex;
     flex-direction: column;
-    /* 关键：纵向布局 */
-    padding: 24px;
-
-    background: var(--ant-colorBgLayout);
 }
 
-/* 拖拽高亮 */
-.empty-page.dragging {
-    outline: 2px dashed var(--ant-colorPrimary);
-    outline-offset: -12px;
-}
-
-/* 中间区域：把卡片居中 */
+/* 关键：不要让 empty-center flex:1 撑满；让它自适应内容 */
 .empty-center {
-    flex: 1;
-    /* 占据中间可伸缩空间 */
-    display: flex;
-    align-items: center;
+    margin: auto;
+    /* 在 empty-page 中水平+垂直居中 */
+    position: relative;
+    /* 伪元素相对它定位 */
+    padding: 14px;
+    /* “比 card 大一圈”的圈大小，按需调 */
+    border-radius: 16px;
+    /* 跟卡片视觉一致 */
+    display: inline-flex;
+    /* shrink-wrap 包住 a-card */
+    align-items: stretch;
     justify-content: center;
 }
 
-/* 卡片样式 */
+/* 拖拽高亮：只包住 empty-center（也就只比 card 大一圈） */
+.empty-center.dragging::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    /* 刚好贴着 empty-center 的边界 */
+    border: 2px dashed var(--ant-colorPrimary, #1677ff);
+    border-radius: 16px;
+    pointer-events: none;
+}
+
+/* 可选：控制卡片宽度/样式 */
 .empty-card {
     width: min(560px, 100%);
     border-radius: 16px;
-    padding: 20px;
-
-    background: var(--ant-colorBgContainer);
-    border: 1px solid var(--ant-colorBorderSecondary);
-    box-shadow: 0 10px 30px color-mix(in srgb, var(--ant-colorTextBase) 10%, transparent);
 }
-
-/* a-empty block spacing */
-.empty-block {
-    margin-top: 10px;
-    margin-bottom: 6px;
-}
-
 
 .empty-desc {
     display: flex;
@@ -243,14 +270,6 @@ const logoSrc = props.logoSrc;
     text-align: center;
 }
 
-.hint {
-    width: 100%;
-    padding: 10px 12px;
-    border-radius: 12px;
-
-    background: var(--ant-colorFillTertiary);
-    border: 1px solid var(--ant-colorBorderSecondary);
-}
 
 .actions {
     margin-top: 14px;
@@ -258,15 +277,14 @@ const logoSrc = props.logoSrc;
 }
 
 .down-icon {
-    margin-left: 8px;
+    margin-left: 18px;
     font-size: 12px;
     opacity: 0.85;
 }
 
 /* 页面底部 footer */
 .page-footer {
-    padding-top: 16px;
-    padding-bottom: 6px;
+    margin-bottom: 16px;
     text-align: center;
 }
 
@@ -285,5 +303,29 @@ const logoSrc = props.logoSrc;
 
 .file-input {
     display: none;
+}
+
+.dropdown-btn {
+    position: relative;
+}
+
+/* 文字居中：占满按钮宽度并居中 */
+.dropdown-btn__text {
+    display: block;
+    width: 100%;
+    text-align: center;
+}
+
+/* 图标固定在最右侧，不影响文字居中 */
+.dropdown-btn__icon {
+    position: absolute;
+    right: 12px;
+    /* 按需调整 */
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 12px;
+    opacity: 0.85;
+    pointer-events: none;
+    /* 避免影响点击 */
 }
 </style>

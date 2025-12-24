@@ -8,6 +8,7 @@ import "./style.css";
 import {
   ConfigProvider,
   Layout,
+  Card,
   Row,
   Col,
   Button,
@@ -42,6 +43,7 @@ app
   .use(ConfigProvider)
   .use(Layout)
   .use(Row)
+  .use(Card)
   .use(Col)
   .use(Button)
   .use(Space)

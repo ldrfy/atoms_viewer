@@ -6,6 +6,9 @@
         "delete": "Delete",
         "cancel": "Cancel"
     },
+    "net": {
+        "timeout": "request timeout"
+    },
     "viewer": {
         "settings": "Settings",
         "about": {
@@ -67,7 +70,13 @@
             "title": "Drag and drop a file here",
             "subtitle": "Or simply select the file, the 'Test' button can load some built-in model tests",
             "pickFile": "Choose file",
-            "preloadDefault": "Test"
+            "preloadDefault": "Load samples",
+            "samples": {
+                "loading": "Loading…",
+                "loadFailed": "Failed to load: {error} (switched to built-in sample)",
+                "empty": "No samples available",
+                "builtinSuffix": "(Built-in)"
+            }
         },
         "export": {
             "transparent": "Transparent Background",

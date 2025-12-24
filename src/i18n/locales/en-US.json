@@ -90,11 +90,8 @@
                 "axes": "Axes",
                 "bonds": "Bonds",
                 "atomSize": "Atom size",
-                "background": {
-                    "title": "Background",
-                    "dark": "Dark",
-                    "light": "Light"
-                }
+                "recordFps": "Recording FPS",
+                "recordFpsHint": "Target recording frame rate; commonly 30 / 60."
             },
             "pose": {
                 "header": "Pose (model rotation, degrees)",

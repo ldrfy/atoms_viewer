@@ -90,11 +90,8 @@
                 "axes": "坐标轴",
                 "bonds": "键",
                 "atomSize": "原子大小",
-                "background": {
-                    "title": "背景色",
-                    "dark": "白色",
-                    "light": "黑色"
-                }
+                "recordFps": "录制帧率 (fps)",
+                "recordFpsHint": "录制输出的目标帧率；常用 30 / 60。"
             },
             "pose": {
                 "header": "姿态（模型旋转，单位：度）",

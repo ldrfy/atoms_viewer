@@ -39,6 +39,9 @@ type CreateRecordingControllerArgs = {
 
   /** i18n 文案（可选） */
   t?: (key: string, params?: Record<string, unknown>) => string;
+
+  /** 录制帧率（从 settings 读） */
+  getRecordFps?: () => number;
 };
 
 export function createRecordingController(
@@ -206,7 +209,7 @@ export function createRecordingController(
       if (!cropCtx || !cropCanvas || !st) return;
       cropCtx.clearRect(0, 0, cropCanvas.width, cropCanvas.height);
       cropCtx.drawImage(
-        src,
+        st.renderer.domElement,
         sx,
         sy,
         sw,
@@ -241,11 +244,11 @@ export function createRecordingController(
 
   function stopRecord(): void {
     const stage = getStage();
-    if (!mediaRecorder || !stage) return;
+    const mr = mediaRecorder;
+    if (!mr || !stage) return;
 
-    mediaRecorder.stop();
-
-    mediaRecorder.onstop = () => {
+    // 先挂 onstop（关键：避免竞态）
+    mr.onstop = () => {
       if (cropRafId) {
         cancelAnimationFrame(cropRafId);
         cropRafId = null;
@@ -258,7 +261,9 @@ export function createRecordingController(
       a.href = url;
       a.download = "three-record.webm";
       a.click();
-      URL.revokeObjectURL(url);
+
+      // 不要立刻 revoke，延迟释放更稳
+      window.setTimeout(() => URL.revokeObjectURL(url), 10_000);
 
       stopRecordTimer();
 
@@ -266,6 +271,13 @@ export function createRecordingController(
       isRecording.value = false;
       isRecordPaused.value = false;
     };
+
+    // 让 recorder 尽量把最后缓存吐出来（有的浏览器有效）
+    try {
+      mr.requestData();
+    } catch {}
+
+    mr.stop();
 
     recordCropBox.value = null;
     recordCropRect = null;
@@ -442,7 +454,9 @@ export function createRecordingController(
 
     recordCropRect = box;
     recordCropBox.value = box;
-    startRecordCropped(60);
+
+    const fps = Math.max(1, Math.floor(args.getRecordFps?.() ?? 60));
+    startRecordCropped(fps);
   }
 
   return {

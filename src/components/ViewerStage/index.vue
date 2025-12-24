@@ -177,15 +177,22 @@
         <!-- 动画控制条：三行布局（修改版） -->
         <div class="anim-bar" v-if="hasModel">
             <!-- 第一行：帧序号 + slider（不固定宽，slider 自适应） -->
-            <a-row v-if="hasAnimation" :gutter="[8, 8]" align="middle" :wrap="false">
+            <a-row v-if="hasAnimation" :gutter="[16, 8]" align="middle" :wrap="false">
                 <a-col flex="none">
-                    <span class="anim-frame-text">{{ frameIndex + 1 }} / {{ frameCount }}</span>
+                    <span class="anim-frame-text">{{ frameIndexModel }} / {{ frameCount }}</span>
                 </a-col>
+
                 <a-col flex="auto" style="min-width: 0">
-                    <a-slider class="anim-slider" :min="0" :max="Math.max(0, frameCount - 1)"
+                    <a-slider class="anim-slider" :min="1" :max="Math.max(1, frameCount)" :step="1"
                         v-model:value="frameIndexModel" />
                 </a-col>
+
+                <a-col flex="none" style="width: 96px">
+                    <a-input-number v-model:value="frameIndexModel" :min="1" :max="Math.max(1, frameCount)" :step="1"
+                        style="width: 100%" />
+                </a-col>
             </a-row>
+
 
             <a-row v-if="hasAnimation" :gutter="8" align="middle" justify="space-between" :wrap="false">
                 <!-- 左：允许被压缩 -->
@@ -334,10 +341,19 @@ const {
 } = stage;
 
 
-const frameIndexModel = computed({
-    get: () => frameIndex.value,
-    set: (v: number) => setFrame(v),
+const frameIndexModel = computed<number>({
+    // UI 显示 1..frameCount
+    get: () => frameIndex.value + 1,
+
+    // UI 输入 1..frameCount -> 内部 0..frameCount-1
+    set: (v: number) => {
+        const n = Math.floor(Number(v) || 1);        // 1-based
+        const idx0 = n - 1;                          // 0-based
+        const max0 = Math.max(0, frameCount.value - 1);    // 防御 frameCount=0
+        setFrame(Math.max(0, Math.min(max0, idx0)));
+    },
 });
+
 
 const bgColorModel = computed({
     get: () => props.settings.backgroundColor,

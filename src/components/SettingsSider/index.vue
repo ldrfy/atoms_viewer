@@ -38,8 +38,35 @@
 
                     <!-- 原子大小 -->
                     <a-form-item :label="t('settings.panel.display.atomSize')">
-                        <a-slider v-model:value="atomScaleModel" :min="0.2" :max="2" :step="0.05" />
+                        <a-row :gutter="8" align="middle">
+                            <a-col :flex="1">
+                                <a-slider v-model:value="atomScaleModel" :min="0.2" :max="2" :step="0.05" />
+                            </a-col>
+                            <a-col :style="{ width: '96px' }">
+                                <a-input-number v-model:value="atomScaleModel" :min="0.2" :max="2" :step="0.05"
+                                    style="width: 100%" />
+                            </a-col>
+                        </a-row>
                     </a-form-item>
+
+
+                    <!-- 录制帧率 -->
+                    <a-form-item :label="t('settings.panel.display.recordFps')">
+                        <a-row :gutter="8" align="middle">
+                            <a-col :flex="1">
+                                <a-slider v-model:value="recordFpsModel" :min="1" :max="120" :step="1" />
+                            </a-col>
+                            <a-col :style="{ width: '96px' }">
+                                <a-input-number v-model:value="recordFpsModel" :min="1" :max="120" :step="1"
+                                    style="width: 100%" />
+                            </a-col>
+                        </a-row>
+
+                        <a-typography-text type="secondary" style="display:block;margin-top:6px;">
+                            {{ t('settings.panel.display.recordFpsHint') }}
+                        </a-typography-text>
+                    </a-form-item>
+
                 </a-form>
             </a-collapse-panel>
 
@@ -219,6 +246,13 @@ function patchSettings(
 /* -----------------------------
  * Display / Pose settings
  * ----------------------------- */
+
+const recordFpsModel = computed({
+    get: () => props.settings.frame_rate ?? 60,
+    set: (v: number) =>
+        patchSettings({ frame_rate: Math.max(1, Math.min(120, Math.floor(v))) }),
+});
+
 
 const atomScaleModel = computed({
     get: () => props.settings.atomScale,

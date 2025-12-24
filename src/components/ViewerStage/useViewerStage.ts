@@ -127,6 +127,7 @@ export function useViewerStage(
     getStage: () => stage,
     patchSettings,
     t,
+    getRecordFps: () => settingsRef.value.frame_rate ?? 60,
   });
 
   const parseMode = ref<ParseMode>("auto");

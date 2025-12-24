@@ -24,6 +24,9 @@ export type ViewerSettings = {
   lammpsTypeMap: LammpsTypeMapItem[];
   backgroundColor: string;
   backgroundTransparent?: boolean;
+
+//   录制帧率
+  frame_rate: number;
 };
 
 export const DEFAULT_SETTINGS: ViewerSettings = {
@@ -37,6 +40,8 @@ export const DEFAULT_SETTINGS: ViewerSettings = {
   lammpsTypeMap: [],
   backgroundColor: isDark.value ? "#000000" : "#ffffff",
   backgroundTransparent: true,
+
+  frame_rate: 60,
 };
 
 /**

@@ -365,8 +365,6 @@ export function createModelRuntime(params: {
     if (!stage) return;
 
     let bgc = getSettings().backgroundColor;
-    let bgt = getSettings().backgroundTransparent;
-    console.log(`----|${bgc}|---|${bgt}|---`);
 
     if (!bgc) {
       return;

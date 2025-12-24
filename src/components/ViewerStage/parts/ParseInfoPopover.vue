@@ -1,6 +1,6 @@
 <template>
     <div v-if="hasModel" class="parse-overlay">
-        <a-popover :arrow="false" v-model:open="open" trigger="click" placement="rightTop"
+        <a-popover :arrow="false" v-model:open="open" trigger="click" placement="right"
             :overlayClassName="'parse-popover'" :destroyTooltipOnHide="true">
             <template #content>
                 <div class="parse-pop-content">

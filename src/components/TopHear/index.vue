@@ -1,6 +1,13 @@
 <template>
     <div class="tophear-overlay">
         <div class="tophear-inner">
+            <div class="top-left-bar">
+                <a-button type="text" class="brand-btn" :class="{ clickable: props.canGoHome }" aria-label="home"
+                    @click="onClickBrand">
+                    <HomeOutlined v-if="props.canGoHome" />
+                    <span class="brand-text">{{ APP_DISPLAY_NAME }}</span>
+                </a-button>
+            </div>
             <div class="top-right-bar">
                 <!-- ===== 桌面端 ===== -->
                 <template v-if="!isMobile">
@@ -120,6 +127,7 @@ import type { MenuInfo } from "ant-design-vue/es/menu/src/interface";
 import { computed, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import {
+    HomeOutlined,
     GlobalOutlined,
     BgColorsOutlined,
     SettingOutlined,
@@ -139,11 +147,21 @@ import {
     setThemeMode,
     type ThemeMode,
 } from "../../theme/mode";
-import { APP_GITHUB_URL } from "../../lib/appMeta";
+import { APP_DISPLAY_NAME, APP_GITHUB_URL } from "../../lib/appMeta";
 import type { SupportLocale } from "../../i18n";
+
+const props = withDefaults(
+    defineProps<{
+        canGoHome?: boolean;
+    }>(),
+    {
+        canGoHome: false,
+    }
+);
 
 const emit = defineEmits<{
     (e: "open-settings"): void;
+    (e: "go-home"): void;
 }>();
 
 const { t } = useI18n();
@@ -205,6 +223,11 @@ function onSelectThemeMode(key: string) {
     setThemeMode(key as ThemeMode);
     closeDrawer();
 }
+
+function onClickBrand(): void {
+    if (!props.canGoHome) return;
+    emit("go-home");
+}
 </script>
 
 <style scoped>
@@ -218,7 +241,28 @@ function onSelectThemeMode(key: string) {
 
 .tophear-inner {
     display: flex;
-    justify-content: flex-end;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.top-left-bar {
+    pointer-events: auto;
+}
+
+.brand-btn {
+    font-size: 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 8px;
+}
+
+.brand-btn.clickable {
+    cursor: pointer;
+}
+
+.brand-text {
+    font-weight: 600;
 }
 
 .top-right-bar {

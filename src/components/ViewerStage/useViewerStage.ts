@@ -40,12 +40,10 @@ import {
   createRecordSelectCtx,
   createCropDashCtx,
   createParseCtx,
-  createEmptyCtx,
   createAnimCtx,
   type RecordSelectCtx,
   type CropDashCtx,
   type ParseCtx,
-  type EmptyCtx,
   type AnimCtx,
 } from "./ctx";
 
@@ -67,6 +65,8 @@ type ViewerStageBindings = {
   onDragLeave: () => void;
   onDrop: (e: DragEvent) => Promise<void>;
   onFilePicked: (e: Event) => Promise<void>;
+  loadFile: (file: File) => Promise<void>;
+  loadText: (text: string, fileName: string) => Promise<void>;
   onExportPng: (payload: {
     scale: number;
     transparent: boolean;
@@ -90,7 +90,6 @@ type ViewerStageBindings = {
   // ctx groups for parts components
   recordSelectCtx: RecordSelectCtx;
   parseCtx: ParseCtx;
-  emptyCtx: EmptyCtx;
   animCtx: AnimCtx;
   cropDashCtx: CropDashCtx;
 } & RecordingBindings;
@@ -450,6 +449,42 @@ export function useViewerStage(
     parseInfo.fileName = file.name;
   }
 
+  /**
+   * 直接从文本加载并渲染（用于 EmptyPage 的内置 sample 或外部调用）。
+   */
+  async function loadText(text: string, fileName: string): Promise<void> {
+    if (!stage || !runtime) return;
+    if (isLoading.value) return;
+
+    isLoading.value = true;
+    await nextFrame();
+
+    const t0 = performance.now();
+    try {
+      stopPlay();
+
+      lastRawText = text;
+      lastRawFileName = fileName;
+
+      renderFromText(text, fileName, "load");
+
+      message.success(`${((performance.now() - t0) / 1000).toFixed(2)} s`);
+      parseInfo.success = true;
+      parseInfo.errorMsg = "";
+    } catch (err) {
+      parseInfo.success = false;
+      parseInfo.errorMsg = (err as Error).message;
+      parseInfo.errorSeq += 1;
+      console.log(err);
+      message.error(`${t("viewer.parse.notice")}: ${parseInfo.errorMsg}`);
+    }
+
+    isLoading.value = false;
+    hasModel.value = true;
+    parseMode.value = "auto";
+    parseInfo.fileName = fileName;
+  }
+
   function onDragEnter(): void {
     dragDepth.value += 1;
     isDragging.value = true;
@@ -627,14 +662,6 @@ export function useViewerStage(
     setParseMode,
   });
 
-  const emptyCtx = createEmptyCtx({
-    hasModel,
-    isDragging,
-    isLoading,
-    openFilePicker,
-    preloadDefault,
-  });
-
   const animCtx = createAnimCtx({
     hasModel,
     hasAnimation,
@@ -656,7 +683,6 @@ export function useViewerStage(
     // ctx groups
     recordSelectCtx,
     parseCtx,
-    emptyCtx,
     animCtx,
     cropDashCtx,
 
@@ -687,6 +713,8 @@ export function useViewerStage(
     onDragLeave,
     onDrop,
     onFilePicked,
+    loadFile,
+    loadText,
     onExportPng,
     preloadDefault,
   };

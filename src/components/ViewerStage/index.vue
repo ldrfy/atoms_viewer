@@ -15,25 +15,6 @@
             <a-spin size="large" />
         </div>
 
-        <!-- 无模型：左上角显示项目名 -->
-        <AppTitle v-if="!stage.hasModel.value" :appName="APP_DISPLAY_NAME" />
-
-        <!-- 有模型：右侧 top60% 悬浮打开按钮 -->
-        <a-float-button v-if="stage.hasModel.value && !stage.isLoading.value" class="open-file-fab" type="primary"
-            :style="{ right: '24px', top: '60%' }" @click="stage.openFilePicker"
-            :aria-label="t('viewer.empty.pickFile')">
-            <template #icon>
-                <FolderOpenOutlined />
-            </template>
-        </a-float-button>
-
-        <!-- 无模型：底部中间版本号 + 开发者（可点击跳 github） -->
-        <AppFooter v-if="!stage.hasModel.value" :appName="APP_DISPLAY_NAME" :version="APP_VERSION" :author="APP_AUTHOR"
-            :githubUrl="APP_GITHUB_URL" />
-
-        <!-- 无模型：空态引导 -->
-        <EmptyOverlay :ctx="emptyCtx" />
-
         <!-- 隐藏文件输入 -->
         <input ref="fileInputRef" class="file-input" type="file" accept=".xyz,.pdb,.dump,.lammpstrj,.traj,.data,.lmp"
             @change="stage.onFilePicked" />
@@ -48,22 +29,14 @@
 
 <script setup lang="ts">
 import { toRef, watch } from "vue";
-import { useI18n } from "vue-i18n";
 import { useViewerStage } from "./useViewerStage";
 import type { ViewerSettings, OpenSettingsPayload } from "../../lib/viewer/settings";
-import { FolderOpenOutlined } from "@ant-design/icons-vue";
 import { setThemeMode, isDarkColor } from "../../theme/mode";
-import { APP_DISPLAY_NAME, APP_VERSION, APP_AUTHOR, APP_GITHUB_URL } from "../../lib/appMeta";
 
 import RecordSelectOverlay from "./parts/RecordSelectOverlay.vue";
 import ParseInfoPopover from "./parts/ParseInfoPopover.vue";
-import EmptyOverlay from "./parts/EmptyOverlay.vue";
 import AnimBar from "./parts/AnimBar.vue";
 import RecordCropDash from "./parts/RecordCropDash.vue";
-import AppTitle from "./parts/AppTitle.vue";
-import AppFooter from "./parts/AppFooter.vue";
-
-const { t } = useI18n();
 
 const props = defineProps<{ settings: ViewerSettings }>();
 const settingsRef = toRef(props, "settings");
@@ -94,10 +67,13 @@ void fileInputRef;
 void canvasHostRef;
 
 // ctx groups are created inside useViewerStage() and returned directly
-const { recordSelectCtx, parseCtx, emptyCtx, animCtx, cropDashCtx } = stage;
+const { recordSelectCtx, parseCtx, animCtx, cropDashCtx } = stage;
 
 defineExpose({
     exportPng: stage.onExportPng,
+    openFilePicker: stage.openFilePicker,
+    loadFile: stage.loadFile,
+    loadText: stage.loadText,
 });
 
 watch(

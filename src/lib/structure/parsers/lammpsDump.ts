@@ -1,6 +1,6 @@
 // src/lib/structure/parsers/lammpsDump.ts
 import type { Atom, StructureModel } from "../types";
-import { t } from "../../../i18n/tr";
+import { t } from "../../../i18n/index";
 
 /**
  * LAMMPS dump 解析选项 / Parse options for LAMMPS dump

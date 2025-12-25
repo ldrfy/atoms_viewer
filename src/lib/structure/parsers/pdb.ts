@@ -1,7 +1,7 @@
 // lib/structure/parsers/pdb.ts
 import type { StructureModel } from "../types";
 import { makeAtom } from "./common";
-import { t } from "../../../i18n/tr";
+import { t } from "../../../i18n/index";
 
 /**
  * 解析 PDB（ATOM/HETATM 坐标）。

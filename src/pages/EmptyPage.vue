@@ -3,7 +3,7 @@
         @dragleave.prevent="onDragLeave" @drop.prevent="onDrop">
         <!-- 中间：卡片 -->
         <div class="empty-center" :class="{ dragging: isDragging }">
-            <a-card>
+            <a-card :title="APP_DISPLAY_NAME">
                 <a-empty class="empty-block">
                     <template #image>
                         <img :src="logoSrc" alt="logo" />

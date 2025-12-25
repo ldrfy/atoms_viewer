@@ -6,7 +6,7 @@
         "delete": "删除",
         "cancel": "取消"
     },
-    "net":{
+    "net": {
         "timeout": "请求超时"
     },
     "viewer": {
@@ -57,6 +57,7 @@
             }
         },
         "locale": {
+            "system": "跟随系统",
             "title": "语言",
             "current": "当前"
         },

@@ -1,7 +1,7 @@
 // lib/structure/parsers/xyz.ts
 import type { Atom, StructureModel } from "../types";
 import { makeAtom } from "./common";
-import { t } from "../../../i18n/tr";
+import { t } from "../../../i18n/index";
 
 export function parseXyz(text: string): StructureModel {
   const lines = text.split(/\r?\n/);

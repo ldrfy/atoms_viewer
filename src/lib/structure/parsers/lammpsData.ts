@@ -1,7 +1,7 @@
 // src/lib/structure/parsers/lammpsData.ts
 import type { Atom, StructureModel } from "../types";
 import { normalizeElementSymbol } from "../chem";
-import { t } from "../../../i18n/tr";
+import { t } from "../../../i18n/index";
 
 /**
  * Options for parsing LAMMPS data files.

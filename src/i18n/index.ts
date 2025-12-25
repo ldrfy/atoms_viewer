@@ -1,12 +1,22 @@
 import { createI18n } from "vue-i18n";
 import type { LocaleMessages, VueMessageType } from "vue-i18n";
-
 type MessageSchema = LocaleMessages<VueMessageType>;
 
 /**
  * 明确支持的 locale（新增语言就在这里加）
  */
-export const SUPPORT_LOCALES = ["zh-CN", "en-US"] as const;
+export const SUPPORT_LOCALES = ["system", "zh-CN", "en-US"] as const;
+function getBrowserLocale(): SupportLocale {
+  const lang =
+    (Array.isArray(navigator.languages) && navigator.languages[0]) ||
+    navigator.language ||
+    "en";
+
+  if (lang.toLowerCase().startsWith("zh")) return "zh-CN";
+  if (lang.toLowerCase().startsWith("en")) return "en-US";
+  return "en-US";
+}
+
 export type SupportLocale = (typeof SUPPORT_LOCALES)[number];
 
 /**
@@ -28,21 +38,17 @@ const messages = SUPPORT_LOCALES.reduce((acc, loc) => {
   return acc;
 }, {} as Record<SupportLocale, MessageSchema>);
 
-function normalizeLocale(input: string | null | undefined): SupportLocale {
-  const v = (input ?? "").toLowerCase();
-  if (v.startsWith("zh")) return "zh-CN";
-  if (v.startsWith("en")) return "en-US";
-  return "zh-CN";
+/** system → 实际 locale */
+function resolveLocale(loc: SupportLocale): SupportLocale {
+  return loc === "system" ? getBrowserLocale() : loc;
 }
 
-const locale = normalizeLocale(
-  localStorage.getItem("locale") ?? navigator.language
-);
+const userLocale = getLocale();
 
 export const i18n = createI18n({
-  legacy: false as const, // 关键：锁死为 composition 模式，避免 TS 推断成 legacy
+  legacy: false as const,
   globalInjection: true,
-  locale,
+  locale: resolveLocale(userLocale),
   fallbackLocale: "en-US",
   messages,
 });
@@ -51,12 +57,32 @@ export const i18n = createI18n({
  * 从“该语言自己的 messages”里取 selfName
  */
 export function getLocaleSelfName(loc: SupportLocale): string {
+  // 关键：显式依赖当前 UI 语言，保证响应式
+  if (loc === "system") {
+    return t("viewer.locale.system");
+  }
+
   const msg = i18n.global.getLocaleMessage(loc) as any;
   const name = msg?.locale?.selfName;
   return typeof name === "string" && name.trim() ? name : loc;
 }
 
 export function setLocale(next: SupportLocale): void {
-  i18n.global.locale.value = next;
   localStorage.setItem("locale", next);
+
+  i18n.global.locale.value = resolveLocale(next);
+}
+
+export function getLocale(): SupportLocale {
+  return (localStorage.getItem("locale") as SupportLocale) ?? "system";
+}
+
+/**
+ * 在非 Vue 组件环境中使用 i18n。
+ *
+ * Use i18n outside Vue components.
+ */
+export function t(key: string, params?: Record<string, unknown>): string {
+  const out = i18n.global.t(key, params as any);
+  return typeof out === "string" ? out : String(out);
 }

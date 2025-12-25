@@ -73,7 +73,7 @@
                         <span class="collapse-header">
                             {{ t("viewer.locale.title") }}
                             <span class="collapse-value">
-                                {{ getLocaleSelfName(curLocale) }}
+                                {{ currentLocaleItem?.label }}
                             </span>
                         </span>
                     </template>
@@ -137,7 +137,7 @@ import {
 import { Grid } from "ant-design-vue";
 
 import {
-    i18n,
+    getLocale,
     SUPPORT_LOCALES,
     getLocaleSelfName,
     setLocale,
@@ -176,9 +176,8 @@ const mobileOpen = ref(false);
 const activeKey = ref<string | undefined>(undefined);
 
 /* ===== locale ===== */
-const curLocale = computed<SupportLocale>(
-    () => i18n.global.locale.value as SupportLocale
-);
+const curLocale = computed<SupportLocale>(() => getLocale());
+
 const curLocaleProxy = ref(curLocale.value);
 
 const localeItems = computed(() =>
@@ -187,6 +186,13 @@ const localeItems = computed(() =>
         label: getLocaleSelfName(loc),
     }))
 );
+const currentLocaleItem = computed(() =>
+    localeItems.value.find(
+        (i) => i.key === curLocaleProxy.value
+    )
+);
+
+
 
 /* ===== theme ===== */
 const themeMode = computed(() => getThemeMode());

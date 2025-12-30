@@ -137,7 +137,7 @@ async function loadSampleManifest(): Promise<void> {
     sampleLoadError.value = null;
 
     try {
-        const res = await fetchWithTimeout(APP_SAMPLES_URL, { cache: "no-store" }, 8000);
+        const res = await fetchWithTimeout(APP_SAMPLES_URL, { cache: "no-store" }, 5000);
         if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
 
         const data = (await res.json()) as unknown;

@@ -565,7 +565,7 @@ export function useViewerStage(
     if (settingsRef.value.dualViewEnabled) {
       const rRaw = settingsRef.value.dualViewSplit;
       const r = typeof rRaw === "number" && Number.isFinite(rRaw) ? rRaw : 0.5;
-      const leftW = Math.max(1, rect.width * Math.max(0.3, Math.min(0.7, r)));
+      const leftW = Math.max(1, rect.width * Math.max(0.1, Math.min(0.9, r)));
       const localX = e.clientX - rect.left;
       if (localX > leftW) return; // ignore clicks on the side view
       viewportW = leftW;
@@ -950,7 +950,7 @@ export function useViewerStage(
 
       // 3) render
       if (settings.dualViewEnabled) {
-        const split = Math.max(0.3, Math.min(0.7, settings.dualViewSplit ?? 0.5));
+        const split = Math.max(0.1, Math.min(0.9, settings.dualViewSplit ?? 0.5));
         const leftW = Math.floor(w * split);
         const rightW = Math.max(1, w - leftW);
 
@@ -1035,7 +1035,10 @@ export function useViewerStage(
     stage = createThreeStage({
       host,
       orthoHalfHeight: 5,
-      onBeforeRender: () => tickAnimation(),
+      onBeforeRender: () => {
+        tickAnimation();
+        runtime?.tickCameraClipping();
+      },
     });
 
     // 2) Create model runtime (meshes/frames/fit)

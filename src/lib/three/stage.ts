@@ -274,12 +274,18 @@ export function createThreeStage(params: {
     sideCamera.position.copy(tmpV3b);
     sideCamera.up.copy(camera.up);
     sideCamera.lookAt(target);
+
+    // Keep clipping planes consistent with the main camera to avoid layer clipping in the side view.
+    sideCamera.near = camera.near;
+    sideCamera.far = camera.far;
     (sideCamera as any).updateProjectionMatrix?.();
   }
 
   const rafLoop: RafLoop = createRafLoop(() => {
     onBeforeRender();
     controls.update();
+    // Ensure dual-view distance stays in sync even if an input event was missed.
+    onControlsChange();
 
     if (!dualViewEnabled) {
       renderer.setScissorTest(false);
@@ -432,7 +438,7 @@ export function createThreeStage(params: {
 
   const setDualViewSplit = (ratio: number): void => {
     // clamp to avoid unusable viewport sizes
-    const r = Math.max(0.3, Math.min(0.7, ratio));
+    const r = Math.max(0.1, Math.min(0.9, ratio));
     dualViewSplit = r;
     if (!dualViewEnabled) return;
     syncSize();

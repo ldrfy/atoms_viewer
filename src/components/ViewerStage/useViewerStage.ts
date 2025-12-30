@@ -24,7 +24,8 @@ import {
 } from "./typeMap";
 type RenderReason = "load" | "reparse";
 
-import { exportTransparentCroppedPng } from "../../lib/three/exportPng";
+import { cropCanvasToPngBlob, downloadBlob } from "../../lib/image/cropPng";
+import { isPerspective, updateCameraForSize, type AnyCamera } from "../../lib/three/camera";
 import { createThreeStage, type ThreeStage } from "../../lib/three/stage";
 
 import { bindViewerStageSettings } from "./bindSettings";
@@ -550,11 +551,26 @@ export function useViewerStage(
     if (!inspectCtx.enabled.value) return;
     if (!stage || !runtime) return;
     // Avoid conflict with record-area selection overlay
-    if ((recording.recordSelectCtx?.isSelecting as any)?.value) return;
+    const selecting =
+      typeof recordSelectCtx.isSelectingRecordArea === "boolean"
+        ? recordSelectCtx.isSelectingRecordArea
+        : recordSelectCtx.isSelectingRecordArea.value;
+    if (selecting) return;
 
     const canvas = stage.renderer.domElement;
     const rect = canvas.getBoundingClientRect();
-    const x = ((e.clientX - rect.left) / Math.max(1, rect.width)) * 2 - 1;
+    // If dual-view is enabled, only the left viewport (front view) is interactive.
+    // Map NDC X using the left viewport width so picking matches the main camera.
+    let viewportW = rect.width;
+    if (settingsRef.value.dualViewEnabled) {
+      const rRaw = settingsRef.value.dualViewSplit;
+      const r = typeof rRaw === "number" && Number.isFinite(rRaw) ? rRaw : 0.5;
+      const leftW = Math.max(1, rect.width * Math.max(0.3, Math.min(0.7, r)));
+      const localX = e.clientX - rect.left;
+      if (localX > leftW) return; // ignore clicks on the side view
+      viewportW = leftW;
+    }
+    const x = ((e.clientX - rect.left) / Math.max(1, viewportW)) * 2 - 1;
     const y = -(((e.clientY - rect.top) / Math.max(1, rect.height)) * 2 - 1);
     ndc.set(x, y);
 
@@ -900,37 +916,114 @@ export function useViewerStage(
 
     const { scale, transparent } = payload;
 
-    // 记录导出前的 renderer 背景（颜色 + alpha）
+    // snapshot renderer state
     const prevColor = new THREE.Color();
     stage.renderer.getClearColor(prevColor);
     const prevAlpha = stage.renderer.getClearAlpha();
+    const prevSize = new THREE.Vector2();
+    stage.renderer.getSize(prevSize);
+    const prevPixelRatio = stage.renderer.getPixelRatio();
+    const prevAutoClear = stage.renderer.autoClear;
 
     try {
-      // 导出期：按勾选临时切到透明或不透明
+      // 1) export background
       stage.renderer.setClearColor(
         new THREE.Color(getSettings().backgroundColor),
         transparent ? 0 : 1
       );
 
-      await exportTransparentCroppedPng({
-        renderer: stage.renderer,
-        scene: stage.scene,
-        camera: stage.getCamera(),
-        host: stage.host,
-        filename: "snapshot.png",
-        scale,
-        orthoHalfHeight: stage.getOrthoHalfHeight(),
+      // 2) supersampled render size
+      const rect = stage.host.getBoundingClientRect();
+      const w = Math.max(1, Math.floor(rect.width));
+      const h = Math.max(1, Math.floor(rect.height));
+      const s = Math.max(1, scale);
+
+      stage.renderer.setPixelRatio(1);
+      stage.renderer.setSize(w * s, h * s, false);
+
+      const settings = getSettings();
+      const orthoHalfHeight = stage.getOrthoHalfHeight();
+
+      const camera = stage.getCamera();
+      const controls = stage.getControls();
+      const target = controls.target;
+
+      // 3) render
+      if (settings.dualViewEnabled) {
+        const split = Math.max(0.3, Math.min(0.7, settings.dualViewSplit ?? 0.5));
+        const leftW = Math.floor(w * split);
+        const rightW = Math.max(1, w - leftW);
+
+        // Update projection for each logical viewport (not scaled)
+        updateCameraForSize(camera, leftW, h, orthoHalfHeight);
+        const sideCamera = camera.clone() as AnyCamera;
+        updateCameraForSize(sideCamera, rightW, h, orthoHalfHeight);
+
+        // Build side camera pose from current main camera pose (keeps wheel zoom consistent)
+        const viewVec = camera.position.clone().sub(target);
+        const dist = Math.max(1e-6, viewVec.length());
+        const q = new THREE.Quaternion().setFromAxisAngle(
+          new THREE.Vector3(0, 1, 0),
+          Math.PI / 2
+        );
+        viewVec.applyQuaternion(q);
+        viewVec.setLength(dist);
+        sideCamera.position.copy(target.clone().add(viewVec));
+        sideCamera.up.copy(camera.up);
+        sideCamera.lookAt(target);
+        if (!isPerspective(camera) && !isPerspective(sideCamera)) {
+          (sideCamera as THREE.OrthographicCamera).zoom =
+            (camera as THREE.OrthographicCamera).zoom;
+        }
+        (sideCamera as any).updateProjectionMatrix?.();
+
+        const fullW = Math.floor(w * s);
+        const fullH = Math.floor(h * s);
+        const leftPx = Math.floor(leftW * s);
+        const rightPx = Math.max(1, fullW - leftPx);
+
+        stage.renderer.autoClear = false;
+        stage.renderer.setScissorTest(true);
+        stage.renderer.setViewport(0, 0, fullW, fullH);
+        stage.renderer.setScissor(0, 0, fullW, fullH);
+        stage.renderer.clear(true, true, true);
+
+        // Left view
+        stage.renderer.setViewport(0, 0, leftPx, fullH);
+        stage.renderer.setScissor(0, 0, leftPx, fullH);
+        stage.renderer.render(stage.scene, camera);
+
+        // Right view
+        stage.renderer.setViewport(leftPx, 0, rightPx, fullH);
+        stage.renderer.setScissor(leftPx, 0, rightPx, fullH);
+        stage.renderer.render(stage.scene, sideCamera);
+
+        stage.renderer.setScissorTest(false);
+      } else {
+        updateCameraForSize(camera, w, h, orthoHalfHeight);
+        stage.renderer.render(stage.scene, camera);
+      }
+
+      // 4) crop & download
+      const { blob } = await cropCanvasToPngBlob(stage.renderer.domElement, {
         alphaThreshold: 8,
         padding: 3,
       });
+      downloadBlob(blob, "snapshot.png");
 
       message.success(t("viewer.export.pngSuccess"));
     } catch (e) {
       console.error("export png failed:", e);
       message.error(t("viewer.export.fail", { reason: (e as Error).message }));
     } finally {
-      // 导出后恢复（保持日常显示不变）
+      // restore renderer state
       stage.renderer.setClearColor(prevColor, prevAlpha);
+      stage.renderer.setPixelRatio(prevPixelRatio);
+      stage.renderer.setSize(prevSize.x, prevSize.y, false);
+      stage.renderer.autoClear = prevAutoClear;
+      stage.renderer.setScissorTest(false);
+      // re-sync size/cameras for the current view mode
+      stage.syncSize();
     }
   }
 
@@ -963,6 +1056,10 @@ export function useViewerStage(
       settingsRef,
       setProjectionMode: (v) => stage?.setProjectionMode(v),
       resetView,
+
+      setDualViewEnabled: (v) => stage?.setDualViewEnabled(v),
+      setDualViewDistance: (d) => stage?.setDualViewDistance(d),
+      setDualViewSplit: (r) => stage?.setDualViewSplit(r),
 
       applyAtomScale: () => runtime?.applyAtomScale(),
       applyShowBonds: () => runtime?.applyShowBonds(),

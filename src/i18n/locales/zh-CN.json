@@ -105,6 +105,11 @@
         "panel": {
             "display": {
                 "header": "显示",
+                "dualView": "双视图（正视 + 侧视）",
+                "dualViewHint": "左右同时显示正视与侧视，便于对照结构。",
+                "dualViewDistance": "视距",
+      "dualViewSplit": "左右比例",
+      "dualViewSplitHint": "调整左侧（正视）与右侧（侧视）的宽度比例。",
                 "perspective": "是否透视",
                 "axes": "坐标轴",
                 "bonds": "键",

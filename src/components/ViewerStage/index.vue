@@ -7,8 +7,8 @@
         <!-- three canvas 宿主 -->
         <div ref="canvasHostRef" class="canvas-host"></div>
 
-        <!-- 左侧：解析信息（贴边弹框） -->
-        <ParseInfoPopover :ctx="parseCtx" />
+        <!-- 原子信息/测量面板（点击原子后显示） -->
+        <AtomInspectorOverlay :ctx="inspectCtx" />
 
         <!-- 放下后开始加载：旋转图标 -->
         <div v-if="stage.isLoading.value" class="loading-overlay">
@@ -28,13 +28,14 @@
 </template>
 
 <script setup lang="ts">
-import { toRef, watch } from "vue";
+import { toRef, watch, onBeforeUnmount } from "vue";
 import { useViewerStage } from "./useViewerStage";
 import type { ViewerSettings, OpenSettingsPayload } from "../../lib/viewer/settings";
 import { setThemeMode, isDarkColor } from "../../theme/mode";
+import { setViewerApi } from "../../lib/viewer/bridge";
 
 import RecordSelectOverlay from "./parts/RecordSelectOverlay.vue";
-import ParseInfoPopover from "./parts/ParseInfoPopover.vue";
+import AtomInspectorOverlay from "./parts/AtomInspectorOverlay.vue";
 import AnimBar from "./parts/AnimBar.vue";
 import RecordCropDash from "./parts/RecordCropDash.vue";
 
@@ -67,7 +68,28 @@ void fileInputRef;
 void canvasHostRef;
 
 // ctx groups are created inside useViewerStage() and returned directly
-const { recordSelectCtx, parseCtx, animCtx, cropDashCtx } = stage;
+const { recordSelectCtx, animCtx, cropDashCtx, inspectCtx } = stage;
+
+// Register the current ViewerStage instance to the global Settings bridge.
+setViewerApi({
+    openFilePicker: stage.openFilePicker,
+    exportPng: stage.onExportPng,
+
+    refreshTypeMap: stage.refreshTypeMap,
+
+    parseInfo: stage.parseInfo,
+    parseMode: stage.parseMode,
+    setParseMode: stage.setParseMode,
+
+    layers: stage.layers,
+    activeLayerId: stage.activeLayerId,
+    setActiveLayer: stage.setActiveLayer,
+    setLayerVisible: stage.setLayerVisible,
+});
+
+onBeforeUnmount(() => {
+    setViewerApi(null);
+});
 
 defineExpose({
     exportPng: stage.onExportPng,

@@ -33,7 +33,9 @@ import {
   Dropdown,
   Collapse,
   Descriptions,
+  Divider,
   FloatButton,
+  Tooltip,
 } from "ant-design-vue";
 
 const app = createApp(App);
@@ -67,6 +69,10 @@ app
   .use(Dropdown)
   .use(Collapse)
   .use(Descriptions)
+  .use(Divider)
   .use(FloatButton);
+
+// Tooltip is used by AtomInspectorOverlay and popovers.
+app.use(Tooltip);
 
 app.mount("#app");

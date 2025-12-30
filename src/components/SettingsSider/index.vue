@@ -1,8 +1,76 @@
 <template>
-    <a-drawer v-model:open="openModel" :title="t('settings.title')" placement="right" :width="360" :mask="true"
+    <a-drawer v-model:open="openModel" :title="t('settings.title')" placement="right"
+        width="min(360px, calc(100vw - 24px))" :mask="true"
         :mask-closable="true" :destroy-on-close="false">
         <!-- 关键：activeKey 由父组件控制 -->
         <a-collapse v-model:activeKey="activeKeyModel" ghost accordion>
+            <!-- 文件 / 导出 / 解析 -->
+            <a-collapse-panel key="files" :header="t('settings.panel.files.header')">
+                <a-form layout="vertical">
+                    <a-form-item>
+                        <a-button type="primary" block :disabled="!viewerApi" @click="onOpenFile">
+                            {{ t('settings.panel.files.openFile') }}
+                        </a-button>
+                        <a-typography-text type="secondary" style="display:block;margin-top:6px;">
+                            {{ t('settings.panel.files.openFileHint') }}
+                        </a-typography-text>
+                    </a-form-item>
+
+                    <a-divider style="margin: 8px 0" />
+
+                    <a-form-item :label="t('settings.panel.files.export.header')">
+                        <a-row :gutter="8" align="middle">
+                            <a-col :flex="1">
+                                <a-input-number v-model:value="exportScale" :min="1" :max="5" :step="0.1"
+                                    :precision="1" :controls="false" style="width: 100%" />
+                            </a-col>
+                            <a-col :style="{ width: '96px' }">
+                                <a-button block type="primary" :disabled="!hasAnyLayer" @click="onExport">
+                                    {{ t('settings.panel.files.export.button') }}
+                                </a-button>
+                            </a-col>
+                        </a-row>
+
+                        <div style="margin-top: 8px">
+                            <a-checkbox v-model:checked="exportTransparent">
+                                {{ t('settings.panel.files.export.transparent') }}
+                            </a-checkbox>
+                        </div>
+
+                        <a-typography-text type="secondary" style="display:block;margin-top:6px;">
+                            {{ t('settings.panel.files.export.hint') }}
+                        </a-typography-text>
+                    </a-form-item>
+
+                    <a-divider style="margin: 8px 0" />
+
+                    <a-form-item :label="t('settings.panel.files.parse.header')">
+                        <a-space direction="vertical" :size="6" style="width: 100%">
+                            <a-select size="small" v-model:value="parseModeModel" :options="parseModeOptions"
+                                :disabled="!hasAnyLayer" style="width: 100%" />
+
+                            <a-alert v-if="viewerApi?.parseInfo.success === false" type="error" show-icon
+                                :description="viewerApi?.parseInfo.errorMsg || '-'" />
+
+                            <a-descriptions size="small" :column="1" bordered>
+                                <a-descriptions-item :label="t('viewer.parse.format')">
+                                    <a-tag>{{ viewerApi?.parseInfo.format || '-' }}</a-tag>
+                                </a-descriptions-item>
+                                <a-descriptions-item :label="t('viewer.parse.file')">
+                                    <span style="word-break: break-all">{{ viewerApi?.parseInfo.fileName || '-' }}</span>
+                                </a-descriptions-item>
+                                <a-descriptions-item :label="t('viewer.parse.atoms')">
+                                    {{ viewerApi?.parseInfo.atomCount ?? 0 }}
+                                </a-descriptions-item>
+                                <a-descriptions-item v-if="(viewerApi?.parseInfo.frameCount ?? 0) > 1"
+                                    :label="t('viewer.parse.frames')">
+                                    {{ viewerApi?.parseInfo.frameCount }}
+                                </a-descriptions-item>
+                            </a-descriptions>
+                        </a-space>
+                    </a-form-item>
+                </a-form>
+            </a-collapse-panel>
             <!-- 显示 / 视图 -->
             <a-collapse-panel key="display" :header="t('settings.panel.display.header')">
                 <a-form layout="vertical">
@@ -169,6 +237,12 @@
                             </a-col>
                         </a-row>
 
+                        <div style="margin-top: 8px">
+                            <a-button block type="primary" :disabled="!viewerApi" @click="onRefreshTypeMap">
+                                {{ t("settings.panel.lammps.refresh") }}
+                            </a-button>
+                        </div>
+
                         <a-typography-text type="secondary" style="display:block;margin-top:8px;">
                             {{ t("settings.panel.lammps.hint") }}
                         </a-typography-text>
@@ -176,15 +250,50 @@
                 </a-form>
             </a-collapse-panel>
 
+            <!-- 多模型图层 -->
+            <a-collapse-panel key="layers" :header="t('settings.panel.layers.header')">
+                <a-space direction="vertical" :size="8" style="width: 100%">
+                    <a-alert v-if="!viewerApi" type="info" show-icon
+                        :message="t('settings.panel.layers.noViewer')" />
+
+                    <a-alert v-else-if="layerList.length === 0" type="info" show-icon
+                        :message="t('settings.panel.layers.empty')" />
+
+                    <div v-else class="layers-list">
+                        <div v-for="l in layerList" :key="l.id" class="layer-row" :class="{ active: l.id === activeLayerId }"
+                            @click="onSetActive(l.id)">
+                            <div class="layer-left">
+                                <a-radio :checked="l.id === activeLayerId" />
+                            </div>
+                            <div class="layer-main">
+                                <div class="layer-name" :title="l.name">{{ l.name }}</div>
+                                <div class="layer-meta">
+                                    {{ t('settings.panel.layers.meta', { atoms: l.atomCount, frames: l.frameCount }) }}
+                                </div>
+                            </div>
+                            <div class="layer-right" @click.stop>
+                                <a-switch size="small" :checked="l.visible" @change="(v: boolean) => onToggleLayer(l.id, v)" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <a-typography-text type="secondary" style="display:block;">
+                        {{ t('settings.panel.layers.hint') }}
+                    </a-typography-text>
+                </a-space>
+            </a-collapse-panel>
+
         </a-collapse>
     </a-drawer>
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, ref } from "vue";
 import type { ViewerSettings } from "../../lib/viewer/settings";
 import { ATOMIC_SYMBOLS, normalizeElementSymbol } from "../../lib/structure/chem";
 import { useI18n } from "vue-i18n";
+import { viewerApiRef } from "../../lib/viewer/bridge";
+import type { ParseMode } from "../../lib/structure/parse";
 
 /** 本地类型：避免 settings.ts 导出名不一致造成报错
  * Local type to avoid export-name mismatch in settings.ts
@@ -192,6 +301,44 @@ import { useI18n } from "vue-i18n";
 type LammpsTypeMapItem = { typeId: number; element: string };
 
 const { t } = useI18n();
+
+const viewerApi = computed(() => viewerApiRef.value);
+const layerList = computed(() => viewerApi.value?.layers.value ?? []);
+const activeLayerId = computed(() => viewerApi.value?.activeLayerId.value ?? null);
+const hasAnyLayer = computed(() => layerList.value.length > 0);
+
+const exportScale = ref<number>(2);
+const exportTransparent = ref<boolean>(true);
+
+const parseModeModel = computed<ParseMode>({
+    get: () => viewerApi.value?.parseMode.value ?? "auto",
+    set: (v) => viewerApi.value?.setParseMode(v),
+});
+
+const parseModeOptions = computed(() => [
+    { value: "auto", label: t("viewer.parse.modeOptions.auto") },
+    { value: "xyz", label: t("viewer.parse.modeOptions.xyz") },
+    { value: "pdb", label: t("viewer.parse.modeOptions.pdb") },
+    { value: "lammpsdump", label: t("viewer.parse.modeOptions.lammpsdump") },
+    { value: "lammpsdata", label: t("viewer.parse.modeOptions.lammpsdata") },
+]);
+
+function onOpenFile(): void {
+    viewerApi.value?.openFilePicker();
+}
+
+function onExport(): void {
+    if (!viewerApi.value) return;
+    void viewerApi.value.exportPng({ scale: exportScale.value, transparent: exportTransparent.value });
+}
+
+function onSetActive(id: string): void {
+    viewerApi.value?.setActiveLayer(id);
+}
+
+function onToggleLayer(id: string, visible: boolean): void {
+    viewerApi.value?.setLayerVisible(id, visible);
+}
 
 const props = defineProps<{
     open: boolean;
@@ -369,4 +516,60 @@ function onLammpsElementChange(idx: number, v: unknown): void {
         i === idx ? { ...row, element } : row
     );
 }
+
+function onRefreshTypeMap(): void {
+    viewerApi.value?.refreshTypeMap();
+}
 </script>
+
+<style scoped>
+.layers-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.layer-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    background: rgba(127, 127, 127, 0.08);
+    cursor: pointer;
+    user-select: none;
+}
+
+.layer-row.active {
+    outline: 1px solid var(--ant-colorPrimary, #1677ff);
+    background: rgba(22, 119, 255, 0.10);
+}
+
+.layer-left {
+    flex: 0 0 auto;
+}
+
+.layer-main {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.layer-name {
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.layer-meta {
+    font-size: 12px;
+    opacity: 0.75;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.layer-right {
+    flex: 0 0 auto;
+}
+</style>

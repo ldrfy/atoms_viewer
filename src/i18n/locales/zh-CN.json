@@ -89,6 +89,15 @@
         },
         "lammps": {
             "mappingMissing": "存在未配置的 LAMMPS type→元素映射（E 占位），请在设置中补全以获得正确颜色/半径/键推断。"
+        },
+        "inspect": {
+            "title": "原子检查",
+            "measureMode": "测量模式（多选 2 点/3 点）",
+            "clear": "清空",
+            "hint": "点击原子以查看信息；开启测量模式可累积选择（最多 3 个）。",
+            "distance": "距离",
+            "angle": "夹角",
+            "orderHint": "按选择顺序计算：∠(1–2–3)，顶点为第 2 个点。"
         }
     },
     "settings": {
@@ -118,8 +127,30 @@
                 "typePlaceholder": "type",
                 "elementPlaceholder": "元素（如 C / O / Fe）",
                 "addMapping": "添加映射",
+      "refresh": "刷新显示",
                 "clear": "清空",
                 "hint": "建议 dump 输出包含 id、type、x y z。若每帧顺序不固定，解析端会按 id 排序以保证动画不抖动。"
+            },
+            "files": {
+                "header": "文件 / 导出 / 解析",
+                "openFile": "打开文件",
+                "openFileHint": "你也可以将文件拖拽到画面中加载。新加载的模型会作为新图层加入，并默认隐藏旧图层。",
+                "export": {
+                    "header": "导出图片",
+                    "button": "导出",
+                    "transparent": "透明背景",
+                    "hint": "导出为 PNG。scale 会按倍率放大渲染分辨率。"
+                },
+                "parse": {
+                    "header": "解析信息"
+                }
+            },
+            "layers": {
+                "header": "模型图层",
+                "noViewer": "当前没有可用的 Viewer 实例。",
+                "empty": "尚未加载任何模型。",
+                "meta": "{atoms} 原子 · {frames} 帧",
+                "hint": "点击一行可设为当前图层；右侧开关控制显示/隐藏。拖入新模型会加入图层列表并默认隐藏旧图层。"
             }
         }
     },

@@ -89,6 +89,15 @@
         },
         "lammps": {
             "mappingMissing": "Unresolved LAMMPS type→element mappings found (placeholder 'E'). Please complete them in Settings for correct colors/radii/bond inference."
+        },
+        "inspect": {
+            "title": "Atom inspector",
+            "measureMode": "Measure mode (multi-select 2/3 points)",
+            "clear": "Clear",
+            "hint": "Click an atom to inspect; enable measure mode to accumulate selections (up to 3).",
+            "distance": "Distance",
+            "angle": "Angle",
+            "orderHint": "Computed in selection order: ∠(1–2–3) with point 2 as the vertex."
         }
     },
     "settings": {
@@ -118,8 +127,30 @@
                 "typePlaceholder": "type",
                 "elementPlaceholder": "Element (e.g., C / O / Fe)",
                 "addMapping": "Add mapping",
+      "refresh": "Refresh view",
                 "clear": "Clear",
                 "hint": "Recommended dump fields: id, type, x y z. If per-frame ordering is not fixed, the parser will sort by id to avoid animation jitter."
+            },
+            "files": {
+                "header": "Files / Export / Parse",
+                "openFile": "Open file",
+                "openFileHint": "You can also drag & drop a file onto the canvas. New loads are added as layers and previous layers are hidden by default.",
+                "export": {
+                    "header": "Export image",
+                    "button": "Export",
+                    "transparent": "Transparent background",
+                    "hint": "Export as PNG. Scale multiplies the render resolution."
+                },
+                "parse": {
+                    "header": "Parse info"
+                }
+            },
+            "layers": {
+                "header": "Model layers",
+                "noViewer": "Viewer is not available.",
+                "empty": "No models loaded yet.",
+                "meta": "{atoms} atoms · {frames} frames",
+                "hint": "Click a row to set the active layer; use the toggle to show/hide. Dragging a new model adds a layer and hides previous layers by default."
             }
         }
     },

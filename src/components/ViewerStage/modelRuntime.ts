@@ -1,70 +1,148 @@
+// src/components/ViewerStage/modelRuntime.ts
 import * as THREE from "three";
-import type { Ref } from "vue";
+import { ref, type Ref } from "vue";
 
-import type { Atom, StructureModel } from "../../lib/structure/types";
 import type { ViewerSettings } from "../../lib/viewer/settings";
-import type { ThreeStage } from "../../lib/three/stage";
+import type { Atom, StructureModel } from "../../lib/structure/types";
 
-import { normalizeElementSymbol } from "../../lib/structure/chem";
+import type { ThreeStage } from "../../lib/three/stage";
 import { makeTextLabel } from "../../lib/three/labels2d";
 import { removeAndDisposeInstancedMeshes } from "../../lib/three/dispose";
-import { buildBondMeshesBicolor } from "../../lib/three/instancedBonds";
 import {
-  buildAtomMeshesByElement,
   applyAtomScaleToMeshes,
+  buildAtomMeshesByElement,
   getSphereBaseRadiusByElement,
 } from "../../lib/three/instancedAtoms";
-import { fitCameraToAtoms, isPerspective } from "../../lib/three/camera";
+import { buildBondMeshesBicolor } from "../../lib/three/instancedBonds";
+import { isPerspective, fitCameraToAtoms as fitCameraToAtomsImpl } from "../../lib/three/camera";
 
 import { applyFrameAtomsToMeshes, computeMeanCenterInto } from "./animation";
-import { remapElementByTypeId } from "./typeMap";
+import { collectTypeIdsAndElementDefaultsFromAtoms, remapAtomsByTypeId } from "./typeMap";
 
-/**
- * 模型运行时（渲染层）：
- * - 管理当前模型的 InstancedMesh（原子、键合）
- * - 管理动画帧数据、锁中心更新
- * - 提供 applyXXX 以响应 settings 改动
- *
- * Model runtime (render layer):
- * - Manage instanced meshes (atoms, bonds)
- * - Manage animation frames & "center lock" update
- * - Provide applyXXX methods reacting to settings changes
- */
+export type ModelLayerInfo = {
+  id: string;
+  name: string;
+  visible: boolean;
+  atomCount: number;
+  frameCount: number;
+  sourceFormat?: string;
+  sourceFileName?: string;
+  createdAtMs: number;
+};
+
+type LayerInternal = {
+  info: ModelLayerInfo;
+  model: StructureModel;
+  group: THREE.Group;
+
+  atomMeshes: THREE.InstancedMesh[];
+  bondMeshes: THREE.InstancedMesh[];
+  lastBondSegCount: number;
+
+  // animation
+  frameIndex: number;
+
+  // LAMMPS
+  hasAnyTypeId: boolean;
+
+  // tmp
+  baseCenter: THREE.Vector3; // keep at (0,0,0) so applyFrameAtomsToMeshes == shift by current mean
+};
+
+function makeLayerId(): string {
+  // short, stable enough for UI
+  return `layer_${Math.random().toString(36).slice(2, 8)}_${Date.now().toString(36)}`;
+}
+
+function safeLayerName(fileName?: string): string {
+  const n = (fileName ?? "").trim();
+  if (!n) return "model";
+  return n;
+}
+
+function disposeGroupChildren(group: THREE.Group): void {
+  const toRemove = [...group.children];
+  for (const c of toRemove) {
+    group.remove(c);
+
+    // Mesh
+    const anyObj = c as any;
+    if (anyObj?.geometry?.dispose) anyObj.geometry.dispose();
+    if (anyObj?.material) {
+      const mat = anyObj.material;
+      if (Array.isArray(mat)) mat.forEach((m) => m?.dispose?.());
+      else mat?.dispose?.();
+    }
+  }
+}
+
+function computeCenteredBox(atoms: Atom[], tmpCenter: THREE.Vector3): {
+  center: THREE.Vector3;
+  box: THREE.Box3;
+  maxSphereRadius: number;
+} {
+  const c = computeMeanCenterInto(atoms, tmpCenter);
+
+  const box = new THREE.Box3();
+  let maxSphere = 0;
+  for (const a of atoms) {
+    const x = a.position[0] - c.x;
+    const y = a.position[1] - c.y;
+    const z = a.position[2] - c.z;
+    box.expandByPoint(new THREE.Vector3(x, y, z));
+    maxSphere = Math.max(maxSphere, getSphereBaseRadiusByElement(a.element, 0.5));
+  }
+
+  return { center: c, box, maxSphereRadius: maxSphere };
+}
+
+function makeCenteredAtomsView(atoms: Atom[], center: THREE.Vector3): Atom[] {
+  // Minimal allocation: Atom has extra fields; fitCameraToAtoms uses only element + position.
+  // We still use Atom type to satisfy typing.
+  return atoms.map((a) => {
+    return {
+      ...(a as any),
+      element: a.element,
+      position: [
+        a.position[0] - center.x,
+        a.position[1] - center.y,
+        a.position[2] - center.z,
+      ],
+    } as Atom;
+  });
+}
+
 export type ModelRuntime = {
+  layers: Ref<ModelLayerInfo[]>;
+  activeLayerId: Ref<string | null>;
+
+  renderModel: (model: StructureModel) => { frameCount: number; hasAnimation: boolean };
+  replaceActiveLayerModel: (model: StructureModel) => { frameCount: number; hasAnimation: boolean };
+
   clearModel: () => void;
 
-  /** 渲染模型（建立第一帧的 mesh 并 fit 相机） / Render model (build meshes for first frame and fit camera) */
-  renderModel: (model: StructureModel) => {
-    frameCount: number;
-    hasAnimation: boolean;
-  };
-
-  /** 应用某帧位置（只更新原子实例矩阵） / Apply a frame (update atom instance matrices only) */
+  getFrameCount: () => number;
+  getFrameIndex: () => number;
   applyFrameByIndex: (idx: number) => void;
-
-  /** 重建 meshes（颜色/半径/键合等） / Rebuild meshes (colors/radii/bonds, etc.) */
-  rebuildVisualsForAtoms: (atoms: Atom[]) => void;
+  getActiveAtoms: () => Atom[] | null;
 
   applyAtomScale: () => void;
   applyShowBonds: () => void;
   applyShowAxes: () => void;
   applyModelRotation: () => void;
-
-  /** typeMap 变化后的处理：重映射元素并重建当前帧 / On typeMap change: remap elements and rebuild current frame */
-  onTypeMapChanged: (currentFrameIndex: number) => void;
-
-  getFrameCount: () => number;
-  hasAnyTypeId: () => boolean;
-  getLastBondSegCount: () => number;
   applyBackgroundColor: () => void;
+
+  hasAnyTypeId: () => boolean;
+  onTypeMapChanged: () => void;
+
+  setActiveLayer: (id: string) => void;
+  setLayerVisible: (id: string, visible: boolean) => void;
+
+  getActiveAtomMeshes: () => THREE.InstancedMesh[];
+  getVisibleAtomMeshes: () => THREE.InstancedMesh[];
 };
 
-/**
- * 创建模型运行时对象。
- *
- * Create model runtime.
- */
-export function createModelRuntime(params: {
+export function createModelRuntime(args: {
   stage: ThreeStage;
   settingsRef: Readonly<Ref<ViewerSettings>>;
   hasModel: Ref<boolean>;
@@ -72,323 +150,495 @@ export function createModelRuntime(params: {
   bondFactor: number;
   bondRadius: number;
 }): ModelRuntime {
-  const {
-    stage,
-    settingsRef,
-    hasModel,
-    atomSizeFactor,
-    bondFactor,
-    bondRadius,
-  } = params;
+  const { stage, settingsRef, hasModel, atomSizeFactor, bondFactor, bondRadius } = args;
 
-  const getSettings = (): ViewerSettings => settingsRef.value;
+  const layers = ref<ModelLayerInfo[]>([]);
+  const activeLayerId = ref<string | null>(null);
 
-  let atomMeshes: THREE.InstancedMesh[] = [];
-  let bondMeshes: THREE.InstancedMesh[] = [];
-  let lastBondSegCount = 0;
+  const layerMap = new Map<string, LayerInternal>();
 
-  // 动画帧数据（显示层） / Animation frames (display layer)
-  let animFrames: Atom[][] = [];
-
-  // 是否存在任何 typeId（决定是否响应 typeMap watch） / Whether any atoms have typeId
-  let hasAnyType = false;
-
-  // 锁中心：第一帧中心 / Center-lock: first frame mean center
-  const baseCenter = new THREE.Vector3();
   const centerTmp = new THREE.Vector3();
+  const centerTmp2 = new THREE.Vector3();
   const matTmp = new THREE.Matrix4();
 
-  // 坐标轴 / Axes helper
-  let axesHelper: THREE.AxesHelper | null = null;
+  // axes helpers are shared at stage level
+  const axesHelper = new THREE.AxesHelper(1);
+  axesHelper.visible = false;
+  stage.axesGroup.add(axesHelper);
 
-  const degToRad = (d: number): number => (d * Math.PI) / 180;
+  const xLabel = makeTextLabel("X", "#ff4444", 14);
+  const yLabel = makeTextLabel("Y", "#44ff44", 14);
+  const zLabel = makeTextLabel("Z", "#4488ff", 14);
+  stage.axesGroup.add(xLabel, yLabel, zLabel);
 
-  /**
-   * 释放坐标轴辅助对象资源（可选）。
-   *
-   * Dispose axes helper resources (optional but safer).
-   */
-  const disposeAxesHelper = (): void => {
-    if (!axesHelper) return;
-    axesHelper.geometry.dispose();
-    const mat = axesHelper.material;
-    if (Array.isArray(mat)) mat.forEach((m) => m.dispose());
-    else mat.dispose();
-    axesHelper = null;
-  };
+  function getSettings(): ViewerSettings {
+    return settingsRef.value;
+  }
 
-  /**
-   * 清理并释放当前的原子/键合 InstancedMesh。
-   *
-   * Remove and dispose current atom/bond instanced meshes.
-   */
-  const disposeVisualMeshes = (): void => {
-    removeAndDisposeInstancedMeshes(stage.modelGroup, atomMeshes);
-    atomMeshes = [];
+  function syncHasModelFlag(): void {
+    hasModel.value = layers.value.length > 0;
+  }
 
-    removeAndDisposeInstancedMeshes(stage.modelGroup, bondMeshes);
-    bondMeshes = [];
+  function getActiveLayer(): LayerInternal | null {
+    const id = activeLayerId.value;
+    if (!id) return null;
+    return layerMap.get(id) ?? null;
+  }
 
-    lastBondSegCount = 0;
-  };
+  function disposeLayer(layer: LayerInternal): void {
+    removeAndDisposeInstancedMeshes(layer.group, layer.atomMeshes);
+    removeAndDisposeInstancedMeshes(layer.group, layer.bondMeshes);
+    layer.atomMeshes = [];
+    layer.bondMeshes = [];
+    layer.lastBondSegCount = 0;
 
-  /**
-   * 将某帧的原子坐标应用到 instanced meshes（锁中心避免整体漂移）。
-   *
-   * Apply a frame's atom positions to instanced meshes (center-locked to avoid drifting).
-   */
-  const applyFrameAtoms = (frameAtoms: Atom[]): void => {
-    applyFrameAtomsToMeshes({
-      frameAtoms,
-      atomMeshes,
-      baseCenter,
-      centerTmp,
-      matTmp,
-    });
-  };
+    // best-effort dispose remaining children (if any)
+    disposeGroupChildren(layer.group);
 
-  /**
-   * 更新坐标轴标签与 AxesHelper（按包围盒大小定长度）。
-   *
-   * Update axes labels and AxesHelper (length derived from bounding box).
-   */
-  const updateAxes = (box: THREE.Box3): void => {
-    // 先清理旧对象 / Clear old objects
-    disposeAxesHelper();
-    stage.axesGroup.clear();
+    stage.modelGroup.remove(layer.group);
+  }
 
-    const size = box.getSize(new THREE.Vector3());
-    const axisLen = Math.max(size.x, size.y, size.z) * 0.6;
+  function updateAxesForAtoms(atoms: Atom[]): void {
+    const { box } = computeCenteredBox(atoms, centerTmp);
 
-    const lx = makeTextLabel("X");
-    lx.position.set(axisLen, 0, 0);
-
-    const ly = makeTextLabel("Y");
-    ly.position.set(0, axisLen, 0);
-
-    const lz = makeTextLabel("Z");
-    lz.position.set(0, 0, axisLen);
-
-    stage.axesGroup.add(lx, ly, lz);
-
-    axesHelper = new THREE.AxesHelper(axisLen);
-    (axesHelper.material as THREE.LineBasicMaterial).depthTest = false;
-    axesHelper.renderOrder = 999;
-    stage.axesGroup.add(axesHelper);
-  };
-
-  const clearModel = (): void => {
-    disposeVisualMeshes();
-    disposeAxesHelper();
-    stage.axesGroup.clear();
-    hasModel.value = false;
-  };
-
-  /**
-   * 重建视觉对象（原子 mesh + 键合 mesh）。
-   *
-   * Rebuild visuals (atom meshes + bond meshes).
-   */
-  const rebuildVisualsForAtoms = (atoms: Atom[]): void => {
-    disposeVisualMeshes();
-
-    const s = getSettings();
-
-    atomMeshes = buildAtomMeshesByElement({
-      atoms,
-      atomSizeFactor,
-      atomScale: s.atomScale,
-    });
-    atomMeshes.forEach((m) => stage.modelGroup.add(m));
-
-    const bondRes = buildBondMeshesBicolor({
-      atoms,
-      bondFactor,
-      atomSizeFactor,
-      bondRadius,
-    });
-    bondMeshes = bondRes.meshes;
-    lastBondSegCount = bondRes.segCount;
-    bondMeshes.forEach((m) => stage.modelGroup.add(m));
-
-    hasModel.value = true;
-
-    applyShowBonds();
-    applyAtomScale();
-  };
-
-  const applyShowAxes = (): void => {
-    stage.axesGroup.visible = getSettings().showAxes;
-  };
-
-  const applyShowBonds = (): void => {
-    const flag = getSettings().showBonds;
-    for (const m of bondMeshes) m.visible = flag;
-  };
-
-  const applyAtomScale = (): void => {
-    applyAtomScaleToMeshes(atomMeshes, getSettings().atomScale);
-  };
-
-  const applyModelRotation = (): void => {
-    const s = getSettings();
-    stage.pivotGroup.rotation.set(
-      degToRad(s.rotationDeg.x),
-      degToRad(s.rotationDeg.y),
-      degToRad(s.rotationDeg.z)
-    );
-  };
-
-  /**
-   * 渲染模型：以第一帧建模，fit 相机，初始化 pivot/model 偏移。
-   *
-   * Render model: build using the first frame, fit camera, init pivot/model offset.
-   */
-  const renderModel = (
-    model: StructureModel
-  ): { frameCount: number; hasAnimation: boolean } => {
-    const frames =
-      model.frames && model.frames.length > 0 ? model.frames : [model.atoms];
-
-    // 原始帧：保留 id/typeId，规范化 element（防止空字符串）
-    // Raw frames: preserve id/typeId, normalize element (avoid empty)
-    const rawFrames: Atom[][] = frames.map((fr) =>
-      fr.map((a) => ({
-        element: normalizeElementSymbol(a.element) || "E",
-        position: a.position,
-        id: a.id,
-        typeId: a.typeId,
-      }))
-    );
-
-    // 是否存在 typeId（决定 lammpsTypeMap watcher 是否生效）
-    // Whether any typeId exists (controls whether lammpsTypeMap watcher is meaningful)
-    hasAnyType = rawFrames.some((fr) => fr.some((a) => a.typeId));
-
-    // 显示层 frames：按 typeId 映射 element（用户配置）
-    // Display frames: remap element based on typeId (user config)
-    animFrames = remapElementByTypeId(
-      rawFrames,
-      getSettings().lammpsTypeMap ?? []
-    );
-
-    // 多帧要求原子数一致，否则 instanceIndex 无法复用
-    // Multi-frame requires same atom count to reuse instance indices
-    const n0 = animFrames[0]!.length;
-    for (let fi = 1; fi < animFrames.length; fi += 1) {
-      if (animFrames[fi]!.length !== n0) {
-        throw new Error("XYZ 多帧动画要求每一帧原子数相同。");
-      }
-    }
-
-    // 用第一帧建模 / Build from first frame
-    const atoms0 = animFrames[0]!;
-    clearModel();
-
-    // 计算包围盒（用于轴长度） / Bounding box (for axes length)
-    const box = new THREE.Box3();
-    for (const a of atoms0) {
-      box.expandByPoint(
-        new THREE.Vector3(a.position[0], a.position[1], a.position[2])
-      );
-    }
-
-    // pivot 放到模型中心，modelGroup 反向偏移，保证旋转围绕中心
-    // Place pivot at model center; offset modelGroup negatively so rotation is around center
-    const center = computeMeanCenterInto(atoms0, centerTmp);
-    baseCenter.copy(center);
-
-    stage.pivotGroup.position.copy(center);
-    stage.modelGroup.position.set(-center.x, -center.y, -center.z);
-
-    rebuildVisualsForAtoms(atoms0);
-
-    // fit camera
-    const cam = stage.getCamera();
-    const ctrls = stage.getControls();
-    const newHalf = fitCameraToAtoms({
-      atoms: atoms0,
-      camera: cam,
-      controls: ctrls,
-      host: stage.host,
-      getSphereRadiusByElement: (el: string) =>
-        getSphereBaseRadiusByElement(el, atomSizeFactor),
-      orthoHalfHeight: stage.getOrthoHalfHeight(),
-    });
-
-    if (!isPerspective(cam)) stage.setOrthoHalfHeight(newHalf);
-
-    applyShowAxes();
-    applyModelRotation();
-    applyFrameAtoms(atoms0);
-    updateAxes(box);
-
-    return {
-      frameCount: animFrames.length,
-      hasAnimation: animFrames.length > 1,
-    };
-  };
-
-  /**
-   * 应用某帧坐标（不重建 mesh，性能最好）。
-   *
-   * Apply frame coordinates (no mesh rebuild; best performance).
-   */
-  const applyFrameByIndex = (idx: number): void => {
-    const n = animFrames.length;
-    if (n === 0) return;
-    const clamped = Math.min(Math.max(0, idx), n - 1);
-    applyFrameAtoms(animFrames[clamped]!);
-  };
-
-  /**
-   * typeMap 改动：重映射 frames -> 重建当前帧 mesh（颜色/半径/键合）
-   *
-   * On typeMap change: remap frames -> rebuild meshes for current frame.
-   */
-  const onTypeMapChanged = (currentFrameIndex: number): void => {
-    if (animFrames.length === 0) return;
-
-    animFrames = remapElementByTypeId(
-      animFrames,
-      getSettings().lammpsTypeMap ?? []
-    );
-
-    const cur = animFrames[currentFrameIndex] ?? animFrames[0];
-    if (!cur) return;
-
-    rebuildVisualsForAtoms(cur);
-    applyFrameAtoms(cur);
-  };
-
-  const applyBackgroundColor = (): void => {
-    if (!stage) return;
-
-    let bgc = getSettings().backgroundColor;
-
-    if (!bgc) {
+    if (box.isEmpty()) {
+      axesHelper.visible = false;
+      xLabel.visible = false;
+      yLabel.visible = false;
+      zLabel.visible = false;
       return;
     }
 
-    stage.renderer.setClearColor(
-      new THREE.Color(bgc),
-      getSettings().backgroundTransparent ? 0 : 1
+    const size = box.getSize(centerTmp2);
+    const axisLen = Math.max(1, size.length() * 0.6);
+
+    axesHelper.visible = true;
+    axesHelper.scale.set(axisLen, axisLen, axisLen);
+
+    xLabel.visible = true;
+    yLabel.visible = true;
+    zLabel.visible = true;
+
+    xLabel.position.set(axisLen, 0, 0);
+    yLabel.position.set(0, axisLen, 0);
+    zLabel.position.set(0, 0, axisLen);
+
+    // keep labels facing camera
+    xLabel.layers.set(2);
+    yLabel.layers.set(2);
+    zLabel.layers.set(2);
+  }
+
+  function fitCameraToAtomsCentered(atoms: Atom[]): void {
+    const camera = stage.getCamera();
+    const controls = stage.getControls();
+
+    // center by current mean to match applyFrameAtomsToMeshes(baseCenter=0)
+    const c = computeMeanCenterInto(atoms, centerTmp);
+    const centeredAtoms = makeCenteredAtomsView(atoms, c);
+
+    const orthoHalf = fitCameraToAtomsImpl({
+      atoms: centeredAtoms,
+      camera,
+      controls,
+      host: stage.host,
+      getSphereRadiusByElement: (el) => getSphereBaseRadiusByElement(el, atomSizeFactor) * getSettings().atomScale,
+      orthoHalfHeight: stage.getOrthoHalfHeight(),
+      margin: 1.25,
+    });
+
+    if (!isPerspective(camera)) {
+      stage.setOrthoHalfHeight(orthoHalf);
+    }
+  }
+
+  function rebuildVisualsForLayer(layer: LayerInternal, atomsForVisuals: Atom[]): void {
+    // clear old
+    removeAndDisposeInstancedMeshes(layer.group, layer.atomMeshes);
+    removeAndDisposeInstancedMeshes(layer.group, layer.bondMeshes);
+    layer.atomMeshes = [];
+    layer.bondMeshes = [];
+    layer.lastBondSegCount = 0;
+
+    // atoms
+    layer.atomMeshes = buildAtomMeshesByElement({
+      atoms: atomsForVisuals,
+      atomSizeFactor,
+      atomScale: getSettings().atomScale,
+      sphereSegments: 16,
+    });
+    for (const m of layer.atomMeshes) {
+      (m.userData as any).layerId = layer.info.id;
+    }
+    for (const m of layer.atomMeshes) layer.group.add(m);
+
+    // bonds (optional)
+    if (getSettings().showBonds) {
+      const c = computeMeanCenterInto(atomsForVisuals, centerTmp);
+      const centeredAtoms = makeCenteredAtomsView(atomsForVisuals, c);
+
+      const res = buildBondMeshesBicolor({
+        atoms: centeredAtoms,
+        bondFactor,
+        atomSizeFactor,
+        bondRadius,
+      });
+      layer.bondMeshes = res.meshes;
+      layer.lastBondSegCount = res.segCount;
+      for (const b of layer.bondMeshes) layer.group.add(b);
+    }
+
+    // center atoms in-place to match visual coordinate space
+    applyFrameAtomsToMeshes({
+      frameAtoms: atomsForVisuals,
+      atomMeshes: layer.atomMeshes,
+      baseCenter: layer.baseCenter,
+      centerTmp: centerTmp2,
+      matTmp,
+    });
+  }
+
+  function hideAllLayers(): void {
+    for (const l of layerMap.values()) {
+      l.info.visible = false;
+      l.group.visible = false;
+    }
+    layers.value = [...layers.value];
+  }
+
+  function setActiveLayer(id: string): void {
+    if (!layerMap.has(id)) return;
+    activeLayerId.value = id;
+
+    // keep axes in sync
+    applyShowAxes();
+  }
+
+  function setLayerVisible(id: string, visible: boolean): void {
+    const layer = layerMap.get(id);
+    if (!layer) return;
+
+    layer.info.visible = visible;
+    layer.group.visible = visible;
+
+    // if active layer is hidden, pick a visible one as active
+    if (activeLayerId.value === id && !visible) {
+      const next = layers.value.find((x) => x.visible && x.id !== id) ?? null;
+      activeLayerId.value = next?.id ?? null;
+      applyShowAxes();
+    }
+
+    layers.value = [...layers.value];
+    syncHasModelFlag();
+  }
+
+  function upsertLayerInternal(layer: LayerInternal): void {
+    layerMap.set(layer.info.id, layer);
+
+    const exists = layers.value.some((x) => x.id === layer.info.id);
+    if (!exists) layers.value = [...layers.value, layer.info];
+    else layers.value = layers.value.map((x) => (x.id === layer.info.id ? layer.info : x));
+
+    syncHasModelFlag();
+  }
+
+  function renderModel(model: StructureModel): { frameCount: number; hasAnimation: boolean } {
+    // New model load: hide previous layers by default (layer-like behavior)
+    hideAllLayers();
+
+    const id = makeLayerId();
+    const name = safeLayerName(model.source?.filename);
+
+    const group = new THREE.Group();
+    group.name = `layer:${id}`;
+    stage.modelGroup.add(group);
+
+    const frameCount = model.frames?.length ? model.frames.length : 1;
+    const hasAnimation = frameCount > 1;
+
+    const firstAtoms = model.frames?.[0] ?? model.atoms;
+
+    const layer: LayerInternal = {
+      info: {
+        id,
+        name,
+        visible: true,
+        atomCount: model.atoms.length,
+        frameCount,
+        sourceFormat: model.source?.format,
+        sourceFileName: model.source?.filename,
+        createdAtMs: Date.now(),
+      },
+      model,
+      group,
+      atomMeshes: [],
+      bondMeshes: [],
+      lastBondSegCount: 0,
+      frameIndex: 0,
+      hasAnyTypeId: false,
+      baseCenter: new THREE.Vector3(0, 0, 0),
+    };
+
+    // detect LAMMPS typeId
+    const typeInfo = collectTypeIdsAndElementDefaultsFromAtoms(firstAtoms);
+    layer.hasAnyTypeId = typeInfo.typeIds.length > 0;
+
+    // Apply current type mapping (if any)
+    const mappedFirstAtoms = remapAtomsByTypeId(firstAtoms, (getSettings().lammpsTypeMap ?? []) as any);
+
+    // Store a model whose frame[0] uses mapped atoms for rendering (keep raw for reparse logic elsewhere)
+    // We do not mutate the original model; we only render with mapped atoms.
+    rebuildVisualsForLayer(layer, mappedFirstAtoms);
+
+    // Show it
+    layer.info.visible = true;
+    group.visible = true;
+
+    upsertLayerInternal(layer);
+    activeLayerId.value = id;
+
+    fitCameraToAtomsCentered(mappedFirstAtoms);
+    applyModelRotation();
+    applyBackgroundColor();
+    applyShowAxes();
+
+    return { frameCount, hasAnimation };
+  }
+
+  function replaceActiveLayerModel(model: StructureModel): { frameCount: number; hasAnimation: boolean } {
+    const active = getActiveLayer();
+    if (!active) {
+      return renderModel(model);
+    }
+
+    active.model = model;
+
+    active.info.name = safeLayerName(model.source?.filename);
+    active.info.atomCount = model.atoms.length;
+    active.info.frameCount = model.frames?.length ? model.frames.length : 1;
+    active.info.sourceFormat = model.source?.format;
+    active.info.sourceFileName = model.source?.filename;
+
+    active.frameIndex = 0;
+
+    const firstAtoms = model.frames?.[0] ?? model.atoms;
+    const typeInfo = collectTypeIdsAndElementDefaultsFromAtoms(firstAtoms);
+    active.hasAnyTypeId = typeInfo.typeIds.length > 0;
+
+    const mappedFirstAtoms = remapAtomsByTypeId(firstAtoms, (getSettings().lammpsTypeMap ?? []) as any);
+
+    rebuildVisualsForLayer(active, mappedFirstAtoms);
+
+    // keep visible
+    active.info.visible = true;
+    active.group.visible = true;
+
+    upsertLayerInternal(active);
+
+    fitCameraToAtomsCentered(mappedFirstAtoms);
+    applyShowAxes();
+
+    return { frameCount: active.info.frameCount, hasAnimation: active.info.frameCount > 1 };
+  }
+
+  function clearModel(): void {
+    for (const l of layerMap.values()) {
+      disposeLayer(l);
+    }
+    layerMap.clear();
+
+    layers.value = [];
+    activeLayerId.value = null;
+
+    // axes cleanup
+    axesHelper.visible = false;
+    xLabel.visible = false;
+    yLabel.visible = false;
+    zLabel.visible = false;
+
+    syncHasModelFlag();
+  }
+
+  function getFrameCount(): number {
+    const active = getActiveLayer();
+    return active ? Math.max(1, active.info.frameCount) : 1;
+  }
+
+  function getFrameIndex(): number {
+    const active = getActiveLayer();
+    return active ? active.frameIndex : 0;
+  }
+
+  function getActiveAtoms(): Atom[] | null {
+    const active = getActiveLayer();
+    if (!active) return null;
+
+    const frames = active.model.frames;
+    if (frames && frames.length > 0) {
+      const idx = Math.min(Math.max(0, active.frameIndex), frames.length - 1);
+      return frames[idx] ?? null;
+    }
+    return active.model.atoms;
+  }
+
+  function applyFrameByIndex(idx: number): void {
+    const active = getActiveLayer();
+    if (!active) return;
+
+    const frames = active.model.frames;
+    if (!frames || frames.length <= 1) {
+      active.frameIndex = 0;
+      return;
+    }
+
+    const clamped = Math.min(Math.max(0, idx), frames.length - 1);
+    active.frameIndex = clamped;
+
+    // apply type mapping to the frame atoms before updating meshes
+    const frameAtoms = frames[clamped] ?? active.model.atoms;
+    const mapped = remapAtomsByTypeId(frameAtoms, (getSettings().lammpsTypeMap ?? []) as any);
+
+    applyFrameAtomsToMeshes({
+      frameAtoms: mapped,
+      atomMeshes: active.atomMeshes,
+      baseCenter: active.baseCenter,
+      centerTmp: centerTmp,
+      matTmp,
+    });
+
+    if (getSettings().showAxes) updateAxesForAtoms(mapped);
+  }
+
+  function applyAtomScale(): void {
+    for (const l of layerMap.values()) {
+      applyAtomScaleToMeshes(l.atomMeshes, getSettings().atomScale, 16);
+    }
+  }
+
+  function applyShowBonds(): void {
+    for (const l of layerMap.values()) {
+      if (getSettings().showBonds) {
+        if (l.bondMeshes.length > 0) continue;
+
+        const atoms = (l.model.frames?.[l.frameIndex] ?? l.model.atoms) as Atom[];
+        const mapped = remapAtomsByTypeId(atoms, (getSettings().lammpsTypeMap ?? []) as any);
+        const c = computeMeanCenterInto(mapped, centerTmp);
+        const centeredAtoms = makeCenteredAtomsView(mapped, c);
+
+        const res = buildBondMeshesBicolor({
+          atoms: centeredAtoms,
+          bondFactor,
+          atomSizeFactor,
+          bondRadius,
+        });
+        l.bondMeshes = res.meshes;
+        l.lastBondSegCount = res.segCount;
+        for (const b of l.bondMeshes) l.group.add(b);
+      } else {
+        if (l.bondMeshes.length === 0) continue;
+        removeAndDisposeInstancedMeshes(l.group, l.bondMeshes);
+        l.bondMeshes = [];
+        l.lastBondSegCount = 0;
+      }
+    }
+  }
+
+  function applyShowAxes(): void {
+    stage.axesGroup.visible = getSettings().showAxes;
+    if (!getSettings().showAxes) {
+      axesHelper.visible = false;
+      xLabel.visible = false;
+      yLabel.visible = false;
+      zLabel.visible = false;
+      return;
+    }
+
+    const active = getActiveLayer();
+    if (!active) return;
+
+    const atoms = (active.model.frames?.[active.frameIndex] ?? active.model.atoms) as Atom[];
+    const mapped = remapAtomsByTypeId(atoms, (getSettings().lammpsTypeMap ?? []) as any);
+    updateAxesForAtoms(mapped);
+  }
+
+  function applyModelRotation(): void {
+    const r = getSettings().rotationDeg;
+    stage.pivotGroup.rotation.set(
+      THREE.MathUtils.degToRad(r.x),
+      THREE.MathUtils.degToRad(r.y),
+      THREE.MathUtils.degToRad(r.z)
     );
-  };
+  }
+
+  function applyBackgroundColor(): void {
+    const col = new THREE.Color(getSettings().backgroundColor);
+    const alpha = getSettings().backgroundTransparent ? 0 : 1;
+    stage.renderer.setClearColor(col, alpha);
+  }
+
+  function hasAnyTypeId(): boolean {
+    // Any layer having typeId means type-map changes should trigger a rebuild.
+    for (const l of layerMap.values()) {
+      if (l.hasAnyTypeId) return true;
+    }
+    return false;
+  }
+
+  function onTypeMapChanged(): void {
+    // Strategy: rebuild visuals for all layers that have typeId (to update colors/labels)
+    for (const l of layerMap.values()) {
+      if (!l.hasAnyTypeId) continue;
+
+      const atoms = (l.model.frames?.[l.frameIndex] ?? l.model.atoms) as Atom[];
+      const mapped = remapAtomsByTypeId(atoms, (getSettings().lammpsTypeMap ?? []) as any);
+
+      // atoms mesh colors depend on element => must rebuild
+      rebuildVisualsForLayer(l, mapped);
+    }
+
+    applyShowAxes();
+  }
+
+  function getActiveAtomMeshes(): THREE.InstancedMesh[] {
+    return getActiveLayer()?.atomMeshes ?? [];
+  }
+
+  function getVisibleAtomMeshes(): THREE.InstancedMesh[] {
+    const out: THREE.InstancedMesh[] = [];
+    for (const l of layerMap.values()) {
+      if (!l.info.visible) continue;
+      for (const m of l.atomMeshes) out.push(m);
+    }
+    return out;
+  }
 
   return {
-    clearModel,
+    layers,
+    activeLayerId,
+
     renderModel,
+    replaceActiveLayerModel,
+
+    clearModel,
+
+    getFrameCount,
+    getFrameIndex,
     applyFrameByIndex,
-    rebuildVisualsForAtoms,
+    getActiveAtoms,
+
     applyAtomScale,
     applyShowBonds,
     applyShowAxes,
     applyModelRotation,
-    onTypeMapChanged,
-    getFrameCount: () => animFrames.length,
-    hasAnyTypeId: () => hasAnyType,
-    getLastBondSegCount: () => lastBondSegCount,
     applyBackgroundColor,
+
+    hasAnyTypeId,
+    onTypeMapChanged,
+
+    setActiveLayer,
+    setLayerVisible,
+
+    getActiveAtomMeshes,
+    getVisibleAtomMeshes,
   };
 }

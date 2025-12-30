@@ -103,6 +103,26 @@ export function remapElementByTypeId(
   );
 }
 
+/**
+ * Remap a single frame's atoms by LAMMPS typeId -> element.
+ *
+ * This is used by the runtime to update colors/labels without re-parsing.
+ */
+export function remapAtomsByTypeId(
+  atoms: Atom[],
+  rows: LammpsTypeMapRow[] = []
+): Atom[] {
+  const map = buildLammpsTypeToElementMap(rows);
+
+  return atoms.map((a) => {
+    const mapped = a.typeId ? map[a.typeId] : undefined;
+    return {
+      ...a,
+      element: normalizeElementSymbol(mapped ?? a.element ?? "E") || "E",
+    };
+  });
+}
+
 export function collectTypeIdsAndElementDefaultsFromAtoms(atoms: Atom[]): {
   typeIds: number[];
   defaults: Record<number, string>;

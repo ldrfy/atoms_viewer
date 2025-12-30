@@ -1,5 +1,5 @@
 // src/components/ViewerStage/useViewerStage.ts
-import { onBeforeUnmount, onMounted, ref, reactive } from "vue";
+import { onBeforeUnmount, onMounted, ref, reactive, computed } from "vue";
 import type { Ref } from "vue";
 import * as THREE from "three";
 
@@ -28,10 +28,21 @@ import { exportTransparentCroppedPng } from "../../lib/three/exportPng";
 import { createThreeStage, type ThreeStage } from "../../lib/three/stage";
 
 import { bindViewerStageSettings } from "./bindSettings";
-import { createModelRuntime, type ModelRuntime } from "./modelRuntime";
+import { createModelRuntime, type ModelRuntime, type ModelLayerInfo } from "./modelRuntime";
 import { isLammpsDumpFormat } from "../../lib/structure/parsers/lammpsDump";
 import { isLammpsDataFormat } from "../../lib/structure/parsers/lammpsData";
 import { applyAnimationInfo } from "./animation";
+import type { Atom } from "../../lib/structure/types";
+import { ATOMIC_SYMBOLS } from "../../lib/structure/chem";
+
+import {
+  createInspectCtx,
+  computeDistance,
+  computeAngleDeg,
+  atomicNumberFromSymbol,
+  type SelectedAtom,
+  type InspectCtx,
+} from "./ctx/inspect";
 
 import { createRecordingController, type RecordingBindings } from "./recording";
 
@@ -58,6 +69,15 @@ type ViewerStageBindings = {
   hasModel: ReturnType<typeof ref<boolean>>;
   isLoading: ReturnType<typeof ref<boolean>>;
 
+  // layers
+  layers: Ref<ModelLayerInfo[]>;
+  activeLayerId: Ref<string | null>;
+  setActiveLayer: (id: string) => void;
+  setLayerVisible: (id: string, visible: boolean) => void;
+
+  // atom inspect
+  inspectCtx: InspectCtx;
+
   openFilePicker: () => void;
   onDragEnter: () => void;
   onDragOver: (e: DragEvent) => void;
@@ -70,6 +90,9 @@ type ViewerStageBindings = {
     scale: number;
     transparent: boolean;
   }) => Promise<void>;
+
+  // LAMMPS typeId -> element mapping
+  refreshTypeMap: () => void;
 
   // animation
   hasAnimation: Ref<boolean>;
@@ -113,6 +136,23 @@ export function useViewerStage(
 
   const isDragging = ref(false);
   const dragDepth = ref(0);
+
+  // --- layers & runtime binding ---
+  const runtimeTick = ref(0);
+
+  const layers = computed<ModelLayerInfo[]>(() => {
+    // dependency to refresh when runtime is (re)created
+    runtimeTick.value;
+    return runtime?.layers.value ?? [];
+  });
+
+  const activeLayerId = computed<string | null>(() => {
+    runtimeTick.value;
+    return runtime?.activeLayerId.value ?? null;
+  });
+
+  // --- atom inspect (picking + measurement) ---
+  const inspectCtx = createInspectCtx();
   const hasModel = ref(false);
   const isLoading = ref(false);
 
@@ -138,6 +178,18 @@ export function useViewerStage(
   let stage: ThreeStage | null = null;
   let runtime: ModelRuntime | null = null;
   let stopBind: (() => void) | null = null;
+
+  // picking helpers
+  const raycaster = new THREE.Raycaster();
+  const ndc = new THREE.Vector2();
+  let pointerDown: { x: number; y: number; tMs: number } | null = null;
+  let removePickListeners: (() => void) | null = null;
+
+  // selection visuals (created after stage init)
+  let selectionGroup: THREE.Group | null = null;
+  let markerMeshes: THREE.Mesh[] = [];
+  let line12: THREE.Line | null = null;
+  let line23: THREE.Line | null = null;
 
   // ✅ recording: moved out to recording.ts
   const recording = createRecordingController({
@@ -176,6 +228,50 @@ export function useViewerStage(
 
   function openFilePicker(): void {
     fileInputRef.value?.click();
+  }
+
+  function syncUiFromRuntime(): void {
+    if (!runtime) {
+      frameCount.value = 1;
+      frameIndex.value = 0;
+      hasAnimation.value = false;
+      stopPlay();
+      return;
+    }
+
+    frameCount.value = runtime.getFrameCount();
+    hasAnimation.value = frameCount.value > 1;
+    frameIndex.value = runtime.getFrameIndex();
+
+    if (!hasAnimation.value) stopPlay();
+
+    // Keep parseInfo aligned to the active layer for Settings.
+    const activeId = runtime.activeLayerId.value;
+    const layer = runtime.layers.value.find((x) => x.id === activeId) ?? null;
+    if (layer) {
+      parseInfo.fileName = layer.sourceFileName ?? layer.name;
+      parseInfo.format = layer.sourceFormat ?? parseInfo.format;
+      parseInfo.atomCount = layer.atomCount;
+      parseInfo.frameCount = layer.frameCount;
+    }
+  }
+
+  function setActiveLayer(id: string): void {
+    if (!runtime) return;
+    runtime.setActiveLayer(id);
+    syncUiFromRuntime();
+    inspectCtx.clear();
+    updateSelectionVisuals();
+  }
+
+  function setLayerVisible(id: string, visible: boolean): void {
+    if (!runtime) return;
+    runtime.setLayerVisible(id, visible);
+    syncUiFromRuntime();
+
+    // If the active layer changes due to hiding, clear selection to avoid mismatch.
+    inspectCtx.clear();
+    updateSelectionVisuals();
   }
 
   /**
@@ -239,6 +335,265 @@ export function useViewerStage(
     frameIndex.value = clamped;
 
     runtime.applyFrameByIndex(clamped);
+
+    // Keep selection markers synced to instanced matrices when frames advance.
+    if (inspectCtx.selected.value.length > 0) {
+      updateSelectionVisuals();
+    }
+  }
+
+  // ---- Atom picking & measurement ----
+  let selectionVisuals: Array<{ mesh: THREE.InstancedMesh; instanceId: number }> = [];
+  const tmpMat = new THREE.Matrix4();
+  const tmpPos = new THREE.Vector3();
+
+  const originalClear = inspectCtx.clear;
+  inspectCtx.clear = () => {
+    originalClear();
+    selectionVisuals = [];
+    updateSelectionVisuals();
+  };
+
+  function updateSelectionMeasure(): void {
+    const sel = inspectCtx.selected.value;
+    const m: { distance12?: number; distance23?: number; angleDeg?: number } = {};
+
+    if (sel.length >= 2 && sel[0]?.position && sel[1]?.position) {
+      const a = { element: "E", position: sel[0]!.position } as Atom;
+      const b = { element: "E", position: sel[1]!.position } as Atom;
+      m.distance12 = computeDistance(a, b);
+    }
+    if (
+      sel.length >= 3 &&
+      sel[0]?.position &&
+      sel[1]?.position &&
+      sel[2]?.position
+    ) {
+      const b = { element: "E", position: sel[1]!.position } as Atom;
+      const c = { element: "E", position: sel[2]!.position } as Atom;
+      m.distance23 = computeDistance(b, c);
+      const a = { element: "E", position: sel[0]!.position } as Atom;
+      m.angleDeg = computeAngleDeg(a, b, c);
+    }
+
+    inspectCtx.measure.value = m;
+  }
+
+  function ensureSelectionVisuals(): void {
+    if (!stage) return;
+    if (selectionGroup) return;
+
+    selectionGroup = new THREE.Group();
+    selectionGroup.name = "atom-selection";
+    stage.modelGroup.add(selectionGroup);
+
+    // Use a unit sphere and scale it per selected atom so the highlight
+    // always wraps the actual atom radius (elements have different radii).
+    // Use a bright unlit material so it is clearly visible on mobile.
+    const geo = new THREE.SphereGeometry(1, 18, 18);
+    const mat = new THREE.MeshBasicMaterial({
+      color: new THREE.Color(0xffd400),
+      transparent: true,
+      opacity: 0.35,
+      depthWrite: false,
+    });
+    mat.polygonOffset = true;
+    mat.polygonOffsetFactor = -2;
+    mat.polygonOffsetUnits = -2;
+    markerMeshes = Array.from({ length: 3 }).map(() => {
+      const m = new THREE.Mesh(geo, mat);
+      m.visible = false;
+      m.renderOrder = 10;
+      m.frustumCulled = false;
+      return m;
+    });
+    for (const m of markerMeshes) selectionGroup.add(m);
+
+    const makeLine = (): THREE.Line => {
+      const g = new THREE.BufferGeometry();
+      g.setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
+      const lm = new THREE.LineBasicMaterial({
+        color: 0xffd400,
+        transparent: true,
+        opacity: 0.95,
+        depthTest: false,
+      });
+      const ln = new THREE.Line(g, lm);
+      ln.visible = false;
+      ln.renderOrder = 9;
+      ln.frustumCulled = false;
+      return ln;
+    };
+    line12 = makeLine();
+    line23 = makeLine();
+    selectionGroup.add(line12);
+    selectionGroup.add(line23);
+  }
+
+  function updateSelectionVisuals(): void {
+    if (!stage) return;
+    ensureSelectionVisuals();
+    if (!selectionGroup || markerMeshes.length === 0) return;
+
+    // Keep transforms up-to-date so instance local positions can be mapped
+    // into the modelGroup coordinate system.
+    stage.modelGroup.updateMatrixWorld(true);
+
+    const sel = inspectCtx.selected.value;
+    for (const m of markerMeshes) m.visible = false;
+    if (line12) line12.visible = false;
+    if (line23) line23.visible = false;
+
+    if (sel.length === 0 || selectionVisuals.length === 0) return;
+
+    const pts: THREE.Vector3[] = [];
+    for (let i = 0; i < Math.min(3, sel.length); i += 1) {
+      const v = selectionVisuals[i];
+      if (!v) continue;
+
+      // 1) instance local -> mesh local
+      v.mesh.getMatrixAt(v.instanceId, tmpMat);
+      tmpPos.setFromMatrixPosition(tmpMat);
+
+      // 2) mesh local -> world
+      v.mesh.updateMatrixWorld(true);
+      v.mesh.localToWorld(tmpPos);
+
+      // 3) world -> modelGroup local (selectionGroup lives under modelGroup)
+      stage.modelGroup.worldToLocal(tmpPos);
+
+      // Scale highlight halo by actual atom radius.
+      const geoAny = v.mesh.geometry as any;
+      const rParam = geoAny?.parameters?.radius as number | undefined;
+      if (!v.mesh.geometry.boundingSphere) v.mesh.geometry.computeBoundingSphere();
+      const rBound = v.mesh.geometry.boundingSphere?.radius;
+      const r = Math.max(0.05, rParam ?? rBound ?? 0.3);
+      const haloR = r * 1.25;
+      markerMeshes[i]!.scale.setScalar(haloR);
+
+      markerMeshes[i]!.position.copy(tmpPos);
+      markerMeshes[i]!.visible = true;
+      pts.push(tmpPos.clone());
+    }
+
+    if (pts.length >= 2 && line12) {
+      (line12.geometry as THREE.BufferGeometry).setFromPoints([pts[0]!, pts[1]!]);
+      line12.visible = true;
+    }
+    if (pts.length >= 3 && line23) {
+      (line23.geometry as THREE.BufferGeometry).setFromPoints([pts[1]!, pts[2]!]);
+      line23.visible = true;
+    }
+  }
+
+  function addPickedAtom(params: {
+    layerId: string;
+    atomIndex: number;
+    element: string;
+    atom: Atom;
+    mesh: THREE.InstancedMesh;
+    instanceId: number;
+    additive: boolean;
+  }): void {
+    const { layerId, atomIndex, element, atom, mesh, instanceId, additive } = params;
+
+    const picked: SelectedAtom = {
+      layerId,
+      atomIndex,
+      element,
+      atomicNumber: atomicNumberFromSymbol(element, ATOMIC_SYMBOLS),
+      id: atom.id,
+      typeId: atom.typeId,
+      position: [atom.position[0], atom.position[1], atom.position[2]],
+    };
+
+    // Different layer => switch active and reset selection (avoids cross-layer confusion)
+    if (activeLayerId.value && activeLayerId.value !== layerId) {
+      setActiveLayer(layerId);
+    }
+
+    const sel = [...inspectCtx.selected.value];
+    const visuals = [...selectionVisuals];
+
+    const existsIdx = sel.findIndex((x) => x.layerId === layerId && x.atomIndex === atomIndex);
+    if (existsIdx >= 0) {
+      // toggle off in additive mode
+      if (additive) {
+        sel.splice(existsIdx, 1);
+        visuals.splice(existsIdx, 1);
+      } else {
+        sel.splice(0, sel.length, picked);
+        visuals.splice(0, visuals.length, { mesh, instanceId });
+      }
+    } else {
+      if (!additive) {
+        sel.splice(0, sel.length, picked);
+        visuals.splice(0, visuals.length, { mesh, instanceId });
+      } else {
+        if (sel.length >= 3) {
+          // keep the last two to preserve measurement order
+          sel.splice(0, 1);
+          visuals.splice(0, 1);
+        }
+        sel.push(picked);
+        visuals.push({ mesh, instanceId });
+      }
+    }
+
+    inspectCtx.selected.value = sel;
+    selectionVisuals = visuals;
+    updateSelectionMeasure();
+    updateSelectionVisuals();
+  }
+
+  function handlePick(e: PointerEvent): void {
+    if (!inspectCtx.enabled.value) return;
+    if (!stage || !runtime) return;
+    // Avoid conflict with record-area selection overlay
+    if ((recording.recordSelectCtx?.isSelecting as any)?.value) return;
+
+    const canvas = stage.renderer.domElement;
+    const rect = canvas.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / Math.max(1, rect.width)) * 2 - 1;
+    const y = -(((e.clientY - rect.top) / Math.max(1, rect.height)) * 2 - 1);
+    ndc.set(x, y);
+
+    raycaster.setFromCamera(ndc, stage.getCamera());
+
+    const meshes = runtime.getVisibleAtomMeshes();
+    const hit = raycaster.intersectObjects(meshes, false)[0];
+    if (!hit) {
+      inspectCtx.clear();
+      return;
+    }
+
+    const mesh = hit.object as THREE.InstancedMesh;
+    const instanceId = (hit as any).instanceId as number | undefined;
+    if (instanceId == null) return;
+
+    const indices = mesh.userData.atomIndices as number[] | undefined;
+    if (!indices) return;
+
+    const atomIndex = indices[instanceId];
+    if (atomIndex == null) return;
+
+    const layerId = (mesh.userData as any).layerId as string | undefined;
+    if (!layerId) return;
+
+    // Ensure active layer so getActiveAtoms() maps correctly.
+    if (activeLayerId.value !== layerId) {
+      setActiveLayer(layerId);
+    }
+
+    const atoms = runtime.getActiveAtoms();
+    if (!atoms) return;
+    const atom = atoms[atomIndex];
+    if (!atom) return;
+
+    const element = (mesh.userData.element as string | undefined) ?? atom.element ?? "E";
+
+    const additive = inspectCtx.measureMode.value || e.shiftKey || e.ctrlKey || e.metaKey;
+    addPickedAtom({ layerId, atomIndex, element, atom, mesh, instanceId, additive });
   }
 
   /**
@@ -347,6 +702,12 @@ export function useViewerStage(
   ): void {
     if (!stage || !runtime) return;
 
+    // New model load should always reset atom selection to avoid stale UI state
+    // (and to avoid cross-model type mismatches during HMR/dev workflows).
+    if (reason === "load") {
+      inspectCtx.clear();
+    }
+
     // 1) parse
     const forcedName = toForcedFilename(fileName, parseMode.value);
     const model = parseStructure(text, forcedName, {
@@ -357,7 +718,12 @@ export function useViewerStage(
     });
 
     // 2) render
-    const info = runtime.renderModel(model);
+    // - load: add a new layer and hide previous layers
+    // - reparse: replace the currently active layer (avoid creating extra layers)
+    const info =
+      reason === "reparse"
+        ? runtime.replaceActiveLayerModel(model)
+        : runtime.renderModel(model);
 
     // 3) sync animation state
     applyAnimationInfo(info, frameIndex, frameCount, hasAnimation);
@@ -399,12 +765,29 @@ export function useViewerStage(
 
     try {
       stopPlay();
+
+      // New model load: clear any previous selections/markers to avoid stale overlays.
+      inspectCtx.clear();
       renderFromText(lastRawText, lastRawFileName, "reparse");
     } catch (err) {
       message.error(
         t("viewer.parse.reparseFailed", { reason: (err as Error).message })
       );
     }
+  }
+
+  /**
+   * Manually re-apply the current LAMMPS typeId -> element mapping.
+   * Useful when the user edits the mapping and wants an explicit refresh.
+   */
+  function refreshTypeMap(): void {
+    if (!stage || !runtime) return;
+    if (!hasModel.value) return;
+    if (!runtime.hasAnyTypeId()) return;
+
+    // Mesh rebuild invalidates instance references; clear selection to be safe.
+    inspectCtx.clear();
+    runtime.onTypeMapChanged();
   }
 
   /**
@@ -572,6 +955,9 @@ export function useViewerStage(
       bondRadius: BOND_RADIUS,
     });
 
+    // Ensure computed refs that depend on runtime can update at least once.
+    runtimeTick.value += 1;
+
     // 3) Bind settings watchers
     stopBind = bindViewerStageSettings({
       settingsRef,
@@ -585,12 +971,53 @@ export function useViewerStage(
 
       hasModel,
       hasAnyTypeId: () => runtime?.hasAnyTypeId() ?? false,
-      onTypeMapChanged: () => runtime?.onTypeMapChanged(frameIndex.value),
+      onTypeMapChanged: () => {
+        runtime?.onTypeMapChanged();
+        // Mesh rebuild invalidates instance references; clear selection to be safe.
+        inspectCtx.clear();
+      },
       applyBackgroundColor: () => runtime?.applyBackgroundColor(),
     });
 
     runtime?.applyBackgroundColor();
     stage.start();
+
+    // Atom picking: treat a short, low-movement pointer interaction as a click.
+    const canvas = stage.renderer.domElement;
+    const onPointerDown = (e: PointerEvent) => {
+      // Only primary pointer to avoid multi-touch conflicts.
+      if (e.isPrimary === false) return;
+      pointerDown = { x: e.clientX, y: e.clientY, tMs: performance.now() };
+    };
+    const onPointerUp = (e: PointerEvent) => {
+      if (!pointerDown) return;
+      if (e.isPrimary === false) {
+        pointerDown = null;
+        return;
+      }
+
+      const dx = e.clientX - pointerDown.x;
+      const dy = e.clientY - pointerDown.y;
+      const dt = performance.now() - pointerDown.tMs;
+      pointerDown = null;
+
+      // Threshold tuned for mobile/desktop.
+      if (Math.hypot(dx, dy) <= 6 && dt <= 400) {
+        handlePick(e);
+      }
+    };
+    const onPointerCancel = () => {
+      pointerDown = null;
+    };
+
+    canvas.addEventListener("pointerdown", onPointerDown, { passive: true });
+    canvas.addEventListener("pointerup", onPointerUp, { passive: true });
+    canvas.addEventListener("pointercancel", onPointerCancel, { passive: true });
+    removePickListeners = () => {
+      canvas.removeEventListener("pointerdown", onPointerDown);
+      canvas.removeEventListener("pointerup", onPointerUp);
+      canvas.removeEventListener("pointercancel", onPointerCancel);
+    };
 
     // Prevent default browser drop behavior (avoid replacing current page)
     window.addEventListener("dragover", preventWindowDropDefault);
@@ -600,6 +1027,9 @@ export function useViewerStage(
   onBeforeUnmount(() => {
     window.removeEventListener("dragover", preventWindowDropDefault);
     window.removeEventListener("drop", preventWindowDropDefault);
+
+    removePickListeners?.();
+    removePickListeners = null;
 
     stopBind?.();
     stopBind = null;
@@ -648,6 +1078,15 @@ export function useViewerStage(
     // ✅ recording bindings
     ...recording,
 
+    // layers
+    layers,
+    activeLayerId,
+    setActiveLayer,
+    setLayerVisible,
+
+    // inspect
+    inspectCtx,
+
     // ctx groups
     recordSelectCtx,
     parseCtx,
@@ -675,6 +1114,8 @@ export function useViewerStage(
     hasModel,
     isLoading,
     openFilePicker,
+
+    refreshTypeMap,
 
     onDragEnter,
     onDragOver,

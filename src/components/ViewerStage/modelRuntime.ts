@@ -132,6 +132,9 @@ export type ModelRuntime = {
   applyModelRotation: () => void;
   applyBackgroundColor: () => void;
 
+  /** Update camera near/far each frame based on visible layers to prevent clipping. */
+  tickCameraClipping: () => void;
+
   hasAnyTypeId: () => boolean;
   onTypeMapChanged: () => void;
 
@@ -160,6 +163,120 @@ export function createModelRuntime(args: {
   const centerTmp = new THREE.Vector3();
   const centerTmp2 = new THREE.Vector3();
   const matTmp = new THREE.Matrix4();
+
+
+  // ---- Camera clipping (near/far) guard for multi-layer display ----
+  // When fitting to a small model, far plane can become too small and clip large visible layers,
+  // and far may not update while the user zooms out. We compute a conservative bounding radius
+  // across *visible* layers and update near/far by current orbit distance.
+  let visibleClipRadius = 0;
+  let lastClipDist = -1;
+  let lastClipRadius = -1;
+
+  function recomputeVisibleClipRadius(): void {
+    let minX = Number.POSITIVE_INFINITY;
+    let minY = Number.POSITIVE_INFINITY;
+    let minZ = Number.POSITIVE_INFINITY;
+    let maxX = Number.NEGATIVE_INFINITY;
+    let maxY = Number.NEGATIVE_INFINITY;
+    let maxZ = Number.NEGATIVE_INFINITY;
+
+    let maxSphere = 0;
+    let any = false;
+
+    const settings = getSettings();
+    const atomScale = settings.atomScale;
+    const rows = (settings.lammpsTypeMap ?? []) as any;
+    const hasRows = Array.isArray(rows) && rows.length > 0;
+
+    for (const l of layerMap.values()) {
+      if (!l.info.visible) continue;
+
+      const atoms0 = (l.model.frames?.[l.frameIndex] ?? l.model.atoms) as Atom[];
+      const atoms = l.hasAnyTypeId && hasRows ? remapAtomsByTypeId(atoms0, rows) : atoms0;
+
+      if (!atoms || atoms.length === 0) continue;
+      any = true;
+
+      const c = computeMeanCenterInto(atoms, centerTmp);
+
+      for (const a of atoms) {
+        const x = a.position[0] - c.x;
+        const y = a.position[1] - c.y;
+        const z = a.position[2] - c.z;
+
+        if (x < minX) minX = x;
+        if (y < minY) minY = y;
+        if (z < minZ) minZ = z;
+        if (x > maxX) maxX = x;
+        if (y > maxY) maxY = y;
+        if (z > maxZ) maxZ = z;
+
+        const r = getSphereBaseRadiusByElement(a.element, atomSizeFactor) * atomScale;
+        if (r > maxSphere) maxSphere = r;
+      }
+    }
+
+    if (!any || !Number.isFinite(minX) || !Number.isFinite(maxX)) {
+      visibleClipRadius = 0;
+      lastClipDist = -1;
+      lastClipRadius = -1;
+      return;
+    }
+
+    // Expand by diameter padding (same idea as fitCameraToAtoms)
+    const pad = Math.max(0.5, maxSphere * 2.0);
+    minX -= pad;
+    minY -= pad;
+    minZ -= pad;
+    maxX += pad;
+    maxY += pad;
+    maxZ += pad;
+
+    const dx = maxX - minX;
+    const dy = maxY - minY;
+    const dz = maxZ - minZ;
+    visibleClipRadius = 0.5 * Math.sqrt(dx * dx + dy * dy + dz * dz);
+
+    // Force a re-apply on next tick.
+    lastClipDist = -1;
+    lastClipRadius = -1;
+  }
+
+  function tickCameraClipping(force = false): void {
+    if (visibleClipRadius <= 0) return;
+
+    const camera = stage.getCamera();
+    const controls = stage.getControls();
+
+    const dist = camera.position.distanceTo(controls.target);
+    if (!force && Math.abs(dist - lastClipDist) < 1e-6 && Math.abs(visibleClipRadius - lastClipRadius) < 1e-6) {
+      return;
+    }
+
+    const clipPaddingMul = 4;
+    const nearBySphere = dist - visibleClipRadius * clipPaddingMul;
+    const farBySphere = dist + visibleClipRadius * clipPaddingMul;
+    const nearAdaptive = dist * 0.02;
+
+    const newNear = Math.max(0.01, nearBySphere, nearAdaptive);
+    const newFar = Math.max(newNear + 1e-3, farBySphere);
+
+    // Avoid needless projection updates.
+    if (!force && Math.abs(newNear - camera.near) < 1e-6 && Math.abs(newFar - camera.far) < 1e-3) {
+      lastClipDist = dist;
+      lastClipRadius = visibleClipRadius;
+      return;
+    }
+
+    camera.near = newNear;
+    camera.far = newFar;
+    camera.updateProjectionMatrix();
+
+    lastClipDist = dist;
+    lastClipRadius = visibleClipRadius;
+  }
+
 
   // axes helpers are shared at stage level
   const axesHelper = new THREE.AxesHelper(1);
@@ -328,6 +445,10 @@ export function createModelRuntime(args: {
       applyShowAxes();
     }
 
+    // Update camera clip planes based on all visible layers
+    recomputeVisibleClipRadius();
+    tickCameraClipping(true);
+
     layers.value = [...layers.value];
     syncHasModelFlag();
   }
@@ -402,6 +523,9 @@ export function createModelRuntime(args: {
     applyBackgroundColor();
     applyShowAxes();
 
+    recomputeVisibleClipRadius();
+    tickCameraClipping(true);
+
     return { frameCount, hasAnimation };
   }
 
@@ -438,6 +562,9 @@ export function createModelRuntime(args: {
     fitCameraToAtomsCentered(mappedFirstAtoms);
     applyShowAxes();
 
+    recomputeVisibleClipRadius();
+    tickCameraClipping(true);
+
     return { frameCount: active.info.frameCount, hasAnimation: active.info.frameCount > 1 };
   }
 
@@ -455,6 +582,10 @@ export function createModelRuntime(args: {
     xLabel.visible = false;
     yLabel.visible = false;
     zLabel.visible = false;
+
+    visibleClipRadius = 0;
+    lastClipDist = -1;
+    lastClipRadius = -1;
 
     syncHasModelFlag();
   }
@@ -513,6 +644,9 @@ export function createModelRuntime(args: {
     for (const l of layerMap.values()) {
       applyAtomScaleToMeshes(l.atomMeshes, getSettings().atomScale, 16);
     }
+
+    recomputeVisibleClipRadius();
+    tickCameraClipping(true);
   }
 
   function applyShowBonds(): void {
@@ -597,6 +731,9 @@ export function createModelRuntime(args: {
     }
 
     applyShowAxes();
+
+    recomputeVisibleClipRadius();
+    tickCameraClipping(true);
   }
 
   function getActiveAtomMeshes(): THREE.InstancedMesh[] {
@@ -631,6 +768,7 @@ export function createModelRuntime(args: {
     applyShowAxes,
     applyModelRotation,
     applyBackgroundColor,
+    tickCameraClipping,
 
     hasAnyTypeId,
     onTypeMapChanged,

@@ -83,7 +83,7 @@ export function bindViewerStageSettings(params: {
       (v) => {
         const r = typeof v === "number" && Number.isFinite(v) ? v : 0.5;
         // clamp to reasonable range to avoid extremely narrow viewports
-        setDualViewSplit(Math.max(0.3, Math.min(0.7, r)));
+        setDualViewSplit(Math.max(0.1, Math.min(0.9, r)));
       },
       { immediate: true }
     )

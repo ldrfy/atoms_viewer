@@ -103,10 +103,10 @@
                     <a-form-item v-if="dualViewEnabledModel" :label="t('settings.panel.display.dualViewSplit')">
                         <a-row :gutter="8" align="middle">
                             <a-col :flex="1">
-                                <a-slider v-model:value="dualViewSplitPctModel" :min="30" :max="70" :step="1" />
+                                <a-slider v-model:value="dualViewSplitPctModel" :min="10" :max="90" :step="1" />
                             </a-col>
                             <a-col :style="{ width: '96px' }">
-                                <a-input-number v-model:value="dualViewSplitPctModel" :min="30" :max="70" :step="1"
+                                <a-input-number v-model:value="dualViewSplitPctModel" :min="10" :max="90" :step="1"
                                     style="width: 100%" />
                             </a-col>
                         </a-row>
@@ -478,14 +478,14 @@ const dualViewDistanceModel = computed({
     set: (v: number) => patchSettings({ dualViewDistance: v }),
 });
 
-// Dual view split ratio: store as 0..1 in settings, expose as 30..70 (%) in UI
+// Dual view split ratio: store as 0..1 in settings, expose as 10..90 (%) in UI
 const dualViewSplitPctModel = computed({
     get: () => {
         const r = typeof props.settings.dualViewSplit === 'number' ? props.settings.dualViewSplit : 0.5;
-        return Math.round(Math.max(0.3, Math.min(0.7, r)) * 100);
+        return Math.round(Math.max(0.1, Math.min(0.9, r)) * 100);
     },
     set: (pct: number) => {
-        const r = Math.max(0.3, Math.min(0.7, pct / 100));
+        const r = Math.max(0.1, Math.min(0.9, pct / 100));
         patchSettings({ dualViewSplit: r });
     },
 });

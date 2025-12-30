@@ -19,22 +19,23 @@
                     <a-divider style="margin: 8px 0" />
 
                     <a-form-item :label="t('settings.panel.files.export.header')">
-                        <a-row :gutter="8" align="middle">
+                        <!-- 倍率 + 透明：同一行，两端对齐（移动端更紧凑） -->
+                        <a-row justify="space-between" align="middle" :gutter="8">
                             <a-col :flex="1">
                                 <a-input-number v-model:value="exportScale" :min="1" :max="5" :step="0.1"
                                     :precision="1" :controls="false" style="width: 100%" />
                             </a-col>
-                            <a-col :style="{ width: '96px' }">
-                                <a-button block type="primary" :disabled="!hasAnyLayer" @click="onExport">
-                                    {{ t('settings.panel.files.export.button') }}
-                                </a-button>
+                            <a-col>
+                                <a-checkbox v-model:checked="exportTransparent">
+                                    {{ t('settings.panel.files.export.transparent') }}
+                                </a-checkbox>
                             </a-col>
                         </a-row>
 
                         <div style="margin-top: 8px">
-                            <a-checkbox v-model:checked="exportTransparent">
-                                {{ t('settings.panel.files.export.transparent') }}
-                            </a-checkbox>
+                            <a-button block type="primary" :disabled="!hasAnyLayer" @click="onExport">
+                                {{ t('settings.panel.files.export.button') }}
+                            </a-button>
                         </div>
 
                         <a-typography-text type="secondary" style="display:block;margin-top:6px;">
@@ -46,7 +47,7 @@
 
                     <a-form-item :label="t('settings.panel.files.parse.header')">
                         <a-space direction="vertical" :size="6" style="width: 100%">
-                            <a-select size="small" v-model:value="parseModeModel" :options="parseModeOptions"
+                            <a-select v-model:value="parseModeModel" :options="parseModeOptions"
                                 :disabled="!hasAnyLayer" style="width: 100%" />
 
                             <a-alert v-if="viewerApi?.parseInfo.success === false" type="error" show-icon
@@ -74,6 +75,46 @@
             <!-- 显示 / 视图 -->
             <a-collapse-panel key="display" :header="t('settings.panel.display.header')">
                 <a-form layout="vertical">
+                    <!-- 双视图：正视 + 侧视 -->
+                    <a-form-item>
+                        <a-row justify="space-between" align="middle">
+                            <a-col>{{ t("settings.panel.display.dualView") }}</a-col>
+                            <a-col>
+                                <a-switch v-model:checked="dualViewEnabledModel" />
+                            </a-col>
+                        </a-row>
+                        <a-typography-text type="secondary" style="display:block;margin-top:6px;">
+                            {{ t("settings.panel.display.dualViewHint") }}
+                        </a-typography-text>
+                    </a-form-item>
+
+                    <a-form-item v-if="dualViewEnabledModel" :label="t('settings.panel.display.dualViewDistance')">
+                        <a-row :gutter="8" align="middle">
+                            <a-col :flex="1">
+                                <a-slider v-model:value="dualViewDistanceModel" :min="1" :max="200" :step="0.5" />
+                            </a-col>
+                            <a-col :style="{ width: '96px' }">
+                                <a-input-number v-model:value="dualViewDistanceModel" :min="1" :max="200" :step="0.5"
+                                    style="width: 100%" />
+                            </a-col>
+                        </a-row>
+                    </a-form-item>
+
+                    <a-form-item v-if="dualViewEnabledModel" :label="t('settings.panel.display.dualViewSplit')">
+                        <a-row :gutter="8" align="middle">
+                            <a-col :flex="1">
+                                <a-slider v-model:value="dualViewSplitPctModel" :min="30" :max="70" :step="1" />
+                            </a-col>
+                            <a-col :style="{ width: '96px' }">
+                                <a-input-number v-model:value="dualViewSplitPctModel" :min="30" :max="70" :step="1"
+                                    style="width: 100%" />
+                            </a-col>
+                        </a-row>
+                        <a-typography-text type="secondary" style="display:block;margin-top:6px;">
+                            {{ t("settings.panel.display.dualViewSplitHint") }}
+                        </a-typography-text>
+                    </a-form-item>
+
                     <!-- 投影 -->
                     <a-form-item>
                         <a-row justify="space-between" align="middle">
@@ -425,6 +466,28 @@ const showBondsModel = computed({
 const orthographicModel = computed({
     get: () => !props.settings.orthographic,
     set: (v: boolean) => patchSettings({ orthographic: !v }),
+});
+
+const dualViewEnabledModel = computed({
+    get: () => !!props.settings.dualViewEnabled,
+    set: (v: boolean) => patchSettings({ dualViewEnabled: v }),
+});
+
+const dualViewDistanceModel = computed({
+    get: () => props.settings.dualViewDistance ?? 10,
+    set: (v: number) => patchSettings({ dualViewDistance: v }),
+});
+
+// Dual view split ratio: store as 0..1 in settings, expose as 30..70 (%) in UI
+const dualViewSplitPctModel = computed({
+    get: () => {
+        const r = typeof props.settings.dualViewSplit === 'number' ? props.settings.dualViewSplit : 0.5;
+        return Math.round(Math.max(0.3, Math.min(0.7, r)) * 100);
+    },
+    set: (pct: number) => {
+        const r = Math.max(0.3, Math.min(0.7, pct / 100));
+        patchSettings({ dualViewSplit: r });
+    },
 });
 
 const rotXModel = computed({

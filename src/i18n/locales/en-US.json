@@ -105,6 +105,11 @@
         "panel": {
             "display": {
                 "header": "Display",
+                "dualView": "Dual view (front + side)",
+                "dualViewHint": "Render front and side views side-by-side.",
+                "dualViewDistance": "View distance",
+      "dualViewSplit": "Split ratio",
+      "dualViewSplitHint": "Adjust the width ratio between front (left) and side (right) view.",
                 "perspective": "Perspective",
                 "axes": "Axes",
                 "bonds": "Bonds",

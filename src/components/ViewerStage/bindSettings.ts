@@ -20,6 +20,10 @@ export function bindViewerStageSettings(params: {
   applyShowAxes: () => void;
   applyModelRotation: () => void;
 
+  setDualViewEnabled: (enabled: boolean) => void;
+  setDualViewDistance: (dist: number) => void;
+  setDualViewSplit: (ratio: number) => void;
+
   hasModel: Ref<boolean>;
   hasAnyTypeId: () => boolean;
   onTypeMapChanged: () => void;
@@ -33,6 +37,9 @@ export function bindViewerStageSettings(params: {
     applyShowBonds,
     applyShowAxes,
     applyModelRotation,
+    setDualViewEnabled,
+    setDualViewDistance,
+    setDualViewSplit,
     hasModel,
     hasAnyTypeId,
     onTypeMapChanged,
@@ -46,6 +53,38 @@ export function bindViewerStageSettings(params: {
     watch(
       () => settingsRef.value.orthographic,
       (v) => setProjectionMode(v),
+      { immediate: true }
+    )
+  );
+
+  // 双视图 / dual view
+  stops.push(
+    watch(
+      () => !!settingsRef.value.dualViewEnabled,
+      (v) => setDualViewEnabled(v),
+      { immediate: true }
+    )
+  );
+
+  stops.push(
+    watch(
+      () => settingsRef.value.dualViewDistance,
+      (v) => {
+        const d = typeof v === "number" && Number.isFinite(v) ? v : 10;
+        setDualViewDistance(d);
+      },
+      { immediate: true }
+    )
+  );
+
+  stops.push(
+    watch(
+      () => settingsRef.value.dualViewSplit,
+      (v) => {
+        const r = typeof v === "number" && Number.isFinite(v) ? v : 0.5;
+        // clamp to reasonable range to avoid extremely narrow viewports
+        setDualViewSplit(Math.max(0.3, Math.min(0.7, r)));
+      },
       { immediate: true }
     )
   );

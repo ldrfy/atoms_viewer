@@ -25,6 +25,13 @@ export type ViewerSettings = {
   backgroundColor: string;
   backgroundTransparent?: boolean;
 
+  /** Dual view: show front + side view simultaneously */
+  dualViewEnabled?: boolean;
+  /** Dual view camera distance (world units, used for both views) */
+  dualViewDistance?: number;
+  /** Dual view split ratio for left viewport width (0..1). */
+  dualViewSplit?: number;
+
 //   录制帧率
   frame_rate: number;
 };
@@ -40,6 +47,10 @@ export const DEFAULT_SETTINGS: ViewerSettings = {
   lammpsTypeMap: [],
   backgroundColor: isDark.value ? "#000000" : "#ffffff",
   backgroundTransparent: true,
+
+  dualViewEnabled: false,
+  dualViewDistance: 10,
+  dualViewSplit: 0.5,
 
   frame_rate: 60,
 };

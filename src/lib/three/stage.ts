@@ -260,8 +260,16 @@ export function createThreeStage(params: {
       presetOffset.identity();
       return;
     }
-    const qL = presetQuat(viewPresets[0]).clone();
-    const qR = presetQuat(viewPresets[1]).clone();
+    // noUncheckedIndexedAccess: even after length checks, indexed access is ViewPreset | undefined.
+    const pL = viewPresets[0];
+    const pR = viewPresets[1];
+    if (!pL || !pR) {
+      presetOffset.identity();
+      return;
+    }
+
+    const qL = presetQuat(pL).clone();
+    const qR = presetQuat(pR).clone();
     presetOffset.copy(qR.multiply(qL.invert()));
   }
 
@@ -496,13 +504,18 @@ export function createThreeStage(params: {
     updatePresetOffset();
 
     if (viewPresets.length > 0) {
+      const preset0 = viewPresets[0];
+      if (!preset0) {
+        syncSize();
+        return;
+      }
       // Re-orient the main camera to the selected preset, but do NOT lock it.
       // Use current distance to keep perceived scale consistent.
       const target = controls.target;
       const dist = Math.max(1e-6, camera.position.distanceTo(target));
       applyCameraPoseForPreset({
         camera,
-        preset: viewPresets[0],
+        preset: preset0,
         target,
         distance: dist,
       });

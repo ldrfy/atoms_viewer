@@ -44,9 +44,6 @@ export function bindViewerStageSettings(params: {
     setViewPresets,
     setDualViewDistance,
     setDualViewSplit,
-    hasModel,
-    hasAnyTypeId,
-    onTypeMapChanged,
     applyBackgroundColor,
   } = params;
 

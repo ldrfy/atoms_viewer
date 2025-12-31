@@ -6,8 +6,10 @@ import "ant-design-vue/dist/reset.css";
 import "./style.css";
 
 import {
+  Popconfirm,
   ConfigProvider,
   Layout,
+  List,
   Card,
   Row,
   Col,
@@ -43,6 +45,8 @@ app.use(i18n);
 
 app
   .use(ConfigProvider)
+  .use(List)
+  .use(Popconfirm)
   .use(Layout)
   .use(Row)
   .use(Card)

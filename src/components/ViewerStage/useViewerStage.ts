@@ -86,6 +86,13 @@ type ViewerStageBindings = {
   setActiveLayer: (id: string) => void;
   setLayerVisible: (id: string, visible: boolean) => void;
 
+  // per-layer LAMMPS type map (active layer)
+  activeLayerTypeMap: Ref<LammpsTypeMapItem[]>;
+  setActiveLayerTypeMap: (rows: LammpsTypeMapItem[]) => void;
+
+  // layer lifecycle
+  removeLayer: (id: string) => void;
+
   // atom inspect
   inspectCtx: InspectCtx;
 
@@ -162,6 +169,11 @@ export function useViewerStage(
   const activeLayerId = computed<string | null>(() => {
     runtimeTick.value;
     return runtime?.activeLayerId.value ?? null;
+  });
+
+  const activeLayerTypeMap = computed<LammpsTypeMapItem[]>(() => {
+    runtimeTick.value;
+    return runtime?.activeTypeMapRows.value ?? [];
   });
 
   // --- atom inspect (picking + measurement) ---
@@ -311,6 +323,20 @@ export function useViewerStage(
 
     // If the active layer changes due to hiding, clear selection to avoid mismatch.
     inspectCtx.clear();
+    updateSelectionVisuals();
+  }
+
+  function setActiveLayerTypeMap(rows: LammpsTypeMapItem[]): void {
+    if (!runtime) return;
+    runtime.setActiveLayerTypeMapRows(rows);
+  }
+
+  function removeLayer(id: string): void {
+    if (!runtime) return;
+    // Deleting a layer invalidates instance references; clear selection to be safe.
+    inspectCtx.clear();
+    runtime.removeLayer(id);
+    syncUiFromRuntime();
     updateSelectionVisuals();
   }
 
@@ -722,9 +748,14 @@ export function useViewerStage(
    *
    * For LAMMPS dump: auto-merge typeId→element mapping and focus Settings panels as needed.
    */
-  function handleLammpsTypeMapAndSettings(model: StructureModel): void {
-    const beforeRows = (
-      (getSettings().lammpsTypeMap ?? []) as LammpsTypeMapItem[]
+  function handleLammpsTypeMapAndSettings(
+    model: StructureModel,
+    reason: RenderReason
+  ): void {
+    const baseRows = (
+      (reason === "reparse"
+        ? runtime?.activeTypeMapRows.value ?? []
+        : getSettings().lammpsTypeMap ?? []) as LammpsTypeMapItem[]
     ).map((r) => ({ typeId: r.typeId, element: r.element }));
 
     const atoms0 =
@@ -743,17 +774,17 @@ export function useViewerStage(
       }
     }
 
-    const mergedRows = mergeTypeMap(beforeRows, detectedTypeIds, defaults) as
+    const mergedRows = mergeTypeMap(baseRows, detectedTypeIds, defaults) as
       | LammpsTypeMapItem[]
       | undefined;
 
     const typeMapAdded = !typeMapEquals(
-      normalizeTypeMapRows(beforeRows),
+      normalizeTypeMapRows(baseRows),
       normalizeTypeMapRows(mergedRows ?? [])
     );
 
     const hasUnknownForThisDump = hasUnknownElementMappingForTypeIds(
-      mergedRows ?? [],
+      (mergedRows ?? []) as any,
       detectedTypeIds
     );
 
@@ -761,8 +792,9 @@ export function useViewerStage(
     // (e.g., batch load) don't accidentally switch away from the LAMMPS panel.
     lastLoadNeedsLammpsFocus = typeMapAdded || hasUnknownForThisDump;
 
-    if (patchSettings && typeMapAdded && mergedRows) {
-      patchSettings({ lammpsTypeMap: mergedRows });
+    // Store mapping on the active layer (NOT global settings).
+    if (runtime && mergedRows) {
+      runtime.setActiveLayerTypeMapRows(mergedRows);
     }
 
     if (typeMapAdded || hasUnknownForThisDump) {
@@ -858,7 +890,7 @@ export function useViewerStage(
       detectedTypeIds.length > 0;
 
     if (isLmp) {
-      handleLammpsTypeMapAndSettings(model);
+      handleLammpsTypeMapAndSettings(model, reason);
     } else {
       // Important: when switching back from LAMMPS to XYZ/PDB, focus display.
       focusSettingsToDisplaySilently();
@@ -1027,7 +1059,7 @@ export function useViewerStage(
     // If there is any typeId mapping and it looks incomplete, focus LAMMPS.
     if (runtime?.hasAnyTypeId()) {
       const rows = normalizeTypeMapRows(
-        ((getSettings().lammpsTypeMap ?? []) as any) ?? []
+        ((runtime?.activeTypeMapRows.value ?? []) as any) ?? []
       );
       const activeAtoms = runtime?.getActiveAtoms?.() ?? null;
       if (activeAtoms) {
@@ -1671,6 +1703,10 @@ export function useViewerStage(
     activeLayerId,
     setActiveLayer,
     setLayerVisible,
+
+    activeLayerTypeMap,
+    setActiveLayerTypeMap: setActiveLayerTypeMap,
+    removeLayer,
 
     // inspect
     inspectCtx,

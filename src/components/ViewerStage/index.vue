@@ -104,6 +104,10 @@ setViewerApi({
     activeLayerId: stage.activeLayerId,
     setActiveLayer: stage.setActiveLayer,
     setLayerVisible: stage.setLayerVisible,
+    removeLayer: stage.removeLayer,
+
+    activeLayerTypeMap: stage.activeLayerTypeMap,
+    setActiveLayerTypeMap: stage.setActiveLayerTypeMap,
 });
 
 onBeforeUnmount(() => {

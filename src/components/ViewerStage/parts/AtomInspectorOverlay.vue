@@ -1,5 +1,5 @@
 <template>
-    <div v-if="visible" class="atom-inspector" @pointerdown.stop>
+    <a-card v-if="visible" class="atom-inspector" @pointerdown.stop>
         <div class="atom-inspector__header">
             <div class="atom-inspector__title">{{ t('viewer.inspect.title') }}</div>
             <a-space size="small">
@@ -13,51 +13,90 @@
         </div>
 
         <div class="atom-inspector__body">
+
             <div v-if="selected.length === 0" class="atom-inspector__empty">
-                <a-typography-text type="secondary">{{ t('viewer.inspect.hint') }}</a-typography-text>
+                <a-typography-text type="secondary">
+                    {{ t('viewer.inspect.hint') }}
+                </a-typography-text>
             </div>
 
+            <!-- Content -->
             <div v-else class="atom-inspector__content">
-                <div class="atom-inspector__atoms">
-                    <div v-for="(a, i) in selected" :key="`${a.layerId}:${a.atomIndex}`" class="atom-inspector__atom">
-                        <div class="atom-inspector__atomLine">
-                            <span class="atom-inspector__badge">{{ i + 1 }}</span>
-                            <span class="atom-inspector__el">{{ a.element }}</span>
-                            <span class="atom-inspector__meta">Z={{ a.atomicNumber }}</span>
-                            <span class="atom-inspector__meta">idx={{ a.atomIndex + 1 }}</span>
-                            <span v-if="a.id != null" class="atom-inspector__meta">id={{ a.id }}</span>
-                            <span v-if="a.typeId != null" class="atom-inspector__meta">type={{ a.typeId }}</span>
-                        </div>
-                        <div class="atom-inspector__coords">
-                            x={{ fmt(a.position?.[0]) }}, y={{ fmt(a.position?.[1]) }}, z={{ fmt(a.position?.[2]) }}
-                        </div>
-                    </div>
-                </div>
 
+                <!-- Atoms -->
+                <a-list size="small" :data-source="selected" :split="false" class="atom-inspector__atoms">
+                    <template #renderItem="{ item, index }">
+                        <a-list-item class="atom-inspector__atom">
+                            <div class="atom-row">
+                                <!-- index -->
+                                <div class="atom-index">
+                                    <a-tag color="blue">{{ index + 1 }}</a-tag>
+                                </div>
+
+                                <!-- body -->
+                                <div class="atom-body">
+                                    <div class="atom-header">
+                                        <a-typography-text strong class="atom-inspector__el">
+                                            {{ item.element }}
+                                        </a-typography-text>
+
+                                        <a-typography-text type="secondary">
+                                            Z={{ item.atomicNumber }}
+                                        </a-typography-text>
+
+                                        <a-typography-text type="secondary">
+                                            idx={{ item.atomIndex + 1 }}
+                                        </a-typography-text>
+
+                                        <a-typography-text v-if="item.id != null" type="secondary">
+                                            id={{ item.id }}
+                                        </a-typography-text>
+
+                                        <a-typography-text v-if="item.typeId != null" type="secondary">
+                                            type={{ item.typeId }}
+                                        </a-typography-text>
+                                    </div>
+
+                                    <div class="atom-inspector__coords">
+                                        x={{ fmt(item.position?.[0]) }},
+                                        y={{ fmt(item.position?.[1]) }},
+                                        z={{ fmt(item.position?.[2]) }}
+                                    </div>
+                                </div>
+                            </div>
+                        </a-list-item>
+                    </template>
+                </a-list>
+
+                <!-- Divider -->
                 <a-divider style="margin: 10px 0" />
 
-                <div class="atom-inspector__measures">
-                    <div v-if="measure.distance12 != null" class="atom-inspector__measure">
-                        <span class="atom-inspector__measureLabel">{{ t('viewer.inspect.distance') }} (1-2)</span>
-                        <span class="atom-inspector__measureValue">{{ fmt(measure.distance12) }} Å</span>
-                    </div>
-                    <div v-if="measure.distance23 != null" class="atom-inspector__measure">
-                        <span class="atom-inspector__measureLabel">{{ t('viewer.inspect.distance') }} (2-3)</span>
-                        <span class="atom-inspector__measureValue">{{ fmt(measure.distance23) }} Å</span>
-                    </div>
-                    <div v-if="measure.angleDeg != null" class="atom-inspector__measure">
-                        <span class="atom-inspector__measureLabel">{{ t('viewer.inspect.angle') }}</span>
-                        <span class="atom-inspector__measureValue">{{ fmt(measure.angleDeg) }}°</span>
-                    </div>
-                    <div v-if="selected.length > 1" class="atom-inspector__measureHint">
-                        <a-typography-text type="secondary">
-                            {{ t('viewer.inspect.orderHint') }}
-                        </a-typography-text>
-                    </div>
-                </div>
+                <!-- Measures -->
+                <a-descriptions size="small" :column="1" class="atom-inspector__measures">
+                    <a-descriptions-item v-if="measure.distance12 != null"
+                        :label="`${t('viewer.inspect.distance')} (1–2)`">
+                        {{ fmt(measure.distance12) }} Å
+                    </a-descriptions-item>
+
+                    <a-descriptions-item v-if="measure.distance23 != null"
+                        :label="`${t('viewer.inspect.distance')} (2–3)`">
+                        {{ fmt(measure.distance23) }} Å
+                    </a-descriptions-item>
+
+                    <a-descriptions-item v-if="measure.angleDeg != null" :label="t('viewer.inspect.angle')">
+                        {{ fmt(measure.angleDeg) }}°
+                    </a-descriptions-item>
+                </a-descriptions>
+
+                <a-typography-text v-if="selected.length > 1" type="secondary" class="atom-inspector__measureHint">
+                    {{ t('viewer.inspect.orderHint') }}
+                </a-typography-text>
+
             </div>
         </div>
-    </div>
+
+
+    </a-card>
 </template>
 
 <script setup lang="ts">
@@ -96,18 +135,14 @@ function fmt(v: number | null | undefined): string {
     width: min(360px, calc(100vw - 24px));
     max-width: calc(100vw - 24px);
 
-    background: rgba(255, 255, 255, 0.92);
-    border: 1px solid rgba(0, 0, 0, 0.08);
-    border-radius: 10px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
-    backdrop-filter: blur(8px);
-    padding: 10px 12px;
 }
 
-/* Dark mode (Ant Design theme sets body class) */
-:global(.dark) .atom-inspector {
-    background: rgba(20, 20, 20, 0.88);
-    border-color: rgba(255, 255, 255, 0.12);
+/* Mobile: avoid overlapping the bottom AnimBar (which can be wide). */
+@media (max-width: 640px) {
+    .atom-inspector {
+        top: 56px;
+        bottom: auto;
+    }
 }
 
 .atom-inspector__header {
@@ -127,96 +162,26 @@ function fmt(v: number | null | undefined): string {
     margin-top: 8px;
 }
 
-.atom-inspector__empty {
-    font-size: 12px;
-}
 
-.atom-inspector__atom {
-    padding: 6px 0;
-    border-bottom: 1px dashed rgba(0, 0, 0, 0.08);
-}
-
-:global(.dark) .atom-inspector__atom {
-    border-bottom-color: rgba(255, 255, 255, 0.12);
-}
-
-.atom-inspector__atom:last-child {
-    border-bottom: none;
-}
-
-.atom-inspector__atomLine {
+.atom-row {
     display: flex;
-    flex-wrap: wrap;
-    align-items: baseline;
-    gap: 6px;
-    font-size: 12px;
+    align-items: flex-start;
 }
 
-.atom-inspector__badge {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 18px;
-    height: 18px;
-    border-radius: 9px;
-    background: rgba(0, 0, 0, 0.06);
-    font-size: 12px;
-    font-variant-numeric: tabular-nums;
+.atom-index {
+    text-align: right;
+    margin-right: 8px;
 }
 
-:global(.dark) .atom-inspector__badge {
-    background: rgba(255, 255, 255, 0.12);
+.atom-body {
+    flex: 1;
 }
 
-.atom-inspector__el {
-    font-weight: 600;
-}
-
-.atom-inspector__meta {
-    font-variant-numeric: tabular-nums;
-    opacity: 0.85;
+.atom-header>* {
+    margin-right: 8px;
 }
 
 .atom-inspector__coords {
-    font-size: 12px;
-    opacity: 0.9;
-    margin-top: 2px;
-    margin-left: 25px;
-    font-variant-numeric: tabular-nums;
-    word-break: break-word;
-}
-
-.atom-inspector__measures {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-}
-
-.atom-inspector__measure {
-    display: flex;
-    justify-content: space-between;
-    gap: 10px;
-    font-size: 12px;
-}
-
-.atom-inspector__measureLabel {
-    opacity: 0.85;
-}
-
-.atom-inspector__measureValue {
-    font-variant-numeric: tabular-nums;
-    font-weight: 600;
-}
-
-.atom-inspector__measureHint {
-    font-size: 12px;
-}
-
-/* Mobile: avoid overlapping the bottom AnimBar (which can be wide). */
-@media (max-width: 640px) {
-    .atom-inspector {
-        top: 56px;
-        bottom: auto;
-    }
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 </style>

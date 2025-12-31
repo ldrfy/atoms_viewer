@@ -134,6 +134,7 @@
             "lammps": {
                 "header": "LAMMPS",
                 "alert": "When a LAMMPS dump or LAMMPS data file provides only numeric types, specify the element symbol for each type here to ensure correct color/radius, bond inference, and stable rendering.",
+                "currentLayer": "Current layer",
                 "mapLabel": "type id → element symbol (searchable)",
                 "typePlaceholder": "type",
                 "elementPlaceholder": "Element (e.g., C / O / Fe)",
@@ -161,7 +162,8 @@
                 "noViewer": "Viewer is not available.",
                 "empty": "No models loaded yet.",
                 "meta": "{atoms} atoms · {frames} frames",
-                "hint": "Click a row to set the active layer; use the toggle to show/hide. Dragging a new model adds a layer and hides previous layers by default."
+                "hint": "Click a row to set the active layer; use the toggle to show/hide. Dragging a new model adds a layer and hides previous layers by default.",
+                "deleteConfirm": "Delete this layer?"
             }
         }
     },

@@ -2,7 +2,10 @@
 import * as THREE from "three";
 import { ref, type Ref } from "vue";
 
-import type { ViewerSettings } from "../../lib/viewer/settings";
+import type {
+  ViewerSettings,
+  LammpsTypeMapItem,
+} from "../../lib/viewer/settings";
 import type { Atom, StructureModel } from "../../lib/structure/types";
 
 import type { ThreeStage } from "../../lib/three/stage";
@@ -14,10 +17,17 @@ import {
   getSphereBaseRadiusByElement,
 } from "../../lib/three/instancedAtoms";
 import { buildBondMeshesBicolor } from "../../lib/three/instancedBonds";
-import { isPerspective, fitCameraToAtoms as fitCameraToAtomsImpl } from "../../lib/three/camera";
+import {
+  isPerspective,
+  fitCameraToAtoms as fitCameraToAtomsImpl,
+} from "../../lib/three/camera";
 
 import { applyFrameAtomsToMeshes, computeMeanCenterInto } from "./animation";
-import { collectTypeIdsAndElementDefaultsFromAtoms, remapAtomsByTypeId } from "./typeMap";
+import {
+  collectTypeIdsAndElementDefaultsFromAtoms,
+  mergeTypeMap,
+  remapAtomsByTypeId,
+} from "./typeMap";
 
 const SPHERE_SEGMENTS = 24;
 
@@ -47,13 +57,18 @@ type LayerInternal = {
   // LAMMPS
   hasAnyTypeId: boolean;
 
+  /** Per-layer LAMMPS typeId->element mapping rows (NOT global). */
+  typeMapRows: LammpsTypeMapItem[];
+
   // tmp
   baseCenter: THREE.Vector3; // keep at (0,0,0) so applyFrameAtomsToMeshes == shift by current mean
 };
 
 function makeLayerId(): string {
   // short, stable enough for UI
-  return `layer_${Math.random().toString(36).slice(2, 8)}_${Date.now().toString(36)}`;
+  return `layer_${Math.random().toString(36).slice(2, 8)}_${Date.now().toString(
+    36
+  )}`;
 }
 
 function safeLayerName(fileName?: string): string {
@@ -78,7 +93,10 @@ function disposeGroupChildren(group: THREE.Group): void {
   }
 }
 
-function computeCenteredBox(atoms: Atom[], tmpCenter: THREE.Vector3): {
+function computeCenteredBox(
+  atoms: Atom[],
+  tmpCenter: THREE.Vector3
+): {
   center: THREE.Vector3;
   box: THREE.Box3;
   maxSphereRadius: number;
@@ -92,7 +110,10 @@ function computeCenteredBox(atoms: Atom[], tmpCenter: THREE.Vector3): {
     const y = a.position[1] - c.y;
     const z = a.position[2] - c.z;
     box.expandByPoint(new THREE.Vector3(x, y, z));
-    maxSphere = Math.max(maxSphere, getSphereBaseRadiusByElement(a.element, 0.5));
+    maxSphere = Math.max(
+      maxSphere,
+      getSphereBaseRadiusByElement(a.element, 0.5)
+    );
   }
 
   return { center: c, box, maxSphereRadius: maxSphere };
@@ -117,12 +138,16 @@ function makeCenteredAtomsView(atoms: Atom[], center: THREE.Vector3): Atom[] {
 export type ModelRuntime = {
   layers: Ref<ModelLayerInfo[]>;
   activeLayerId: Ref<string | null>;
+  activeTypeMapRows: Ref<LammpsTypeMapItem[]>;
 
   renderModel: (
     model: StructureModel,
     opts?: { hidePreviousLayers?: boolean }
   ) => { frameCount: number; hasAnimation: boolean };
-  replaceActiveLayerModel: (model: StructureModel) => { frameCount: number; hasAnimation: boolean };
+  replaceActiveLayerModel: (model: StructureModel) => {
+    frameCount: number;
+    hasAnimation: boolean;
+  };
 
   clearModel: () => void;
 
@@ -143,6 +168,10 @@ export type ModelRuntime = {
   hasAnyTypeId: () => boolean;
   onTypeMapChanged: () => void;
 
+  setActiveLayerTypeMapRows: (rows: LammpsTypeMapItem[]) => void;
+
+  removeLayer: (id: string) => void;
+
   setActiveLayer: (id: string) => void;
   setLayerVisible: (id: string, visible: boolean) => void;
 
@@ -158,17 +187,24 @@ export function createModelRuntime(args: {
   bondFactor: number;
   bondRadius: number;
 }): ModelRuntime {
-  const { stage, settingsRef, hasModel, atomSizeFactor, bondFactor, bondRadius } = args;
+  const {
+    stage,
+    settingsRef,
+    hasModel,
+    atomSizeFactor,
+    bondFactor,
+    bondRadius,
+  } = args;
 
   const layers = ref<ModelLayerInfo[]>([]);
   const activeLayerId = ref<string | null>(null);
+  const activeTypeMapRows = ref<LammpsTypeMapItem[]>([]);
 
   const layerMap = new Map<string, LayerInternal>();
 
   const centerTmp = new THREE.Vector3();
   const centerTmp2 = new THREE.Vector3();
   const matTmp = new THREE.Matrix4();
-
 
   // ---- Camera clipping (near/far) guard for multi-layer display ----
   // When fitting to a small model, far plane can become too small and clip large visible layers,
@@ -191,14 +227,13 @@ export function createModelRuntime(args: {
 
     const settings = getSettings();
     const atomScale = settings.atomScale;
-    const rows = (settings.lammpsTypeMap ?? []) as any;
-    const hasRows = Array.isArray(rows) && rows.length > 0;
 
     for (const l of layerMap.values()) {
       if (!l.info.visible) continue;
 
-      const atoms0 = (l.model.frames?.[l.frameIndex] ?? l.model.atoms) as Atom[];
-      const atoms = l.hasAnyTypeId && hasRows ? remapAtomsByTypeId(atoms0, rows) : atoms0;
+      const atoms0 = (l.model.frames?.[l.frameIndex] ??
+        l.model.atoms) as Atom[];
+      const atoms = getMappedAtomsForLayer(l, atoms0);
 
       if (!atoms || atoms.length === 0) continue;
       any = true;
@@ -217,7 +252,8 @@ export function createModelRuntime(args: {
         if (y > maxY) maxY = y;
         if (z > maxZ) maxZ = z;
 
-        const r = getSphereBaseRadiusByElement(a.element, atomSizeFactor) * atomScale;
+        const r =
+          getSphereBaseRadiusByElement(a.element, atomSizeFactor) * atomScale;
         if (r > maxSphere) maxSphere = r;
       }
     }
@@ -255,7 +291,11 @@ export function createModelRuntime(args: {
     const controls = stage.getControls();
 
     const dist = camera.position.distanceTo(controls.target);
-    if (!force && Math.abs(dist - lastClipDist) < 1e-6 && Math.abs(visibleClipRadius - lastClipRadius) < 1e-6) {
+    if (
+      !force &&
+      Math.abs(dist - lastClipDist) < 1e-6 &&
+      Math.abs(visibleClipRadius - lastClipRadius) < 1e-6
+    ) {
       return;
     }
 
@@ -268,7 +308,11 @@ export function createModelRuntime(args: {
     const newFar = Math.max(newNear + 1e-3, farBySphere);
 
     // Avoid needless projection updates.
-    if (!force && Math.abs(newNear - camera.near) < 1e-6 && Math.abs(newFar - camera.far) < 1e-3) {
+    if (
+      !force &&
+      Math.abs(newNear - camera.near) < 1e-6 &&
+      Math.abs(newFar - camera.far) < 1e-3
+    ) {
       lastClipDist = dist;
       lastClipRadius = visibleClipRadius;
       return;
@@ -281,7 +325,6 @@ export function createModelRuntime(args: {
     lastClipDist = dist;
     lastClipRadius = visibleClipRadius;
   }
-
 
   // axes helpers are shared at stage level
   const axesHelper = new THREE.AxesHelper(1);
@@ -305,6 +348,30 @@ export function createModelRuntime(args: {
     const id = activeLayerId.value;
     if (!id) return null;
     return layerMap.get(id) ?? null;
+  }
+
+  function syncActiveTypeMap(): void {
+    const a = getActiveLayer();
+    activeTypeMapRows.value = (a?.typeMapRows ?? []) as LammpsTypeMapItem[];
+  }
+
+  function expandTypeIdsContiguous(typeIdsRaw: number[]): number[] {
+    if (!typeIdsRaw || typeIdsRaw.length === 0) return [];
+    const maxId = typeIdsRaw[typeIdsRaw.length - 1] ?? 0;
+    if (Number.isFinite(maxId) && maxId > 0 && maxId <= 2000) {
+      return Array.from({ length: maxId }, (_, i) => i + 1);
+    }
+    return typeIdsRaw;
+  }
+
+  function getMappedAtomsForLayer(
+    layer: LayerInternal,
+    atoms0: Atom[]
+  ): Atom[] {
+    const rows = (layer.typeMapRows ?? []) as any;
+    const hasRows = Array.isArray(rows) && rows.length > 0;
+    if (layer.hasAnyTypeId && hasRows) return remapAtomsByTypeId(atoms0, rows);
+    return atoms0;
   }
 
   function disposeLayer(layer: LayerInternal): void {
@@ -364,7 +431,9 @@ export function createModelRuntime(args: {
       camera,
       controls,
       host: stage.host,
-      getSphereRadiusByElement: (el) => getSphereBaseRadiusByElement(el, atomSizeFactor) * getSettings().atomScale,
+      getSphereRadiusByElement: (el) =>
+        getSphereBaseRadiusByElement(el, atomSizeFactor) *
+        getSettings().atomScale,
       orthoHalfHeight: stage.getOrthoHalfHeight(),
       margin: 1.25,
     });
@@ -374,7 +443,10 @@ export function createModelRuntime(args: {
     }
   }
 
-  function rebuildVisualsForLayer(layer: LayerInternal, atomsForVisuals: Atom[]): void {
+  function rebuildVisualsForLayer(
+    layer: LayerInternal,
+    atomsForVisuals: Atom[]
+  ): void {
     // clear old
     removeAndDisposeInstancedMeshes(layer.group, layer.atomMeshes);
     removeAndDisposeInstancedMeshes(layer.group, layer.bondMeshes);
@@ -431,6 +503,7 @@ export function createModelRuntime(args: {
   function setActiveLayer(id: string): void {
     if (!layerMap.has(id)) return;
     activeLayerId.value = id;
+    syncActiveTypeMap();
 
     // keep axes in sync
     applyShowAxes();
@@ -447,6 +520,7 @@ export function createModelRuntime(args: {
     if (activeLayerId.value === id && !visible) {
       const next = layers.value.find((x) => x.visible && x.id !== id) ?? null;
       activeLayerId.value = next?.id ?? null;
+      syncActiveTypeMap();
       applyShowAxes();
     }
 
@@ -463,7 +537,10 @@ export function createModelRuntime(args: {
 
     const exists = layers.value.some((x) => x.id === layer.info.id);
     if (!exists) layers.value = [...layers.value, layer.info];
-    else layers.value = layers.value.map((x) => (x.id === layer.info.id ? layer.info : x));
+    else
+      layers.value = layers.value.map((x) =>
+        x.id === layer.info.id ? layer.info : x
+      );
 
     syncHasModelFlag();
   }
@@ -508,6 +585,7 @@ export function createModelRuntime(args: {
       lastBondSegCount: 0,
       frameIndex: 0,
       hasAnyTypeId: false,
+      typeMapRows: [],
       baseCenter: new THREE.Vector3(0, 0, 0),
     };
 
@@ -515,8 +593,17 @@ export function createModelRuntime(args: {
     const typeInfo = collectTypeIdsAndElementDefaultsFromAtoms(firstAtoms);
     layer.hasAnyTypeId = typeInfo.typeIds.length > 0;
 
-    // Apply current type mapping (if any)
-    const mappedFirstAtoms = remapAtomsByTypeId(firstAtoms, (getSettings().lammpsTypeMap ?? []) as any);
+    if (layer.hasAnyTypeId) {
+      const templateRows = (getSettings().lammpsTypeMap ?? []) as any;
+      const detected = expandTypeIdsContiguous(typeInfo.typeIds);
+      layer.typeMapRows =
+        (mergeTypeMap(templateRows, detected, typeInfo.defaults) as any) ?? [];
+    } else {
+      layer.typeMapRows = [];
+    }
+
+    // Apply current per-layer type mapping (if any)
+    const mappedFirstAtoms = getMappedAtomsForLayer(layer, firstAtoms);
 
     // Store a model whose frame[0] uses mapped atoms for rendering (keep raw for reparse logic elsewhere)
     // We do not mutate the original model; we only render with mapped atoms.
@@ -528,6 +615,7 @@ export function createModelRuntime(args: {
 
     upsertLayerInternal(layer);
     activeLayerId.value = id;
+    syncActiveTypeMap();
 
     fitCameraToAtomsCentered(mappedFirstAtoms);
     applyModelRotation();
@@ -540,7 +628,10 @@ export function createModelRuntime(args: {
     return { frameCount, hasAnimation };
   }
 
-  function replaceActiveLayerModel(model: StructureModel): { frameCount: number; hasAnimation: boolean } {
+  function replaceActiveLayerModel(model: StructureModel): {
+    frameCount: number;
+    hasAnimation: boolean;
+  } {
     const active = getActiveLayer();
     if (!active) {
       return renderModel(model);
@@ -560,7 +651,20 @@ export function createModelRuntime(args: {
     const typeInfo = collectTypeIdsAndElementDefaultsFromAtoms(firstAtoms);
     active.hasAnyTypeId = typeInfo.typeIds.length > 0;
 
-    const mappedFirstAtoms = remapAtomsByTypeId(firstAtoms, (getSettings().lammpsTypeMap ?? []) as any);
+    if (active.hasAnyTypeId) {
+      const baseRows = (
+        active.typeMapRows && active.typeMapRows.length > 0
+          ? active.typeMapRows
+          : getSettings().lammpsTypeMap ?? []
+      ) as any;
+      const detected = expandTypeIdsContiguous(typeInfo.typeIds);
+      active.typeMapRows =
+        (mergeTypeMap(baseRows, detected, typeInfo.defaults) as any) ?? [];
+    } else {
+      active.typeMapRows = [];
+    }
+
+    const mappedFirstAtoms = getMappedAtomsForLayer(active, firstAtoms);
 
     rebuildVisualsForLayer(active, mappedFirstAtoms);
 
@@ -569,6 +673,7 @@ export function createModelRuntime(args: {
     active.group.visible = true;
 
     upsertLayerInternal(active);
+    syncActiveTypeMap();
 
     fitCameraToAtomsCentered(mappedFirstAtoms);
     applyShowAxes();
@@ -576,7 +681,10 @@ export function createModelRuntime(args: {
     recomputeVisibleClipRadius();
     tickCameraClipping(true);
 
-    return { frameCount: active.info.frameCount, hasAnimation: active.info.frameCount > 1 };
+    return {
+      frameCount: active.info.frameCount,
+      hasAnimation: active.info.frameCount > 1,
+    };
   }
 
   function clearModel(): void {
@@ -587,6 +695,7 @@ export function createModelRuntime(args: {
 
     layers.value = [];
     activeLayerId.value = null;
+    activeTypeMapRows.value = [];
 
     // axes cleanup
     axesHelper.visible = false;
@@ -638,7 +747,7 @@ export function createModelRuntime(args: {
 
     // apply type mapping to the frame atoms before updating meshes
     const frameAtoms = frames[clamped] ?? active.model.atoms;
-    const mapped = remapAtomsByTypeId(frameAtoms, (getSettings().lammpsTypeMap ?? []) as any);
+    const mapped = getMappedAtomsForLayer(active, frameAtoms);
 
     applyFrameAtomsToMeshes({
       frameAtoms: mapped,
@@ -653,7 +762,11 @@ export function createModelRuntime(args: {
 
   function applyAtomScale(): void {
     for (const l of layerMap.values()) {
-      applyAtomScaleToMeshes(l.atomMeshes, getSettings().atomScale, SPHERE_SEGMENTS);
+      applyAtomScaleToMeshes(
+        l.atomMeshes,
+        getSettings().atomScale,
+        SPHERE_SEGMENTS
+      );
     }
 
     recomputeVisibleClipRadius();
@@ -665,8 +778,9 @@ export function createModelRuntime(args: {
       if (getSettings().showBonds) {
         if (l.bondMeshes.length > 0) continue;
 
-        const atoms = (l.model.frames?.[l.frameIndex] ?? l.model.atoms) as Atom[];
-        const mapped = remapAtomsByTypeId(atoms, (getSettings().lammpsTypeMap ?? []) as any);
+        const atoms = (l.model.frames?.[l.frameIndex] ??
+          l.model.atoms) as Atom[];
+        const mapped = getMappedAtomsForLayer(l, atoms);
         const c = computeMeanCenterInto(mapped, centerTmp);
         const centeredAtoms = makeCenteredAtomsView(mapped, c);
 
@@ -701,8 +815,9 @@ export function createModelRuntime(args: {
     const active = getActiveLayer();
     if (!active) return;
 
-    const atoms = (active.model.frames?.[active.frameIndex] ?? active.model.atoms) as Atom[];
-    const mapped = remapAtomsByTypeId(atoms, (getSettings().lammpsTypeMap ?? []) as any);
+    const atoms = (active.model.frames?.[active.frameIndex] ??
+      active.model.atoms) as Atom[];
+    const mapped = getMappedAtomsForLayer(active, atoms);
     updateAxesForAtoms(mapped);
   }
 
@@ -730,21 +845,57 @@ export function createModelRuntime(args: {
   }
 
   function onTypeMapChanged(): void {
-    // Strategy: rebuild visuals for all layers that have typeId (to update colors/labels)
-    for (const l of layerMap.values()) {
-      if (!l.hasAnyTypeId) continue;
+    // Per-layer mapping: refresh only the active layer.
+    const active = getActiveLayer();
+    if (!active) return;
+    if (!active.hasAnyTypeId) return;
 
-      const atoms = (l.model.frames?.[l.frameIndex] ?? l.model.atoms) as Atom[];
-      const mapped = remapAtomsByTypeId(atoms, (getSettings().lammpsTypeMap ?? []) as any);
+    const atoms = (active.model.frames?.[active.frameIndex] ??
+      active.model.atoms) as Atom[];
+    const mapped = getMappedAtomsForLayer(active, atoms);
 
-      // atoms mesh colors depend on element => must rebuild
-      rebuildVisualsForLayer(l, mapped);
-    }
+    // atom mesh colors depend on element => must rebuild
+    rebuildVisualsForLayer(active, mapped);
 
     applyShowAxes();
 
     recomputeVisibleClipRadius();
     tickCameraClipping(true);
+  }
+
+  function setActiveLayerTypeMapRows(rows: LammpsTypeMapItem[]): void {
+    const active = getActiveLayer();
+    if (!active) return;
+    active.typeMapRows = (rows ?? []) as any;
+    activeTypeMapRows.value = (active.typeMapRows ?? []) as any;
+  }
+
+  function removeLayer(id: string): void {
+    const layer = layerMap.get(id);
+    if (!layer) return;
+
+    // If deleting the active layer, selection/axes should follow the next active layer.
+    const wasActive = activeLayerId.value === id;
+
+    disposeLayer(layer);
+    layerMap.delete(id);
+
+    layers.value = layers.value.filter((x) => x.id !== id);
+
+    if (wasActive) {
+      const next =
+        layers.value.find((x) => x.visible) ?? layers.value[0] ?? null;
+      activeLayerId.value = next?.id ?? null;
+    }
+
+    syncActiveTypeMap();
+    applyShowAxes();
+
+    recomputeVisibleClipRadius();
+    tickCameraClipping(true);
+
+    layers.value = [...layers.value];
+    syncHasModelFlag();
   }
 
   function getActiveAtomMeshes(): THREE.InstancedMesh[] {
@@ -763,6 +914,7 @@ export function createModelRuntime(args: {
   return {
     layers,
     activeLayerId,
+    activeTypeMapRows,
 
     renderModel,
     replaceActiveLayerModel,
@@ -783,6 +935,8 @@ export function createModelRuntime(args: {
 
     hasAnyTypeId,
     onTypeMapChanged,
+    setActiveLayerTypeMapRows,
+    removeLayer,
 
     setActiveLayer,
     setLayerVisible,

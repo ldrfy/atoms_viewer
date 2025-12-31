@@ -116,8 +116,16 @@
                                 </div>
                             </div>
                             <div class="layer-right" @click.stop>
-                                <a-switch size="small" :checked="l.visible"
-                                    @change="(v: boolean) => onToggleLayer(l.id, v)" />
+                                <a-space :size="4">
+                                    <a-switch size="small" :checked="l.visible"
+                                        @change="(v: boolean) => onToggleLayer(l.id, v)" />
+                                    <a-popconfirm :title="t('settings.panel.layers.deleteConfirm')"
+                                        @confirm="() => onDeleteLayer(l.id)">
+                                        <a-button type="text" danger aria-label="delete layer">
+                                            <DeleteOutlined />
+                                        </a-button>
+                                    </a-popconfirm>
+                                </a-space>
                             </div>
                         </div>
                     </div>
@@ -280,6 +288,21 @@
                 <a-form layout="vertical">
                     <a-alert type="info" show-icon :message="t('settings.panel.lammps.alert')" />
 
+                    <a-space :size="6" style="margin-top: 8px; flex-wrap: wrap;">
+                        <a-typography-text type="secondary">
+                            {{ t('settings.panel.lammps.currentLayer') }}:
+                        </a-typography-text>
+                        <a-tooltip v-if="activeLayerInfo" :title="activeLayerInfo.sourceFileName || activeLayerInfo.id">
+                            <a-tag style="max-width: 100%;">
+                                <span
+                                    style="display:inline-block;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom;">
+                                    {{ activeLayerInfo.name }}
+                                </span>
+                            </a-tag>
+                        </a-tooltip>
+                        <a-typography-text v-else type="secondary">-</a-typography-text>
+                    </a-space>
+
                     <a-form-item :label="t('settings.panel.lammps.mapLabel')" style="margin-top: 12px;">
                         <div v-for="(row, idx) in lammpsTypeMapModel" :key="`${row.typeId}-${idx}`"
                             style="margin-bottom: 8px;">
@@ -338,6 +361,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
 import { message } from "ant-design-vue";
+import { DeleteOutlined } from "@ant-design/icons-vue";
 import type { ViewerSettings } from "../../lib/viewer/settings";
 import { normalizeViewPresets, type ViewPreset } from "../../lib/viewer/viewPresets";
 import { ATOMIC_SYMBOLS, normalizeElementSymbol } from "../../lib/structure/chem";
@@ -355,6 +379,11 @@ const { t } = useI18n();
 const viewerApi = computed(() => viewerApiRef.value);
 const layerList = computed(() => viewerApi.value?.layers.value ?? []);
 const activeLayerId = computed(() => viewerApi.value?.activeLayerId.value ?? null);
+const activeLayerInfo = computed(() => {
+    const id = activeLayerId.value;
+    if (!id) return null;
+    return layerList.value.find((l) => l.id === id) ?? null;
+});
 const hasAnyLayer = computed(() => layerList.value.length > 0);
 
 const exportScale = ref<number>(2);
@@ -388,6 +417,10 @@ function onSetActive(id: string): void {
 
 function onToggleLayer(id: string, visible: boolean): void {
     viewerApi.value?.setLayerVisible(id, visible);
+}
+
+function onDeleteLayer(id: string): void {
+    viewerApi.value?.removeLayer(id);
 }
 
 const props = withDefaults(defineProps<{
@@ -596,8 +629,8 @@ function resetDistance(): void {
  * ----------------------------- */
 
 const lammpsTypeMapModel = computed<LammpsTypeMapItem[]>({
-    get: () => (props.settings.lammpsTypeMap as LammpsTypeMapItem[] | undefined) ?? [],
-    set: (v) => patchSettings({ lammpsTypeMap: v }),
+    get: () => (viewerApi.value?.activeLayerTypeMap.value as LammpsTypeMapItem[] | undefined) ?? [],
+    set: (v) => viewerApi.value?.setActiveLayerTypeMap(v),
 });
 
 const atomicOptions = computed(() =>

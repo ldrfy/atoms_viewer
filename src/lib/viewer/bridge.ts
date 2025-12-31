@@ -1,5 +1,6 @@
 import { shallowRef } from "vue";
 import type { Ref } from "vue";
+import type { LammpsTypeMapItem } from "./settings";
 
 import type { ParseMode, ParseInfo } from "../structure/parse";
 import type { ModelLayerInfo } from "../../components/ViewerStage/modelRuntime";
@@ -7,7 +8,10 @@ import type { ModelLayerInfo } from "../../components/ViewerStage/modelRuntime";
 export type ViewerPublicApi = {
   // actions
   openFilePicker: () => void;
-  exportPng: (payload: { scale: number; transparent: boolean }) => void | Promise<void>;
+  exportPng: (payload: {
+    scale: number;
+    transparent: boolean;
+  }) => void | Promise<void>;
 
   // LAMMPS typeId -> element mapping
   refreshTypeMap: () => void;
@@ -22,6 +26,11 @@ export type ViewerPublicApi = {
   activeLayerId: Ref<string | null>;
   setActiveLayer: (id: string) => void;
   setLayerVisible: (id: string, visible: boolean) => void;
+  removeLayer: (id: string) => void;
+
+  // per-layer LAMMPS type map (active layer)
+  activeLayerTypeMap: Ref<LammpsTypeMapItem[]>;
+  setActiveLayerTypeMap: (rows: LammpsTypeMapItem[]) => void;
 };
 
 /**

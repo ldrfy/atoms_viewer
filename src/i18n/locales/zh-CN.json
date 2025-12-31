@@ -135,6 +135,7 @@
             "lammps": {
                 "header": "LAMMPS",
                 "alert": "当 LAMMPS dump 以及 LAMMPS data 只提供 type（数字）时，需要在这里指定 type 对应元素符号，用于颜色/半径/键推断与稳定显示。",
+                "currentLayer": "当前图层",
                 "mapLabel": "type id → 元素符号（支持搜索）",
                 "typePlaceholder": "type",
                 "elementPlaceholder": "元素（如 C / O / Fe）",
@@ -162,7 +163,8 @@
                 "noViewer": "当前没有可用的 Viewer 实例。",
                 "empty": "尚未加载任何模型。",
                 "meta": "{atoms} 原子 · {frames} 帧",
-                "hint": "点击一行可设为当前图层；右侧开关控制显示/隐藏。拖入新模型会加入图层列表并默认隐藏旧图层。"
+                "hint": "点击一行可设为当前图层；右侧开关控制显示/隐藏。拖入新模型会加入图层列表并默认隐藏旧图层。",
+                "deleteConfirm": "确定删除此图层吗？"
             }
         }
     },

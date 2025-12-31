@@ -8,6 +8,7 @@
                     <span class="brand-text">{{ APP_DISPLAY_NAME }}</span>
                 </a-button>
             </div>
+
             <div class="top-right-bar">
                 <!-- ===== 桌面端 ===== -->
                 <template v-if="!isMobile">
@@ -16,9 +17,10 @@
                         <a-button type="text" class="btn-icon" aria-label="language">
                             <GlobalOutlined />
                         </a-button>
-                        <template #overlay>
 
-                            <a-menu :selectedKeys="[curLocale]" @click="(e: MenuInfo) => onSelectLocale(String(e.key))">
+                        <template #overlay>
+                            <a-menu :selectedKeys="[curLocaleProxy]"
+                                @click="(e: MenuInfo) => onSelectLocale(String(e.key))">
                                 <a-menu-item v-for="item in localeItems" :key="item.key">
                                     {{ item.label }}
                                 </a-menu-item>
@@ -62,10 +64,8 @@
             </div>
         </div>
 
-
         <!-- ===== 移动端 Drawer ===== -->
         <a-drawer placement="top" height="auto" :open="mobileOpen" :closable="false" @close="closeDrawer">
-            <!-- 展开区：完全使用 Ant -->
             <a-collapse accordion ghost v-model:activeKey="activeKey">
                 <!-- 语言 -->
                 <a-collapse-panel key="locale">
@@ -78,13 +78,11 @@
                         </span>
                     </template>
 
-                    <a-radio-group v-model:value="curLocaleProxy" @change="onSelectLocale(curLocaleProxy)"
-                        class="lang_radio_group">
+                    <a-radio-group v-model:value="curLocaleProxy" @change="closeDrawer" class="lang_radio_group">
                         <a-radio v-for="item in localeItems" :key="item.key" :value="item.key" class="lang-radio-item">
                             {{ item.label }}
                         </a-radio>
                     </a-radio-group>
-
                 </a-collapse-panel>
 
                 <!-- 主题 -->
@@ -116,7 +114,6 @@
                     </span>
                 </a-typography-text>
             </a-space>
-
         </a-drawer>
     </div>
 </template>
@@ -137,18 +134,13 @@ import {
 import { Grid } from "ant-design-vue";
 
 import {
-    getLocale,
     SUPPORT_LOCALES,
     getLocaleSelfName,
     setLocale,
+    type SupportLocale,
 } from "../../i18n";
-import {
-    getThemeMode,
-    setThemeMode,
-    type ThemeMode,
-} from "../../theme/mode";
+import { getThemeMode, setThemeMode, type ThemeMode } from "../../theme/mode";
 import { APP_DISPLAY_NAME, APP_GITHUB_URL } from "../../lib/appMeta";
-import type { SupportLocale } from "../../i18n";
 
 const props = withDefaults(
     defineProps<{
@@ -164,7 +156,7 @@ const emit = defineEmits<{
     (e: "go-home"): void;
 }>();
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 
 /* ===== 响应式断点 ===== */
 const { useBreakpoint } = Grid;
@@ -175,10 +167,13 @@ const isMobile = computed(() => screens.value.lg === false);
 const mobileOpen = ref(false);
 const activeKey = ref<string | undefined>(undefined);
 
-/* ===== locale ===== */
-const curLocale = computed<SupportLocale>(() => getLocale());
-
-const curLocaleProxy = ref(curLocale.value);
+/* ===== locale（关键：绑定到 vue-i18n 的响应式 locale）===== */
+const curLocaleProxy = computed<SupportLocale>({
+    get: () => locale.value as SupportLocale,
+    set: (v) => {
+        setLocale(v); // 你的封装：通常会更新 i18n.locale + 本地存储
+    },
+});
 
 const localeItems = computed(() =>
     SUPPORT_LOCALES.map((loc) => ({
@@ -186,13 +181,10 @@ const localeItems = computed(() =>
         label: getLocaleSelfName(loc),
     }))
 );
+
 const currentLocaleItem = computed(() =>
-    localeItems.value.find(
-        (i) => i.key === curLocaleProxy.value
-    )
+    localeItems.value.find((i) => i.key === curLocaleProxy.value)
 );
-
-
 
 /* ===== theme ===== */
 const themeMode = computed(() => getThemeMode());
@@ -221,7 +213,7 @@ function openGithub() {
 }
 
 function onSelectLocale(key: string) {
-    setLocale(key as any);
+    curLocaleProxy.value = key as SupportLocale;
     closeDrawer();
 }
 
@@ -304,7 +296,6 @@ function onClickBrand(): void {
 .lang-radio-item {
     display: block;
     margin-bottom: 8px;
-    /* 控制“每一条之间的间距” */
 }
 
 .lang-radio-item:last-child {
@@ -321,12 +312,10 @@ function onClickBrand(): void {
     display: flex;
     align-items: center;
     justify-content: center;
-    /* 水平居中 */
     gap: 8px;
     cursor: pointer;
     padding: 8px;
 }
-
 
 /* Ant Typography 默认不会给 hover / active 上色，这里只是兜底 */
 .plain-click:hover,

@@ -3,7 +3,7 @@
         @dragleave.prevent="onDragLeave" @drop.prevent="onDrop">
         <!-- 中间：卡片 -->
         <div class="empty-center" :class="{ dragging: isDragging }">
-            <a-card :title="APP_DISPLAY_NAME">
+            <a-card :title="t(APP_DISPLAY_NAME)">
                 <a-empty class="empty-block">
                     <template #image>
                         <img :src="logoSrc" alt="logo" />
@@ -72,8 +72,6 @@
         <!-- 底部：Footer（页面底部） -->
         <div class="page-footer">
             <a class="footer-link" :href="APP_GITHUB_URL" target="_blank" rel="noopener noreferrer">
-                <span>{{ APP_DISPLAY_NAME }}</span>
-                <span class="sep">·</span>
                 <span>v{{ APP_VERSION }}</span>
                 <template v-if="APP_AUTHOR">
                     <span class="sep">·</span>
@@ -97,6 +95,7 @@ import { APP_AUTHOR, APP_DISPLAY_NAME, APP_GITHUB_URL, APP_VERSION } from "../li
 import { fetchWithTimeout } from "../lib/net/index.ts";
 
 const { t } = useI18n();
+
 
 const props = withDefaults(
     defineProps<{

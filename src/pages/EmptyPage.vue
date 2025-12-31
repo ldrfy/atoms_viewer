@@ -82,8 +82,8 @@
             </a>
         </div>
 
-        <input ref="fileInputRef" class="file-input" type="file" accept=".xyz,.pdb,.dump,.lammpstrj,.traj,.data,.lmp"
-            @change="onFilePicked" />
+        <input ref="fileInputRef" class="file-input" type="file" multiple
+            accept=".xyz,.pdb,.dump,.lammpstrj,.traj,.data,.lmp" @change="onFilePicked" />
     </div>
 </template>
 
@@ -110,6 +110,7 @@ const props = withDefaults(
 
 const emit = defineEmits<{
     (e: "load-file", file: File): void;
+    (e: "load-files", files: File[]): void;
     (e: "preload-sample", item: SampleManifestItem): void; // ✅ 改成传对象
 }>();
 
@@ -188,17 +189,25 @@ function onDrop(e: DragEvent): void {
     dragDepth.value = 0;
     isDragging.value = false;
 
-    const file = e.dataTransfer?.files?.[0];
-    if (!file) return;
-    emit("load-file", file);
+    const files = Array.from(e.dataTransfer?.files ?? []);
+    if (files.length === 0) return;
+    if (files.length === 1) {
+        emit("load-file", files[0]!);
+    } else {
+        emit("load-files", files);
+    }
 }
 
 function onFilePicked(e: Event): void {
     const input = e.target as HTMLInputElement;
-    const file = input.files?.[0];
+    const files = Array.from(input.files ?? []);
     input.value = "";
-    if (!file) return;
-    emit("load-file", file);
+    if (files.length === 0) return;
+    if (files.length === 1) {
+        emit("load-file", files[0]!);
+    } else {
+        emit("load-files", files);
+    }
 }
 
 function onSampleMenuClick(info: { key: string | number }): void {

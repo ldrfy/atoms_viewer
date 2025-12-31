@@ -1,4 +1,5 @@
 import { isDark } from "../../theme/mode";
+import type { ViewPreset } from "./viewPresets";
 export type LammpsTypeMapItem = {
   typeId: number;
   element: string;
@@ -25,10 +26,18 @@ export type ViewerSettings = {
   backgroundColor: string;
   backgroundTransparent?: boolean;
 
+  /** Multi-view presets (choose 1 => single view, choose 2 => dual view). */
+  viewPresets?: ViewPreset[];
+
   /** Dual view: show front + side view simultaneously */
   dualViewEnabled?: boolean;
   /** Dual view camera distance (world units, used for both views) */
   dualViewDistance?: number;
+  /**
+   * The fitted (original) distance captured on model load.
+   * Used by the "Reset original distance" UI.
+   */
+  initialDualViewDistance?: number;
   /** Dual view split ratio for left viewport width (0..1). */
   dualViewSplit?: number;
 
@@ -48,8 +57,13 @@ export const DEFAULT_SETTINGS: ViewerSettings = {
   backgroundColor: isDark.value ? "#000000" : "#ffffff",
   backgroundTransparent: true,
 
+  // Enforce "at least one view" at the settings level. This avoids the UI being in an
+  // undefined state for first-time users and ensures distance syncing works consistently.
+  viewPresets: ["front"],
+
   dualViewEnabled: false,
   dualViewDistance: 10,
+  initialDualViewDistance: 10,
   dualViewSplit: 0.5,
 
   frame_rate: 60,

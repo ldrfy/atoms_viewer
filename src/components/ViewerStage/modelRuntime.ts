@@ -19,6 +19,8 @@ import { isPerspective, fitCameraToAtoms as fitCameraToAtomsImpl } from "../../l
 import { applyFrameAtomsToMeshes, computeMeanCenterInto } from "./animation";
 import { collectTypeIdsAndElementDefaultsFromAtoms, remapAtomsByTypeId } from "./typeMap";
 
+const SPHERE_SEGMENTS = 24;
+
 export type ModelLayerInfo = {
   id: string;
   name: string;
@@ -116,7 +118,10 @@ export type ModelRuntime = {
   layers: Ref<ModelLayerInfo[]>;
   activeLayerId: Ref<string | null>;
 
-  renderModel: (model: StructureModel) => { frameCount: number; hasAnimation: boolean };
+  renderModel: (
+    model: StructureModel,
+    opts?: { hidePreviousLayers?: boolean }
+  ) => { frameCount: number; hasAnimation: boolean };
   replaceActiveLayerModel: (model: StructureModel) => { frameCount: number; hasAnimation: boolean };
 
   clearModel: () => void;
@@ -382,7 +387,7 @@ export function createModelRuntime(args: {
       atoms: atomsForVisuals,
       atomSizeFactor,
       atomScale: getSettings().atomScale,
-      sphereSegments: 16,
+      sphereSegments: SPHERE_SEGMENTS,
     });
     for (const m of layer.atomMeshes) {
       (m.userData as any).layerId = layer.info.id;
@@ -463,9 +468,15 @@ export function createModelRuntime(args: {
     syncHasModelFlag();
   }
 
-  function renderModel(model: StructureModel): { frameCount: number; hasAnimation: boolean } {
-    // New model load: hide previous layers by default (layer-like behavior)
-    hideAllLayers();
+  function renderModel(
+    model: StructureModel,
+    opts?: { hidePreviousLayers?: boolean }
+  ): { frameCount: number; hasAnimation: boolean } {
+    // New model load: hide previous layers by default (layer-like behavior).
+    // When loading multiple files at once, the caller can disable this per-file
+    // so all newly-added layers remain visible.
+    const hidePrev = opts?.hidePreviousLayers !== false;
+    if (hidePrev) hideAllLayers();
 
     const id = makeLayerId();
     const name = safeLayerName(model.source?.filename);
@@ -642,7 +653,7 @@ export function createModelRuntime(args: {
 
   function applyAtomScale(): void {
     for (const l of layerMap.values()) {
-      applyAtomScaleToMeshes(l.atomMeshes, getSettings().atomScale, 16);
+      applyAtomScaleToMeshes(l.atomMeshes, getSettings().atomScale, SPHERE_SEGMENTS);
     }
 
     recomputeVisibleClipRadius();

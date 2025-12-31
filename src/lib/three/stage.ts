@@ -11,6 +11,8 @@ import {
   updateCameraForSize,
   type AnyCamera,
 } from "./camera";
+import { normalizeViewPresets, type ViewPreset } from "../viewer/viewPresets";
+import { applyCameraPoseForPreset } from "./viewPresets";
 
 /**
  * Three.js 舞台对象：负责 renderer/scene/camera/controls/resize/loop 等生命周期管理。
@@ -66,6 +68,13 @@ export type ThreeStage = {
   /** 释放资源 / Dispose resources */
   dispose: () => void;
 
+  /** Multi-view presets (choose 1 => single view, choose 2 => dual view). */
+  setViewPresets: (presets: ViewPreset[]) => void;
+  /** Current normalized view presets. */
+  getViewPresets: () => ViewPreset[];
+  /** Secondary camera for the 2nd viewport (when dual view is active). */
+  getAuxCamera: () => AnyCamera | null;
+
   /** Dual view (front+side): enable/disable */
   setDualViewEnabled: (enabled: boolean) => void;
   /** Dual view camera distance (world units). For orthographic, mapped to zoom. */
@@ -109,12 +118,18 @@ export function createThreeStage(params: {
   let camera: AnyCamera = new THREE.PerspectiveCamera(45, 1, 0.01, 2000);
   camera.position.set(0, 0, 10);
 
-  // --- dual view (front + side) ---
-  let dualViewEnabled = false;
+  // --- multi-view presets (front / side / top) ---
+  // [] => normal single view (free orbit)
+  // [x] => single view locked to preset x
+  // [a,b] => dual view (left=a, right=b)
+  let viewPresets: ViewPreset[] = [];
+
+  // Reuse legacy field names for persistence/UI.
   let dualViewDistance = 10; // world units
   let dualViewOrthoBaseDist = 10; // used to map dist -> zoom
   let dualViewSplit = 0.5; // left viewport ratio
-  let sideCamera: AnyCamera | null = null;
+
+  let auxCamera: AnyCamera | null = null;
 
   // --- renderer / 渲染器 ---
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
@@ -139,14 +154,17 @@ export function createThreeStage(params: {
   let controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
   controls.dampingFactor = 0.08;
+  // Interaction model: we rotate the *model* (pivot group) instead of orbiting the camera.
+  // Keep zoom/pan enabled, but disable camera rotation so settings' XYZ rotation can stay in sync.
+  controls.enableRotate = false;
 
   /**
-   * OrbitControls 的滚轮缩放只会改变主相机。
-   * Dual view 下需要把“当前距离/缩放”同步回 dualViewDistance，
-   * 以便右侧侧视相机也能实时跟随。
+   * OrbitControls 只作用于主相机。
+   * 当启用“预设视角”时，需要把“当前距离/缩放”同步回 dualViewDistance，
+   * 以便其它视角相机能实时跟随。
    */
   const onControlsChange = (): void => {
-    if (!dualViewEnabled) return;
+    if (viewPresets.length === 0) return;
 
     if (isPerspective(camera)) {
       dualViewDistance = camera.position.distanceTo(controls.target);
@@ -173,13 +191,14 @@ export function createThreeStage(params: {
   const syncSize = (): { w: number; h: number } => {
     const size = syncRenderersToHost(host, renderer, labelRenderer);
 
-    const leftW = dualViewEnabled ? Math.floor(size.w * dualViewSplit) : size.w;
-    const rightW = dualViewEnabled ? Math.max(1, size.w - leftW) : size.w;
+    const isDual = viewPresets.length === 2;
+    const leftW = isDual ? Math.floor(size.w * dualViewSplit) : size.w;
+    const rightW = isDual ? Math.max(1, size.w - leftW) : size.w;
     updateCameraForSize(camera, leftW, size.h, orthoHalfHeight);
 
-    if (dualViewEnabled) {
-      if (!sideCamera) sideCamera = camera.clone() as AnyCamera;
-      updateCameraForSize(sideCamera, rightW, size.h, orthoHalfHeight);
+    if (isDual) {
+      if (!auxCamera) auxCamera = camera.clone() as AnyCamera;
+      updateCameraForSize(auxCamera, rightW, size.h, orthoHalfHeight);
 
       // Make the label renderer cover only the left half to avoid layout mismatch.
       if (labelRenderer) {
@@ -210,7 +229,41 @@ export function createThreeStage(params: {
 
   const tmpV3 = new THREE.Vector3();
   const tmpV3b = new THREE.Vector3();
-  const tmpQ = new THREE.Quaternion();
+
+  /** Preset quaternions relative to the canonical "front" view. */
+  const qFront = new THREE.Quaternion(); // identity
+  const qSide = new THREE.Quaternion().setFromAxisAngle(
+    new THREE.Vector3(0, 1, 0),
+    Math.PI / 2
+  );
+  const qTop = new THREE.Quaternion().setFromAxisAngle(
+    new THREE.Vector3(1, 0, 0),
+    -Math.PI / 2
+  );
+
+  function presetQuat(p: ViewPreset): THREE.Quaternion {
+    switch (p) {
+      case "side":
+        return qSide;
+      case "top":
+        return qTop;
+      case "front":
+      default:
+        return qFront;
+    }
+  }
+
+  // Offset between the two chosen presets (from left to right).
+  const presetOffset = new THREE.Quaternion();
+  function updatePresetOffset(): void {
+    if (viewPresets.length !== 2) {
+      presetOffset.identity();
+      return;
+    }
+    const qL = presetQuat(viewPresets[0]).clone();
+    const qR = presetQuat(viewPresets[1]).clone();
+    presetOffset.copy(qR.multiply(qL.invert()));
+  }
 
   function applyViewDistance(dist: number): void {
     dualViewDistance = Math.max(0.001, dist);
@@ -218,8 +271,10 @@ export function createThreeStage(params: {
     const target = controls.target;
     const dir = camera.position.clone().sub(target).normalize();
 
+    // Perspective: move along current view direction.
     if (isPerspective(camera)) {
       camera.position.copy(target.clone().add(dir.multiplyScalar(dualViewDistance)));
+      camera.lookAt(target);
       camera.updateProjectionMatrix();
       controls.update();
       return;
@@ -229,65 +284,67 @@ export function createThreeStage(params: {
     const ortho = camera as THREE.OrthographicCamera;
     const z = dualViewOrthoBaseDist / Math.max(1e-6, dualViewDistance);
     ortho.zoom = Math.max(1e-3, z);
+    // Keep camera roughly at the requested distance (projection not affected, but clipping is).
+    camera.position.copy(target.clone().add(dir.multiplyScalar(dualViewDistance)));
+    camera.lookAt(target);
     ortho.updateProjectionMatrix();
 
-    // Keep side camera zoom in sync for orthographic dual-view.
-    if (dualViewEnabled && sideCamera && !isPerspective(sideCamera)) {
-      const sideOrtho = sideCamera as THREE.OrthographicCamera;
-      sideOrtho.zoom = ortho.zoom;
-      sideOrtho.updateProjectionMatrix();
+    // Keep aux camera zoom in sync for orthographic dual-view.
+    if (viewPresets.length === 2 && auxCamera && !isPerspective(auxCamera)) {
+      const auxOrtho = auxCamera as THREE.OrthographicCamera;
+      auxOrtho.zoom = ortho.zoom;
+      auxOrtho.updateProjectionMatrix();
     }
 
     controls.update();
   }
 
-  function syncSideCameraPose(sizeW: number, sizeH: number): void {
-    if (!sideCamera) return;
+  function syncAuxCameraPose(sizeW: number, sizeH: number): void {
+    if (viewPresets.length !== 2) return;
+    if (!auxCamera) return;
 
     const leftW = Math.floor(sizeW * dualViewSplit);
     const rightW = Math.max(1, sizeW - leftW);
 
     // Keep camera type consistent.
-    if (isPerspective(camera) !== isPerspective(sideCamera)) {
-      sideCamera = camera.clone() as AnyCamera;
-      updateCameraForSize(sideCamera, rightW, sizeH, orthoHalfHeight);
+    if (isPerspective(camera) !== isPerspective(auxCamera)) {
+      auxCamera = camera.clone() as AnyCamera;
+      updateCameraForSize(auxCamera, rightW, sizeH, orthoHalfHeight);
     }
 
     // If both are orthographic, keep zoom consistent (distance maps to zoom).
-    if (!isPerspective(camera) && !isPerspective(sideCamera)) {
-      (sideCamera as THREE.OrthographicCamera).zoom =
+    if (!isPerspective(camera) && !isPerspective(auxCamera)) {
+      (auxCamera as THREE.OrthographicCamera).zoom =
         (camera as THREE.OrthographicCamera).zoom;
-      (sideCamera as THREE.OrthographicCamera).updateProjectionMatrix();
+      (auxCamera as THREE.OrthographicCamera).updateProjectionMatrix();
     }
 
     const target = controls.target;
+
+    // Derive the second camera pose from the main camera pose by applying a fixed preset offset.
+    // This keeps both viewports rotating together "like before".
     tmpV3.copy(camera.position).sub(target);
+    tmpV3.applyQuaternion(presetOffset);
+    tmpV3.add(target);
+    auxCamera.position.copy(tmpV3);
 
-    // Rotate the view vector +90deg around world up to get a side view.
-    tmpQ.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2);
-    tmpV3.applyQuaternion(tmpQ);
-
-    // Enforce the configured distance.
-    tmpV3.setLength(dualViewDistance);
-    tmpV3b.copy(target).add(tmpV3);
-
-    sideCamera.position.copy(tmpV3b);
-    sideCamera.up.copy(camera.up);
-    sideCamera.lookAt(target);
+    tmpV3b.copy(camera.up).applyQuaternion(presetOffset);
+    auxCamera.up.copy(tmpV3b);
+    auxCamera.lookAt(target);
 
     // Keep clipping planes consistent with the main camera to avoid layer clipping in the side view.
-    sideCamera.near = camera.near;
-    sideCamera.far = camera.far;
-    (sideCamera as any).updateProjectionMatrix?.();
+    auxCamera.near = camera.near;
+    auxCamera.far = camera.far;
+    (auxCamera as any).updateProjectionMatrix?.();
   }
 
   const rafLoop: RafLoop = createRafLoop(() => {
     onBeforeRender();
     controls.update();
-    // Ensure dual-view distance stays in sync even if an input event was missed.
+    // Keep dual-view distance in sync (used by the distance slider and ortho mapping).
     onControlsChange();
 
-    if (!dualViewEnabled) {
+    if (viewPresets.length !== 2) {
       renderer.setScissorTest(false);
       renderer.render(scene, camera);
       labelRenderer?.render(scene, camera);
@@ -300,8 +357,8 @@ export function createThreeStage(params: {
     const leftW = Math.floor(w * dualViewSplit);
     const rightW = Math.max(1, w - leftW);
 
-    // Update side camera pose each frame.
-    syncSideCameraPose(w, h);
+    // Update aux camera pose each frame.
+    syncAuxCameraPose(w, h);
 
     const prevAutoClear = renderer.autoClear;
     renderer.autoClear = false;
@@ -315,11 +372,11 @@ export function createThreeStage(params: {
     renderer.setScissor(0, 0, leftW, h);
     renderer.render(scene, camera);
 
-    // Right: side camera
-    if (sideCamera) {
+    // Right: aux camera
+    if (auxCamera) {
       renderer.setViewport(leftW, 0, rightW, h);
       renderer.setScissor(leftW, 0, rightW, h);
-      renderer.render(scene, sideCamera);
+      renderer.render(scene, auxCamera);
     }
 
     renderer.setScissorTest(false);
@@ -361,10 +418,16 @@ export function createThreeStage(params: {
     controls.addEventListener("change", onControlsChange);
     orthoHalfHeight = res.orthoHalfHeight;
 
-    // Keep dual view cameras in sync.
-    sideCamera = camera.clone() as AnyCamera;
+    // Update cached base distance used by dist <-> zoom mapping.
     dualViewOrthoBaseDist = camera.position.distanceTo(controls.target);
-    applyViewDistance(dualViewDistance);
+    // Recreate aux camera (used when dual-view is active) to match camera type.
+    if (viewPresets.length === 2) {
+      auxCamera = camera.clone() as AnyCamera;
+    }
+    // If presets are enabled, re-apply the locked distance/zoom.
+    if (viewPresets.length > 0) {
+      applyViewDistance(dualViewDistance);
+    }
 
     // 如果 controls 实例变化，需要释放旧 controls
     // Dispose old controls if a new instance was created
@@ -419,20 +482,48 @@ export function createThreeStage(params: {
     canvas.parentElement?.removeChild(canvas);
   };
 
-  const setDualViewEnabled = (enabled: boolean): void => {
-    dualViewEnabled = !!enabled;
-    if (dualViewEnabled) {
-      if (!sideCamera) sideCamera = camera.clone() as AnyCamera;
+  const setViewPresets = (presets: ViewPreset[]): void => {
+    viewPresets = normalizeViewPresets(presets);
+
+    // Presets define camera directions, but we keep camera rotation disabled.
+    // User interaction rotates the model via ViewerStage (pivot rotation).
+    controls.enableRotate = false;
+
+    if (viewPresets.length === 2 && !auxCamera) {
+      auxCamera = camera.clone() as AnyCamera;
+    }
+
+    updatePresetOffset();
+
+    if (viewPresets.length > 0) {
+      // Re-orient the main camera to the selected preset, but do NOT lock it.
+      // Use current distance to keep perceived scale consistent.
+      const target = controls.target;
+      const dist = Math.max(1e-6, camera.position.distanceTo(target));
+      applyCameraPoseForPreset({
+        camera,
+        preset: viewPresets[0],
+        target,
+        distance: dist,
+      });
+      // Cache base dist for ortho mapping after pose change.
       dualViewOrthoBaseDist = camera.position.distanceTo(controls.target);
+      // Ensure distance/zoom is consistent with the slider setting.
       applyViewDistance(dualViewDistance);
     }
+
     syncSize();
+  };
+
+  const setDualViewEnabled = (enabled: boolean): void => {
+    // Backward-compat: old dual-view toggle means [front, side]
+    setViewPresets(enabled ? ["front", "side"] : []);
   };
 
   const setDualViewDistance = (dist: number): void => {
     // Keep settings in sync even when disabled, but only apply to the camera when dual view is enabled.
     dualViewDistance = Math.max(0.001, dist);
-    if (!dualViewEnabled) return;
+    if (viewPresets.length === 0) return;
     applyViewDistance(dualViewDistance);
   };
 
@@ -440,7 +531,7 @@ export function createThreeStage(params: {
     // clamp to avoid unusable viewport sizes
     const r = Math.max(0.1, Math.min(0.9, ratio));
     dualViewSplit = r;
-    if (!dualViewEnabled) return;
+    if (viewPresets.length !== 2) return;
     syncSize();
   };
 
@@ -466,6 +557,10 @@ export function createThreeStage(params: {
     start,
     stop,
     dispose,
+
+    setViewPresets,
+    getViewPresets: () => viewPresets.slice(),
+    getAuxCamera: () => auxCamera,
 
     setDualViewEnabled,
     setDualViewDistance,

@@ -9,6 +9,7 @@ import type {
   OpenSettingsPayload,
 } from "../../lib/viewer/settings";
 import { hasUnknownElementMappingForTypeIds } from "../../lib/viewer/settings";
+import { normalizeViewPresets } from "../../lib/viewer/viewPresets";
 import type { StructureModel } from "../../lib/structure/types";
 
 import { message } from "ant-design-vue";
@@ -25,11 +26,19 @@ import {
 type RenderReason = "load" | "reparse";
 
 import { cropCanvasToPngBlob, downloadBlob } from "../../lib/image/cropPng";
-import { isPerspective, updateCameraForSize, type AnyCamera } from "../../lib/three/camera";
+import {
+  isPerspective,
+  updateCameraForSize,
+  type AnyCamera,
+} from "../../lib/three/camera";
 import { createThreeStage, type ThreeStage } from "../../lib/three/stage";
 
 import { bindViewerStageSettings } from "./bindSettings";
-import { createModelRuntime, type ModelRuntime, type ModelLayerInfo } from "./modelRuntime";
+import {
+  createModelRuntime,
+  type ModelRuntime,
+  type ModelLayerInfo,
+} from "./modelRuntime";
 import { isLammpsDumpFormat } from "../../lib/structure/parsers/lammpsDump";
 import { isLammpsDataFormat } from "../../lib/structure/parsers/lammpsData";
 import { applyAnimationInfo } from "./animation";
@@ -46,6 +55,7 @@ import {
 } from "./ctx/inspect";
 
 import { createRecordingController, type RecordingBindings } from "./recording";
+import { useFileDrop } from "./useFileDrop";
 
 import {
   createRecordSelectCtx,
@@ -86,6 +96,7 @@ type ViewerStageBindings = {
   onDrop: (e: DragEvent) => Promise<void>;
   onFilePicked: (e: Event) => Promise<void>;
   loadFile: (file: File) => Promise<void>;
+  loadFiles: (iles: File[], source: "drop" | "picker" | "api") => Promise<void>;
   loadUrl: (url: string, fileName: string) => Promise<void>;
   onExportPng: (payload: {
     scale: number;
@@ -135,8 +146,9 @@ export function useViewerStage(
   const canvasHostRef = ref<HTMLDivElement | null>(null);
   const fileInputRef = ref<HTMLInputElement | null>(null);
 
-  const isDragging = ref(false);
-  const dragDepth = ref(0);
+  // Extract file drag/drop logic into a standalone composable.
+  // This keeps useViewerStage.ts smaller and easier to maintain.
+  const fileDrop = useFileDrop({ loadFiles });
 
   // --- layers & runtime binding ---
   const runtimeTick = ref(0);
@@ -180,10 +192,30 @@ export function useViewerStage(
   let runtime: ModelRuntime | null = null;
   let stopBind: (() => void) | null = null;
 
+  // When a LAMMPS-like model is loaded and the type->element mapping is missing/incomplete,
+  // we want to force Settings to focus the LAMMPS panel even if a later "open settings"
+  // call happens in the same tick (e.g., multi-file batch load).
+  let lastLoadNeedsLammpsFocus = false;
+
   // picking helpers
   const raycaster = new THREE.Raycaster();
   const ndc = new THREE.Vector2();
   let pointerDown: { x: number; y: number; tMs: number } | null = null;
+  // model rotation via drag (left button)
+  let rotateLast: { x: number; y: number } | null = null;
+  // Active pointer tracking for drag-rotate (needed for pointer capture + touch).
+  let rotatePointerId: number | null = null;
+  let rotatePointerType: string | null = null;
+  // During drag-rotation, keep a local rotation state for smooth interaction.
+  let dragRotationDeg: { x: number; y: number; z: number } | null = null;
+  // Throttle syncing rotation back to settings to avoid heavy UI updates during drag.
+  let rotSyncTimer = 0;
+  let lastRotSyncMs = 0;
+
+  // sync dual-view distance back to settings when user zooms with mouse wheel
+  let distSyncRaf = 0;
+  let lastSyncedDist = NaN;
+  let removeControlsSync: (() => void) | null = null;
   let removePickListeners: (() => void) | null = null;
 
   // selection visuals (created after stage init)
@@ -226,6 +258,13 @@ export function useViewerStage(
   let lastRawFileName: string | null = null;
 
   const getSettings = (): ViewerSettings => settingsRef.value;
+
+  function wrapDeg180(deg: number): number {
+    // Normalize to (-180, 180]
+    let x = ((((deg + 180) % 360) + 360) % 360) - 180;
+    if (x === -180) x = 180;
+    return x;
+  }
 
   function openFilePicker(): void {
     fileInputRef.value?.click();
@@ -344,7 +383,10 @@ export function useViewerStage(
   }
 
   // ---- Atom picking & measurement ----
-  let selectionVisuals: Array<{ mesh: THREE.InstancedMesh; instanceId: number }> = [];
+  let selectionVisuals: Array<{
+    mesh: THREE.InstancedMesh;
+    instanceId: number;
+  }> = [];
   const tmpMat = new THREE.Matrix4();
   const tmpPos = new THREE.Vector3();
 
@@ -357,7 +399,8 @@ export function useViewerStage(
 
   function updateSelectionMeasure(): void {
     const sel = inspectCtx.selected.value;
-    const m: { distance12?: number; distance23?: number; angleDeg?: number } = {};
+    const m: { distance12?: number; distance23?: number; angleDeg?: number } =
+      {};
 
     if (sel.length >= 2 && sel[0]?.position && sel[1]?.position) {
       const a = { element: "E", position: sel[0]!.position } as Atom;
@@ -466,7 +509,8 @@ export function useViewerStage(
       // Scale highlight halo by actual atom radius.
       const geoAny = v.mesh.geometry as any;
       const rParam = geoAny?.parameters?.radius as number | undefined;
-      if (!v.mesh.geometry.boundingSphere) v.mesh.geometry.computeBoundingSphere();
+      if (!v.mesh.geometry.boundingSphere)
+        v.mesh.geometry.computeBoundingSphere();
       const rBound = v.mesh.geometry.boundingSphere?.radius;
       const r = Math.max(0.05, rParam ?? rBound ?? 0.3);
       const haloR = r * 1.25;
@@ -478,11 +522,17 @@ export function useViewerStage(
     }
 
     if (pts.length >= 2 && line12) {
-      (line12.geometry as THREE.BufferGeometry).setFromPoints([pts[0]!, pts[1]!]);
+      (line12.geometry as THREE.BufferGeometry).setFromPoints([
+        pts[0]!,
+        pts[1]!,
+      ]);
       line12.visible = true;
     }
     if (pts.length >= 3 && line23) {
-      (line23.geometry as THREE.BufferGeometry).setFromPoints([pts[1]!, pts[2]!]);
+      (line23.geometry as THREE.BufferGeometry).setFromPoints([
+        pts[1]!,
+        pts[2]!,
+      ]);
       line23.visible = true;
     }
   }
@@ -496,7 +546,8 @@ export function useViewerStage(
     instanceId: number;
     additive: boolean;
   }): void {
-    const { layerId, atomIndex, element, atom, mesh, instanceId, additive } = params;
+    const { layerId, atomIndex, element, atom, mesh, instanceId, additive } =
+      params;
 
     const picked: SelectedAtom = {
       layerId,
@@ -516,7 +567,9 @@ export function useViewerStage(
     const sel = [...inspectCtx.selected.value];
     const visuals = [...selectionVisuals];
 
-    const existsIdx = sel.findIndex((x) => x.layerId === layerId && x.atomIndex === atomIndex);
+    const existsIdx = sel.findIndex(
+      (x) => x.layerId === layerId && x.atomIndex === atomIndex
+    );
     if (existsIdx >= 0) {
       // toggle off in additive mode
       if (additive) {
@@ -559,22 +612,39 @@ export function useViewerStage(
 
     const canvas = stage.renderer.domElement;
     const rect = canvas.getBoundingClientRect();
-    // If dual-view is enabled, only the left viewport (front view) is interactive.
-    // Map NDC X using the left viewport width so picking matches the main camera.
+    const rawPresets = settingsRef.value.viewPresets;
+    const presets =
+      normalizeViewPresets(rawPresets).length > 0
+        ? normalizeViewPresets(rawPresets)
+        : settingsRef.value.dualViewEnabled
+        ? (["front", "side"] as const)
+        : ([] as const);
+
+    const isDual = presets.length === 2;
+
+    let pickCamera: AnyCamera = stage.getCamera();
     let viewportW = rect.width;
-    if (settingsRef.value.dualViewEnabled) {
+    let xPx = e.clientX - rect.left;
+    if (isDual) {
       const rRaw = settingsRef.value.dualViewSplit;
       const r = typeof rRaw === "number" && Number.isFinite(rRaw) ? rRaw : 0.5;
       const leftW = Math.max(1, rect.width * Math.max(0.1, Math.min(0.9, r)));
-      const localX = e.clientX - rect.left;
-      if (localX > leftW) return; // ignore clicks on the side view
-      viewportW = leftW;
+      const rightW = Math.max(1, rect.width - leftW);
+      if (xPx <= leftW) {
+        viewportW = leftW;
+      } else {
+        const aux = stage.getAuxCamera();
+        if (aux) pickCamera = aux;
+        viewportW = rightW;
+        xPx = xPx - leftW;
+      }
     }
-    const x = ((e.clientX - rect.left) / Math.max(1, viewportW)) * 2 - 1;
+
+    const x = (xPx / Math.max(1, viewportW)) * 2 - 1;
     const y = -(((e.clientY - rect.top) / Math.max(1, rect.height)) * 2 - 1);
     ndc.set(x, y);
 
-    raycaster.setFromCamera(ndc, stage.getCamera());
+    raycaster.setFromCamera(ndc, pickCamera);
 
     const meshes = runtime.getVisibleAtomMeshes();
     const hit = raycaster.intersectObjects(meshes, false)[0];
@@ -606,10 +676,20 @@ export function useViewerStage(
     const atom = atoms[atomIndex];
     if (!atom) return;
 
-    const element = (mesh.userData.element as string | undefined) ?? atom.element ?? "E";
+    const element =
+      (mesh.userData.element as string | undefined) ?? atom.element ?? "E";
 
-    const additive = inspectCtx.measureMode.value || e.shiftKey || e.ctrlKey || e.metaKey;
-    addPickedAtom({ layerId, atomIndex, element, atom, mesh, instanceId, additive });
+    const additive =
+      inspectCtx.measureMode.value || e.shiftKey || e.ctrlKey || e.metaKey;
+    addPickedAtom({
+      layerId,
+      atomIndex,
+      element,
+      atom,
+      mesh,
+      instanceId,
+      additive,
+    });
   }
 
   /**
@@ -649,8 +729,19 @@ export function useViewerStage(
 
     const atoms0 =
       model.frames && model.frames[0] ? model.frames[0] : model.atoms;
-    const { typeIds: detectedTypeIds, defaults } =
+    const { typeIds: detectedTypeIdsRaw, defaults } =
       collectTypeIdsAndElementDefaultsFromAtoms(atoms0);
+
+    // UX: many users expect to see a contiguous mapping table (1..maxTypeId),
+    // even if the current dump frame only contains a sparse subset.
+    // To avoid pathological memory use, clamp the expansion.
+    let detectedTypeIds = detectedTypeIdsRaw;
+    if (detectedTypeIdsRaw.length > 0) {
+      const maxId = detectedTypeIdsRaw[detectedTypeIdsRaw.length - 1] ?? 0;
+      if (Number.isFinite(maxId) && maxId > 0 && maxId <= 2000) {
+        detectedTypeIds = Array.from({ length: maxId }, (_, i) => i + 1);
+      }
+    }
 
     const mergedRows = mergeTypeMap(beforeRows, detectedTypeIds, defaults) as
       | LammpsTypeMapItem[]
@@ -665,6 +756,10 @@ export function useViewerStage(
       mergedRows ?? [],
       detectedTypeIds
     );
+
+    // Persist the last-load "needs focus" flag so later open-settings calls
+    // (e.g., batch load) don't accidentally switch away from the LAMMPS panel.
+    lastLoadNeedsLammpsFocus = typeMapAdded || hasUnknownForThisDump;
 
     if (patchSettings && typeMapAdded && mergedRows) {
       patchSettings({ lammpsTypeMap: mergedRows });
@@ -687,6 +782,7 @@ export function useViewerStage(
    * Non-LAMMPS file: do not force opening Settings, but reset focus to display.
    */
   function focusSettingsToDisplaySilently(): void {
+    lastLoadNeedsLammpsFocus = false;
     requestOpenSettings?.({ focusKey: "display", open: false });
   }
 
@@ -714,7 +810,8 @@ export function useViewerStage(
   function renderFromText(
     text: string,
     fileName: string,
-    reason: RenderReason
+    reason: RenderReason,
+    opts?: { hidePreviousLayers?: boolean }
   ): void {
     if (!stage || !runtime) return;
 
@@ -739,7 +836,9 @@ export function useViewerStage(
     const info =
       reason === "reparse"
         ? runtime.replaceActiveLayerModel(model)
-        : runtime.renderModel(model);
+        : runtime.renderModel(model, {
+            hidePreviousLayers: opts?.hidePreviousLayers,
+          });
 
     // 3) sync animation state
     applyAnimationInfo(info, frameIndex, frameCount, hasAnimation);
@@ -749,7 +848,14 @@ export function useViewerStage(
 
     // 5) apply settings focus policy by format
     const fmt = model.source?.format ?? "";
-    const isLmp = isLammpsDumpFormat(fmt) || isLammpsDataFormat(fmt);
+    const atoms0 =
+      model.frames && model.frames[0] ? model.frames[0] : model.atoms;
+    const { typeIds: detectedTypeIds } =
+      collectTypeIdsAndElementDefaultsFromAtoms(atoms0);
+    const isLmp =
+      isLammpsDumpFormat(fmt) ||
+      isLammpsDataFormat(fmt) ||
+      detectedTypeIds.length > 0;
 
     if (isLmp) {
       handleLammpsTypeMapAndSettings(model);
@@ -797,13 +903,36 @@ export function useViewerStage(
    * Useful when the user edits the mapping and wants an explicit refresh.
    */
   function refreshTypeMap(): void {
-    if (!stage || !runtime) return;
-    if (!hasModel.value) return;
-    if (!runtime.hasAnyTypeId()) return;
+    void (async () => {
+      if (!stage || !runtime) return;
+      if (!hasModel.value) return;
+      if (!runtime.hasAnyTypeId()) return;
 
-    // Mesh rebuild invalidates instance references; clear selection to be safe.
-    inspectCtx.clear();
-    runtime.onTypeMapChanged();
+      // Mesh rebuild invalidates instance references; clear selection to be safe.
+      inspectCtx.clear();
+
+      // Show the loading spinner and yield frames so the UI has time to paint.
+      // Also enforce a small minimum duration so the user can see the feedback.
+      const tStart = performance.now();
+      if (!isLoading.value) {
+        isLoading.value = true;
+        await nextFrame();
+        await nextFrame();
+      }
+
+      try {
+        runtime.onTypeMapChanged();
+      } finally {
+        const minMs = 250;
+        const elapsed = performance.now() - tStart;
+        if (elapsed < minMs) {
+          await new Promise((r) =>
+            window.setTimeout(r, Math.ceil(minMs - elapsed))
+          );
+        }
+        isLoading.value = false;
+      }
+    })();
   }
 
   /**
@@ -811,22 +940,32 @@ export function useViewerStage(
    *
    * Load a file and render the model.
    */
-  async function loadFile(file: File): Promise<void> {
-    loadInit();
-    const t0 = performance.now();
+  async function loadFiles(
+    files: File[],
+    source: "drop" | "picker" | "api"
+  ): Promise<void> {
+    await loadFilesInternal(files, { openSettingsAfter: true, source });
+  }
 
-    const text = await file.text();
-    loadText(t0, text, file.name);
+  async function loadFile(file: File): Promise<void> {
+    await loadFilesInternal([file], {
+      openSettingsAfter: false,
+      source: "api",
+    });
   }
   async function loadUrl(url: string, fileName: string): Promise<void> {
-    loadInit();
+    if (isLoading.value) return;
+    await loadInit();
     const t0 = performance.now();
 
     const res = await fetch(url);
     if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
     const text = await res.text();
 
-    loadText(t0, text, fileName);
+    await loadText(t0, text, fileName, {
+      hidePreviousLayers: true,
+      openSettingsAfter: false,
+    });
   }
 
   async function loadInit() {
@@ -840,7 +979,8 @@ export function useViewerStage(
   async function loadText(
     t0: number,
     text: string,
-    fileName: string
+    fileName: string,
+    opts?: { hidePreviousLayers?: boolean; openSettingsAfter?: boolean }
   ): Promise<void> {
     try {
       stopPlay();
@@ -848,7 +988,18 @@ export function useViewerStage(
       lastRawText = text;
       lastRawFileName = fileName;
 
-      renderFromText(text, fileName, "load");
+      renderFromText(text, fileName, "load", {
+        hidePreviousLayers: opts?.hidePreviousLayers,
+      });
+
+      // Default-load UX:
+      // - Ensure there is always at least one preset selected.
+      // - Keep the distance slider reflecting the fitted camera distance.
+      syncViewPresetAndDistanceOnModelLoad();
+
+      if (opts?.openSettingsAfter) {
+        focusSettingsToLayersOrLammps();
+      }
 
       message.success(`${((performance.now() - t0) / 1000).toFixed(2)} s`);
       parseInfo.success = true;
@@ -867,41 +1018,157 @@ export function useViewerStage(
     parseInfo.fileName = fileName;
   }
 
-  function onDragEnter(): void {
-    dragDepth.value += 1;
-    isDragging.value = true;
+  function focusSettingsToLayersOrLammps(): void {
+    if (!requestOpenSettings) return;
+    if (lastLoadNeedsLammpsFocus) {
+      requestOpenSettings({ focusKey: "lammps", open: true });
+      return;
+    }
+    // If there is any typeId mapping and it looks incomplete, focus LAMMPS.
+    if (runtime?.hasAnyTypeId()) {
+      const rows = normalizeTypeMapRows(
+        ((getSettings().lammpsTypeMap ?? []) as any) ?? []
+      );
+      const activeAtoms = runtime?.getActiveAtoms?.() ?? null;
+      if (activeAtoms) {
+        const { typeIds } =
+          collectTypeIdsAndElementDefaultsFromAtoms(activeAtoms);
+        if (hasUnknownElementMappingForTypeIds(rows as any, typeIds)) {
+          requestOpenSettings({ focusKey: "lammps", open: true });
+          return;
+        }
+      }
+      const hasPlaceholder = rows.some((r) => {
+        const el = (r.element ?? "").toString().trim();
+        return !el || el.toUpperCase() === "E";
+      });
+      if (hasPlaceholder) {
+        requestOpenSettings({ focusKey: "lammps", open: true });
+        return;
+      }
+    }
+    requestOpenSettings({ focusKey: "layers", open: true });
   }
 
-  function onDragOver(e: DragEvent): void {
-    if (e.dataTransfer) e.dataTransfer.dropEffect = "copy";
-  }
+  async function loadFilesInternal(
+    files: File[],
+    opts: { openSettingsAfter: boolean; source: "drop" | "picker" | "api" }
+  ): Promise<void> {
+    if (!stage || !runtime) return;
+    if (isLoading.value) return;
 
-  function onDragLeave(): void {
-    dragDepth.value -= 1;
-    if (dragDepth.value <= 0) {
-      dragDepth.value = 0;
-      isDragging.value = false;
+    await loadInit();
+    const t0 = performance.now();
+
+    try {
+      stopPlay();
+
+      // New load: clear selection/measurement overlays.
+      inspectCtx.clear();
+
+      let okCount = 0;
+      let lastOkName = "";
+
+      for (const f of files) {
+        try {
+          const text = await f.text();
+          lastRawText = text;
+          lastRawFileName = f.name;
+
+          // First successful file hides previous layers; subsequent files keep all newly loaded layers visible.
+          renderFromText(text, f.name, "load", {
+            hidePreviousLayers: okCount === 0,
+          });
+
+          okCount += 1;
+          lastOkName = f.name;
+        } catch (err) {
+          const msg = (err as Error).message ?? String(err);
+          message.error(`${f.name}: ${msg}`);
+        }
+      }
+
+      if (okCount > 0) {
+        // Default-load UX:
+        // - Ensure there is always at least one preset selected.
+        // - Keep the distance slider reflecting the fitted camera distance.
+        syncViewPresetAndDistanceOnModelLoad();
+
+        message.success(
+          `${okCount} file(s), ${((performance.now() - t0) / 1000).toFixed(
+            2
+          )} s`
+        );
+
+        parseInfo.success = true;
+        parseInfo.errorMsg = "";
+        hasModel.value = true;
+        parseMode.value = "auto";
+        parseInfo.fileName = lastOkName || lastRawFileName!;
+
+        if (opts.openSettingsAfter) {
+          focusSettingsToLayersOrLammps();
+        }
+      } else {
+        parseInfo.success = false;
+        parseInfo.errorMsg = t("viewer.parse.notice");
+        parseInfo.errorSeq += 1;
+        message.error(t("viewer.parse.notice"));
+      }
+    } catch (err) {
+      parseInfo.success = false;
+      parseInfo.errorMsg = (err as Error).message ?? String(err);
+      parseInfo.errorSeq += 1;
+      console.log(err);
+      message.error(`${t("viewer.parse.notice")}: ${parseInfo.errorMsg}`);
+    } finally {
+      isLoading.value = false;
     }
   }
 
-  async function onDrop(e: DragEvent): Promise<void> {
-    dragDepth.value = 0;
-    isDragging.value = false;
+  function syncViewPresetAndDistanceOnModelLoad(): void {
+    if (!stage) return;
+    const canPatch = !!patchSettings;
 
-    const file = e.dataTransfer?.files?.[0];
-    if (!file) return;
+    const cam = stage.getCamera();
+    const controls = stage.getControls();
+    const dist = cam.position.distanceTo(controls.target);
 
-    await loadFile(file);
+    // 1) ensure stage internal distance matches the fitted camera distance.
+    // This prevents a "jump" when presets are (re)applied after fitting.
+    stage.setDualViewDistance(dist);
+    // Keep settings in sync so the slider shows the fitted distance.
+    if (canPatch)
+      patchSettings!({ dualViewDistance: dist, initialDualViewDistance: dist });
+
+    // 2) determine the intended presets (persisted user choice or a sensible default).
+    let presets = normalizeViewPresets(getSettings().viewPresets);
+    if (presets.length === 0 && !!getSettings().dualViewEnabled) {
+      presets = ["front", "side"];
+    }
+
+    if (presets.length === 0) {
+      const w = stage.host.getBoundingClientRect().width;
+      // On narrow screens (mobile), default to a single view.
+      // On wider screens, default to dual view to show more context.
+      presets = w >= 900 ? ["front", "side"] : ["front"];
+      if (canPatch)
+        patchSettings!({ viewPresets: presets, dualViewEnabled: false });
+    }
+
+    // 3) reapply presets after runtime fit so the view angle always matches the selected preset(s).
+    stage.setViewPresets(presets);
   }
 
-  async function onFilePicked(e: Event): Promise<void> {
-    const input = e.target as HTMLInputElement;
-    const file = input.files?.[0];
-    input.value = "";
-    if (!file) return;
-
-    await loadFile(file);
-  }
+  // Drag/drop handlers are provided by useFileDrop().
+  const {
+    isDragging,
+    onDragEnter,
+    onDragOver,
+    onDragLeave,
+    onDrop,
+    onFilePicked,
+  } = fileDrop;
 
   /**
    * 导出透明背景并裁剪的 PNG。
@@ -949,8 +1216,20 @@ export function useViewerStage(
       const target = controls.target;
 
       // 3) render
-      if (settings.dualViewEnabled) {
-        const split = Math.max(0.1, Math.min(0.9, settings.dualViewSplit ?? 0.5));
+      const presets = (() => {
+        const v = normalizeViewPresets(settings.viewPresets);
+        if (v.length > 0) return v;
+        // Backward-compat
+        return settings.dualViewEnabled
+          ? (["front", "side"] as const)
+          : ([] as const);
+      })();
+
+      if (presets.length === 2) {
+        const split = Math.max(
+          0.1,
+          Math.min(0.9, settings.dualViewSplit ?? 0.5)
+        );
         const leftW = Math.floor(w * split);
         const rightW = Math.max(1, w - leftW);
 
@@ -959,21 +1238,43 @@ export function useViewerStage(
         const sideCamera = camera.clone() as AnyCamera;
         updateCameraForSize(sideCamera, rightW, h, orthoHalfHeight);
 
-        // Build side camera pose from current main camera pose (keeps wheel zoom consistent)
-        const viewVec = camera.position.clone().sub(target);
-        const dist = Math.max(1e-6, viewVec.length());
-        const q = new THREE.Quaternion().setFromAxisAngle(
+        // Build 2nd camera pose from current main camera pose by applying a fixed preset offset.
+        // This matches the on-screen dual-view behavior.
+        const qFront = new THREE.Quaternion(); // identity
+        const qSide = new THREE.Quaternion().setFromAxisAngle(
           new THREE.Vector3(0, 1, 0),
           Math.PI / 2
         );
-        viewVec.applyQuaternion(q);
-        viewVec.setLength(dist);
+        const qTop = new THREE.Quaternion().setFromAxisAngle(
+          new THREE.Vector3(1, 0, 0),
+          -Math.PI / 2
+        );
+
+        const presetQuat = (p: string): THREE.Quaternion => {
+          if (p === "side") return qSide;
+          if (p === "top") return qTop;
+          return qFront;
+        };
+
+        const qL = presetQuat(presets[0]).clone();
+        const qR = presetQuat(presets[1]).clone();
+        const offset = qR.multiply(qL.invert());
+
+        const viewVec = camera.position.clone().sub(target);
+        viewVec.applyQuaternion(offset);
         sideCamera.position.copy(target.clone().add(viewVec));
-        sideCamera.up.copy(camera.up);
+
+        const up = camera.up.clone().applyQuaternion(offset);
+        sideCamera.up.copy(up);
         sideCamera.lookAt(target);
+
+        // Keep clipping planes consistent.
+        sideCamera.near = camera.near;
+        sideCamera.far = camera.far;
         if (!isPerspective(camera) && !isPerspective(sideCamera)) {
-          (sideCamera as THREE.OrthographicCamera).zoom =
-            (camera as THREE.OrthographicCamera).zoom;
+          (sideCamera as THREE.OrthographicCamera).zoom = (
+            camera as THREE.OrthographicCamera
+          ).zoom;
         }
         (sideCamera as any).updateProjectionMatrix?.();
 
@@ -1060,7 +1361,7 @@ export function useViewerStage(
       setProjectionMode: (v) => stage?.setProjectionMode(v),
       resetView,
 
-      setDualViewEnabled: (v) => stage?.setDualViewEnabled(v),
+      setViewPresets: (v) => stage?.setViewPresets(v),
       setDualViewDistance: (d) => stage?.setDualViewDistance(d),
       setDualViewSplit: (r) => stage?.setDualViewSplit(r),
 
@@ -1082,13 +1383,185 @@ export function useViewerStage(
     runtime?.applyBackgroundColor();
     stage.start();
 
+    // Sync camera distance back to settings when the user zooms (mouse wheel / touchpad).
+    if (patchSettings) {
+      const controls = stage.getControls();
+      const scheduleSync = () => {
+        if (distSyncRaf) return;
+        distSyncRaf = requestAnimationFrame(() => {
+          distSyncRaf = 0;
+          if (!stage) return;
+          const cam = stage.getCamera();
+          const c = stage.getControls();
+          const dist = cam.position.distanceTo(c.target);
+          if (!Number.isFinite(dist)) return;
+          if (
+            Number.isFinite(lastSyncedDist) &&
+            Math.abs(dist - lastSyncedDist) < 1e-6
+          )
+            return;
+          lastSyncedDist = dist;
+          if (
+            Math.abs(dist - (settingsRef.value.dualViewDistance ?? dist)) > 1e-4
+          ) {
+            patchSettings({ dualViewDistance: dist });
+          }
+        });
+      };
+      controls.addEventListener("change", scheduleSync);
+      removeControlsSync = () =>
+        controls.removeEventListener("change", scheduleSync);
+    }
+
     // Atom picking: treat a short, low-movement pointer interaction as a click.
     const canvas = stage.renderer.domElement;
     const onPointerDown = (e: PointerEvent) => {
       // Only primary pointer to avoid multi-touch conflicts.
       if (e.isPrimary === false) return;
       pointerDown = { x: e.clientX, y: e.clientY, tMs: performance.now() };
+
+      // Drag-rotate the *model* so XYZ rotation stays in sync with Settings.
+      // - Mouse/Pen: left button
+      // - Touch: single primary pointer
+      const pt = (e as any).pointerType as string | undefined;
+      const isTouch = pt === "touch";
+      const isMouseLike = pt === "mouse" || pt === "pen" || !pt;
+
+      const canRotate =
+        (isMouseLike && (e.buttons & 1) === 1) || (isTouch && e.isPrimary);
+
+      if (!canRotate) return;
+      if (recording.isSelectingRecordArea.value) return;
+
+      rotateLast = { x: e.clientX, y: e.clientY };
+      rotatePointerId = e.pointerId;
+      rotatePointerType = pt ?? null;
+      try {
+        canvas.setPointerCapture(e.pointerId);
+      } catch {
+        // ignore
+      }
     };
+
+    const ROT_SPEED_DEG_PER_PX = 0.3;
+    const ROT_SYNC_INTERVAL_MS = 120;
+
+    const clearRotate = (): void => {
+      if (rotatePointerId != null) {
+        try {
+          canvas.releasePointerCapture(rotatePointerId);
+        } catch {
+          // ignore
+        }
+      }
+      rotateLast = null;
+      rotatePointerId = null;
+      rotatePointerType = null;
+      dragRotationDeg = null;
+      if (rotSyncTimer) {
+        window.clearTimeout(rotSyncTimer);
+        rotSyncTimer = 0;
+      }
+    };
+
+    const flushRotationToSettings = (force: boolean): void => {
+      if (!patchSettings) return;
+      if (!dragRotationDeg) return;
+
+      const now = performance.now();
+      if (!force && now - lastRotSyncMs < ROT_SYNC_INTERVAL_MS) return;
+
+      lastRotSyncMs = now;
+      patchSettings({ rotationDeg: { ...dragRotationDeg } });
+    };
+
+    const scheduleRotationSync = (force = false): void => {
+      if (!patchSettings) return;
+      if (!dragRotationDeg) return;
+
+      if (force) {
+        if (rotSyncTimer) {
+          window.clearTimeout(rotSyncTimer);
+          rotSyncTimer = 0;
+        }
+        flushRotationToSettings(true);
+        return;
+      }
+
+      flushRotationToSettings(false);
+
+      if (rotSyncTimer) return;
+
+      const due = Math.max(
+        0,
+        ROT_SYNC_INTERVAL_MS - (performance.now() - lastRotSyncMs)
+      );
+
+      rotSyncTimer = window.setTimeout(() => {
+        rotSyncTimer = 0;
+        flushRotationToSettings(true);
+      }, due);
+    };
+
+    const applyDragRotationToStage = (): void => {
+      if (!stage) return;
+      if (!dragRotationDeg) return;
+      stage.pivotGroup.rotation.set(
+        THREE.MathUtils.degToRad(dragRotationDeg.x),
+        THREE.MathUtils.degToRad(dragRotationDeg.y),
+        THREE.MathUtils.degToRad(dragRotationDeg.z)
+      );
+    };
+
+    const onPointerMove = (e: PointerEvent) => {
+      if (rotatePointerId == null) return;
+      if (e.pointerId !== rotatePointerId) return;
+      if (!rotateLast) return;
+      if (!stage) return;
+
+      // Do not rotate the model while selecting recording area.
+      if (recording.isSelectingRecordArea.value) return;
+
+      const ptNow =
+        rotatePointerType ??
+        ((e as any).pointerType as string | undefined) ??
+        null;
+      const isTouchNow = ptNow === "touch";
+      const isMouseLikeNow = ptNow === "mouse" || ptNow === "pen" || !ptNow;
+
+      if (isMouseLikeNow && (e.buttons & 1) !== 1) {
+        clearRotate();
+        return;
+      }
+      if (isTouchNow && (e.pressure ?? 0) === 0) {
+        clearRotate();
+        return;
+      }
+
+      const dx = e.clientX - rotateLast.x;
+      const dy = e.clientY - rotateLast.y;
+      rotateLast = { x: e.clientX, y: e.clientY };
+      if (dx === 0 && dy === 0) return;
+
+      if (!dragRotationDeg) {
+        const cur = getSettings().rotationDeg;
+        dragRotationDeg = { x: cur.x, y: cur.y, z: cur.z };
+      }
+
+      dragRotationDeg.x = wrapDeg180(
+        dragRotationDeg.x + dy * ROT_SPEED_DEG_PER_PX
+      );
+      dragRotationDeg.y = wrapDeg180(
+        dragRotationDeg.y + dx * ROT_SPEED_DEG_PER_PX
+      );
+
+      // Apply immediately for smooth interaction (avoid patchSettings thrash).
+      applyDragRotationToStage();
+
+      // Throttle UI/settings updates to keep drag smooth.
+      scheduleRotationSync(false);
+    };
+
     const onPointerUp = (e: PointerEvent) => {
       if (!pointerDown) return;
       if (e.isPrimary === false) {
@@ -1101,20 +1574,32 @@ export function useViewerStage(
       const dt = performance.now() - pointerDown.tMs;
       pointerDown = null;
 
+      // Ensure final rotation is persisted.
+      scheduleRotationSync(true);
+      clearRotate();
+
       // Threshold tuned for mobile/desktop.
       if (Math.hypot(dx, dy) <= 6 && dt <= 400) {
         handlePick(e);
       }
     };
+
     const onPointerCancel = () => {
       pointerDown = null;
+
+      scheduleRotationSync(true);
+      clearRotate();
     };
 
     canvas.addEventListener("pointerdown", onPointerDown, { passive: true });
+    canvas.addEventListener("pointermove", onPointerMove, { passive: true });
     canvas.addEventListener("pointerup", onPointerUp, { passive: true });
-    canvas.addEventListener("pointercancel", onPointerCancel, { passive: true });
+    canvas.addEventListener("pointercancel", onPointerCancel, {
+      passive: true,
+    });
     removePickListeners = () => {
       canvas.removeEventListener("pointerdown", onPointerDown);
+      canvas.removeEventListener("pointermove", onPointerMove);
       canvas.removeEventListener("pointerup", onPointerUp);
       canvas.removeEventListener("pointercancel", onPointerCancel);
     };
@@ -1130,6 +1615,9 @@ export function useViewerStage(
 
     removePickListeners?.();
     removePickListeners = null;
+
+    removeControlsSync?.();
+    removeControlsSync = null;
 
     stopBind?.();
     stopBind = null;
@@ -1223,6 +1711,7 @@ export function useViewerStage(
     onDrop,
     onFilePicked,
     loadFile,
+    loadFiles,
     loadUrl,
     onExportPng,
   };

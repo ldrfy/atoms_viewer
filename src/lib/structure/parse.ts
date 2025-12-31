@@ -147,9 +147,9 @@ function detectFormat(
 
   // 2) 嗅探兜底 / Sniffing fallback
 
-  // LAMMPS dump 特征：ITEM: TIMESTEP
-  // LAMMPS dump signature: ITEM: TIMESTEP
-  if (text.includes("ITEM: TIMESTEP")) {
+  // LAMMPS dump 特征：通常含有若干 ITEM: 段（TIMESTEP / NUMBER OF ATOMS / BOX BOUNDS / ATOMS ...）
+  // LAMMPS dump signature: typically contains several ITEM: sections (TIMESTEP / NUMBER OF ATOMS / BOX BOUNDS / ATOMS ...)
+  if (isLikelyLammpsDump(text)) {
     return { format: "lammpsdump", extNormalized };
   }
 
@@ -160,6 +160,22 @@ function detectFormat(
   }
 
   return { format: "unknown", extNormalized };
+}
+
+/**
+ * 粗略判断文本是否像 LAMMPS dump（lammpstrj/dump）。
+ *
+ * Heuristically detect whether text looks like a LAMMPS dump (lammpstrj/dump).
+ */
+function isLikelyLammpsDump(text: string): boolean {
+  // Use line-level regex to avoid accidental matches.
+  const reTime = /^\s*ITEM:\s+TIMESTEP\b/m;
+  const reNum = /^\s*ITEM:\s+NUMBER\s+OF\s+ATOMS\b/m;
+  const reBox = /^\s*ITEM:\s+BOX\s+BOUNDS\b/m;
+  const reAtoms = /^\s*ITEM:\s+ATOMS\b/m;
+
+  // Many dumps include TIMESTEP; some single-snapshot dumps may omit it but still have ATOMS + (NUMBER/BOX).
+  return reTime.test(text) || (reAtoms.test(text) && (reNum.test(text) || reBox.test(text)));
 }
 
 /**

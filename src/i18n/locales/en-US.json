@@ -105,11 +105,17 @@
         "panel": {
             "display": {
                 "header": "Display",
+                "viewPresets": "View presets",
+                "viewPresetsHint": "Select 1 preset for single view, or select 2 presets for side-by-side dual view.",
+                "viewPresetsNeedOne": "Please keep at least one view preset selected (cannot uncheck the last one).",
+                "viewPresetFront": "Front",
+                "viewPresetSide": "Side",
+                "viewPresetTop": "Top",
                 "dualView": "Dual view (front + side)",
                 "dualViewHint": "Render front and side views side-by-side.",
                 "dualViewDistance": "View distance",
-      "dualViewSplit": "Split ratio",
-      "dualViewSplitHint": "Adjust the width ratio between front (left) and side (right) view.",
+                "dualViewSplit": "Split ratio",
+                "dualViewSplitHint": "Adjust the width ratio between front (left) and side (right) view.",
                 "perspective": "Perspective",
                 "axes": "Axes",
                 "bonds": "Bonds",
@@ -123,7 +129,7 @@
                 "rotY": "Rotate Y",
                 "rotZ": "Rotate Z",
                 "resetPose": "Reset rotation",
-                "resetView": "Reset view"
+                "resetView": "Reset original distance"
             },
             "lammps": {
                 "header": "LAMMPS",
@@ -132,19 +138,19 @@
                 "typePlaceholder": "type",
                 "elementPlaceholder": "Element (e.g., C / O / Fe)",
                 "addMapping": "Add mapping",
-      "refresh": "Refresh view",
+                "refresh": "Refresh view",
                 "clear": "Clear",
                 "hint": "Recommended dump fields: id, type, x y z. If per-frame ordering is not fixed, the parser will sort by id to avoid animation jitter."
             },
             "files": {
-                "header": "Files / Export / Parse",
+                "header": "Export / Parse",
                 "openFile": "Open file",
                 "openFileHint": "You can also drag & drop a file onto the canvas. New loads are added as layers and previous layers are hidden by default.",
                 "export": {
                     "header": "Export image",
-                    "button": "Export",
+                    "button": "Export as PNG",
                     "transparent": "Transparent background",
-                    "hint": "Export as PNG. Scale multiplies the render resolution."
+                    "hint": "Scale multiplies the render resolution."
                 },
                 "parse": {
                     "header": "Parse info"

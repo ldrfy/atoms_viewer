@@ -105,11 +105,17 @@
         "panel": {
             "display": {
                 "header": "显示",
+                "viewPresets": "视角选择",
+                "viewPresetsHint": "可勾选 1 个视角显示单视图，或勾选 2 个视角显示双视图（左右并排）。",
+                "viewPresetsNeedOne": "至少选择一个视角（无法取消最后一个）。",
+                "viewPresetFront": "正视图",
+                "viewPresetSide": "侧视图",
+                "viewPresetTop": "俯视图",
                 "dualView": "双视图（正视 + 侧视）",
                 "dualViewHint": "左右同时显示正视与侧视，便于对照结构。",
                 "dualViewDistance": "视距",
-      "dualViewSplit": "左右比例",
-      "dualViewSplitHint": "调整左侧（正视）与右侧（侧视）的宽度比例。",
+                "dualViewSplit": "左右比例",
+                "dualViewSplitHint": "调整左侧（正视）与右侧（侧视）的宽度比例。",
                 "perspective": "是否透视",
                 "axes": "坐标轴",
                 "bonds": "键",
@@ -123,7 +129,7 @@
                 "rotY": "Y 轴旋转",
                 "rotZ": "Z 轴旋转",
                 "resetPose": "回到旋转前",
-                "resetView": "恢复原始方向"
+                "resetView": "恢复原始视距"
             },
             "lammps": {
                 "header": "LAMMPS",
@@ -132,19 +138,19 @@
                 "typePlaceholder": "type",
                 "elementPlaceholder": "元素（如 C / O / Fe）",
                 "addMapping": "添加映射",
-      "refresh": "刷新显示",
+                "refresh": "刷新显示",
                 "clear": "清空",
                 "hint": "建议 dump 输出包含 id、type、x y z。若每帧顺序不固定，解析端会按 id 排序以保证动画不抖动。"
             },
             "files": {
-                "header": "文件 / 导出 / 解析",
+                "header": "导出 / 解析",
                 "openFile": "打开文件",
                 "openFileHint": "你也可以将文件拖拽到画面中加载。新加载的模型会作为新图层加入，并默认隐藏旧图层。",
                 "export": {
                     "header": "导出图片",
-                    "button": "导出",
+                    "button": "导出为 PNG",
                     "transparent": "透明背景",
-                    "hint": "导出为 PNG。scale 会按倍率放大渲染分辨率。"
+                    "hint": "scale 会按倍率放大渲染分辨率。"
                 },
                 "parse": {
                     "header": "解析信息"

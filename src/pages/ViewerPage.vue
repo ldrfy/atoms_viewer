@@ -1,6 +1,7 @@
 <template>
     <div class="viewer-page">
-        <ViewerStage ref="viewerRef" v-model:settings="settingsModel" @open-settings="(p) => emit('open-settings', p)" />
+        <ViewerStage ref="viewerRef" v-model:settings="settingsModel"
+            @open-settings="(p) => emit('open-settings', p)" />
     </div>
 </template>
 
@@ -31,6 +32,7 @@ type ViewerStageExpose = {
     exportPng: (payload: { scale: number; transparent: boolean }) => void | Promise<void>;
     openFilePicker: () => void;
     loadFile: (file: File) => Promise<void>;
+    loadFiles: (files: File[]) => Promise<void>;
     loadUrl: (url: string, fileName: string) => Promise<void>;
 };
 
@@ -48,10 +50,12 @@ watch(
 
         if (req.kind === "file") {
             await api.loadFile(req.file);
+        } else if (req.kind === "files") {
+            await api.loadFiles(req.files);
         } else if (req.kind === "url") {
             await api.loadUrl(req.url, req.fileName);
         } else {
-            throw new Error("unknow");
+            throw new Error("unknown loadRequest");
         }
 
         emit("consume-load");

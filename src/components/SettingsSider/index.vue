@@ -1,29 +1,17 @@
 <template>
     <a-drawer v-model:open="openModel" :title="t('settings.title')" placement="right"
-        width="min(360px, calc(100vw - 24px))" :mask="true"
-        :mask-closable="true" :destroy-on-close="false">
+        width="min(360px, calc(100vw - 24px))" :mask="true" :mask-closable="true" :destroy-on-close="false">
         <!-- 关键：activeKey 由父组件控制 -->
         <a-collapse v-model:activeKey="activeKeyModel" ghost accordion>
             <!-- 文件 / 导出 / 解析 -->
             <a-collapse-panel key="files" :header="t('settings.panel.files.header')">
                 <a-form layout="vertical">
-                    <a-form-item>
-                        <a-button type="primary" block :disabled="!viewerApi" @click="onOpenFile">
-                            {{ t('settings.panel.files.openFile') }}
-                        </a-button>
-                        <a-typography-text type="secondary" style="display:block;margin-top:6px;">
-                            {{ t('settings.panel.files.openFileHint') }}
-                        </a-typography-text>
-                    </a-form-item>
-
-                    <a-divider style="margin: 8px 0" />
-
                     <a-form-item :label="t('settings.panel.files.export.header')">
                         <!-- 倍率 + 透明：同一行，两端对齐（移动端更紧凑） -->
                         <a-row justify="space-between" align="middle" :gutter="8">
-                            <a-col :flex="1">
-                                <a-input-number v-model:value="exportScale" :min="1" :max="5" :step="0.1"
-                                    :precision="1" :controls="false" style="width: 100%" />
+                            <a-col>
+                                <a-input-number v-model:value="exportScale" :min="1" :max="5" :step="0.1" :precision="1"
+                                    style="width: 140px" />
                             </a-col>
                             <a-col>
                                 <a-checkbox v-model:checked="exportTransparent">
@@ -58,7 +46,8 @@
                                     <a-tag>{{ viewerApi?.parseInfo.format || '-' }}</a-tag>
                                 </a-descriptions-item>
                                 <a-descriptions-item :label="t('viewer.parse.file')">
-                                    <span style="word-break: break-all">{{ viewerApi?.parseInfo.fileName || '-' }}</span>
+                                    <span style="word-break: break-all">{{ viewerApi?.parseInfo.fileName || '-'
+                                    }}</span>
                                 </a-descriptions-item>
                                 <a-descriptions-item :label="t('viewer.parse.atoms')">
                                     {{ viewerApi?.parseInfo.atomCount ?? 0 }}
@@ -70,37 +59,115 @@
                             </a-descriptions>
                         </a-space>
                     </a-form-item>
-                </a-form>
-            </a-collapse-panel>
-            <!-- 显示 / 视图 -->
-            <a-collapse-panel key="display" :header="t('settings.panel.display.header')">
-                <a-form layout="vertical">
-                    <!-- 双视图：正视 + 侧视 -->
-                    <a-form-item>
-                        <a-row justify="space-between" align="middle">
-                            <a-col>{{ t("settings.panel.display.dualView") }}</a-col>
-                            <a-col>
-                                <a-switch v-model:checked="dualViewEnabledModel" />
-                            </a-col>
-                        </a-row>
-                        <a-typography-text type="secondary" style="display:block;margin-top:6px;">
-                            {{ t("settings.panel.display.dualViewHint") }}
-                        </a-typography-text>
-                    </a-form-item>
 
-                    <a-form-item v-if="dualViewEnabledModel" :label="t('settings.panel.display.dualViewDistance')">
+
+
+                    <!-- 录制帧率 -->
+                    <a-form-item :label="t('settings.panel.display.recordFps')">
                         <a-row :gutter="8" align="middle">
                             <a-col :flex="1">
-                                <a-slider v-model:value="dualViewDistanceModel" :min="1" :max="200" :step="0.5" />
+                                <a-slider v-model:value="recordFpsModel" :min="1" :max="120" :step="1" />
                             </a-col>
                             <a-col :style="{ width: '96px' }">
-                                <a-input-number v-model:value="dualViewDistanceModel" :min="1" :max="200" :step="0.5"
+                                <a-input-number v-model:value="recordFpsModel" :min="1" :max="120" :step="1"
                                     style="width: 100%" />
                             </a-col>
                         </a-row>
+
+                        <a-typography-text type="secondary" style="display:block;margin-top:6px;">
+                            {{ t('settings.panel.display.recordFpsHint') }}
+                        </a-typography-text>
                     </a-form-item>
 
-                    <a-form-item v-if="dualViewEnabledModel" :label="t('settings.panel.display.dualViewSplit')">
+                </a-form>
+            </a-collapse-panel>
+
+
+            <!-- 多模型图层 -->
+            <a-collapse-panel key="layers" :header="t('settings.panel.layers.header')">
+                <a-space direction="vertical" :size="8" style="width: 100%">
+                    <!-- 文件选择放在“模型图层”最上方 -->
+                    <div>
+                        <a-button type="primary" block :disabled="!viewerApi" @click="onOpenFile">
+                            {{ t('settings.panel.files.openFile') }}
+                        </a-button>
+                        <a-typography-text type="secondary" style="display:block;margin-top:6px;">
+                            {{ t('settings.panel.files.openFileHint') }}
+                        </a-typography-text>
+                    </div>
+
+                    <a-divider style="margin: 8px 0" />
+
+                    <a-alert v-if="!viewerApi" type="info" show-icon :message="t('settings.panel.layers.noViewer')" />
+
+                    <a-alert v-else-if="layerList.length === 0" type="info" show-icon
+                        :message="t('settings.panel.layers.empty')" />
+
+                    <div v-else class="layers-list">
+                        <div v-for="l in layerList" :key="l.id" class="layer-row"
+                            :class="{ active: l.id === activeLayerId }" @click="onSetActive(l.id)">
+                            <div class="layer-left">
+                                <a-radio :checked="l.id === activeLayerId" />
+                            </div>
+                            <div class="layer-main">
+                                <div class="layer-name" :title="l.name">{{ l.name }}</div>
+                                <div class="layer-meta">
+                                    {{ t('settings.panel.layers.meta', { atoms: l.atomCount, frames: l.frameCount }) }}
+                                </div>
+                            </div>
+                            <div class="layer-right" @click.stop>
+                                <a-switch size="small" :checked="l.visible"
+                                    @change="(v: boolean) => onToggleLayer(l.id, v)" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <a-typography-text type="secondary" style="display:block;">
+                        {{ t('settings.panel.layers.hint') }}
+                    </a-typography-text>
+                </a-space>
+            </a-collapse-panel>
+
+            <!-- 显示 / 视图 -->
+            <a-collapse-panel key="display" :header="t('settings.panel.display.header')">
+                <a-form layout="vertical">
+                    <!-- 恢复原始方向：放在“显示”最上方 -->
+                    <a-form-item>
+                        <a-button block @click="resetDistance">
+                            {{ t("settings.panel.pose.resetView") }}
+                        </a-button>
+                    </a-form-item>
+
+                    <a-form-item v-if="viewPresetsModel.length > 0"
+                        :label="t('settings.panel.display.dualViewDistance')">
+                        <a-row :gutter="8" align="middle">
+                            <a-col :flex="1">
+                                <a-slider v-model:value="dualViewDistanceModel" :min="1" :max="dualViewDistanceMax"
+                                    :step="0.5" />
+                            </a-col>
+                            <a-col :style="{ width: '96px' }">
+                                <a-input-number v-model:value="dualViewDistanceModel" :min="1"
+                                    :max="dualViewDistanceMax" :step="0.5" style="width: 100%" />
+                            </a-col>
+                        </a-row>
+                    </a-form-item>
+                    <!-- 多视角：正视 / 侧视 / 俯视
+                         - 选 1 个 => 单视图
+                         - 选 2 个 => 双视图（左右显示所选两视角） -->
+                    <a-form-item :label="t('settings.panel.display.viewPresets')">
+                        <!-- Use a controlled value + change handler to enforce:
+                             1) at least one preset must be selected
+                             2) at most two presets; selecting a 3rd auto-unchecks the oldest -->
+                        <a-checkbox-group :value="viewPresetsModel" :options="viewPresetOptions"
+                            @change="onViewPresetsChange" />
+                        <a-typography-text type="secondary" style="display:block;margin-top:6px;">
+                            {{ t('settings.panel.display.viewPresetsHint') }}
+                        </a-typography-text>
+                    </a-form-item>
+
+
+                    <a-form-item v-if="viewPresetsModel.length === 2"
+                        :label="t('settings.panel.display.dualViewSplit')">
                         <a-row :gutter="8" align="middle">
                             <a-col :flex="1">
                                 <a-slider v-model:value="dualViewSplitPctModel" :min="10" :max="90" :step="1" />
@@ -158,24 +225,6 @@
                         </a-row>
                     </a-form-item>
 
-
-                    <!-- 录制帧率 -->
-                    <a-form-item :label="t('settings.panel.display.recordFps')">
-                        <a-row :gutter="8" align="middle">
-                            <a-col :flex="1">
-                                <a-slider v-model:value="recordFpsModel" :min="1" :max="120" :step="1" />
-                            </a-col>
-                            <a-col :style="{ width: '96px' }">
-                                <a-input-number v-model:value="recordFpsModel" :min="1" :max="120" :step="1"
-                                    style="width: 100%" />
-                            </a-col>
-                        </a-row>
-
-                        <a-typography-text type="secondary" style="display:block;margin-top:6px;">
-                            {{ t('settings.panel.display.recordFpsHint') }}
-                        </a-typography-text>
-                    </a-form-item>
-
                 </a-form>
             </a-collapse-panel>
 
@@ -219,18 +268,9 @@
                     </a-form-item>
 
                     <a-form-item>
-                        <a-row :gutter="8">
-                            <a-col :span="12">
-                                <a-button block @click="resetPose">
-                                    {{ t("settings.panel.pose.resetPose") }}
-                                </a-button>
-                            </a-col>
-                            <a-col :span="12">
-                                <a-button block @click="resetView">
-                                    {{ t("settings.panel.pose.resetView") }}
-                                </a-button>
-                            </a-col>
-                        </a-row>
+                        <a-button block @click="resetPose">
+                            {{ t("settings.panel.pose.resetPose") }}
+                        </a-button>
                     </a-form-item>
                 </a-form>
             </a-collapse-panel>
@@ -291,46 +331,15 @@
                 </a-form>
             </a-collapse-panel>
 
-            <!-- 多模型图层 -->
-            <a-collapse-panel key="layers" :header="t('settings.panel.layers.header')">
-                <a-space direction="vertical" :size="8" style="width: 100%">
-                    <a-alert v-if="!viewerApi" type="info" show-icon
-                        :message="t('settings.panel.layers.noViewer')" />
-
-                    <a-alert v-else-if="layerList.length === 0" type="info" show-icon
-                        :message="t('settings.panel.layers.empty')" />
-
-                    <div v-else class="layers-list">
-                        <div v-for="l in layerList" :key="l.id" class="layer-row" :class="{ active: l.id === activeLayerId }"
-                            @click="onSetActive(l.id)">
-                            <div class="layer-left">
-                                <a-radio :checked="l.id === activeLayerId" />
-                            </div>
-                            <div class="layer-main">
-                                <div class="layer-name" :title="l.name">{{ l.name }}</div>
-                                <div class="layer-meta">
-                                    {{ t('settings.panel.layers.meta', { atoms: l.atomCount, frames: l.frameCount }) }}
-                                </div>
-                            </div>
-                            <div class="layer-right" @click.stop>
-                                <a-switch size="small" :checked="l.visible" @change="(v: boolean) => onToggleLayer(l.id, v)" />
-                            </div>
-                        </div>
-                    </div>
-
-                    <a-typography-text type="secondary" style="display:block;">
-                        {{ t('settings.panel.layers.hint') }}
-                    </a-typography-text>
-                </a-space>
-            </a-collapse-panel>
-
         </a-collapse>
     </a-drawer>
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, ref, watch } from "vue";
+import { message } from "ant-design-vue";
 import type { ViewerSettings } from "../../lib/viewer/settings";
+import { normalizeViewPresets, type ViewPreset } from "../../lib/viewer/viewPresets";
 import { ATOMIC_SYMBOLS, normalizeElementSymbol } from "../../lib/structure/chem";
 import { useI18n } from "vue-i18n";
 import { viewerApiRef } from "../../lib/viewer/bridge";
@@ -381,20 +390,18 @@ function onToggleLayer(id: string, visible: boolean): void {
     viewerApi.value?.setLayerVisible(id, visible);
 }
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
     open: boolean;
     settings: ViewerSettings;
-    /**
-     * 折叠面板当前展开项（accordion 模式下为单 key）
-     * Current expanded panel key (single key under accordion)
-     */
-    activeKey: string;
-}>();
+    activeKey?: string;              // <- 允许 undefined
+}>(), {
+    activeKey: "display",            // <- 给个默认 key
+});
 
 const emit = defineEmits<{
     (e: "update:open", v: boolean): void;
     (e: "update:settings", v: ViewerSettings): void;
-    (e: "update:activeKey", v: string): void;
+    (e: "update:activeKey", v: string | undefined): void;  // <- 同步放宽
 }>();
 
 /**
@@ -410,9 +417,9 @@ const openModel = computed({
  * Collapse activeKey v-model
  * 折叠面板展开项双向绑定
  */
-const activeKeyModel = computed<string>({
+const activeKeyModel = computed<string | undefined>({
     get: () => props.activeKey,
-    set: (v: string) => emit("update:activeKey", v),
+    set: (v) => emit("update:activeKey", v),
 });
 
 /** 合并并回写 settings / Patch settings back to parent */
@@ -468,14 +475,76 @@ const orthographicModel = computed({
     set: (v: boolean) => patchSettings({ orthographic: !v }),
 });
 
-const dualViewEnabledModel = computed({
-    get: () => !!props.settings.dualViewEnabled,
-    set: (v: boolean) => patchSettings({ dualViewEnabled: v }),
-});
+const viewPresetOptions = computed(() => [
+    { label: t("settings.panel.display.viewPresetFront"), value: "front" },
+    { label: t("settings.panel.display.viewPresetSide"), value: "side" },
+    { label: t("settings.panel.display.viewPresetTop"), value: "top" },
+]);
+
+// View presets selection is a controlled value so we can enforce constraints:
+// - At least one preset must be selected.
+// - At most two presets; selecting a 3rd auto-unchecks the oldest.
+const viewPresetsModel = ref<ViewPreset[]>(["front"]);
+
+function syncViewPresetsFromProps(): void {
+    const cur = normalizeViewPresets(props.settings.viewPresets);
+    if (cur.length > 0) {
+        viewPresetsModel.value = cur;
+        return;
+    }
+    // Backward-compat: old dualViewEnabled implies [front, side]
+    if (props.settings.dualViewEnabled) {
+        viewPresetsModel.value = ["front", "side"];
+        return;
+    }
+    // Never allow empty in UI
+    viewPresetsModel.value = ["front"];
+}
+
+watch(
+    () => [props.settings.viewPresets, props.settings.dualViewEnabled] as const,
+    () => syncViewPresetsFromProps(),
+    { immediate: true, deep: true }
+);
+
+function onViewPresetsChange(nextRaw: any): void {
+    // Do NOT normalize here: the change payload may contain 3 items.
+    // We need the raw set to correctly detect the newly added preset and drop the oldest.
+    const arr = Array.isArray(nextRaw) ? nextRaw : [];
+    const next = arr.filter(
+        (x): x is ViewPreset => x === "front" || x === "side" || x === "top"
+    );
+    const prev = viewPresetsModel.value;
+
+    // Prevent unselecting all
+    if (!next || next.length === 0) {
+        message.warning(t("settings.panel.display.viewPresetsNeedOne"));
+        return;
+    }
+
+    // Build a stable selection order based on user actions:
+    // keep previous ones that are still selected, then append newly added ones.
+    const keep = prev.filter((p) => next.includes(p));
+    const added = next.filter((p) => !prev.includes(p));
+    const merged = [...keep, ...added];
+
+    // Enforce max-two: drop the oldest (front of the array).
+    while (merged.length > 2) merged.shift();
+
+    viewPresetsModel.value = merged;
+    patchSettings({ viewPresets: merged, dualViewEnabled: false });
+}
 
 const dualViewDistanceModel = computed({
     get: () => props.settings.dualViewDistance ?? 10,
     set: (v: number) => patchSettings({ dualViewDistance: v }),
+});
+
+// Allow the distance control to represent fitted camera distances for larger models.
+// Keep a conservative minimum upper bound so the UI stays usable.
+const dualViewDistanceMax = computed(() => {
+    const v = props.settings.dualViewDistance ?? 10;
+    return Math.max(200, Math.ceil(v * 1.2));
 });
 
 // Dual view split ratio: store as 0..1 in settings, expose as 10..90 (%) in UI
@@ -509,11 +578,17 @@ function resetPose(): void {
     patchSettings({ rotationDeg: { x: 0, y: 0, z: 0 } });
 }
 
-function resetView(): void {
-    patchSettings({
-        rotationDeg: { x: 0, y: 0, z: 0 },
-        resetViewSeq: (props.settings.resetViewSeq ?? 0) + 1,
-    });
+function resetDistance(): void {
+    // Restore the fitted distance captured on model load.
+    // Do not touch model rotation so users can keep their chosen orientation.
+    const d =
+        typeof props.settings.initialDualViewDistance === "number" &&
+            Number.isFinite(props.settings.initialDualViewDistance)
+            ? props.settings.initialDualViewDistance
+            : (typeof props.settings.dualViewDistance === "number" && Number.isFinite(props.settings.dualViewDistance)
+                ? props.settings.dualViewDistance
+                : 10);
+    patchSettings({ dualViewDistance: d });
 }
 
 /* -----------------------------
@@ -555,7 +630,12 @@ function toElement(v: unknown): string {
 }
 
 function addLammpsRow(): void {
-    lammpsTypeMapModel.value = [...lammpsTypeMapModel.value, { typeId: 1, element: "E" }];
+    const used = new Set(
+        lammpsTypeMapModel.value.map((r) => toInt((r as any).typeId, 1))
+    );
+    let next = 1;
+    while (used.has(next)) next += 1;
+    lammpsTypeMapModel.value = [...lammpsTypeMapModel.value, { typeId: next, element: "E" }];
 }
 
 function removeLammpsRow(idx: number): void {

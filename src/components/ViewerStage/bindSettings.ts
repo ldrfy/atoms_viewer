@@ -1,5 +1,9 @@
 import { watch, type Ref } from "vue";
 import type { ViewerSettings } from "../../lib/viewer/settings";
+import {
+  normalizeViewPresets,
+  type ViewPreset,
+} from "../../lib/viewer/viewPresets";
 
 /**
  * 绑定 ViewerStage 与 settings 的 watch 逻辑，并返回统一的 stop 函数。
@@ -20,7 +24,7 @@ export function bindViewerStageSettings(params: {
   applyShowAxes: () => void;
   applyModelRotation: () => void;
 
-  setDualViewEnabled: (enabled: boolean) => void;
+  setViewPresets: (presets: ViewPreset[]) => void;
   setDualViewDistance: (dist: number) => void;
   setDualViewSplit: (ratio: number) => void;
 
@@ -37,7 +41,7 @@ export function bindViewerStageSettings(params: {
     applyShowBonds,
     applyShowAxes,
     applyModelRotation,
-    setDualViewEnabled,
+    setViewPresets,
     setDualViewDistance,
     setDualViewSplit,
     hasModel,
@@ -57,12 +61,28 @@ export function bindViewerStageSettings(params: {
     )
   );
 
-  // 双视图 / dual view
+  // 多视角视图 / multi-view presets
   stops.push(
     watch(
-      () => !!settingsRef.value.dualViewEnabled,
-      (v) => setDualViewEnabled(v),
-      { immediate: true }
+      () =>
+        [
+          settingsRef.value.viewPresets,
+          settingsRef.value.dualViewEnabled,
+        ] as const,
+      () => {
+        const v = normalizeViewPresets(settingsRef.value.viewPresets);
+        if (v.length > 0) {
+          setViewPresets(v);
+          return;
+        }
+        // Backward-compat: old dualViewEnabled implies [front, side]
+        if (!!settingsRef.value.dualViewEnabled) {
+          setViewPresets(["front", "side"]);
+          return;
+        }
+        setViewPresets([]);
+      },
+      { immediate: true, deep: true }
     )
   );
 
@@ -135,19 +155,9 @@ export function bindViewerStageSettings(params: {
     )
   );
 
-  // LAMMPS type map 改动：只对包含 typeId 的数据有意义
-  // LAMMPS type map changes: only meaningful if any atoms have typeId
-  stops.push(
-    watch(
-      () => settingsRef.value.lammpsTypeMap,
-      () => {
-        if (!hasModel.value) return;
-        if (!hasAnyTypeId()) return;
-        onTypeMapChanged();
-      },
-      { deep: true }
-    )
-  );
+  // LAMMPS type map changes can be expensive (rebuilding instanced meshes).
+  // To prevent UI stalls, we DO NOT rebuild on every edit.
+  // The caller should trigger a rebuild explicitly ("Refresh display").
 
   stops.push(
     watch(
@@ -155,7 +165,7 @@ export function bindViewerStageSettings(params: {
         settingsRef.value.backgroundColor,
         settingsRef.value.backgroundTransparent,
       ],
-      () => applyBackgroundColor(),
+      () => applyBackgroundColor()
     )
   );
 

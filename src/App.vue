@@ -5,7 +5,8 @@
             <TopHear :can-go-home="page === 'viewer'" @go-home="goHome" @open-settings="onOpenSettings" />
 
             <a-layout-content>
-                <EmptyPage v-if="page === 'empty'" @load-file="openWithFile" @preload-sample="preloadSample" />
+                <EmptyPage v-if="page === 'empty'" @load-file="openWithFile" @load-files="openWithFiles"
+                    @preload-sample="preloadSample" />
 
                 <ViewerPage v-else v-model:settings="settings" :loadRequest="loadRequest"
                     @consume-load="loadRequest = null" @open-settings="onOpenSettings" />
@@ -41,7 +42,7 @@ const settingsOpen = ref(false);
  * Settings 折叠面板当前展开项（accordion 下是单 key）
  * Current expanded panel key for SettingsSider (single key with accordion)
  */
-const settingsActiveKey = ref<string>("display");
+const settingsActiveKey = ref<string | undefined>("display");
 
 const settings = ref<ViewerSettings>({
     ...DEFAULT_SETTINGS,
@@ -58,6 +59,17 @@ const loadRequest = ref<LoadRequest | null>(null);
 
 function openWithFile(file: File): void {
     loadRequest.value = { kind: "file", file };
+    page.value = "viewer";
+}
+
+function openWithFiles(files: File[]): void {
+    if (!files || files.length === 0) return;
+    // Single file keeps the legacy path; multi-file uses batch loading.
+    if (files.length === 1) {
+        openWithFile(files[0]!);
+        return;
+    }
+    loadRequest.value = { kind: "files", files };
     page.value = "viewer";
 }
 

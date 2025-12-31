@@ -11,13 +11,13 @@
         <AtomInspectorOverlay :ctx="inspectCtx" />
 
         <!-- 放下后开始加载：旋转图标 -->
-        <div v-if="stage.isLoading.value" class="loading-overlay">
+        <div v-if="isLoading" class="loading-overlay">
             <a-spin size="large" />
         </div>
 
         <!-- 隐藏文件输入 -->
-        <input ref="fileInputRef" class="file-input" type="file" accept=".xyz,.pdb,.dump,.lammpstrj,.traj,.data,.lmp"
-            @change="stage.onFilePicked" />
+        <input ref="fileInputRef" class="file-input" type="file" multiple
+            accept=".xyz,.pdb,.dump,.lammpstrj,.traj,.data,.lmp" @change="stage.onFilePicked" />
 
         <!-- 动画 + 录制控制条 -->
         <AnimBar :ctx="animCtx" />
@@ -49,24 +49,43 @@ const emit = defineEmits<{
 }>();
 
 /** 统一 patch settings / Unified patch settings */
+// IMPORTANT: patchSettings can be called multiple times within the same tick (e.g. LAMMPS
+// mapping auto-fill + distance sync). If we always merge into props.settings, later patches
+// may overwrite earlier ones before parent updates propagate. Use a local shadow snapshot.
+let settingsShadow: ViewerSettings = {
+    ...props.settings,
+    rotationDeg: { ...props.settings.rotationDeg },
+};
+
+watch(
+    () => props.settings,
+    (v) => {
+        settingsShadow = { ...v, rotationDeg: { ...v.rotationDeg } };
+    },
+    { immediate: true, deep: true }
+);
+
 function patchSettings(patch: Partial<ViewerSettings>): void {
-    emit("update:settings", {
-        ...props.settings,
+    const base = settingsShadow;
+    const merged: ViewerSettings = {
+        ...base,
         ...patch,
         rotationDeg: {
-            ...props.settings.rotationDeg,
+            ...base.rotationDeg,
             ...(patch.rotationDeg ?? {}),
         },
-    });
+    };
+    settingsShadow = merged;
+    emit("update:settings", merged);
 }
 
 const stage = useViewerStage(settingsRef, patchSettings, (payload) => emit("open-settings", payload));
 
 /** template ref 必须是本地标识符，因此这里保留解构 */
-const { fileInputRef, canvasHostRef } = stage;
+const { fileInputRef, canvasHostRef, isLoading } = stage;
 void fileInputRef;
 void canvasHostRef;
-
+void isLoading;
 // ctx groups are created inside useViewerStage() and returned directly
 const { recordSelectCtx, animCtx, cropDashCtx, inspectCtx } = stage;
 
@@ -95,6 +114,7 @@ defineExpose({
     exportPng: stage.onExportPng,
     openFilePicker: stage.openFilePicker,
     loadFile: stage.loadFile,
+    loadFiles: (files: File[]) => stage.loadFiles(files, "api"),
     loadUrl: stage.loadUrl,
 });
 

@@ -7,6 +7,7 @@ const p = pkg as AnyPkg;
 
 export const APP_DISPLAY_NAME: string = String(p.displayName);
 export const APP_VERSION: string = String(p.version ?? "0.0.0");
+export const APP_YUHLDR_URL: string = String(p.urls?.yuhldr ?? "");
 export const APP_GITHUB_URL: string = String(p.urls?.github ?? "");
 export const APP_SAMPLES_URL: string = String(p.urls?.samples ?? "");
 

@@ -71,7 +71,7 @@
 
         <!-- 底部：Footer（页面底部） -->
         <div class="page-footer">
-            <a class="footer-link" :href="APP_GITHUB_URL" target="_blank" rel="noopener noreferrer">
+            <a class="footer-link" :href="APP_YUHLDR_URL" target="_blank" rel="noopener noreferrer">
                 <span>v{{ APP_VERSION }}</span>
                 <template v-if="APP_AUTHOR">
                     <span class="sep">·</span>
@@ -91,7 +91,7 @@ import { useI18n } from "vue-i18n";
 import { APP_SAMPLES_URL } from "../lib/appMeta"
 import type { SampleManifestItem } from "../lib/structure/types";
 import { DownOutlined } from "@ant-design/icons-vue";
-import { APP_AUTHOR, APP_DISPLAY_NAME, APP_GITHUB_URL, APP_VERSION } from "../lib/appMeta";
+import { APP_AUTHOR, APP_DISPLAY_NAME, APP_VERSION, APP_YUHLDR_URL } from "../lib/appMeta";
 import { fetchWithTimeout } from "../lib/net/index.ts";
 
 const { t } = useI18n();

@@ -8,7 +8,7 @@
         "yuhldr": "https://github.com/yuhldr",
         "samples": "https://raw.githubusercontent.com/ldrfy/atoms_viewer_docs/refs/tags/v0.0.1/data/data.json"
     },
-    "version": "0.1.0",
+    "version": "1.0.0",
     "type": "module",
     "scripts": {
         "dev": "vite",

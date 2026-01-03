@@ -104,6 +104,14 @@
     "settings": {
         "title": "配置",
         "panel": {
+            "other": {
+                "header": "其他",
+                "axes": "坐标轴",
+                "bonds": "键",
+                "atomSize": "原子大小",
+                "recordFps": "录制帧率 (fps)",
+                "recordFpsHint": "录制输出的目标帧率；常用 30 / 60。"
+            },
             "display": {
                 "header": "显示",
                 "viewPresets": "视角选择",
@@ -117,12 +125,7 @@
                 "dualViewDistance": "视距",
                 "dualViewSplit": "左右比例",
                 "dualViewSplitHint": "调整左侧（正视）与右侧（侧视）的宽度比例。",
-                "perspective": "是否透视",
-                "axes": "坐标轴",
-                "bonds": "键",
-                "atomSize": "原子大小",
-                "recordFps": "录制帧率 (fps)",
-                "recordFpsHint": "录制输出的目标帧率；常用 30 / 60。"
+                "perspective": "是否透视"
             },
             "pose": {
                 "header": "姿态（模型旋转，单位：度）",

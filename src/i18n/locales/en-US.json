@@ -102,6 +102,14 @@
     },
     "settings": {
         "title": "Settings",
+        "other": {
+            "header": "Other",
+            "axes": "Axes",
+            "bonds": "Bonds",
+            "atomSize": "Atom size",
+            "recordFps": "Recording FPS",
+            "recordFpsHint": "Target recording frame rate; commonly 30 / 60."
+        },
         "panel": {
             "display": {
                 "header": "Display",
@@ -116,12 +124,7 @@
                 "dualViewDistance": "View distance",
                 "dualViewSplit": "Split ratio",
                 "dualViewSplitHint": "Adjust the width ratio between front (left) and side (right) view.",
-                "perspective": "Perspective",
-                "axes": "Axes",
-                "bonds": "Bonds",
-                "atomSize": "Atom size",
-                "recordFps": "Recording FPS",
-                "recordFpsHint": "Target recording frame rate; commonly 30 / 60."
+                "perspective": "Perspective"
             },
             "pose": {
                 "header": "Pose (model rotation, degrees)",

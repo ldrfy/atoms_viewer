@@ -61,24 +61,6 @@
                     </a-form-item>
 
 
-
-                    <!-- 录制帧率 -->
-                    <a-form-item :label="t('settings.panel.display.recordFps')">
-                        <a-row :gutter="8" align="middle">
-                            <a-col :flex="1">
-                                <a-slider v-model:value="recordFpsModel" :min="1" :max="120" :step="1" />
-                            </a-col>
-                            <a-col :style="{ width: '96px' }">
-                                <a-input-number v-model:value="recordFpsModel" :min="1" :max="120" :step="1"
-                                    style="width: 100%" />
-                            </a-col>
-                        </a-row>
-
-                        <a-typography-text type="secondary" style="display:block;margin-top:6px;">
-                            {{ t('settings.panel.display.recordFpsHint') }}
-                        </a-typography-text>
-                    </a-form-item>
-
                 </a-form>
             </a-collapse-panel>
 
@@ -196,39 +178,6 @@
                             <a-col>{{ t("settings.panel.display.perspective") }}</a-col>
                             <a-col>
                                 <a-switch v-model:checked="orthographicModel" />
-                            </a-col>
-                        </a-row>
-                    </a-form-item>
-
-                    <!-- 坐标轴 -->
-                    <a-form-item>
-                        <a-row justify="space-between" align="middle">
-                            <a-col>{{ t("settings.panel.display.axes") }}</a-col>
-                            <a-col>
-                                <a-switch v-model:checked="showAxesModel" />
-                            </a-col>
-                        </a-row>
-                    </a-form-item>
-
-                    <!-- Bonds -->
-                    <a-form-item>
-                        <a-row justify="space-between" align="middle">
-                            <a-col>{{ t("settings.panel.display.bonds") }}</a-col>
-                            <a-col>
-                                <a-switch v-model:checked="showBondsModel" />
-                            </a-col>
-                        </a-row>
-                    </a-form-item>
-
-                    <!-- 原子大小 -->
-                    <a-form-item :label="t('settings.panel.display.atomSize')">
-                        <a-row :gutter="8" align="middle">
-                            <a-col :flex="1">
-                                <a-slider v-model:value="atomScaleModel" :min="0.2" :max="2" :step="0.05" />
-                            </a-col>
-                            <a-col :style="{ width: '96px' }">
-                                <a-input-number v-model:value="atomScaleModel" :min="0.2" :max="2" :step="0.05"
-                                    style="width: 100%" />
                             </a-col>
                         </a-row>
                     </a-form-item>
@@ -351,6 +300,65 @@
                             {{ t("settings.panel.lammps.hint") }}
                         </a-typography-text>
                     </a-form-item>
+                </a-form>
+            </a-collapse-panel>
+
+            <!-- 其他 -->
+            <a-collapse-panel key="other" :header="t('settings.panel.other.header')">
+                <a-form layout="vertical">
+
+                    <!-- 坐标轴 -->
+                    <a-form-item>
+                        <a-row justify="space-between" align="middle">
+                            <a-col>{{ t("settings.panel.other.axes") }}</a-col>
+                            <a-col>
+                                <a-switch v-model:checked="showAxesModel" />
+                            </a-col>
+                        </a-row>
+                    </a-form-item>
+
+                    <!-- Bonds -->
+                    <a-form-item>
+                        <a-row justify="space-between" align="middle">
+                            <a-col>{{ t("settings.panel.other.bonds") }}</a-col>
+                            <a-col>
+                                <a-switch v-model:checked="showBondsModel" />
+                            </a-col>
+                        </a-row>
+                    </a-form-item>
+
+                    <!-- 原子大小 -->
+                    <a-form-item :label="t('settings.panel.other.atomSize')">
+                        <a-row :gutter="8" align="middle">
+                            <a-col :flex="1">
+                                <a-slider v-model:value="atomScaleModel" :min="0.2" :max="2" :step="0.05" />
+                            </a-col>
+                            <a-col :style="{ width: '96px' }">
+                                <a-input-number v-model:value="atomScaleModel" :min="0.2" :max="2" :step="0.05"
+                                    style="width: 100%" />
+                            </a-col>
+                        </a-row>
+                    </a-form-item>
+
+
+
+                    <!-- 录制帧率 -->
+                    <a-form-item :label="t('settings.panel.other.recordFps')">
+                        <a-row :gutter="8" align="middle">
+                            <a-col :flex="1">
+                                <a-slider v-model:value="recordFpsModel" :min="1" :max="120" :step="1" />
+                            </a-col>
+                            <a-col :style="{ width: '96px' }">
+                                <a-input-number v-model:value="recordFpsModel" :min="1" :max="120" :step="1"
+                                    style="width: 100%" />
+                            </a-col>
+                        </a-row>
+
+                        <a-typography-text type="secondary" style="display:block;margin-top:6px;">
+                            {{ t('settings.panel.other.recordFpsHint') }}
+                        </a-typography-text>
+                    </a-form-item>
+
                 </a-form>
             </a-collapse-panel>
 
@@ -575,10 +583,11 @@ const dualViewDistanceModel = computed({
 
 // Allow the distance control to represent fitted camera distances for larger models.
 // Keep a conservative minimum upper bound so the UI stays usable.
-const dualViewDistanceMax = computed(() => {
-    const v = props.settings.dualViewDistance ?? 10;
-    return Math.max(200, Math.ceil(v * 1.2));
-});
+// const dualViewDistanceMax = computed(() => {
+//     const v = props.settings.dualViewDistance ?? 10;
+//     return Math.max(200, Math.ceil(v * 1.2));
+// });
+const dualViewDistanceMax = 500;
 
 // Dual view split ratio: store as 0..1 in settings, expose as 10..90 (%) in UI
 const dualViewSplitPctModel = computed({

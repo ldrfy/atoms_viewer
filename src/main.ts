@@ -36,7 +36,6 @@ import {
   Collapse,
   Descriptions,
   Divider,
-  FloatButton,
   Tooltip,
 } from "ant-design-vue";
 
@@ -74,9 +73,6 @@ app
   .use(Collapse)
   .use(Descriptions)
   .use(Divider)
-  .use(FloatButton);
-
-// Tooltip is used by AtomInspectorOverlay and popovers.
-app.use(Tooltip);
+  .use(Tooltip);
 
 app.mount("#app");

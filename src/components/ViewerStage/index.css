@@ -242,6 +242,7 @@
   background: rgba(0, 0, 0, 0.55);
   color: #fff;
   font-size: 12px;
+  -webkit-user-select: none;
   user-select: none;
 }
 

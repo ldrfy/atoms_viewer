@@ -1,14 +1,14 @@
 <template>
     <div v-if="hasModel" class="parse-overlay">
-        <a-popover v-model:open="open" trigger="click" placement="right"
-            :overlayClassName="'parse-popover'" :destroyTooltipOnHide="true">
+        <a-popover v-model:open="open" trigger="click" placement="right" :overlayClassName="'parse-popover'"
+            :destroyTooltipOnHide="true">
             <template #content>
                 <div class="parse-pop-content">
                     <div class="parse-pop-title">{{ t("viewer.parse.mode") }}</div>
 
                     <a-space direction="vertical" :size="6" style="width: 100%">
-                        <a-select size="small" v-model:value="parseModeModel" :options="parseModeOptions"
-                            style="width: 100%" />
+                        <a-select size="small" :aria-label="t('viewer.parse.mode')" :title="t('viewer.parse.mode')"
+                            v-model:value="parseModeModel" :options="parseModeOptions" style="width: 100%" />
 
                         <a-alert v-if="ctx.parseInfo.success === false" type="error" show-icon
                             :description="ctx.parseInfo.errorMsg || '-'" />
@@ -35,7 +35,8 @@
                 </div>
             </template>
 
-            <a-button class="btn-icon parse-handle" type="text" :aria-label="t('viewer.parse.mode')">
+            <a-button class="btn-icon parse-handle" type="text" :aria-label="t('viewer.parse.mode')"
+                :title="t('viewer.parse.mode')">
                 <ExclamationCircleOutlined />
             </a-button>
         </a-popover>

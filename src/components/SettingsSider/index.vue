@@ -7,7 +7,7 @@
         <!-- 自定义 Header：手机端更像 bottom-sheet -->
         <div class="settings-header">
             <div v-if="drawerPlacement === 'bottom'" class="settings-grab" @mousedown.prevent="onResizeStart"
-                aria-label="resize" role="button" tabindex="0">
+                aria-label="resize" title="Resize" role="button" tabindex="0">
                 <div class="settings-grab-bar"></div>
             </div>
 
@@ -16,7 +16,7 @@
                     {{ t('settings.title') }}
                 </div>
 
-                <a-button type="text" size="small" @click="openModel = false" aria-label="close">
+                <a-button type="text" size="small" @click="openModel = false" aria-label="close" title="Close">
                     ✕
                 </a-button>
             </div>
@@ -34,8 +34,9 @@
                             <!-- 倍率 + 透明：同一行，两端对齐（移动端更紧凑） -->
                             <a-row justify="space-between" align="middle" :gutter="8">
                                 <a-col>
-                                    <a-input-number v-model:value="exportScale" :min="1" :max="5" :step="0.1"
-                                        :precision="1" style="width: 140px" />
+                                    <a-input-number aria-label="Export scale" title="Export scale"
+                                        v-model:value="exportScale" :min="1" :max="5" :step="0.1" :precision="1"
+                                        style="width: 140px" />
                                 </a-col>
                                 <a-col>
                                     <a-checkbox v-model:checked="exportTransparent">
@@ -59,8 +60,9 @@
 
                         <a-form-item :label="t('settings.panel.files.parse.header')">
                             <a-space direction="vertical" :size="6" style="width: 100%">
-                                <a-select v-model:value="parseModeModel" :options="parseModeOptions"
-                                    :disabled="!hasAnyLayer" style="width: 100%" />
+                                <a-select :aria-label="t('viewer.parse.mode')" :title="t('viewer.parse.mode')"
+                                    v-model:value="parseModeModel" :options="parseModeOptions" :disabled="!hasAnyLayer"
+                                    style="width: 100%" />
 
                                 <a-alert v-if="viewerApi?.parseInfo.success === false" type="error" show-icon
                                     :description="viewerApi?.parseInfo.errorMsg || '-'" />
@@ -71,7 +73,7 @@
                                     </a-descriptions-item>
                                     <a-descriptions-item :label="t('viewer.parse.file')">
                                         <span style="word-break: break-all">{{ viewerApi?.parseInfo.fileName || '-'
-                                            }}</span>
+                                        }}</span>
                                     </a-descriptions-item>
                                     <a-descriptions-item :label="t('viewer.parse.atoms')">
                                         {{ viewerApi?.parseInfo.atomCount ?? 0 }}
@@ -126,10 +128,11 @@
                                 <div class="layer-right" @click.stop>
                                     <a-space :size="4">
                                         <a-switch size="small" :checked="l.visible"
+                                            :aria-label="'Visibility: ' + l.name" :title="'Visibility: ' + l.name"
                                             @change="(v: boolean) => onToggleLayer(l.id, v)" />
                                         <a-popconfirm :title="t('settings.panel.layers.deleteConfirm')"
                                             @confirm="() => onDeleteLayer(l.id)">
-                                            <a-button type="text" danger aria-label="delete layer">
+                                            <a-button type="text" danger aria-label="delete layer" title="Delete layer">
                                                 <DeleteOutlined />
                                             </a-button>
                                         </a-popconfirm>
@@ -162,8 +165,10 @@
                                         :step="0.5" />
                                 </a-col>
                                 <a-col :style="{ width: '96px' }">
-                                    <a-input-number v-model:value="dualViewDistanceModel" :min="1"
-                                        :max="dualViewDistanceMax" :step="0.5" style="width: 100%" />
+                                    <a-input-number :aria-label="t('settings.panel.display.dualViewDistance')"
+                                        :title="t('settings.panel.display.dualViewDistance')"
+                                        v-model:value="dualViewDistanceModel" :min="1" :max="dualViewDistanceMax"
+                                        :step="0.5" style="width: 100%" />
                                 </a-col>
                             </a-row>
                         </a-form-item>
@@ -189,7 +194,9 @@
                                     <a-slider v-model:value="dualViewSplitPctModel" :min="10" :max="90" :step="1" />
                                 </a-col>
                                 <a-col :style="{ width: '96px' }">
-                                    <a-input-number v-model:value="dualViewSplitPctModel" :min="10" :max="90" :step="1"
+                                    <a-input-number :aria-label="t('settings.panel.display.dualViewSplit')"
+                                        :title="t('settings.panel.display.dualViewSplit')"
+                                        v-model:value="dualViewSplitPctModel" :min="10" :max="90" :step="1"
                                         style="width: 100%" />
                                 </a-col>
                             </a-row>
@@ -203,7 +210,9 @@
                             <a-row justify="space-between" align="middle">
                                 <a-col>{{ t("settings.panel.display.perspective") }}</a-col>
                                 <a-col>
-                                    <a-switch v-model:checked="orthographicModel" />
+                                    <a-switch v-model:checked="orthographicModel"
+                                        :aria-label="t('settings.panel.display.perspective')"
+                                        :title="t('settings.panel.display.perspective')" />
                                 </a-col>
                             </a-row>
                         </a-form-item>
@@ -220,8 +229,9 @@
                                     <a-slider v-model:value="rotXModel" :min="-180" :max="180" :step="1" />
                                 </a-col>
                                 <a-col :style="{ width: '96px' }">
-                                    <a-input-number v-model:value="rotXModel" :min="-180" :max="180" :step="1"
-                                        style="width: 100%" />
+                                    <a-input-number :aria-label="t('settings.panel.pose.rotX')"
+                                        :title="t('settings.panel.pose.rotX')" v-model:value="rotXModel" :min="-180"
+                                        :max="180" :step="1" style="width: 100%" />
                                 </a-col>
                             </a-row>
                         </a-form-item>
@@ -232,8 +242,9 @@
                                     <a-slider v-model:value="rotYModel" :min="-180" :max="180" :step="1" />
                                 </a-col>
                                 <a-col :style="{ width: '96px' }">
-                                    <a-input-number v-model:value="rotYModel" :min="-180" :max="180" :step="1"
-                                        style="width: 100%" />
+                                    <a-input-number :aria-label="t('settings.panel.pose.rotY')"
+                                        :title="t('settings.panel.pose.rotY')" v-model:value="rotYModel" :min="-180"
+                                        :max="180" :step="1" style="width: 100%" />
                                 </a-col>
                             </a-row>
                         </a-form-item>
@@ -244,8 +255,9 @@
                                     <a-slider v-model:value="rotZModel" :min="-180" :max="180" :step="1" />
                                 </a-col>
                                 <a-col :style="{ width: '96px' }">
-                                    <a-input-number v-model:value="rotZModel" :min="-180" :max="180" :step="1"
-                                        style="width: 100%" />
+                                    <a-input-number :aria-label="t('settings.panel.pose.rotZ')"
+                                        :title="t('settings.panel.pose.rotZ')" v-model:value="rotZModel" :min="-180"
+                                        :max="180" :step="1" style="width: 100%" />
                                 </a-col>
                             </a-row>
                         </a-form-item>
@@ -284,13 +296,18 @@
                                 style="margin-bottom: 8px;">
                                 <a-row :gutter="8" align="middle">
                                     <a-col :span="8">
-                                        <a-input-number :min="1" :step="1" :value="row.typeId" style="width: 100%;"
+                                        <a-input-number :aria-label="t('settings.panel.lammps.typePlaceholder')"
+                                            :title="t('settings.panel.lammps.typePlaceholder')" :min="1" :step="1"
+                                            :value="row.typeId" style="width: 100%;"
                                             :placeholder="t('settings.panel.lammps.typePlaceholder')"
                                             @change="onLammpsTypeId(idx, $event)" />
                                     </a-col>
 
                                     <a-col :span="10">
-                                        <a-select show-search :value="row.element" style="width: 100%;"
+                                        <a-select show-search
+                                            :aria-label="t('settings.panel.lammps.elementPlaceholder')"
+                                            :title="t('settings.panel.lammps.elementPlaceholder')" :value="row.element"
+                                            style="width: 100%;"
                                             :placeholder="t('settings.panel.lammps.elementPlaceholder')"
                                             :options="atomicOptions" :filter-option="filterAtomicOption"
                                             @change="onLammpsElementChange(idx, $event)" />
@@ -339,7 +356,9 @@
                             <a-row justify="space-between" align="middle">
                                 <a-col>{{ t("settings.panel.other.axes") }}</a-col>
                                 <a-col>
-                                    <a-switch v-model:checked="showAxesModel" />
+                                    <a-switch v-model:checked="showAxesModel"
+                                        :aria-label="t('settings.panel.other.axes')"
+                                        :title="t('settings.panel.other.axes')" />
                                 </a-col>
                             </a-row>
                         </a-form-item>
@@ -349,7 +368,9 @@
                             <a-row justify="space-between" align="middle">
                                 <a-col>{{ t("settings.panel.other.bonds") }}</a-col>
                                 <a-col>
-                                    <a-switch v-model:checked="showBondsModel" />
+                                    <a-switch v-model:checked="showBondsModel"
+                                        :aria-label="t('settings.panel.other.bonds')"
+                                        :title="t('settings.panel.other.bonds')" />
                                 </a-col>
                             </a-row>
                         </a-form-item>
@@ -361,8 +382,9 @@
                                     <a-slider v-model:value="atomScaleModel" :min="0.2" :max="2" :step="0.05" />
                                 </a-col>
                                 <a-col :style="{ width: '96px' }">
-                                    <a-input-number v-model:value="atomScaleModel" :min="0.2" :max="2" :step="0.05"
-                                        style="width: 100%" />
+                                    <a-input-number :aria-label="t('settings.panel.other.atomSize')"
+                                        :title="t('settings.panel.other.atomSize')" v-model:value="atomScaleModel"
+                                        :min="0.2" :max="2" :step="0.05" style="width: 100%" />
                                 </a-col>
                             </a-row>
                         </a-form-item>
@@ -376,8 +398,9 @@
                                     <a-slider v-model:value="recordFpsModel" :min="1" :max="120" :step="1" />
                                 </a-col>
                                 <a-col :style="{ width: '96px' }">
-                                    <a-input-number v-model:value="recordFpsModel" :min="1" :max="120" :step="1"
-                                        style="width: 100%" />
+                                    <a-input-number :aria-label="t('settings.panel.other.recordFps')"
+                                        :title="t('settings.panel.other.recordFps')" v-model:value="recordFpsModel"
+                                        :min="1" :max="120" :step="1" style="width: 100%" />
                                 </a-col>
                             </a-row>
 

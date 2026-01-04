@@ -97,6 +97,7 @@
   cursor: row-resize;
   display: flex;
   justify-content: center;
+  touch-action: none;
 }
 
 .settings-grab-bar {
@@ -104,6 +105,11 @@
   height: 4px;
   border-radius: 999px;
   background: rgba(0, 0, 0, 0.18);
+}
+
+:root[data-theme="dark"] .settings-grab-bar {
+  /* On dark theme the handle must be bright enough to be visible */
+  background: rgba(255, 255, 255, 0.26);
 }
 
 /* Body scroll container */

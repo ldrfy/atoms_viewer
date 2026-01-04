@@ -1,13 +1,16 @@
 <template>
   <a-drawer
     v-model:open="openModel"
-    class="settings-drawer"
+    :class="[
+      'settings-drawer',
+      drawerPlacement === 'bottom' ? 'settings-drawer--bottom' : '',
+    ]"
     :placement="drawerPlacement"
-    :mask="true"
-    :mask-closable="true"
+    :mask="drawerPlacement === 'right'"
+    :mask-closable="drawerPlacement === 'right'"
     :destroy-on-close="false"
     :closable="false"
-    :maskStyle="maskStyle"
+    :maskStyle="drawerPlacement === 'right' ? maskStyle : undefined"
     :width="drawerPlacement === 'right' ? drawerWidth : undefined"
     :height="drawerPlacement === 'bottom' ? mobileHeight : undefined"
     :get-container="false"
@@ -819,9 +822,33 @@ let resizing = false;
 let startY = 0;
 let startH = 0;
 let activePointerId: number | null = null;
+let touchMoveBlocker: ((e: TouchEvent) => void) | null = null;
 
 function clamp(n: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, n));
+}
+
+function startBlockPullToRefresh(): void {
+  // Chrome/Android: overscroll-behavior is effective when applied to the root.
+  document.documentElement.classList.add("resizing");
+  document.body.classList.add("resizing");
+
+  // iOS/Safari (and some OEM browsers): overscroll-behavior may not reliably stop pull-to-refresh.
+  // During the resize gesture only, prevent default touchmove to suppress refresh / rubber-band.
+  touchMoveBlocker = (ev: TouchEvent) => {
+    if (resizing) ev.preventDefault();
+  };
+  window.addEventListener("touchmove", touchMoveBlocker, { passive: false });
+}
+
+function stopBlockPullToRefresh(): void {
+  document.documentElement.classList.remove("resizing");
+  document.body.classList.remove("resizing");
+
+  if (touchMoveBlocker) {
+    window.removeEventListener("touchmove", touchMoveBlocker as any);
+    touchMoveBlocker = null;
+  }
 }
 
 function onResizeStart(e: PointerEvent): void {
@@ -832,9 +859,22 @@ function onResizeStart(e: PointerEvent): void {
   startY = e.clientY;
   startH = mobileHeight.value;
 
+  // Keep receiving pointer events even if the finger drifts outside the handle.
+  // Also reduces the chance of losing the gesture to scroll/pull-to-refresh.
+  try {
+    (e.currentTarget as HTMLElement | null)?.setPointerCapture?.(e.pointerId);
+  } catch {
+    // Ignore capture failures (older browsers)
+  }
+
+  startBlockPullToRefresh();
+
   window.addEventListener("pointermove", onResizing, { passive: false });
   window.addEventListener("pointerup", onResizeEnd, { passive: true });
   window.addEventListener("pointercancel", onResizeEnd, { passive: true });
+  window.addEventListener("lostpointercapture", onResizeEnd as any, {
+    passive: true,
+  });
 }
 
 function onResizing(e: PointerEvent): void {
@@ -853,9 +893,11 @@ function onResizing(e: PointerEvent): void {
 function onResizeEnd(): void {
   if (!resizing) return;
   resizing = false;
+  stopBlockPullToRefresh();
   window.removeEventListener("pointermove", onResizing);
   window.removeEventListener("pointerup", onResizeEnd);
   window.removeEventListener("pointercancel", onResizeEnd);
+  window.removeEventListener("lostpointercapture", onResizeEnd as any);
   activePointerId = null;
 }
 

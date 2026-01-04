@@ -1,0 +1,124 @@
+.layers-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.layer-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(127, 127, 127, 0.08);
+  cursor: pointer;
+  user-select: none;
+}
+
+.layer-row.active {
+  outline: 1px solid var(--ant-colorPrimary, #1677ff);
+  background: rgba(22, 119, 255, 0.1);
+}
+
+.layer-left {
+  flex: 0 0 auto;
+}
+
+.layer-main {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.layer-name {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.layer-meta {
+  font-size: 12px;
+  opacity: 0.75;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.layer-right {
+  flex: 0 0 auto;
+}
+
+/* Drawer overall */
+.settings-drawer :deep(.ant-drawer-body) {
+  background: var(--ant-colorBgContainer, #fff);
+}
+
+/* Header */
+.settings-header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--ant-colorBgContainer, #fff);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.settings-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  gap: 10px;
+}
+
+.settings-title {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+/* Mobile grab handle (resize hotzone) */
+.settings-grab {
+  padding: 10px 0 6px;
+  cursor: row-resize;
+  display: flex;
+  justify-content: center;
+}
+
+.settings-grab-bar {
+  width: 44px;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.18);
+}
+
+/* Body scroll container */
+.settings-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 10px 12px calc(12px + env(safe-area-inset-bottom));
+}
+
+/* Collapse touch friendliness */
+.settings-collapse :deep(.ant-collapse-header) {
+  padding: 12px 0 !important;
+  font-size: 13px;
+}
+
+.settings-collapse :deep(.ant-collapse-content-box) {
+  padding: 0 0 12px 0 !important;
+}
+
+/* Make InputNumber steppers easier to tap on mobile */
+@media (max-width: 768px) {
+  .settings-drawer :deep(.ant-input-number-handler-wrap) {
+    width: 32px;
+  }
+
+  .settings-drawer :deep(.ant-input-number-handler) {
+    height: 50%;
+  }
+
+  .settings-drawer :deep(.ant-form-item-label > label) {
+    font-size: 13px;
+  }
+}

@@ -16,6 +16,7 @@
     :get-container="false"
     :contentWrapperStyle="contentWrapperStyle"
     :bodyStyle="drawerBodyStyle"
+    @after-open-change="onAfterOpenChange"
   >
     <!-- 自定义 Header：手机端更像 bottom-sheet -->
     <div class="settings-header">
@@ -39,7 +40,7 @@
         <a-button
           type="text"
           size="small"
-          @click="openModel = false"
+          @click="onCloseClick"
           aria-label="close"
           title="Close"
         >
@@ -754,6 +755,37 @@ const openModel = computed({
   set: (v: boolean) => emit("update:open", v),
 });
 
+// Keep placement stable while the drawer is open (and during its close animation).
+watch(
+  () => props.open,
+  (v, prev) => {
+    if (v) {
+      placementLock.value = isMobile.value ? "bottom" : "right";
+      freezeTopPx.value = null;
+      if (releaseLockTimer != null) {
+        window.clearTimeout(releaseLockTimer);
+        releaseLockTimer = null;
+      }
+      return;
+    }
+
+    // If the drawer is being closed programmatically (not via our close button),
+    // still apply the same guards on mobile to avoid a jump.
+    if (prev && !v) {
+      placementLock.value =
+        placementLock.value ?? (isMobile.value ? "bottom" : "right");
+      if (placementLock.value === "bottom" && freezeTopPx.value == null) {
+        freezeBottomSheetTop();
+        if (releaseLockTimer != null) window.clearTimeout(releaseLockTimer);
+        releaseLockTimer = window.setTimeout(() => {
+          clearCloseGuards();
+        }, 500);
+      }
+    }
+  },
+  { immediate: true }
+);
+
 /**
  * Collapse activeKey v-model
  * 折叠面板展开项双向绑定
@@ -779,6 +811,27 @@ const activeKeyModel = computed<string[]>({
  * ----------------------------- */
 const isMobile = ref(false);
 
+// Lock placement during open/close to avoid jitter around the breakpoint.
+const placementLock = ref<"right" | "bottom" | null>(null);
+// Freeze top during close on mobile to avoid a "jump" when the visual viewport changes.
+const freezeTopPx = ref<number | null>(null);
+let releaseLockTimer: number | null = null;
+
+function clearCloseGuards(): void {
+  freezeTopPx.value = null;
+  placementLock.value = null;
+  if (releaseLockTimer != null) {
+    window.clearTimeout(releaseLockTimer);
+    releaseLockTimer = null;
+  }
+}
+
+function getViewportHeight(): number {
+  // Prefer VisualViewport to match the actually visible area on mobile browsers.
+  // Fallback to innerHeight when unavailable.
+  return Math.round((window.visualViewport?.height ?? window.innerHeight) || 0);
+}
+
 function updateIsMobile(): void {
   isMobile.value = window.matchMedia("(max-width: 768px)").matches;
 }
@@ -791,10 +844,11 @@ onMounted(() => {
 onBeforeUnmount(() => {
   window.removeEventListener("resize", updateIsMobile);
   onResizeEnd(); // 确保移除监听
+  clearCloseGuards();
 });
 
-const drawerPlacement = computed<"right" | "bottom">(() =>
-  isMobile.value ? "bottom" : "right"
+const drawerPlacement = computed<"right" | "bottom">(
+  () => placementLock.value ?? (isMobile.value ? "bottom" : "right")
 );
 
 const drawerWidth = "min(360px, calc(100vw - 24px))";
@@ -817,6 +871,45 @@ const mobileHeight = ref<number>(
     Math.min(560, Math.floor(window.innerHeight * 0.75))
   )
 );
+
+function freezeBottomSheetTop(): void {
+  const vh = getViewportHeight();
+  // Keep the top edge stable: top = viewportHeight - drawerHeight.
+  freezeTopPx.value = Math.max(0, vh - mobileHeight.value);
+}
+
+function onCloseClick(): void {
+  // If we are closing a bottom-sheet, guard against viewport changes
+  // (address bar show/hide, pull-to-refresh UI) that can cause a visual "jump".
+  if (drawerPlacement.value === "bottom") {
+    placementLock.value = "bottom";
+    freezeBottomSheetTop();
+
+    // Fallback: clear guards even if the drawer does not emit after-open-change.
+    if (releaseLockTimer != null) window.clearTimeout(releaseLockTimer);
+    releaseLockTimer = window.setTimeout(() => {
+      clearCloseGuards();
+    }, 500);
+  } else {
+    placementLock.value = "right";
+    if (releaseLockTimer != null) window.clearTimeout(releaseLockTimer);
+    releaseLockTimer = window.setTimeout(() => {
+      clearCloseGuards();
+    }, 500);
+  }
+
+  openModel.value = false;
+}
+
+function onAfterOpenChange(open: boolean): void {
+  // When the animation finishes, release locks.
+  if (!open) {
+    clearCloseGuards();
+  } else {
+    // Opening finished: no need to keep a frozen top.
+    freezeTopPx.value = null;
+  }
+}
 
 let resizing = false;
 let startY = 0;
@@ -919,11 +1012,21 @@ const contentWrapperStyle = computed(() => {
   }
 
   // 手机端：bottom-sheet，圆角顶边 + safe-area
-  return {
+  const base = {
     borderRadius: "14px 14px 0 0",
     overflow: "hidden",
     boxShadow: "0 -12px 34px rgba(0,0,0,0.14)",
   } as Record<string, any>;
+
+  // During close, some mobile browsers change the visual viewport height (address bar).
+  // A bottom-anchored fixed drawer would jump upward; freezing `top` keeps the motion smooth.
+  if (freezeTopPx.value != null) {
+    return { ...base, top: `${freezeTopPx.value}px`, bottom: "auto" } as Record<
+      string,
+      any
+    >;
+  }
+  return base;
 });
 
 const drawerBodyStyle = computed(() => {

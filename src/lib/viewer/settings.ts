@@ -15,6 +15,8 @@ export type ViewerSettings = {
   atomScale: number;
   showAxes: boolean;
   showBonds: boolean;
+  /** During multi-frame playback, refresh bond meshes each frame. */
+  refreshBondsOnPlay: boolean;
   rotationDeg: RotationDeg;
   // 新增：是否正交（关闭透视）
   orthographic: boolean;
@@ -49,6 +51,7 @@ export const DEFAULT_SETTINGS: ViewerSettings = {
   atomScale: 1,
   showAxes: false,
   showBonds: true,
+  refreshBondsOnPlay: true,
   rotationDeg: { x: 0, y: 0, z: 0 },
   orthographic: false,
   resetViewSeq: 0,

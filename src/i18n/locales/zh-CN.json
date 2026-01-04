@@ -110,7 +110,8 @@
                 "bonds": "键",
                 "atomSize": "原子大小",
                 "recordFps": "录制帧率 (fps)",
-                "recordFpsHint": "录制输出的目标帧率；常用 30 / 60。"
+                "recordFpsHint": "录制输出的目标帧率；常用 30 / 60。",
+                "refreshBondsOnPlay": "播放时原子连接每帧刷新"
             },
             "display": {
                 "header": "显示",

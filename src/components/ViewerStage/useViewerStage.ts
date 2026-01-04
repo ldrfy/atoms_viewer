@@ -210,6 +210,7 @@ export function useViewerStage(
   // animation
   const anim = createViewerAnimationController({
     getRuntime: () => runtime,
+    settingsRef,
     inspectCtx,
     onSelectionVisualsNeedUpdate: () => picking.updateSelectionVisuals(),
   });

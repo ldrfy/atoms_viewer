@@ -153,7 +153,7 @@ export type ModelRuntime = {
 
   getFrameCount: () => number;
   getFrameIndex: () => number;
-  applyFrameByIndex: (idx: number) => void;
+  applyFrameByIndex: (idx: number, opts?: { refreshBonds?: boolean }) => void;
   getActiveAtoms: () => Atom[] | null;
 
   applyAtomScale: () => void;
@@ -799,7 +799,7 @@ export function createModelRuntime(args: {
     return active.model.atoms;
   }
 
-  function applyFrameByIndex(idx: number): void {
+  function applyFrameByIndex(idx: number, opts?: { refreshBonds?: boolean }): void {
     const active = getActiveLayer();
     if (!active) return;
 
@@ -824,6 +824,10 @@ export function createModelRuntime(args: {
       matTmp,
     });
 
+    if (opts?.refreshBonds) {
+      rebuildBondsForLayer(active, mapped);
+    }
+
     if (getSettings().showAxes) updateAxesForAtoms(mapped);
   }
 
@@ -838,6 +842,33 @@ export function createModelRuntime(args: {
 
     recomputeVisibleClipRadius();
     tickCameraClipping(true);
+  }
+  function rebuildBondsForLayer(layer: LayerInternal, atoms: Atom[]): void {
+    // Rebuild (and re-center) bond meshes to match the current frame.
+    // This is intentionally separated from applyShowBonds so playback can
+    // refresh bonds conditionally without toggling visibility.
+
+    if (!getSettings().showBonds) return;
+
+    if (layer.bondMeshes.length > 0) {
+      removeAndDisposeInstancedMeshes(layer.group, layer.bondMeshes);
+      layer.bondMeshes = [];
+      layer.lastBondSegCount = 0;
+    }
+
+    const c = computeMeanCenterInto(atoms, centerTmp2);
+    const centeredAtoms = makeCenteredAtomsView(atoms, c);
+
+    const res = buildBondMeshesBicolor({
+      atoms: centeredAtoms,
+      bondFactor,
+      atomSizeFactor,
+      bondRadius,
+    });
+
+    layer.bondMeshes = res.meshes;
+    layer.lastBondSegCount = res.segCount;
+    for (const b of layer.bondMeshes) layer.group.add(b);
   }
 
   function applyShowBonds(): void {

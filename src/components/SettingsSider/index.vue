@@ -593,6 +593,19 @@
               </a-row>
             </a-form-item>
 
+            <!-- 播放时键合刷新 -->
+            <a-form-item>
+              <a-row justify="space-between" align="middle">
+                <a-col>{{ t("settings.panel.other.refreshBondsOnPlay") }}</a-col>
+                <a-col>
+                  <a-switch
+                    v-model:checked="refreshBondsOnPlayModel"
+                    :aria-label="t('settings.panel.other.refreshBondsOnPlay')"
+                    :title="t('settings.panel.other.refreshBondsOnPlay')"
+                  />
+                </a-col>
+              </a-row>
+            </a-form-item>
             <!-- 原子大小 -->
             <a-form-item :label="t('settings.panel.other.atomSize')">
               <a-row :gutter="8" align="middle">
@@ -1091,6 +1104,11 @@ const showAxesModel = computed({
 const showBondsModel = computed({
   get: () => props.settings.showBonds,
   set: (v: boolean) => patchSettings({ showBonds: v }),
+});
+
+const refreshBondsOnPlayModel = computed({
+  get: () => props.settings.refreshBondsOnPlay ?? true,
+  set: (v: boolean) => patchSettings({ refreshBondsOnPlay: v }),
 });
 
 /**

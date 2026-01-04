@@ -1,4 +1,4 @@
-import type { Ref } from "vue";
+import type { Ref } from 'vue';
 
 /**
  * Accept either a raw value or a Ref-wrapped value.

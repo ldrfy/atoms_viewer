@@ -1,7 +1,7 @@
 // lib/structure/parsers/xyz.ts
-import type { Atom, StructureModel } from "../types";
-import { makeAtom } from "./common";
-import { t } from "../../../i18n/index";
+import type { Atom, StructureModel } from '../types';
+import { makeAtom } from './common';
+import { t } from '../../../i18n/index';
 
 export function parseXyz(text: string): StructureModel {
   const lines = text.split(/\r?\n/);
@@ -11,22 +11,22 @@ export function parseXyz(text: string): StructureModel {
   const comments: string[] = [];
 
   while (true) {
-    while (i < lines.length && (lines[i] ?? "").trim() === "") i += 1;
+    while (i < lines.length && (lines[i] ?? '').trim() === '') i += 1;
     if (i >= lines.length) break;
 
-    const nAtoms = Number.parseInt((lines[i] ?? "").trim(), 10);
+    const nAtoms = Number.parseInt((lines[i] ?? '').trim(), 10);
     if (!Number.isFinite(nAtoms) || nAtoms <= 0) break;
     i += 1;
 
-    const comment = (lines[i] ?? "").trim();
+    const comment = (lines[i] ?? '').trim();
     comments.push(comment);
     i += 1;
 
     const atoms: Atom[] = new Array(nAtoms);
     for (let k = 0; k < nAtoms; k += 1) {
-      const parts = (lines[i + k] ?? "").trim().split(/\s+/);
+      const parts = (lines[i + k] ?? '').trim().split(/\s+/);
 
-      const element = (parts[0] ?? "X").trim() || "X";
+      const element = (parts[0] ?? 'X').trim() || 'X';
       const x = parseFloatSafe(parts[1]);
       const y = parseFloatSafe(parts[2]);
       const z = parseFloatSafe(parts[3]);
@@ -41,14 +41,14 @@ export function parseXyz(text: string): StructureModel {
   const atoms0 = frames[0];
 
   if (!atoms0) {
-    throw new Error(t("errors.xyz.noFrames"));
+    throw new Error(t('errors.xyz.noFrames'));
   }
 
   const n0 = atoms0.length;
 
   for (let fi = 1; fi < frames.length; fi += 1) {
     if (frames[fi]!.length !== n0) {
-      throw new Error(t("errors.xyz.inconsistentAtomCountPerFrame"));
+      throw new Error(t('errors.xyz.inconsistentAtomCountPerFrame'));
     }
   }
 
@@ -60,6 +60,6 @@ export function parseXyz(text: string): StructureModel {
 }
 
 function parseFloatSafe(s: string | undefined): number {
-  const v = Number.parseFloat((s ?? "").trim());
+  const v = Number.parseFloat((s ?? '').trim());
   return Number.isFinite(v) ? v : 0;
 }

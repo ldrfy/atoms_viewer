@@ -1,10 +1,10 @@
-import * as THREE from "three";
-import type { Atom } from "../../lib/structure/types";
-import type { Ref } from "vue";
+import * as THREE from 'three';
+import type { Atom } from '../../lib/structure/types';
+import type { Ref } from 'vue';
 
 export function computeMeanCenterInto(
   atoms: Atom[],
-  out: THREE.Vector3
+  out: THREE.Vector3,
 ): THREE.Vector3 {
   let cx = 0;
   let cy = 0;
@@ -62,7 +62,7 @@ export function applyAnimationInfo(
   info: { frameCount: number; hasAnimation: boolean },
   frameIndex: Ref<number>,
   frameCount: Ref<number>,
-  hasAnimation: Ref<boolean>
+  hasAnimation: Ref<boolean>,
 ): void {
   frameIndex.value = 0;
   frameCount.value = info.frameCount;

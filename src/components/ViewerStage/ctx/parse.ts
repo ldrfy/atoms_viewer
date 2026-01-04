@@ -1,6 +1,6 @@
-import type { Ref } from "vue";
-import type { ParseMode, ParseInfo } from "../../../lib/structure/parse";
-import type { MaybeRef } from "./common";
+import type { Ref } from 'vue';
+import type { ParseMode, ParseInfo } from '../../../lib/structure/parse';
+import type { MaybeRef } from './common';
 
 export type ParseCtx = {
   hasModel: MaybeRef<boolean>;

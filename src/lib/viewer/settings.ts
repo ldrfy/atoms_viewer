@@ -1,5 +1,5 @@
-import { isDark } from "../../theme/mode";
-import type { ViewPreset } from "./viewPresets";
+import { isDark } from '../../theme/mode';
+import type { ViewPreset } from './viewPresets';
 export type LammpsTypeMapItem = {
   typeId: number;
   element: string;
@@ -41,7 +41,7 @@ export type ViewerSettings = {
   /** Dual view split ratio for left viewport width (0..1). */
   dualViewSplit?: number;
 
-//   录制帧率
+  //   录制帧率
   frame_rate: number;
 };
 
@@ -54,12 +54,12 @@ export const DEFAULT_SETTINGS: ViewerSettings = {
   resetViewSeq: 0,
 
   lammpsTypeMap: [],
-  backgroundColor: isDark.value ? "#000000" : "#ffffff",
+  backgroundColor: isDark.value ? '#000000' : '#ffffff',
   backgroundTransparent: true,
 
   // Enforce "at least one view" at the settings level. This avoids the UI being in an
   // undefined state for first-time users and ensures distance syncing works consistently.
-  viewPresets: ["front"],
+  viewPresets: ['front'],
 
   dualViewEnabled: false,
   dualViewDistance: 10,
@@ -75,7 +75,7 @@ export const DEFAULT_SETTINGS: ViewerSettings = {
  * Check whether element mapping is an unknown placeholder ("E").
  */
 function isUnknownElement(element: string | undefined | null): boolean {
-  return (element ?? "").trim().toUpperCase() === "E";
+  return (element ?? '').trim().toUpperCase() === 'E';
 }
 
 /**
@@ -92,7 +92,7 @@ function isUnknownElement(element: string | undefined | null): boolean {
  */
 export function hasUnknownElementMappingForTypeIds(
   rows: LammpsTypeMapItem[],
-  typeIds: number[]
+  typeIds: number[],
 ): boolean {
   if (typeIds.length === 0) return false;
 

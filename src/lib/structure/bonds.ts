@@ -1,5 +1,5 @@
-import type { Atom } from "./types";
-import { getCovalentRadiusAng } from "./chem";
+import type { Atom } from './types';
+import { getCovalentRadiusAng } from './chem';
 
 export interface Bond {
   i: number;

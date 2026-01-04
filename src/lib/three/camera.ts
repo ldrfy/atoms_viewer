@@ -1,11 +1,11 @@
-import * as THREE from "three";
-import { OrbitControls } from "three/addons/controls/OrbitControls.js";
-import type { Atom } from "../structure/types";
-import { getElementSize } from "./resize";
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import type { Atom } from '../structure/types';
+import { getElementSize } from './resize';
 
 export type AnyCamera = THREE.PerspectiveCamera | THREE.OrthographicCamera;
 export function isPerspective(
-  cam: THREE.Camera
+  cam: THREE.Camera,
 ): cam is THREE.PerspectiveCamera {
   return (cam as THREE.PerspectiveCamera).isPerspectiveCamera === true;
 }
@@ -39,7 +39,7 @@ export function updateCameraForSize(
   camera: AnyCamera,
   w: number,
   h: number,
-  orthoHalfHeight: number
+  orthoHalfHeight: number,
 ): void {
   const aspect = w / Math.max(1, h);
 
@@ -95,7 +95,7 @@ export function switchProjectionMode(params: {
   controls.dispose();
 
   const fovRad = THREE.MathUtils.degToRad(
-    isPerspective(camera) ? camera.fov : fovDeg
+    isPerspective(camera) ? camera.fov : fovDeg,
   );
 
   // ---------- 切到透视 ----------
@@ -106,8 +106,8 @@ export function switchProjectionMode(params: {
     if (!isPerspective(camera)) {
       // 正交有效 halfHeight = orthoHalfHeight / zoom
       // 如果你传入的 orthoHalfHeight 是“未缩放基准”，这里要除以 camera.zoom
-      const effectiveHalfH =
-        (orthoHalfHeight || 5) / Math.max(1e-6, camera.zoom);
+      const effectiveHalfH
+        = (orthoHalfHeight || 5) / Math.max(1e-6, camera.zoom);
       const newDist = effectiveHalfH / Math.tan(fovRad / 2);
       newPos = target.clone().add(viewDir.multiplyScalar(newDist));
     }
@@ -151,7 +151,7 @@ export function switchProjectionMode(params: {
     newHalfH,
     -newHalfH,
     0.01,
-    2000
+    2000,
   );
   cam.position.copy(pos);
   cam.up.copy(up);
@@ -222,7 +222,7 @@ export function fitCameraToAtoms(params: {
 
   for (const a of atoms) {
     box.expandByPoint(
-      new THREE.Vector3(a.position[0], a.position[1], a.position[2])
+      new THREE.Vector3(a.position[0], a.position[1], a.position[2]),
     );
     maxSphere = Math.max(maxSphere, getSphereRadiusByElement(a.element));
   }

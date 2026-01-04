@@ -1,6 +1,6 @@
-import * as THREE from "three";
-import type { AnyCamera } from "./camera";
-import type { ViewPreset } from "../viewer/viewPresets";
+import * as THREE from 'three';
+import type { AnyCamera } from './camera';
+import type { ViewPreset } from '../viewer/viewPresets';
 
 const V_UP = new THREE.Vector3(0, 1, 0);
 const V_UP_TOP = new THREE.Vector3(0, 0, 1);
@@ -22,15 +22,15 @@ export function applyCameraPoseForPreset(params: {
 
   const dir = new THREE.Vector3();
   switch (preset) {
-    case "front":
+    case 'front':
       dir.set(0, 0, 1);
       camera.up.copy(V_UP);
       break;
-    case "side":
+    case 'side':
       dir.set(1, 0, 0);
       camera.up.copy(V_UP);
       break;
-    case "top":
+    case 'top':
       dir.set(0, 1, 0);
       camera.up.copy(V_UP_TOP);
       break;

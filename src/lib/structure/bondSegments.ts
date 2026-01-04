@@ -1,17 +1,17 @@
 // src/lib/structure/bondSegments.ts
-import type { Atom } from "./types";
-import { getCovalentRadiusAng } from "./chem";
-import { computeBonds } from "./bonds";
+import type { Atom } from './types';
+import { getCovalentRadiusAng } from './chem';
+import { computeBonds } from './bonds';
 
 export type BondSegment2 = {
   colorKey: string;
-  p1: Atom["position"];
-  p2: Atom["position"];
+  p1: Atom['position'];
+  p2: Atom['position'];
 };
 
 export type BondGroups2 = Map<
   string,
-  Array<{ p1: Atom["position"]; p2: Atom["position"] }>
+  Array<{ p1: Atom['position']; p2: Atom['position'] }>
 >;
 
 export type BicolorBondGroupsResult = {
@@ -34,7 +34,7 @@ type BuildBicolorBondGroupsOptions = {
  */
 export function buildBicolorBondGroups(
   atoms: Atom[],
-  opts: BuildBicolorBondGroupsOptions = {}
+  opts: BuildBicolorBondGroupsOptions = {},
 ): BicolorBondGroupsResult {
   const bondFactor = opts.bondFactor ?? 1.05;
   const atomSizeFactor = opts.atomSizeFactor ?? 0.5;
@@ -63,7 +63,7 @@ export function buildBicolorBondGroups(
     const pi = ai.position;
     const pj = aj.position;
 
-    const mid: Atom["position"] = [
+    const mid: Atom['position'] = [
       pi[0] * alpha + pj[0] * beta,
       pi[1] * alpha + pj[1] * beta,
       pi[2] * alpha + pj[2] * beta,
@@ -83,13 +83,14 @@ export function buildBicolorBondGroups(
 function pushGroup(
   groups: BondGroups2,
   element: string,
-  p1: Atom["position"],
-  p2: Atom["position"]
+  p1: Atom['position'],
+  p2: Atom['position'],
 ): void {
   const arr = groups.get(element);
   if (arr) {
     arr.push({ p1, p2 });
-  } else {
+  }
+  else {
     groups.set(element, [{ p1, p2 }]);
   }
 }

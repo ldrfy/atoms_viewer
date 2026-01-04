@@ -1,7 +1,7 @@
 // src/components/ViewerStage/logic/viewerAnimation.ts
-import { ref } from "vue";
-import type { ModelRuntime } from "../modelRuntime";
-import type { InspectCtx } from "../ctx/inspect";
+import { ref } from 'vue';
+import type { ModelRuntime } from '../modelRuntime';
+import type { InspectCtx } from '../ctx/inspect';
 
 export function createViewerAnimationController(deps: {
   getRuntime: () => ModelRuntime | null;

@@ -1,5 +1,5 @@
 // lib/structure/parsers/common.ts
-import type { Atom, Vec3 } from "../types";
+import type { Atom, Vec3 } from '../types';
 
 /**
  * 创建 Atom，统一输出字段结构，避免不同解析器字段不一致导致渲染期报错。
@@ -17,7 +17,7 @@ export function makeAtom(
   element: string,
   x: number,
   y: number,
-  z: number
+  z: number,
 ): Atom {
   const position: Vec3 = [x, y, z];
   return { element, position };

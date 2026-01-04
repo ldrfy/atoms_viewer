@@ -19,7 +19,7 @@
         <ViewerPage
           v-else
           v-model:settings="settings"
-          :loadRequest="loadRequest"
+          :load-request="loadRequest"
           @consume-load="loadRequest = null"
           @open-settings="onOpenSettings"
         />
@@ -29,30 +29,30 @@
       <SettingsSider
         v-model:open="settingsOpen"
         v-model:settings="settings"
-        v-model:activeKey="settingsActiveKey"
+        v-model:active-key="settingsActiveKey"
       />
     </a-layout>
   </a-config-provider>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watchEffect, defineAsyncComponent } from "vue";
-import SettingsSider from "./components/SettingsSider";
-import TopHear from "./components/TopHear";
-import EmptyPage from "./pages/EmptyPage.vue";
+import { ref, computed, watchEffect, defineAsyncComponent } from 'vue';
+import SettingsSider from './components/SettingsSider';
+import TopHear from './components/TopHear';
+import EmptyPage from './pages/EmptyPage.vue';
 import {
   DEFAULT_SETTINGS,
   type ViewerSettings,
   type OpenSettingsPayload,
-} from "./lib/viewer/settings";
-import { theme as antdTheme } from "ant-design-vue";
-import { isDark, applyThemeToDom } from "./theme/mode";
-import type { LoadRequest } from "./pages/types";
-import type { SampleManifestItem } from "./lib/structure/types";
+} from './lib/viewer/settings';
+import { theme as antdTheme } from 'ant-design-vue';
+import { isDark, applyThemeToDom } from './theme/mode';
+import type { LoadRequest } from './pages/types';
+import type { SampleManifestItem } from './lib/structure/types';
 
-const ViewerPage = defineAsyncComponent(() => import("./pages/ViewerPage.vue"));
+const ViewerPage = defineAsyncComponent(() => import('./pages/ViewerPage.vue'));
 const antdAlgorithm = computed(() =>
-  isDark.value ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm
+  isDark.value ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm,
 );
 
 const settingsOpen = ref(false);
@@ -61,7 +61,7 @@ const settingsOpen = ref(false);
  * Settings 折叠面板当前展开项（非 accordion：可多项展开；空数组表示全部折叠）
  * Current expanded panel keys for SettingsSider (non-accordion; empty = all collapsed)
  */
-const settingsActiveKey = ref<string[]>(["display"]);
+const settingsActiveKey = ref<string[]>(['display']);
 
 const settings = ref<ViewerSettings>({
   ...DEFAULT_SETTINGS,
@@ -73,12 +73,12 @@ watchEffect(() => {
 });
 
 // 页面流程控制（空页 / viewer）
-const page = ref<"empty" | "viewer">("empty");
+const page = ref<'empty' | 'viewer'>('empty');
 const loadRequest = ref<LoadRequest | null>(null);
 
 function openWithFile(file: File): void {
-  loadRequest.value = { kind: "file", file };
-  page.value = "viewer";
+  loadRequest.value = { kind: 'file', file };
+  page.value = 'viewer';
 }
 
 function openWithFiles(files: File[]): void {
@@ -88,18 +88,18 @@ function openWithFiles(files: File[]): void {
     openWithFile(files[0]!);
     return;
   }
-  loadRequest.value = { kind: "files", files };
-  page.value = "viewer";
+  loadRequest.value = { kind: 'files', files };
+  page.value = 'viewer';
 }
 
 async function preloadSample(sample: SampleManifestItem): Promise<void> {
   const { url, fileName } = sample;
-  loadRequest.value = { kind: "url", url, fileName };
-  page.value = "viewer";
+  loadRequest.value = { kind: 'url', url, fileName };
+  page.value = 'viewer';
 }
 
 function goHome(): void {
-  page.value = "empty";
+  page.value = 'empty';
   loadRequest.value = null;
 }
 

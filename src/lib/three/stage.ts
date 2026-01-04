@@ -1,18 +1,18 @@
-import * as THREE from "three";
-import { OrbitControls } from "three/addons/controls/OrbitControls.js";
-import type { CSS2DRenderer } from "three/addons/renderers/CSS2DRenderer.js";
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import type { CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js';
 
-import { createRafLoop, type RafLoop } from "./loop";
-import { observeElementResize, syncRenderersToHost } from "./resize";
-import { attachCss2dRenderer } from "./labels2d";
+import { createRafLoop, type RafLoop } from './loop';
+import { observeElementResize, syncRenderersToHost } from './resize';
+import { attachCss2dRenderer } from './labels2d';
 import {
   isPerspective,
   switchProjectionMode,
   updateCameraForSize,
   type AnyCamera,
-} from "./camera";
-import { normalizeViewPresets, type ViewPreset } from "../viewer/viewPresets";
-import { applyCameraPoseForPreset } from "./viewPresets";
+} from './camera';
+import { normalizeViewPresets, type ViewPreset } from '../viewer/viewPresets';
+import { applyCameraPoseForPreset } from './viewPresets';
 
 /**
  * Three.js 舞台对象：负责 renderer/scene/camera/controls/resize/loop 等生命周期管理。
@@ -145,7 +145,7 @@ export function createThreeStage(params: {
   host.appendChild(renderer.domElement);
 
   // --- css2d labels / 2D 标签 ---
-  const labelRenderer = attachCss2dRenderer(host, "2");
+  const labelRenderer = attachCss2dRenderer(host, '2');
 
   // --- lights / 灯光 ---
   scene.add(new THREE.AmbientLight(0xffffff, 0.7));
@@ -179,7 +179,7 @@ export function createThreeStage(params: {
     dualViewDistance = dualViewOrthoBaseDist / Math.max(1e-6, ortho.zoom ?? 1);
   };
 
-  controls.addEventListener("change", onControlsChange);
+  controls.addEventListener('change', onControlsChange);
 
   // 正交相机 frustum 半高：会随 fit/resize 更新
   // Ortho frustum half-height: updated by fit/resize
@@ -209,9 +209,10 @@ export function createThreeStage(params: {
         el.style.width = `${leftW}px`;
         el.style.height = `${size.h}px`;
         el.style.left = `0px`;
-        el.style.right = "auto";
+        el.style.right = 'auto';
       }
-    } else {
+    }
+    else {
       // Restore label renderer to full width.
       if (labelRenderer) {
         labelRenderer.setSize(size.w, size.h);
@@ -219,7 +220,7 @@ export function createThreeStage(params: {
         el.style.width = `${size.w}px`;
         el.style.height = `${size.h}px`;
         el.style.left = `0px`;
-        el.style.right = "0px";
+        el.style.right = '0px';
       }
     }
     return size;
@@ -236,20 +237,20 @@ export function createThreeStage(params: {
   const qFront = new THREE.Quaternion(); // identity
   const qSide = new THREE.Quaternion().setFromAxisAngle(
     new THREE.Vector3(0, 1, 0),
-    Math.PI / 2
+    Math.PI / 2,
   );
   const qTop = new THREE.Quaternion().setFromAxisAngle(
     new THREE.Vector3(1, 0, 0),
-    -Math.PI / 2
+    -Math.PI / 2,
   );
 
   function presetQuat(p: ViewPreset): THREE.Quaternion {
     switch (p) {
-      case "side":
+      case 'side':
         return qSide;
-      case "top":
+      case 'top':
         return qTop;
-      case "front":
+      case 'front':
       default:
         return qFront;
     }
@@ -284,7 +285,7 @@ export function createThreeStage(params: {
     // Perspective: move along current view direction.
     if (isPerspective(camera)) {
       camera.position.copy(
-        target.clone().add(dir.multiplyScalar(dualViewDistance))
+        target.clone().add(dir.multiplyScalar(dualViewDistance)),
       );
       camera.lookAt(target);
       camera.updateProjectionMatrix();
@@ -428,7 +429,7 @@ export function createThreeStage(params: {
     // Keep interaction model consistent: we rotate the model (pivot), not the camera.
     controls.enableRotate = false;
     // Re-bind controls change listener (controls instance may change)
-    controls.addEventListener("change", onControlsChange);
+    controls.addEventListener('change', onControlsChange);
     orthoHalfHeight = res.orthoHalfHeight;
 
     // Update cached base distance used by dist <-> zoom mapping.
@@ -445,7 +446,7 @@ export function createThreeStage(params: {
     // 如果 controls 实例变化，需要释放旧 controls
     // Dispose old controls if a new instance was created
     if (prevControls !== controls) {
-      prevControls.removeEventListener("change", onControlsChange);
+      prevControls.removeEventListener('change', onControlsChange);
       prevControls.dispose();
     }
 
@@ -461,7 +462,7 @@ export function createThreeStage(params: {
         camera,
         Math.floor(rect.width),
         Math.floor(rect.height),
-        orthoHalfHeight
+        orthoHalfHeight,
       );
     }
 
@@ -486,7 +487,7 @@ export function createThreeStage(params: {
 
     if (labelRenderer) {
       labelRenderer.domElement.parentElement?.removeChild(
-        labelRenderer.domElement
+        labelRenderer.domElement,
       );
     }
 
@@ -535,7 +536,7 @@ export function createThreeStage(params: {
 
   const setDualViewEnabled = (enabled: boolean): void => {
     // Backward-compat: old dual-view toggle means [front, side]
-    setViewPresets(enabled ? ["front", "side"] : []);
+    setViewPresets(enabled ? ['front', 'side'] : []);
   };
 
   const setDualViewDistance = (dist: number): void => {

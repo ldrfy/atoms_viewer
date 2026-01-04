@@ -1,4 +1,4 @@
-import { ref, type Ref } from "vue";
+import { ref, type Ref } from 'vue';
 
 export type FileDropBindings = {
   /** Whether the host is currently in a drag-over state (used for UI overlays). */
@@ -22,7 +22,7 @@ export type FileDropBindings = {
  * while still exposing the same handler API to the ViewerStage template.
  */
 export function useFileDrop(params: {
-  loadFiles: (files: File[], source: "drop" | "picker") => Promise<void>;
+  loadFiles: (files: File[], source: 'drop' | 'picker') => Promise<void>;
 }): FileDropBindings {
   const { loadFiles } = params;
 
@@ -35,7 +35,7 @@ export function useFileDrop(params: {
   }
 
   function onDragOver(e: DragEvent): void {
-    if (e.dataTransfer) e.dataTransfer.dropEffect = "copy";
+    if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
   }
 
   function onDragLeave(): void {
@@ -52,16 +52,16 @@ export function useFileDrop(params: {
 
     const files = Array.from(e.dataTransfer?.files ?? []);
     if (files.length === 0) return;
-    await loadFiles(files, "drop");
+    await loadFiles(files, 'drop');
   }
 
   async function onFilePicked(e: Event): Promise<void> {
     const input = e.target as HTMLInputElement;
     const files = Array.from(input.files ?? []);
     // Reset input so picking the same file again still triggers change.
-    input.value = "";
+    input.value = '';
     if (files.length === 0) return;
-    await loadFiles(files, "picker");
+    await loadFiles(files, 'picker');
   }
 
   return {

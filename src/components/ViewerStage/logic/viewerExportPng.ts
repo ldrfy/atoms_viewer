@@ -1,15 +1,15 @@
 // src/components/ViewerStage/logic/viewerExportPng.ts
-import * as THREE from "three";
-import { message } from "ant-design-vue";
-import { normalizeViewPresets } from "../../../lib/viewer/viewPresets";
-import { cropCanvasToPngBlob, downloadBlob } from "../../../lib/image/cropPng";
+import * as THREE from 'three';
+import { message } from 'ant-design-vue';
+import { normalizeViewPresets } from '../../../lib/viewer/viewPresets';
+import { cropCanvasToPngBlob, downloadBlob } from '../../../lib/image/cropPng';
 import {
   isPerspective,
   updateCameraForSize,
   type AnyCamera,
-} from "../../../lib/three/camera";
-import type { ViewerSettings } from "../../../lib/viewer/settings";
-import type { ThreeStage } from "../../../lib/three/stage";
+} from '../../../lib/three/camera';
+import type { ViewerSettings } from '../../../lib/viewer/settings';
+import type { ThreeStage } from '../../../lib/three/stage';
 
 export function createPngExporter(deps: {
   getStage: () => ThreeStage | null;
@@ -36,7 +36,7 @@ export function createPngExporter(deps: {
     try {
       stage.renderer.setClearColor(
         new THREE.Color(deps.getSettings().backgroundColor),
-        transparent ? 0 : 1
+        transparent ? 0 : 1,
       );
 
       const rect = stage.host.getBoundingClientRect();
@@ -58,14 +58,14 @@ export function createPngExporter(deps: {
         const v = normalizeViewPresets(settings.viewPresets);
         if (v.length > 0) return v;
         return settings.dualViewEnabled
-          ? (["front", "side"] as const)
+          ? (['front', 'side'] as const)
           : ([] as const);
       })();
 
       if (presets.length === 2) {
         const split = Math.max(
           0.1,
-          Math.min(0.9, settings.dualViewSplit ?? 0.5)
+          Math.min(0.9, settings.dualViewSplit ?? 0.5),
         );
         const leftW = Math.floor(w * split);
         const rightW = Math.max(1, w - leftW);
@@ -77,16 +77,16 @@ export function createPngExporter(deps: {
         const qFront = new THREE.Quaternion();
         const qSide = new THREE.Quaternion().setFromAxisAngle(
           new THREE.Vector3(0, 1, 0),
-          Math.PI / 2
+          Math.PI / 2,
         );
         const qTop = new THREE.Quaternion().setFromAxisAngle(
           new THREE.Vector3(1, 0, 0),
-          -Math.PI / 2
+          -Math.PI / 2,
         );
 
         const presetQuat = (p: string): THREE.Quaternion => {
-          if (p === "side") return qSide;
-          if (p === "top") return qTop;
+          if (p === 'side') return qSide;
+          if (p === 'top') return qTop;
           return qFront;
         };
 
@@ -131,7 +131,8 @@ export function createPngExporter(deps: {
         stage.renderer.render(stage.scene, sideCamera);
 
         stage.renderer.setScissorTest(false);
-      } else {
+      }
+      else {
         updateCameraForSize(camera, w, h, orthoHalfHeight);
         stage.renderer.render(stage.scene, camera);
       }
@@ -140,15 +141,17 @@ export function createPngExporter(deps: {
         alphaThreshold: 8,
         padding: 3,
       });
-      downloadBlob(blob, "snapshot.png");
+      downloadBlob(blob, 'snapshot.png');
 
-      message.success(deps.t("viewer.export.pngSuccess"));
-    } catch (e) {
-      console.error("export png failed:", e);
+      message.success(deps.t('viewer.export.pngSuccess'));
+    }
+    catch (e) {
+      console.error('export png failed:', e);
       message.error(
-        deps.t("viewer.export.fail", { reason: (e as Error).message })
+        deps.t('viewer.export.fail', { reason: (e as Error).message }),
       );
-    } finally {
+    }
+    finally {
       stage.renderer.setClearColor(prevColor, prevAlpha);
       stage.renderer.setPixelRatio(prevPixelRatio);
       stage.renderer.setSize(prevSize.x, prevSize.y, false);

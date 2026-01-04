@@ -1,9 +1,9 @@
-import { watch, type Ref } from "vue";
-import type { ViewerSettings } from "../../lib/viewer/settings";
+import { watch, type Ref } from 'vue';
+import type { ViewerSettings } from '../../lib/viewer/settings';
 import {
   normalizeViewPresets,
   type ViewPreset,
-} from "../../lib/viewer/viewPresets";
+} from '../../lib/viewer/viewPresets';
 
 /**
  * 绑定 ViewerStage 与 settings 的 watch 逻辑，并返回统一的 stop 函数。
@@ -53,9 +53,9 @@ export function bindViewerStageSettings(params: {
   stops.push(
     watch(
       () => settingsRef.value.orthographic,
-      (v) => setProjectionMode(v),
-      { immediate: true }
-    )
+      v => setProjectionMode(v),
+      { immediate: true },
+    ),
   );
 
   // 多视角视图 / multi-view presets
@@ -73,53 +73,53 @@ export function bindViewerStageSettings(params: {
           return;
         }
         // Backward-compat: old dualViewEnabled implies [front, side]
-        if (!!settingsRef.value.dualViewEnabled) {
-          setViewPresets(["front", "side"]);
+        if (settingsRef.value.dualViewEnabled) {
+          setViewPresets(['front', 'side']);
           return;
         }
         setViewPresets([]);
       },
-      { immediate: true, deep: true }
-    )
+      { immediate: true, deep: true },
+    ),
   );
 
   stops.push(
     watch(
       () => settingsRef.value.dualViewDistance,
       (v) => {
-        const d = typeof v === "number" && Number.isFinite(v) ? v : 10;
+        const d = typeof v === 'number' && Number.isFinite(v) ? v : 10;
         setDualViewDistance(d);
       },
-      { immediate: true }
-    )
+      { immediate: true },
+    ),
   );
 
   stops.push(
     watch(
       () => settingsRef.value.dualViewSplit,
       (v) => {
-        const r = typeof v === "number" && Number.isFinite(v) ? v : 0.5;
+        const r = typeof v === 'number' && Number.isFinite(v) ? v : 0.5;
         // clamp to reasonable range to avoid extremely narrow viewports
         setDualViewSplit(Math.max(0.1, Math.min(0.9, r)));
       },
-      { immediate: true }
-    )
+      { immediate: true },
+    ),
   );
 
   // 复位视角 / reset view
   stops.push(
     watch(
       () => settingsRef.value.resetViewSeq,
-      () => resetView()
-    )
+      () => resetView(),
+    ),
   );
 
   // 原子缩放 / atom scale
   stops.push(
     watch(
       () => settingsRef.value.atomScale,
-      () => applyAtomScale()
-    )
+      () => applyAtomScale(),
+    ),
   );
 
   // 显示键合 / show bonds
@@ -127,8 +127,8 @@ export function bindViewerStageSettings(params: {
     watch(
       () => settingsRef.value.showBonds,
       () => applyShowBonds(),
-      { immediate: true }
-    )
+      { immediate: true },
+    ),
   );
 
   // 显示坐标轴 / show axes
@@ -136,8 +136,8 @@ export function bindViewerStageSettings(params: {
     watch(
       () => settingsRef.value.showAxes,
       () => applyShowAxes(),
-      { immediate: true }
-    )
+      { immediate: true },
+    ),
   );
 
   // 模型旋转 / model rotation
@@ -148,8 +148,8 @@ export function bindViewerStageSettings(params: {
         return [s.x, s.y, s.z];
       },
       () => applyModelRotation(),
-      { immediate: true }
-    )
+      { immediate: true },
+    ),
   );
 
   // LAMMPS type map changes can be expensive (rebuilding instanced meshes).
@@ -162,8 +162,8 @@ export function bindViewerStageSettings(params: {
         settingsRef.value.backgroundColor,
         settingsRef.value.backgroundTransparent,
       ],
-      () => applyBackgroundColor()
-    )
+      () => applyBackgroundColor(),
+    ),
   );
 
   return (): void => {

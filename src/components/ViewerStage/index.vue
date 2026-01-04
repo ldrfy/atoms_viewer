@@ -1,51 +1,64 @@
 <template>
-    <div class="stage" @dragenter.prevent="stage.onDragEnter" @dragover.prevent="stage.onDragOver"
-        @dragleave.prevent="stage.onDragLeave" @drop.prevent="stage.onDrop">
-        <!-- 录制框选/编辑遮罩 -->
-        <RecordSelectOverlay :ctx="stage.recordSelectCtx" />
+  <div
+    class="stage"
+    @dragenter.prevent="stage.onDragEnter"
+    @dragover.prevent="stage.onDragOver"
+    @dragleave.prevent="stage.onDragLeave"
+    @drop.prevent="stage.onDrop"
+  >
+    <!-- 录制框选/编辑遮罩 -->
+    <RecordSelectOverlay :ctx="stage.recordSelectCtx" />
 
-        <!-- three canvas 宿主：函数 ref，避免本地变量重复 -->
-        <div :ref="stage.bindCanvasHost" class="canvas-host"></div>
+    <!-- three canvas 宿主：函数 ref，避免本地变量重复 -->
+    <div :ref="stage.bindCanvasHost" class="canvas-host" />
 
-        <!-- 原子信息/测量面板（点击原子后显示） -->
-        <AtomInspectorOverlay :ctx="stage.inspectCtx" />
+    <!-- 原子信息/测量面板（点击原子后显示） -->
+    <AtomInspectorOverlay :ctx="stage.inspectCtx" />
 
-        <!-- 放下后开始加载：旋转图标 -->
-        <div v-if="isLoading" class="loading-overlay">
-            <a-spin size="large" />
-        </div>
-
-        <!-- 隐藏文件输入：函数 ref，避免本地变量重复 -->
-        <input :ref="stage.bindFileInput" class="file-input" type="file" multiple aria-label="Pick files"
-            title="Pick files" accept=".xyz,.pdb,.dump,.lammpstrj,.traj,.data,.lmp" @change="stage.onFilePicked" />
-
-        <!-- 动画 + 录制控制条 -->
-        <AnimBar :ctx="stage.animCtx" />
-
-        <!-- 录制中：显示裁剪虚线框（不影响操作） -->
-        <RecordCropDash :ctx="stage.cropDashCtx" />
+    <!-- 放下后开始加载：旋转图标 -->
+    <div v-if="isLoading" class="loading-overlay">
+      <a-spin size="large" />
     </div>
+
+    <!-- 隐藏文件输入：函数 ref，避免本地变量重复 -->
+    <input
+      :ref="stage.bindFileInput"
+      class="file-input"
+      type="file"
+      multiple
+      aria-label="Pick files"
+      title="Pick files"
+      accept=".xyz,.pdb,.dump,.lammpstrj,.traj,.data,.lmp"
+      @change="stage.onFilePicked"
+    >
+
+    <!-- 动画 + 录制控制条 -->
+    <AnimBar :ctx="stage.animCtx" />
+
+    <!-- 录制中：显示裁剪虚线框（不影响操作） -->
+    <RecordCropDash :ctx="stage.cropDashCtx" />
+  </div>
 </template>
 
 <script setup lang="ts">
-import { toRef, watch, onBeforeUnmount } from "vue";
-import { useViewerStage } from "./useViewerStage";
-import type { ViewerSettings, OpenSettingsPayload } from "../../lib/viewer/settings";
-import { setThemeMode, isDarkColor } from "../../theme/mode";
-import { setViewerApi } from "../../lib/viewer/bridge";
+import { toRef, watch, onBeforeUnmount } from 'vue';
+import { useViewerStage } from './useViewerStage';
+import type { ViewerSettings, OpenSettingsPayload } from '../../lib/viewer/settings';
+import { setThemeMode, isDarkColor } from '../../theme/mode';
+import { setViewerApi } from '../../lib/viewer/bridge';
 
-import RecordSelectOverlay from "./parts/RecordSelectOverlay.vue";
-import AtomInspectorOverlay from "./parts/AtomInspectorOverlay.vue";
-import AnimBar from "./parts/AnimBar.vue";
-import RecordCropDash from "./parts/RecordCropDash.vue";
+import RecordSelectOverlay from './parts/RecordSelectOverlay.vue';
+import AtomInspectorOverlay from './parts/AtomInspectorOverlay.vue';
+import AnimBar from './parts/AnimBar.vue';
+import RecordCropDash from './parts/RecordCropDash.vue';
 
 const props = defineProps<{ settings: ViewerSettings }>();
-const settingsRef = toRef(props, "settings");
+const settingsRef = toRef(props, 'settings');
 
 const emit = defineEmits<{
-    (e: "model-state", hasModel: boolean): void;
-    (e: "update:settings", v: ViewerSettings): void;
-    (e: "open-settings", payload?: OpenSettingsPayload): void;
+  (e: 'model-state', hasModel: boolean): void;
+  (e: 'update:settings', v: ViewerSettings): void;
+  (e: 'open-settings', payload?: OpenSettingsPayload): void;
 }>();
 
 /** 统一 patch settings / Unified patch settings */
@@ -53,34 +66,34 @@ const emit = defineEmits<{
 // mapping auto-fill + distance sync). If we always merge into props.settings, later patches
 // may overwrite earlier ones before parent updates propagate. Use a local shadow snapshot.
 let settingsShadow: ViewerSettings = {
-    ...props.settings,
-    rotationDeg: { ...props.settings.rotationDeg },
+  ...props.settings,
+  rotationDeg: { ...props.settings.rotationDeg },
 };
 
 watch(
-    () => props.settings,
-    (v) => {
-        settingsShadow = { ...v, rotationDeg: { ...v.rotationDeg } };
-    },
-    { immediate: true, deep: true }
+  () => props.settings,
+  (v) => {
+    settingsShadow = { ...v, rotationDeg: { ...v.rotationDeg } };
+  },
+  { immediate: true, deep: true },
 );
 
 function patchSettings(patch: Partial<ViewerSettings>): void {
-    const base = settingsShadow;
-    const merged: ViewerSettings = {
-        ...base,
-        ...patch,
-        rotationDeg: {
-            ...base.rotationDeg,
-            ...(patch.rotationDeg ?? {}),
-        },
-    };
-    settingsShadow = merged;
-    emit("update:settings", merged);
+  const base = settingsShadow;
+  const merged: ViewerSettings = {
+    ...base,
+    ...patch,
+    rotationDeg: {
+      ...base.rotationDeg,
+      ...(patch.rotationDeg ?? {}),
+    },
+  };
+  settingsShadow = merged;
+  emit('update:settings', merged);
 }
 
-const stage = useViewerStage(settingsRef, patchSettings, (payload) =>
-    emit("open-settings", payload)
+const stage = useViewerStage(settingsRef, patchSettings, payload =>
+  emit('open-settings', payload),
 );
 
 // NOTE: Vue template ref auto-unwrapping is guaranteed for top-level refs.
@@ -94,21 +107,21 @@ setViewerApi(stage.bridgeApi);
 defineExpose(stage.exposedApi);
 
 onBeforeUnmount(() => {
-    setViewerApi(null);
+  setViewerApi(null);
 });
 
 watch(
-    stage.hasModel,
-    (v) => emit("model-state", !!v),
-    { immediate: true }
+  stage.hasModel,
+  v => emit('model-state', !!v),
+  { immediate: true },
 );
 
 watch(
-    () => props.settings.backgroundColor,
-    (color) => {
-        if (!color) return;
-        setThemeMode(isDarkColor(color) ? "dark" : "light");
-    }
+  () => props.settings.backgroundColor,
+  (color) => {
+    if (!color) return;
+    setThemeMode(isDarkColor(color) ? 'dark' : 'light');
+  },
 );
 </script>
 

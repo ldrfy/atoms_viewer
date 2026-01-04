@@ -1,33 +1,33 @@
 // src/components/ViewerStage/modelRuntime.ts
-import * as THREE from "three";
-import { ref, type Ref } from "vue";
+import * as THREE from 'three';
+import { ref, type Ref } from 'vue';
 
 import type {
   ViewerSettings,
   LammpsTypeMapItem,
-} from "../../lib/viewer/settings";
-import type { Atom, StructureModel } from "../../lib/structure/types";
+} from '../../lib/viewer/settings';
+import type { Atom, StructureModel } from '../../lib/structure/types';
 
-import type { ThreeStage } from "../../lib/three/stage";
-import { makeTextLabel } from "../../lib/three/labels2d";
-import { removeAndDisposeInstancedMeshes } from "../../lib/three/dispose";
+import type { ThreeStage } from '../../lib/three/stage';
+import { makeTextLabel } from '../../lib/three/labels2d';
+import { removeAndDisposeInstancedMeshes } from '../../lib/three/dispose';
 import {
   applyAtomScaleToMeshes,
   buildAtomMeshesByElement,
   getSphereBaseRadiusByElement,
-} from "../../lib/three/instancedAtoms";
-import { buildBondMeshesBicolor } from "../../lib/three/instancedBonds";
+} from '../../lib/three/instancedAtoms';
+import { buildBondMeshesBicolor } from '../../lib/three/instancedBonds';
 import {
   isPerspective,
   fitCameraToAtoms as fitCameraToAtomsImpl,
-} from "../../lib/three/camera";
+} from '../../lib/three/camera';
 
-import { applyFrameAtomsToMeshes, computeMeanCenterInto } from "./animation";
+import { applyFrameAtomsToMeshes, computeMeanCenterInto } from './animation';
 import {
   collectTypeIdsAndElementDefaultsFromAtoms,
   mergeTypeMap,
   remapAtomsByTypeId,
-} from "./typeMap";
+} from './typeMap';
 
 const SPHERE_SEGMENTS = 24;
 
@@ -67,13 +67,13 @@ type LayerInternal = {
 function makeLayerId(): string {
   // short, stable enough for UI
   return `layer_${Math.random().toString(36).slice(2, 8)}_${Date.now().toString(
-    36
+    36,
   )}`;
 }
 
 function safeLayerName(fileName?: string): string {
-  const n = (fileName ?? "").trim();
-  if (!n) return "model";
+  const n = (fileName ?? '').trim();
+  if (!n) return 'model';
   return n;
 }
 
@@ -87,7 +87,7 @@ function disposeGroupChildren(group: THREE.Group): void {
     if (anyObj?.geometry?.dispose) anyObj.geometry.dispose();
     if (anyObj?.material) {
       const mat = anyObj.material;
-      if (Array.isArray(mat)) mat.forEach((m) => m?.dispose?.());
+      if (Array.isArray(mat)) mat.forEach(m => m?.dispose?.());
       else mat?.dispose?.();
     }
   }
@@ -95,7 +95,7 @@ function disposeGroupChildren(group: THREE.Group): void {
 
 function computeCenteredBox(
   atoms: Atom[],
-  tmpCenter: THREE.Vector3
+  tmpCenter: THREE.Vector3,
 ): {
   center: THREE.Vector3;
   box: THREE.Box3;
@@ -112,7 +112,7 @@ function computeCenteredBox(
     box.expandByPoint(new THREE.Vector3(x, y, z));
     maxSphere = Math.max(
       maxSphere,
-      getSphereBaseRadiusByElement(a.element, 0.5)
+      getSphereBaseRadiusByElement(a.element, 0.5),
     );
   }
 
@@ -142,7 +142,7 @@ export type ModelRuntime = {
 
   renderModel: (
     model: StructureModel,
-    opts?: { hidePreviousLayers?: boolean }
+    opts?: { hidePreviousLayers?: boolean },
   ) => { frameCount: number; hasAnimation: boolean };
   replaceActiveLayerModel: (model: StructureModel) => {
     frameCount: number;
@@ -231,8 +231,8 @@ export function createModelRuntime(args: {
     for (const l of layerMap.values()) {
       if (!l.info.visible) continue;
 
-      const atoms0 = (l.model.frames?.[l.frameIndex] ??
-        l.model.atoms) as Atom[];
+      const atoms0 = (l.model.frames?.[l.frameIndex]
+        ?? l.model.atoms) as Atom[];
       const atoms = getMappedAtomsForLayer(l, atoms0);
 
       if (!atoms || atoms.length === 0) continue;
@@ -252,8 +252,8 @@ export function createModelRuntime(args: {
         if (y > maxY) maxY = y;
         if (z > maxZ) maxZ = z;
 
-        const r =
-          getSphereBaseRadiusByElement(a.element, atomSizeFactor) * atomScale;
+        const r
+          = getSphereBaseRadiusByElement(a.element, atomSizeFactor) * atomScale;
         if (r > maxSphere) maxSphere = r;
       }
     }
@@ -292,9 +292,9 @@ export function createModelRuntime(args: {
 
     const dist = camera.position.distanceTo(controls.target);
     if (
-      !force &&
-      Math.abs(dist - lastClipDist) < 1e-6 &&
-      Math.abs(visibleClipRadius - lastClipRadius) < 1e-6
+      !force
+      && Math.abs(dist - lastClipDist) < 1e-6
+      && Math.abs(visibleClipRadius - lastClipRadius) < 1e-6
     ) {
       return;
     }
@@ -309,9 +309,9 @@ export function createModelRuntime(args: {
 
     // Avoid needless projection updates.
     if (
-      !force &&
-      Math.abs(newNear - camera.near) < 1e-6 &&
-      Math.abs(newFar - camera.far) < 1e-3
+      !force
+      && Math.abs(newNear - camera.near) < 1e-6
+      && Math.abs(newFar - camera.far) < 1e-3
     ) {
       lastClipDist = dist;
       lastClipRadius = visibleClipRadius;
@@ -352,7 +352,7 @@ export function createModelRuntime(args: {
 
   function makeAxisMeshes(
     mat: THREE.Material,
-    rot: THREE.Euler
+    rot: THREE.Euler,
   ): { body: THREE.Mesh; arrow: THREE.Mesh } {
     const body = new THREE.Mesh(axisBodyGeo, mat);
     const arrow = new THREE.Mesh(axisArrowGeo, mat);
@@ -372,7 +372,7 @@ export function createModelRuntime(args: {
   } {
     const radius = Math.min(
       AXIS_RADIUS_MAX,
-      Math.max(AXIS_RADIUS_MIN, axisLen * AXIS_RADIUS_FACTOR)
+      Math.max(AXIS_RADIUS_MIN, axisLen * AXIS_RADIUS_FACTOR),
     );
     const arrowLen = Math.max(radius * 6, axisLen * ARROW_LEN_FACTOR);
     const bodyLen = Math.max(1e-3, axisLen - arrowLen);
@@ -399,9 +399,9 @@ export function createModelRuntime(args: {
     return { axisLen, arrowLen };
   }
 
-  const xLabel = makeTextLabel("X", "#ff4444", 16);
-  const yLabel = makeTextLabel("Y", "#44ff44", 16);
-  const zLabel = makeTextLabel("Z", "#4488ff", 16);
+  const xLabel = makeTextLabel('X', '#ff4444', 16);
+  const yLabel = makeTextLabel('Y', '#44ff44', 16);
+  const zLabel = makeTextLabel('Z', '#4488ff', 16);
   stage.axesGroup.add(xLabel, yLabel, zLabel);
 
   function getSettings(): ViewerSettings {
@@ -434,7 +434,7 @@ export function createModelRuntime(args: {
 
   function getMappedAtomsForLayer(
     layer: LayerInternal,
-    atoms0: Atom[]
+    atoms0: Atom[],
   ): Atom[] {
     const rows = (layer.typeMapRows ?? []) as any;
     const hasRows = Array.isArray(rows) && rows.length > 0;
@@ -496,9 +496,9 @@ export function createModelRuntime(args: {
       camera,
       controls,
       host: stage.host,
-      getSphereRadiusByElement: (el) =>
-        getSphereBaseRadiusByElement(el, atomSizeFactor) *
-        getSettings().atomScale,
+      getSphereRadiusByElement: el =>
+        getSphereBaseRadiusByElement(el, atomSizeFactor)
+        * getSettings().atomScale,
       orthoHalfHeight: stage.getOrthoHalfHeight(),
       margin: 1.25,
     });
@@ -510,7 +510,7 @@ export function createModelRuntime(args: {
 
   function rebuildVisualsForLayer(
     layer: LayerInternal,
-    atomsForVisuals: Atom[]
+    atomsForVisuals: Atom[],
   ): void {
     // clear old
     removeAndDisposeInstancedMeshes(layer.group, layer.atomMeshes);
@@ -583,7 +583,7 @@ export function createModelRuntime(args: {
 
     // if active layer is hidden, pick a visible one as active
     if (activeLayerId.value === id && !visible) {
-      const next = layers.value.find((x) => x.visible && x.id !== id) ?? null;
+      const next = layers.value.find(x => x.visible && x.id !== id) ?? null;
       activeLayerId.value = next?.id ?? null;
       syncActiveTypeMap();
       applyShowAxes();
@@ -600,11 +600,11 @@ export function createModelRuntime(args: {
   function upsertLayerInternal(layer: LayerInternal): void {
     layerMap.set(layer.info.id, layer);
 
-    const exists = layers.value.some((x) => x.id === layer.info.id);
+    const exists = layers.value.some(x => x.id === layer.info.id);
     if (!exists) layers.value = [...layers.value, layer.info];
     else
-      layers.value = layers.value.map((x) =>
-        x.id === layer.info.id ? layer.info : x
+      layers.value = layers.value.map(x =>
+        x.id === layer.info.id ? layer.info : x,
       );
 
     syncHasModelFlag();
@@ -612,7 +612,7 @@ export function createModelRuntime(args: {
 
   function renderModel(
     model: StructureModel,
-    opts?: { hidePreviousLayers?: boolean }
+    opts?: { hidePreviousLayers?: boolean },
   ): { frameCount: number; hasAnimation: boolean } {
     // New model load: hide previous layers by default (layer-like behavior).
     // When loading multiple files at once, the caller can disable this per-file
@@ -661,9 +661,10 @@ export function createModelRuntime(args: {
     if (layer.hasAnyTypeId) {
       const templateRows = (getSettings().lammpsTypeMap ?? []) as any;
       const detected = expandTypeIdsContiguous(typeInfo.typeIds);
-      layer.typeMapRows =
-        (mergeTypeMap(templateRows, detected, typeInfo.defaults) as any) ?? [];
-    } else {
+      layer.typeMapRows
+        = (mergeTypeMap(templateRows, detected, typeInfo.defaults) as any) ?? [];
+    }
+    else {
       layer.typeMapRows = [];
     }
 
@@ -723,9 +724,10 @@ export function createModelRuntime(args: {
           : getSettings().lammpsTypeMap ?? []
       ) as any;
       const detected = expandTypeIdsContiguous(typeInfo.typeIds);
-      active.typeMapRows =
-        (mergeTypeMap(baseRows, detected, typeInfo.defaults) as any) ?? [];
-    } else {
+      active.typeMapRows
+        = (mergeTypeMap(baseRows, detected, typeInfo.defaults) as any) ?? [];
+    }
+    else {
       active.typeMapRows = [];
     }
 
@@ -830,7 +832,7 @@ export function createModelRuntime(args: {
       applyAtomScaleToMeshes(
         l.atomMeshes,
         getSettings().atomScale,
-        SPHERE_SEGMENTS
+        SPHERE_SEGMENTS,
       );
     }
 
@@ -843,8 +845,8 @@ export function createModelRuntime(args: {
       if (getSettings().showBonds) {
         if (l.bondMeshes.length > 0) continue;
 
-        const atoms = (l.model.frames?.[l.frameIndex] ??
-          l.model.atoms) as Atom[];
+        const atoms = (l.model.frames?.[l.frameIndex]
+          ?? l.model.atoms) as Atom[];
         const mapped = getMappedAtomsForLayer(l, atoms);
         const c = computeMeanCenterInto(mapped, centerTmp);
         const centeredAtoms = makeCenteredAtomsView(mapped, c);
@@ -858,7 +860,8 @@ export function createModelRuntime(args: {
         l.bondMeshes = res.meshes;
         l.lastBondSegCount = res.segCount;
         for (const b of l.bondMeshes) l.group.add(b);
-      } else {
+      }
+      else {
         if (l.bondMeshes.length === 0) continue;
         removeAndDisposeInstancedMeshes(l.group, l.bondMeshes);
         l.bondMeshes = [];
@@ -880,8 +883,8 @@ export function createModelRuntime(args: {
     const active = getActiveLayer();
     if (!active) return;
 
-    const atoms = (active.model.frames?.[active.frameIndex] ??
-      active.model.atoms) as Atom[];
+    const atoms = (active.model.frames?.[active.frameIndex]
+      ?? active.model.atoms) as Atom[];
     const mapped = getMappedAtomsForLayer(active, atoms);
     updateAxesForAtoms(mapped);
   }
@@ -891,7 +894,7 @@ export function createModelRuntime(args: {
     stage.pivotGroup.rotation.set(
       THREE.MathUtils.degToRad(r.x),
       THREE.MathUtils.degToRad(r.y),
-      THREE.MathUtils.degToRad(r.z)
+      THREE.MathUtils.degToRad(r.z),
     );
   }
 
@@ -915,8 +918,8 @@ export function createModelRuntime(args: {
     if (!active) return;
     if (!active.hasAnyTypeId) return;
 
-    const atoms = (active.model.frames?.[active.frameIndex] ??
-      active.model.atoms) as Atom[];
+    const atoms = (active.model.frames?.[active.frameIndex]
+      ?? active.model.atoms) as Atom[];
     const mapped = getMappedAtomsForLayer(active, atoms);
 
     // atom mesh colors depend on element => must rebuild
@@ -945,11 +948,11 @@ export function createModelRuntime(args: {
     disposeLayer(layer);
     layerMap.delete(id);
 
-    layers.value = layers.value.filter((x) => x.id !== id);
+    layers.value = layers.value.filter(x => x.id !== id);
 
     if (wasActive) {
-      const next =
-        layers.value.find((x) => x.visible) ?? layers.value[0] ?? null;
+      const next
+        = layers.value.find(x => x.visible) ?? layers.value[0] ?? null;
       activeLayerId.value = next?.id ?? null;
     }
 

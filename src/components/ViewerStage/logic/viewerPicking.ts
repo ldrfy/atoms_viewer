@@ -1,15 +1,15 @@
 // src/components/ViewerStage/logic/viewerPicking.ts
-import * as THREE from "three";
-import type { Ref } from "vue";
+import * as THREE from 'three';
+import type { Ref } from 'vue';
 
-import type { ViewerSettings } from "../../../lib/viewer/settings";
-import { normalizeViewPresets } from "../../../lib/viewer/viewPresets";
-import { ATOMIC_SYMBOLS } from "../../../lib/structure/chem";
-import type { Atom } from "../../../lib/structure/types";
-import type { AnyCamera } from "../../../lib/three/camera";
+import type { ViewerSettings } from '../../../lib/viewer/settings';
+import { normalizeViewPresets } from '../../../lib/viewer/viewPresets';
+import { ATOMIC_SYMBOLS } from '../../../lib/structure/chem';
+import type { Atom } from '../../../lib/structure/types';
+import type { AnyCamera } from '../../../lib/three/camera';
 
-import type { ThreeStage } from "../../../lib/three/stage";
-import type { ModelRuntime } from "../modelRuntime";
+import type { ThreeStage } from '../../../lib/three/stage';
+import type { ModelRuntime } from '../modelRuntime';
 
 import {
   computeDistance,
@@ -17,7 +17,7 @@ import {
   atomicNumberFromSymbol,
   type SelectedAtom,
   type InspectCtx,
-} from "../ctx/inspect";
+} from '../ctx/inspect';
 
 type RenderDeps = {
   settingsRef: Readonly<Ref<ViewerSettings>>;
@@ -70,26 +70,26 @@ export function createViewerPickingController(deps: RenderDeps) {
 
   function updateSelectionMeasure(): void {
     const sel = deps.inspectCtx.selected.value;
-    const m: { distance12?: number; distance23?: number; angleDeg?: number } =
-      {};
+    const m: { distance12?: number; distance23?: number; angleDeg?: number }
+      = {};
 
     if (sel.length >= 2 && sel[0]?.position && sel[1]?.position) {
-      const a = { element: "E", position: sel[0]!.position } as Atom;
-      const b = { element: "E", position: sel[1]!.position } as Atom;
+      const a = { element: 'E', position: sel[0]!.position } as Atom;
+      const b = { element: 'E', position: sel[1]!.position } as Atom;
       m.distance12 = computeDistance(a, b);
     }
 
     if (
-      sel.length >= 3 &&
-      sel[0]?.position &&
-      sel[1]?.position &&
-      sel[2]?.position
+      sel.length >= 3
+      && sel[0]?.position
+      && sel[1]?.position
+      && sel[2]?.position
     ) {
-      const b = { element: "E", position: sel[1]!.position } as Atom;
-      const c = { element: "E", position: sel[2]!.position } as Atom;
+      const b = { element: 'E', position: sel[1]!.position } as Atom;
+      const c = { element: 'E', position: sel[2]!.position } as Atom;
       m.distance23 = computeDistance(b, c);
 
-      const a = { element: "E", position: sel[0]!.position } as Atom;
+      const a = { element: 'E', position: sel[0]!.position } as Atom;
       m.angleDeg = computeAngleDeg(a, b, c);
     }
 
@@ -102,7 +102,7 @@ export function createViewerPickingController(deps: RenderDeps) {
     if (selectionGroup) return;
 
     selectionGroup = new THREE.Group();
-    selectionGroup.name = "atom-selection";
+    selectionGroup.name = 'atom-selection';
     stage.modelGroup.add(selectionGroup);
 
     const geo = new THREE.SphereGeometry(1, 18, 18);
@@ -224,8 +224,8 @@ export function createViewerPickingController(deps: RenderDeps) {
     instanceId: number;
     additive: boolean;
   }): void {
-    const { layerId, atomIndex, element, atom, mesh, instanceId, additive } =
-      params;
+    const { layerId, atomIndex, element, atom, mesh, instanceId, additive }
+      = params;
 
     const picked: SelectedAtom = {
       layerId,
@@ -245,21 +245,24 @@ export function createViewerPickingController(deps: RenderDeps) {
     const visuals = [...selectionVisuals];
 
     const existsIdx = sel.findIndex(
-      (x) => x.layerId === layerId && x.atomIndex === atomIndex
+      x => x.layerId === layerId && x.atomIndex === atomIndex,
     );
     if (existsIdx >= 0) {
       if (additive) {
         sel.splice(existsIdx, 1);
         visuals.splice(existsIdx, 1);
-      } else {
+      }
+      else {
         sel.splice(0, sel.length, picked);
         visuals.splice(0, visuals.length, { mesh, instanceId });
       }
-    } else {
+    }
+    else {
       if (!additive) {
         sel.splice(0, sel.length, picked);
         visuals.splice(0, visuals.length, { mesh, instanceId });
-      } else {
+      }
+      else {
         if (sel.length >= 3) {
           sel.splice(0, 1);
           visuals.splice(0, 1);
@@ -288,12 +291,12 @@ export function createViewerPickingController(deps: RenderDeps) {
     const rect = canvas.getBoundingClientRect();
 
     const rawPresets = deps.settingsRef.value.viewPresets;
-    const presets =
-      normalizeViewPresets(rawPresets).length > 0
+    const presets
+      = normalizeViewPresets(rawPresets).length > 0
         ? normalizeViewPresets(rawPresets)
         : deps.settingsRef.value.dualViewEnabled
-        ? (["front", "side"] as const)
-        : ([] as const);
+          ? (['front', 'side'] as const)
+          : ([] as const);
 
     const isDual = presets.length === 2;
 
@@ -303,13 +306,14 @@ export function createViewerPickingController(deps: RenderDeps) {
 
     if (isDual) {
       const rRaw = deps.settingsRef.value.dualViewSplit;
-      const r = typeof rRaw === "number" && Number.isFinite(rRaw) ? rRaw : 0.5;
+      const r = typeof rRaw === 'number' && Number.isFinite(rRaw) ? rRaw : 0.5;
       const leftW = Math.max(1, rect.width * Math.max(0.1, Math.min(0.9, r)));
       const rightW = Math.max(1, rect.width - leftW);
 
       if (xPx <= leftW) {
         viewportW = leftW;
-      } else {
+      }
+      else {
         const aux = stage.getAuxCamera();
         if (aux) pickCamera = aux;
         viewportW = rightW;
@@ -353,11 +357,11 @@ export function createViewerPickingController(deps: RenderDeps) {
     const atom = atoms[atomIndex];
     if (!atom) return;
 
-    const element =
-      (mesh.userData.element as string | undefined) ?? atom.element ?? "E";
+    const element
+      = (mesh.userData.element as string | undefined) ?? atom.element ?? 'E';
 
-    const additive =
-      deps.inspectCtx.measureMode.value || e.shiftKey || e.ctrlKey || e.metaKey;
+    const additive
+      = deps.inspectCtx.measureMode.value || e.shiftKey || e.ctrlKey || e.metaKey;
 
     addPickedAtom({
       layerId,
@@ -377,7 +381,8 @@ export function createViewerPickingController(deps: RenderDeps) {
     if (rotatePointerId != null) {
       try {
         canvas.releasePointerCapture(rotatePointerId);
-      } catch {
+      }
+      catch {
         // ignore
       }
     }
@@ -424,7 +429,7 @@ export function createViewerPickingController(deps: RenderDeps) {
 
     const due = Math.max(
       0,
-      ROT_SYNC_INTERVAL_MS - (performance.now() - lastRotSyncMs)
+      ROT_SYNC_INTERVAL_MS - (performance.now() - lastRotSyncMs),
     );
     rotSyncTimer = window.setTimeout(() => {
       rotSyncTimer = 0;
@@ -439,7 +444,7 @@ export function createViewerPickingController(deps: RenderDeps) {
     stage.pivotGroup.rotation.set(
       THREE.MathUtils.degToRad(dragRotationDeg.x),
       THREE.MathUtils.degToRad(dragRotationDeg.y),
-      THREE.MathUtils.degToRad(dragRotationDeg.z)
+      THREE.MathUtils.degToRad(dragRotationDeg.z),
     );
   }
 
@@ -454,11 +459,11 @@ export function createViewerPickingController(deps: RenderDeps) {
       pointerDown = { x: e.clientX, y: e.clientY, tMs: performance.now() };
 
       const pt = (e as any).pointerType as string | undefined;
-      const isTouch = pt === "touch";
-      const isMouseLike = pt === "mouse" || pt === "pen" || !pt;
+      const isTouch = pt === 'touch';
+      const isMouseLike = pt === 'mouse' || pt === 'pen' || !pt;
 
-      const canRotate =
-        (isMouseLike && (e.buttons & 1) === 1) || (isTouch && e.isPrimary);
+      const canRotate
+        = (isMouseLike && (e.buttons & 1) === 1) || (isTouch && e.isPrimary);
 
       if (!canRotate) return;
       if (deps.isSelectingRecordArea.value) return;
@@ -469,7 +474,8 @@ export function createViewerPickingController(deps: RenderDeps) {
 
       try {
         canvas.setPointerCapture(e.pointerId);
-      } catch {
+      }
+      catch {
         // ignore
       }
     };
@@ -483,13 +489,13 @@ export function createViewerPickingController(deps: RenderDeps) {
 
       if (deps.isSelectingRecordArea.value) return;
 
-      const ptNow =
-        rotatePointerType ??
-        ((e as any).pointerType as string | undefined) ??
-        null;
+      const ptNow
+        = rotatePointerType
+          ?? ((e as any).pointerType as string | undefined)
+          ?? null;
 
-      const isTouchNow = ptNow === "touch";
-      const isMouseLikeNow = ptNow === "mouse" || ptNow === "pen" || !ptNow;
+      const isTouchNow = ptNow === 'touch';
+      const isMouseLikeNow = ptNow === 'mouse' || ptNow === 'pen' || !ptNow;
 
       if (isMouseLikeNow && (e.buttons & 1) !== 1) {
         clearRotate(canvas);
@@ -511,10 +517,10 @@ export function createViewerPickingController(deps: RenderDeps) {
       }
 
       dragRotationDeg.x = wrapDeg180(
-        dragRotationDeg.x + dy * ROT_SPEED_DEG_PER_PX
+        dragRotationDeg.x + dy * ROT_SPEED_DEG_PER_PX,
       );
       dragRotationDeg.y = wrapDeg180(
-        dragRotationDeg.y + dx * ROT_SPEED_DEG_PER_PX
+        dragRotationDeg.y + dx * ROT_SPEED_DEG_PER_PX,
       );
 
       applyDragRotationToStage();
@@ -547,18 +553,18 @@ export function createViewerPickingController(deps: RenderDeps) {
       clearRotate(canvas);
     };
 
-    canvas.addEventListener("pointerdown", onPointerDown, { passive: true });
-    canvas.addEventListener("pointermove", onPointerMove, { passive: true });
-    canvas.addEventListener("pointerup", onPointerUp, { passive: true });
-    canvas.addEventListener("pointercancel", onPointerCancel, {
+    canvas.addEventListener('pointerdown', onPointerDown, { passive: true });
+    canvas.addEventListener('pointermove', onPointerMove, { passive: true });
+    canvas.addEventListener('pointerup', onPointerUp, { passive: true });
+    canvas.addEventListener('pointercancel', onPointerCancel, {
       passive: true,
     });
 
     removePickListeners = () => {
-      canvas.removeEventListener("pointerdown", onPointerDown);
-      canvas.removeEventListener("pointermove", onPointerMove);
-      canvas.removeEventListener("pointerup", onPointerUp);
-      canvas.removeEventListener("pointercancel", onPointerCancel);
+      canvas.removeEventListener('pointerdown', onPointerDown);
+      canvas.removeEventListener('pointermove', onPointerMove);
+      canvas.removeEventListener('pointerup', onPointerUp);
+      canvas.removeEventListener('pointercancel', onPointerCancel);
     };
   }
 

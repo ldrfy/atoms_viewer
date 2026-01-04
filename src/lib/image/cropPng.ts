@@ -21,7 +21,7 @@ export type AlphaCropOptions = {
  */
 export function findNonTransparentBounds(
   img: ImageData,
-  options: AlphaCropOptions = {}
+  options: AlphaCropOptions = {},
 ): CropBounds | null {
   const alphaThreshold = options.alphaThreshold ?? 8;
   const padding = options.padding ?? 3;
@@ -67,12 +67,12 @@ export function findNonTransparentBounds(
  *   HTMLCanvasElement: 复制后的 2D canvas
  */
 export function copyTo2dCanvas(src: HTMLCanvasElement): HTMLCanvasElement {
-  const tmp = document.createElement("canvas");
+  const tmp = document.createElement('canvas');
   tmp.width = src.width;
   tmp.height = src.height;
 
-  const ctx = tmp.getContext("2d");
-  if (!ctx) throw new Error("无法创建 2D 上下文（copyTo2dCanvas）");
+  const ctx = tmp.getContext('2d');
+  if (!ctx) throw new Error('无法创建 2D 上下文（copyTo2dCanvas）');
 
   ctx.clearRect(0, 0, tmp.width, tmp.height);
   ctx.drawImage(src, 0, 0);
@@ -91,34 +91,34 @@ export function copyTo2dCanvas(src: HTMLCanvasElement): HTMLCanvasElement {
  */
 export function cropCanvasByAlpha(
   src: HTMLCanvasElement,
-  options: AlphaCropOptions = {}
+  options: AlphaCropOptions = {},
 ): { canvas: HTMLCanvasElement; bounds: CropBounds } {
   const fallbackToFull = options.fallbackToFull ?? true;
 
   const tmp = copyTo2dCanvas(src);
-  const ctx = tmp.getContext("2d");
-  if (!ctx) throw new Error("无法创建 2D 上下文（cropCanvasByAlpha）");
+  const ctx = tmp.getContext('2d');
+  if (!ctx) throw new Error('无法创建 2D 上下文（cropCanvasByAlpha）');
 
   const img = ctx.getImageData(0, 0, tmp.width, tmp.height);
   const bounds = findNonTransparentBounds(img, options);
 
-  const crop =
-    bounds ??
-    (fallbackToFull ? { x: 0, y: 0, w: tmp.width, h: tmp.height } : null);
+  const crop
+    = bounds
+      ?? (fallbackToFull ? { x: 0, y: 0, w: tmp.width, h: tmp.height } : null);
   if (!crop) {
     // 全透明且不允许 fallback
-    const empty = document.createElement("canvas");
+    const empty = document.createElement('canvas');
     empty.width = 1;
     empty.height = 1;
     return { canvas: empty, bounds: { x: 0, y: 0, w: 1, h: 1 } };
   }
 
-  const out = document.createElement("canvas");
+  const out = document.createElement('canvas');
   out.width = crop.w;
   out.height = crop.h;
 
-  const outCtx = out.getContext("2d");
-  if (!outCtx) throw new Error("无法创建输出 2D 上下文（cropCanvasByAlpha）");
+  const outCtx = out.getContext('2d');
+  if (!outCtx) throw new Error('无法创建输出 2D 上下文（cropCanvasByAlpha）');
 
   outCtx.clearRect(0, 0, crop.w, crop.h);
   outCtx.drawImage(tmp, crop.x, crop.y, crop.w, crop.h, 0, 0, crop.w, crop.h);
@@ -139,8 +139,8 @@ export function canvasToPngBlob(canvas: HTMLCanvasElement): Promise<Blob> {
   return new Promise((resolve, reject) => {
     canvas.toBlob((b) => {
       if (b) resolve(b);
-      else reject(new Error("canvas.toBlob 返回空，无法导出 PNG"));
-    }, "image/png");
+      else reject(new Error('canvas.toBlob 返回空，无法导出 PNG'));
+    }, 'image/png');
   });
 }
 
@@ -156,7 +156,7 @@ export function canvasToPngBlob(canvas: HTMLCanvasElement): Promise<Blob> {
  */
 export async function cropCanvasToPngBlob(
   src: HTMLCanvasElement,
-  options: AlphaCropOptions = {}
+  options: AlphaCropOptions = {},
 ): Promise<{ blob: Blob; bounds: CropBounds }> {
   const { canvas, bounds } = cropCanvasByAlpha(src, options);
   const blob = await canvasToPngBlob(canvas);
@@ -175,7 +175,7 @@ export async function cropCanvasToPngBlob(
  */
 export function downloadBlob(blob: Blob, filename: string): void {
   const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
+  const a = document.createElement('a');
   a.href = url;
   a.download = filename;
   document.body.appendChild(a);

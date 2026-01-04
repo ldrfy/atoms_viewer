@@ -1,7 +1,7 @@
 // src/components/ViewerStage/recording.ts
-import { computed, ref, type ComputedRef, type Ref } from "vue";
-import { message } from "ant-design-vue";
-import type { ThreeStage } from "../../lib/three/stage";
+import { computed, ref, type ComputedRef, type Ref } from 'vue';
+import { message } from 'ant-design-vue';
+import type { ThreeStage } from '../../lib/three/stage';
 
 export type CropBox = { x: number; y: number; w: number; h: number };
 
@@ -45,7 +45,7 @@ type CreateRecordingControllerArgs = {
 };
 
 export function createRecordingController(
-  args: CreateRecordingControllerArgs
+  args: CreateRecordingControllerArgs,
 ): RecordingBindings {
   const { getStage, patchSettings, t } = args;
 
@@ -66,10 +66,10 @@ export function createRecordingController(
   // ----------------------------
   // internal: pointer edit
   // ----------------------------
-  type EditMode = "idle" | "draw" | "move" | "resize";
-  let editMode: EditMode = "idle";
-  let activeHandle: "n" | "s" | "e" | "w" | "nw" | "ne" | "sw" | "se" | null =
-    null;
+  type EditMode = 'idle' | 'draw' | 'move' | 'resize';
+  let editMode: EditMode = 'idle';
+  let activeHandle: 'n' | 's' | 'e' | 'w' | 'nw' | 'ne' | 'sw' | 'se' | null
+    = null;
 
   let selectPointerId: number | null = null;
   let startPt: { x: number; y: number } | null = null;
@@ -141,8 +141,8 @@ export function createRecordingController(
     recordElapsedMs.value = 0;
 
     recordTimerId = window.setInterval(() => {
-      recordElapsedMs.value =
-        recordAccumulated + (performance.now() - recordStartTs);
+      recordElapsedMs.value
+        = recordAccumulated + (performance.now() - recordStartTs);
     }, 200);
   }
 
@@ -157,8 +157,8 @@ export function createRecordingController(
     if (recordTimerId) return;
     recordStartTs = performance.now();
     recordTimerId = window.setInterval(() => {
-      recordElapsedMs.value =
-        recordAccumulated + (performance.now() - recordStartTs);
+      recordElapsedMs.value
+        = recordAccumulated + (performance.now() - recordStartTs);
     }, 200);
   }
 
@@ -173,8 +173,8 @@ export function createRecordingController(
 
   const recordTimeText = computed(() => {
     const s = Math.floor(recordElapsedMs.value / 1000);
-    const mm = String(Math.floor(s / 60)).padStart(2, "0");
-    const ss = String(s % 60).padStart(2, "0");
+    const mm = String(Math.floor(s / 60)).padStart(2, '0');
+    const ss = String(s % 60).padStart(2, '0');
     return `${mm}:${ss}`;
   });
 
@@ -187,8 +187,8 @@ export function createRecordingController(
     if (!recordCropRect) return;
 
     // 建 crop canvas
-    if (!cropCanvas) cropCanvas = document.createElement("canvas");
-    cropCtx = cropCanvas.getContext("2d", { alpha: true });
+    if (!cropCanvas) cropCanvas = document.createElement('canvas');
+    cropCtx = cropCanvas.getContext('2d', { alpha: true });
     if (!cropCtx) return;
 
     const dpr = window.devicePixelRatio || 1;
@@ -216,7 +216,7 @@ export function createRecordingController(
         0,
         0,
         cropCanvas.width,
-        cropCanvas.height
+        cropCanvas.height,
       );
       cropRafId = window.requestAnimationFrame(pump);
     };
@@ -226,7 +226,7 @@ export function createRecordingController(
 
     recordedChunks = [];
     mediaRecorder = new MediaRecorder(stream, {
-      mimeType: "video/webm; codecs=vp9",
+      mimeType: 'video/webm; codecs=vp9',
       videoBitsPerSecond: 8_000_000,
     });
 
@@ -253,12 +253,12 @@ export function createRecordingController(
         cropRafId = null;
       }
 
-      const blob = new Blob(recordedChunks, { type: "video/webm" });
+      const blob = new Blob(recordedChunks, { type: 'video/webm' });
       const url = URL.createObjectURL(blob);
 
-      const a = document.createElement("a");
+      const a = document.createElement('a');
       a.href = url;
-      a.download = "three-record.webm";
+      a.download = 'three-record.webm';
       a.click();
 
       // 不要立刻 revoke，延迟释放更稳
@@ -274,7 +274,10 @@ export function createRecordingController(
     // 让 recorder 尽量把最后缓存吐出来（有的浏览器有效）
     try {
       mr.requestData();
-    } catch {}
+    }
+    catch {
+      // ignore
+    }
 
     mr.stop();
 
@@ -285,11 +288,12 @@ export function createRecordingController(
   function togglePause(): void {
     if (!mediaRecorder) return;
 
-    if (mediaRecorder.state === "recording") {
+    if (mediaRecorder.state === 'recording') {
       mediaRecorder.pause();
       pauseRecordTimer();
       isRecordPaused.value = true;
-    } else if (mediaRecorder.state === "paused") {
+    }
+    else if (mediaRecorder.state === 'paused') {
       mediaRecorder.resume();
       resumeRecordTimer();
       isRecordPaused.value = false;
@@ -306,7 +310,7 @@ export function createRecordingController(
     isSelectingRecordArea.value = true;
     recordDraftBox.value = null;
 
-    editMode = "idle";
+    editMode = 'idle';
     activeHandle = null;
     selectPointerId = null;
     startPt = null;
@@ -320,8 +324,8 @@ export function createRecordingController(
     if (!isSelectingRecordArea.value) return;
 
     const el = e.target as HTMLElement | null;
-    if (el?.closest(".record-select-actions")) return;
-    if (el?.closest(".record-select-hint")) return;
+    if (el?.closest('.record-select-actions')) return;
+    if (el?.closest('.record-select-hint')) return;
 
     const p = toLocalXY(e);
     if (!p) return;
@@ -332,26 +336,28 @@ export function createRecordingController(
 
     const target = e.target as HTMLElement;
     const h = (target?.dataset?.h ?? null) as
-      | "n"
-      | "s"
-      | "e"
-      | "w"
-      | "nw"
-      | "ne"
-      | "sw"
-      | "se"
+      | 'n'
+      | 's'
+      | 'e'
+      | 'w'
+      | 'nw'
+      | 'ne'
+      | 'sw'
+      | 'se'
       | null;
 
     const hasBox = !!recordDraftBox.value;
 
     if (hasBox && h) {
-      editMode = "resize";
+      editMode = 'resize';
       activeHandle = h;
-    } else if (hasBox && startBox) {
-      editMode = "move";
+    }
+    else if (hasBox && startBox) {
+      editMode = 'move';
       activeHandle = null;
-    } else {
-      editMode = "draw";
+    }
+    else {
+      editMode = 'draw';
       activeHandle = null;
       recordDraftBox.value = { x: p.x, y: p.y, w: 0, h: 0 };
     }
@@ -370,7 +376,7 @@ export function createRecordingController(
     const dx = p.x - startPt.x;
     const dy = p.y - startPt.y;
 
-    if (editMode === "draw") {
+    if (editMode === 'draw') {
       const b0 = recordDraftBox.value;
       if (!b0) return;
       recordDraftBox.value = normBox({ x: b0.x, y: b0.y, w: dx, h: dy });
@@ -379,7 +385,7 @@ export function createRecordingController(
 
     if (!startBox) return;
 
-    if (editMode === "move") {
+    if (editMode === 'move') {
       recordDraftBox.value = clampBoxToCanvas({
         x: startBox.x + dx,
         y: startBox.y + dy,
@@ -389,21 +395,21 @@ export function createRecordingController(
       return;
     }
 
-    if (editMode === "resize") {
+    if (editMode === 'resize') {
       const b: CropBox = { ...startBox };
 
-      if (activeHandle?.includes("w")) {
+      if (activeHandle?.includes('w')) {
         b.x = startBox.x + dx;
         b.w = startBox.w - dx;
       }
-      if (activeHandle?.includes("e")) {
+      if (activeHandle?.includes('e')) {
         b.w = startBox.w + dx;
       }
-      if (activeHandle?.includes("n")) {
+      if (activeHandle?.includes('n')) {
         b.y = startBox.y + dy;
         b.h = startBox.h - dy;
       }
-      if (activeHandle?.includes("s")) {
+      if (activeHandle?.includes('s')) {
         b.h = startBox.h + dy;
       }
 
@@ -418,7 +424,7 @@ export function createRecordingController(
     selectPointerId = null;
     startPt = null;
     startBox = null;
-    editMode = "idle";
+    editMode = 'idle';
     activeHandle = null;
   }
 
@@ -429,7 +435,7 @@ export function createRecordingController(
     selectPointerId = null;
     startPt = null;
     startBox = null;
-    editMode = "idle";
+    editMode = 'idle';
     activeHandle = null;
   }
 
@@ -442,7 +448,7 @@ export function createRecordingController(
     if (!box) return;
 
     if (box.w < 8 || box.h < 8) {
-      message.warning(t?.("viewer.record.tooSmall") ?? "Selection too small");
+      message.warning(t?.('viewer.record.tooSmall') ?? 'Selection too small');
       return;
     }
 

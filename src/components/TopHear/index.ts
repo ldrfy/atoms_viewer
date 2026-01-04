@@ -1,2 +1,2 @@
-import TopHear from "./index.vue";
+import TopHear from './index.vue';
 export default TopHear;

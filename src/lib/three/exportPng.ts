@@ -1,8 +1,8 @@
-import * as THREE from "three";
-import type { AnyCamera } from "./camera";
-import { updateCameraForSize } from "./camera";
-import { getElementSize } from "./resize";
-import { cropCanvasToPngBlob, downloadBlob } from "../image/cropPng";
+import * as THREE from 'three';
+import type { AnyCamera } from './camera';
+import { updateCameraForSize } from './camera';
+import { getElementSize } from './resize';
+import { cropCanvasToPngBlob, downloadBlob } from '../image/cropPng';
 
 export async function exportTransparentCroppedPng(params: {
   renderer: THREE.WebGLRenderer;

@@ -1,7 +1,7 @@
-import type { Ref } from "vue";
-import type { ViewerSettings } from "../../../lib/viewer/settings";
-import type { RecordingBindings } from "../recording";
-import type { MaybeRef } from "./common";
+import type { Ref } from 'vue';
+import type { ViewerSettings } from '../../../lib/viewer/settings';
+import type { RecordingBindings } from '../recording';
+import type { MaybeRef } from './common';
 
 export type AnimCtx = {
   hasModel: MaybeRef<boolean>;

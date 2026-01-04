@@ -1,7 +1,7 @@
-import * as THREE from "three";
-import type { Atom } from "../structure/types";
-import { getElementColorHex } from "../structure/chem";
-import { buildBicolorBondGroups } from "../structure/bondSegments";
+import * as THREE from 'three';
+import type { Atom } from '../structure/types';
+import { getElementColorHex } from '../structure/chem';
+import { buildBicolorBondGroups } from '../structure/bondSegments';
 
 /**
  * 键合渲染构建结果（InstancedMesh 列表 + 段数）。
@@ -50,7 +50,7 @@ export function buildBondMeshesBicolor(params: {
     1.0,
     12,
     1,
-    false
+    false,
   );
 
   const up = new THREE.Vector3(0, 1, 0);

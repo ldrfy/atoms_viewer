@@ -1,6 +1,6 @@
 // src/lib/structure/parsers/lammpsDump.ts
-import type { Atom, StructureModel } from "../types";
-import { t } from "../../../i18n/index";
+import type { Atom, StructureModel } from '../types';
+import { t } from '../../../i18n/index';
 
 /**
  * LAMMPS dump 解析选项 / Parse options for LAMMPS dump
@@ -36,7 +36,7 @@ export type ParseLammpsDumpOptions = {
  */
 export function parseLammpsDump(
   text: string,
-  opts?: ParseLammpsDumpOptions
+  opts?: ParseLammpsDumpOptions,
 ): StructureModel {
   const lines = text.split(/\r?\n/);
   const frames: Atom[][] = [];
@@ -45,7 +45,7 @@ export function parseLammpsDump(
   let i = 0;
   while (i < lines.length) {
     // 找到一帧的开头 / Find frame header
-    if (!startsWith(lines[i], "ITEM: TIMESTEP")) {
+    if (!startsWith(lines[i], 'ITEM: TIMESTEP')) {
       i += 1;
       continue;
     }
@@ -59,7 +59,7 @@ export function parseLammpsDump(
     // -------------------------
     // NUMBER OF ATOMS
     // -------------------------
-    expectStartsWith(lines[i], "ITEM: NUMBER OF ATOMS");
+    expectStartsWith(lines[i], 'ITEM: NUMBER OF ATOMS');
     i += 1;
     const nAtoms = parseIntStrict(lines[i]);
     i += 1;
@@ -74,8 +74,8 @@ export function parseLammpsDump(
     // Box usage:
     // - if columns are x y z: box is not needed for coordinates (already absolute)
     // - if columns are xs ys zs: they are scaled to [0,1], need bounds to convert to Cartesian
-    const boxLine = lines[i] ?? "";
-    expectStartsWith(boxLine, "ITEM: BOX BOUNDS");
+    const boxLine = lines[i] ?? '';
+    expectStartsWith(boxLine, 'ITEM: BOX BOUNDS');
 
     // triclinic（倾斜盒）会在 header 中出现 xy/xz/yz
     // triclinic box contains tilt factors (xy xz yz). Not supported here for simplicity.
@@ -84,7 +84,7 @@ export function parseLammpsDump(
 
     if (isTriclinic) {
       throw new Error(
-        "LAMMPS dump：暂不支持 triclinic BOX（含 xy/xz/yz）。请用正交盒，或导出 x y z（非 xs/ys/zs）。"
+        'LAMMPS dump：暂不支持 triclinic BOX（含 xy/xz/yz）。请用正交盒，或导出 x y z（非 xs/ys/zs）。',
       );
     }
 
@@ -100,27 +100,27 @@ export function parseLammpsDump(
     // -------------------------
     // ATOMS header + columns
     // -------------------------
-    const header = lines[i] ?? "";
-    if (!startsWith(header, "ITEM: ATOMS")) {
-      throw new Error(t("errors.lammpsDump.missingAtomsSection"));
+    const header = lines[i] ?? '';
+    if (!startsWith(header, 'ITEM: ATOMS')) {
+      throw new Error(t('errors.lammpsDump.missingAtomsSection'));
     }
 
-    const cols = header.replace("ITEM: ATOMS", "").trim().split(/\s+/);
+    const cols = header.replace('ITEM: ATOMS', '').trim().split(/\s+/);
     i += 1;
 
     // 常见列名 / Common columns
-    const idxId = cols.indexOf("id");
-    const idxType = cols.indexOf("type");
+    const idxId = cols.indexOf('id');
+    const idxType = cols.indexOf('type');
 
     // 绝对坐标（推荐）/ absolute coordinates
-    const idxX = firstIndexOf(cols, ["x", "xu"]);
-    const idxY = firstIndexOf(cols, ["y", "yu"]);
-    const idxZ = firstIndexOf(cols, ["z", "zu"]);
+    const idxX = firstIndexOf(cols, ['x', 'xu']);
+    const idxY = firstIndexOf(cols, ['y', 'yu']);
+    const idxZ = firstIndexOf(cols, ['z', 'zu']);
 
     // 缩放坐标 / scaled coordinates (0..1)
-    const idxXs = cols.indexOf("xs");
-    const idxYs = cols.indexOf("ys");
-    const idxZs = cols.indexOf("zs");
+    const idxXs = cols.indexOf('xs');
+    const idxYs = cols.indexOf('ys');
+    const idxZs = cols.indexOf('zs');
 
     const hasAbs = idxX >= 0 && idxY >= 0 && idxZ >= 0;
     const hasScaled = idxXs >= 0 && idxYs >= 0 && idxZs >= 0;
@@ -129,15 +129,15 @@ export function parseLammpsDump(
       // 你要做 type->element 映射，type 列是必须的
       // "type" is required if we want type->element mapping.
       throw new Error(
-        t("errors.lammpsDump.missingTypeColumn", { columns: cols.join(" ") })
+        t('errors.lammpsDump.missingTypeColumn', { columns: cols.join(' ') }),
       );
     }
 
     if (!hasAbs && !hasScaled) {
       throw new Error(
-        t("errors.lammpsDump.missingCoordsColumns", {
-          columns: cols.join(" "),
-        })
+        t('errors.lammpsDump.missingCoordsColumns', {
+          columns: cols.join(' '),
+        }),
       );
     }
 
@@ -148,7 +148,7 @@ export function parseLammpsDump(
     const rows: Row[] = new Array(nAtoms);
 
     for (let k = 0; k < nAtoms; k += 1) {
-      const parts = (lines[i + k] ?? "").trim().split(/\s+/);
+      const parts = (lines[i + k] ?? '').trim().split(/\s+/);
 
       // id 可选，但强烈建议 dump 输出 id，用于排序与动画稳定
       // id is optional but recommended for stable animation (sorting).
@@ -176,7 +176,7 @@ export function parseLammpsDump(
             ylo,
             yhi,
             zlo,
-            zhi
+            zhi,
           );
 
       // 保留 id/typeId，便于后续做实时映射更新、动画排序等
@@ -188,23 +188,23 @@ export function parseLammpsDump(
     // -------------------------
     // Build the frame
     // -------------------------
-    const frame: Atom[] =
-      sortById && idxId >= 0
+    const frame: Atom[]
+      = sortById && idxId >= 0
         ? rows
             .slice()
             .sort((a, b) => (a.id ?? 0) - (b.id ?? 0))
-            .map((r) => r.atom)
-        : rows.map((r) => r.atom);
+            .map(r => r.atom)
+        : rows.map(r => r.atom);
 
     frames.push(frame);
   }
 
   const atoms0 = frames[0];
   if (!atoms0) {
-    throw new Error(t("errors.lammpsDump.noFrames"));
+    throw new Error(t('errors.lammpsDump.noFrames'));
   }
 
-  return { atoms: atoms0, frames, comment: "LAMMPS dump" };
+  return { atoms: atoms0, frames, comment: 'LAMMPS dump' };
 }
 
 /* -----------------------------
@@ -212,43 +212,43 @@ export function parseLammpsDump(
  * ----------------------------- */
 
 function startsWith(line: string | undefined, prefix: string): boolean {
-  return (line ?? "").startsWith(prefix);
+  return (line ?? '').startsWith(prefix);
 }
 
 function expectStartsWith(line: string | undefined, prefix: string): void {
   if (!startsWith(line, prefix)) {
     throw new Error(
-      t("errors.lammpsDump.unexpectedHeader", {
+      t('errors.lammpsDump.unexpectedHeader', {
         expected: prefix,
-        actual: line ?? "",
-      })
+        actual: line ?? '',
+      }),
     );
   }
 }
 
 function parseIntStrict(s: string | undefined): number {
-  const v = Number.parseInt((s ?? "").trim(), 10);
+  const v = Number.parseInt((s ?? '').trim(), 10);
   if (!Number.isFinite(v)) {
-    throw new Error(t("errors.parseIntFailed", { value: s ?? "" }));
+    throw new Error(t('errors.parseIntFailed', { value: s ?? '' }));
   }
   return v;
 }
 
 function parseIntSafe(s: string | undefined): number {
-  const v = Number.parseInt((s ?? "").trim(), 10);
+  const v = Number.parseInt((s ?? '').trim(), 10);
   return Number.isFinite(v) ? v : 0;
 }
 
 function parseFloatSafe(s: string | undefined): number {
-  const v = Number.parseFloat((s ?? "").trim());
+  const v = Number.parseFloat((s ?? '').trim());
   return Number.isFinite(v) ? v : 0;
 }
 
 function parseTwoFloats(s: string | undefined): [number, number] {
-  const parts = (s ?? "").trim().split(/\s+/);
+  const parts = (s ?? '').trim().split(/\s+/);
 
   if (parts.length < 2) {
-    throw new Error(t("errors.lammpsDump.badBoxBoundsLine", { line: s ?? "" }));
+    throw new Error(t('errors.lammpsDump.badBoxBoundsLine', { line: s ?? '' }));
   }
   return [parseFloatSafe(parts[0]), parseFloatSafe(parts[1])];
 }
@@ -271,7 +271,7 @@ function firstIndexOf(cols: string[], candidates: string[]): number {
  */
 function resolveElement(typeId: number, map?: Record<number, string>): string {
   const el = map?.[typeId];
-  return el ? el : "E"; // 与你的 chem.ts 占位一致（Unknown）
+  return el ? el : 'E'; // 与你的 chem.ts 占位一致（Unknown）
 }
 
 /**
@@ -288,7 +288,7 @@ function scaledToCartesian(
   ylo: number,
   yhi: number,
   zlo: number,
-  zhi: number
+  zhi: number,
 ): [number, number, number] {
   const xs = parseFloatSafe(parts[ix]);
   const ys = parseFloatSafe(parts[iy]);
@@ -307,5 +307,5 @@ function scaledToCartesian(
  * Check whether a format string indicates LAMMPS dump-like data.
  */
 export function isLammpsDumpFormat(fmt: string): boolean {
-  return ["dump", "lammpstrj", "traj", "lammpsdump"].includes(fmt);
+  return ['dump', 'lammpstrj', 'traj', 'lammpsdump'].includes(fmt);
 }

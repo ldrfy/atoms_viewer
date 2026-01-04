@@ -1,7 +1,7 @@
 export async function fetchWithTimeout(
   input: RequestInfo | URL,
   init: RequestInit = {},
-  timeoutMs = 5000
+  timeoutMs = 5000,
 ) {
   const controller = new AbortController();
   const id = window.setTimeout(() => controller.abort(), timeoutMs);
@@ -12,7 +12,8 @@ export async function fetchWithTimeout(
       signal: controller.signal,
     });
     return res;
-  } finally {
+  }
+  finally {
     window.clearTimeout(id);
   }
 }

@@ -1,9 +1,9 @@
 // src/lib/structure/parse.ts
-import type { StructureModel } from "./types";
-import { parseXyz } from "./parsers/xyz";
-import { parsePdb } from "./parsers/pdb";
-import { parseLammpsDump } from "./parsers/lammpsDump";
-import { parseLammpsData } from "./parsers/lammpsData";
+import type { StructureModel } from './types';
+import { parseXyz } from './parsers/xyz';
+import { parsePdb } from './parsers/pdb';
+import { parseLammpsDump } from './parsers/lammpsDump';
+import { parseLammpsData } from './parsers/lammpsData';
 
 export type StructureParseOptions = {
   /**
@@ -29,7 +29,7 @@ export type StructureParseOptions = {
 export function parseStructure(
   text: string,
   filename?: string,
-  opts?: StructureParseOptions
+  opts?: StructureParseOptions,
 ): StructureModel {
   const ext = getExt(filename);
   const { format, extNormalized } = detectFormat(text, ext);
@@ -37,36 +37,36 @@ export function parseStructure(
   let model: StructureModel;
 
   switch (format) {
-    case "xyz":
+    case 'xyz':
       model = parseXyz(text);
       break;
 
-    case "pdb":
+    case 'pdb':
       model = parsePdb(text);
       break;
 
-    case "dump":
-    case "lammpstrj":
-    case "traj":
-    case "lammpsdump":
+    case 'dump':
+    case 'lammpstrj':
+    case 'traj':
+    case 'lammpsdump':
       model = parseLammpsDump(text, {
         typeToElement: opts?.lammpsTypeToElement,
         sortById: opts?.lammpsSortById ?? true,
       });
       break;
 
-    case "data":
-    case "lammpsdata":
+    case 'data':
+    case 'lammpsdata':
       // 注意：read_data 的 data 文件通常是单帧
       // NOTE: LAMMPS data (read_data) is typically single-frame
-      model = parseLammpsData(text, filename ?? "unknown", {
+      model = parseLammpsData(text, filename ?? 'unknown', {
         lammpsTypeToElement: opts?.lammpsTypeToElement,
         sortById: opts?.lammpsSortById ?? true,
       });
       break;
 
     default:
-      throw new Error(`不支持的格式: ${extNormalized || "unknown"}`);
+      throw new Error(`不支持的格式: ${extNormalized || 'unknown'}`);
   }
 
   // 兜底：保证 frames 至少有一帧
@@ -78,7 +78,7 @@ export function parseStructure(
   // 统一写入 source 信息：format 使用“归一化格式”，不要直接用扩展名
   // Set source info: use normalized format instead of raw extension
   model.source = {
-    filename: filename ?? "unknown",
+    filename: filename ?? 'unknown',
     format,
   };
 
@@ -92,7 +92,7 @@ export function parseStructure(
  */
 export async function loadStructureFromFile(
   file: File,
-  opts?: StructureParseOptions
+  opts?: StructureParseOptions,
 ): Promise<StructureModel> {
   const text = await file.text();
   return parseStructure(text, file.name, opts);
@@ -104,9 +104,9 @@ export async function loadStructureFromFile(
  * Extract file extension (without dot), lowercased.
  */
 function getExt(filename?: string): string {
-  const name = (filename ?? "").toLowerCase();
-  const p = name.lastIndexOf(".");
-  return p >= 0 ? name.slice(p + 1) : "";
+  const name = (filename ?? '').toLowerCase();
+  const p = name.lastIndexOf('.');
+  return p >= 0 ? name.slice(p + 1) : '';
 }
 
 /**
@@ -120,26 +120,26 @@ function getExt(filename?: string): string {
  */
 function detectFormat(
   text: string,
-  ext: string
+  ext: string,
 ): { format: string; extNormalized: string } {
-  const extNormalized = ext || "";
+  const extNormalized = ext || '';
 
   // 1) 扩展名优先 / Extension first
   switch (extNormalized) {
-    case "xyz":
-      return { format: "xyz", extNormalized };
-    case "pdb":
-      return { format: "pdb", extNormalized };
+    case 'xyz':
+      return { format: 'xyz', extNormalized };
+    case 'pdb':
+      return { format: 'pdb', extNormalized };
 
-    case "dump":
-    case "lammpstrj":
-    case "traj":
+    case 'dump':
+    case 'lammpstrj':
+    case 'traj':
       return { format: extNormalized, extNormalized };
 
     // read_data 常见扩展名 / Common read_data extensions
-    case "data":
-    case "lammpsdata":
-      return { format: "lammpsdata", extNormalized };
+    case 'data':
+    case 'lammpsdata':
+      return { format: 'lammpsdata', extNormalized };
 
     default:
       break;
@@ -150,16 +150,16 @@ function detectFormat(
   // LAMMPS dump 特征：通常含有若干 ITEM: 段（TIMESTEP / NUMBER OF ATOMS / BOX BOUNDS / ATOMS ...）
   // LAMMPS dump signature: typically contains several ITEM: sections (TIMESTEP / NUMBER OF ATOMS / BOX BOUNDS / ATOMS ...)
   if (isLikelyLammpsDump(text)) {
-    return { format: "lammpsdump", extNormalized };
+    return { format: 'lammpsdump', extNormalized };
   }
 
   // LAMMPS data 特征：存在 Atoms 段（且不是 dump）
   // LAMMPS data signature: has an "Atoms" section (and not a dump)
   if (isLikelyLammpsData(text)) {
-    return { format: "lammpsdata", extNormalized };
+    return { format: 'lammpsdata', extNormalized };
   }
 
-  return { format: "unknown", extNormalized };
+  return { format: 'unknown', extNormalized };
 }
 
 /**
@@ -188,7 +188,7 @@ function isLikelyLammpsDump(text: string): boolean {
  * - 存在独立行的 "Atoms"（允许 "Atoms # full" 等）
  */
 function isLikelyLammpsData(text: string): boolean {
-  if (text.includes("ITEM: TIMESTEP")) return false;
+  if (text.includes('ITEM: TIMESTEP')) return false;
 
   // 用行级正则提高准确性
   // Line-level regex for better precision
@@ -196,7 +196,7 @@ function isLikelyLammpsData(text: string): boolean {
   return re.test(text);
 }
 
-export type ParseMode = "auto" | "xyz" | "pdb" | "lammpsdump" | "lammpsdata";
+export type ParseMode = 'auto' | 'xyz' | 'pdb' | 'lammpsdump' | 'lammpsdata';
 
 export type ParseInfo = {
   fileName: string;
@@ -209,21 +209,21 @@ export type ParseInfo = {
 };
 
 function stripExt(name: string): string {
-  const i = name.lastIndexOf(".");
+  const i = name.lastIndexOf('.');
   return i >= 0 ? name.slice(0, i) : name;
 }
 export function toForcedFilename(
   originalName: string,
-  mode: ParseMode
+  mode: ParseMode,
 ): string {
-  if (mode === "auto") return originalName;
+  if (mode === 'auto') return originalName;
 
   const base = stripExt(originalName);
   // 通过“伪造扩展名”强制 parseStructure 走对应 parser
   // Force parser by a fake extension
   const ext = (() => {
-    if (mode === "lammpsdump") return "dump";
-    if (mode === "lammpsdata") return "data";
+    if (mode === 'lammpsdump') return 'dump';
+    if (mode === 'lammpsdata') return 'data';
     return mode; // xyz/pdb
   })();
 

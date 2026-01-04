@@ -1,26 +1,26 @@
 // src/components/ViewerStage/useViewerStage.ts
-import { onBeforeUnmount, onMounted, ref, computed } from "vue";
-import type { Ref, ComponentPublicInstance } from "vue";
+import { onBeforeUnmount, onMounted, ref, computed } from 'vue';
+import type { Ref, ComponentPublicInstance } from 'vue';
 
 import type {
   ViewerSettings,
   LammpsTypeMapItem,
   OpenSettingsPayload,
-} from "../../lib/viewer/settings";
+} from '../../lib/viewer/settings';
 
-import { useI18n } from "vue-i18n";
+import { useI18n } from 'vue-i18n';
 
-import { createThreeStage, type ThreeStage } from "../../lib/three/stage";
-import { bindViewerStageSettings } from "./bindSettings";
+import { createThreeStage, type ThreeStage } from '../../lib/three/stage';
+import { bindViewerStageSettings } from './bindSettings';
 import {
   createModelRuntime,
   type ModelRuntime,
   type ModelLayerInfo,
-} from "./modelRuntime";
+} from './modelRuntime';
 
-import { createInspectCtx, type InspectCtx } from "./ctx/inspect";
-import { createRecordingController, type RecordingBindings } from "./recording";
-import { useFileDrop } from "./useFileDrop";
+import { createInspectCtx, type InspectCtx } from './ctx/inspect';
+import { createRecordingController, type RecordingBindings } from './recording';
+import { useFileDrop } from './useFileDrop';
 
 import {
   createRecordSelectCtx,
@@ -31,12 +31,12 @@ import {
   type CropDashCtx,
   type ParseCtx,
   type AnimCtx,
-} from "./ctx";
+} from './ctx';
 
-import { createViewerPickingController } from "./logic/viewerPicking";
-import { createPngExporter } from "./logic/viewerExportPng";
-import { createViewerLoader } from "./logic/viewerLoader";
-import { createViewerAnimationController } from "./logic/viewerAnimation";
+import { createViewerPickingController } from './logic/viewerPicking';
+import { createPngExporter } from './logic/viewerExportPng';
+import { createViewerLoader } from './logic/viewerLoader';
+import { createViewerAnimationController } from './logic/viewerAnimation';
 
 /**
  * Template ref callback param type (works for DOM + component instance).
@@ -114,7 +114,7 @@ type ViewerStageBindings = {
   loadFile: (file: File) => Promise<void>;
   loadFiles: (
     files: File[],
-    source: "drop" | "picker" | "api"
+    source: 'drop' | 'picker' | 'api',
   ) => Promise<void>;
   loadUrl: (url: string, fileName: string) => Promise<void>;
 
@@ -146,7 +146,7 @@ type ViewerStageBindings = {
 export function useViewerStage(
   settingsRef: Readonly<Ref<ViewerSettings>>,
   patchSettings?: (patch: Partial<ViewerSettings>) => void,
-  requestOpenSettings?: (payload?: OpenSettingsPayload) => void
+  requestOpenSettings?: (payload?: OpenSettingsPayload) => void,
 ): ViewerStageBindings {
   const { t } = useI18n();
 
@@ -168,18 +168,16 @@ export function useViewerStage(
   const runtimeTick = ref(0);
 
   const layers = computed<ModelLayerInfo[]>(() => {
-    runtimeTick.value;
-    return runtime?.layers.value ?? [];
+    // 将 runtimeTick 纳入依赖：通过序列表达式避免触发 no-unused-expressions。
+    return (runtimeTick.value, runtime?.layers.value ?? []);
   });
 
   const activeLayerId = computed<string | null>(() => {
-    runtimeTick.value;
-    return runtime?.activeLayerId.value ?? null;
+    return (runtimeTick.value, runtime?.activeLayerId.value ?? null);
   });
 
   const activeLayerTypeMap = computed<LammpsTypeMapItem[]>(() => {
-    runtimeTick.value;
-    return runtime?.activeTypeMapRows.value ?? [];
+    return (runtimeTick.value, runtime?.activeTypeMapRows.value ?? []);
   });
 
   // state
@@ -261,7 +259,7 @@ export function useViewerStage(
     if (!runtime) return;
 
     const activeId = runtime.activeLayerId.value;
-    const layer = runtime.layers.value.find((x) => x.id === activeId) ?? null;
+    const layer = runtime.layers.value.find(x => x.id === activeId) ?? null;
     if (layer) {
       loader.parseInfo.fileName = layer.sourceFileName ?? layer.name;
       loader.parseInfo.format = layer.sourceFormat ?? loader.parseInfo.format;
@@ -347,12 +345,12 @@ export function useViewerStage(
 
     stopBind = bindViewerStageSettings({
       settingsRef,
-      setProjectionMode: (v) => stage?.setProjectionMode(v),
+      setProjectionMode: v => stage?.setProjectionMode(v),
       resetView,
 
-      setViewPresets: (v) => stage?.setViewPresets(v),
-      setDualViewDistance: (d) => stage?.setDualViewDistance(d),
-      setDualViewSplit: (r) => stage?.setDualViewSplit(r),
+      setViewPresets: v => stage?.setViewPresets(v),
+      setDualViewDistance: d => stage?.setDualViewDistance(d),
+      setDualViewSplit: r => stage?.setDualViewSplit(r),
 
       applyAtomScale: () => runtime?.applyAtomScale(),
       applyShowBonds: () => runtime?.applyShowBonds(),
@@ -390,8 +388,8 @@ export function useViewerStage(
         if (!Number.isFinite(dist)) return;
 
         if (
-          Number.isFinite(lastSyncedDist) &&
-          Math.abs(dist - lastSyncedDist) < 1e-4
+          Number.isFinite(lastSyncedDist)
+          && Math.abs(dist - lastSyncedDist) < 1e-4
         )
           return;
         lastSyncedDist = dist;
@@ -411,13 +409,13 @@ export function useViewerStage(
       };
     }
 
-    window.addEventListener("dragover", preventWindowDropDefault);
-    window.addEventListener("drop", preventWindowDropDefault);
+    window.addEventListener('dragover', preventWindowDropDefault);
+    window.addEventListener('drop', preventWindowDropDefault);
   });
 
   onBeforeUnmount(() => {
-    window.removeEventListener("dragover", preventWindowDropDefault);
-    window.removeEventListener("drop", preventWindowDropDefault);
+    window.removeEventListener('dragover', preventWindowDropDefault);
+    window.removeEventListener('drop', preventWindowDropDefault);
 
     picking.detach();
 
@@ -487,7 +485,7 @@ export function useViewerStage(
     exportPng: exporter.onExportPng,
     openFilePicker,
     loadFile: loader.loadFile,
-    loadFiles: (files: File[]) => loader.loadFiles(files, "api"),
+    loadFiles: (files: File[]) => loader.loadFiles(files, 'api'),
     loadUrl: loader.loadUrl,
   };
 

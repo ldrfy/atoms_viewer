@@ -1,9 +1,9 @@
-import { createApp } from "vue";
-import App from "./App.vue";
-import { i18n } from "./i18n";
+import { createApp } from 'vue';
+import App from './App.vue';
+import { i18n } from './i18n';
 
-import "ant-design-vue/dist/reset.css";
-import "./style.css";
+import 'ant-design-vue/dist/reset.css';
+import './style.css';
 
 import {
   Popconfirm,
@@ -37,7 +37,7 @@ import {
   Descriptions,
   Divider,
   Tooltip,
-} from "ant-design-vue";
+} from 'ant-design-vue';
 
 const app = createApp(App);
 app.use(i18n);
@@ -75,4 +75,4 @@ app
   .use(Divider)
   .use(Tooltip);
 
-app.mount("#app");
+app.mount('#app');

@@ -1,10 +1,10 @@
-import * as THREE from "three";
-import type { Atom } from "../structure/types";
-import { getCovalentRadiusAng, getElementColorHex } from "../structure/chem";
+import * as THREE from 'three';
+import type { Atom } from '../structure/types';
+import { getCovalentRadiusAng, getElementColorHex } from '../structure/chem';
 
 export function getSphereBaseRadiusByElement(
   el: string,
-  atomSizeFactor: number
+  atomSizeFactor: number,
 ): number {
   return atomSizeFactor * getCovalentRadiusAng(el);
 }
@@ -36,7 +36,7 @@ export function buildAtomMeshesByElement(params: {
     const geometry = new THREE.SphereGeometry(
       rSphere,
       sphereSegments,
-      sphereSegments
+      sphereSegments,
     );
     const material = new THREE.MeshStandardMaterial({
       color: new THREE.Color(getElementColorHex(el)),
@@ -66,7 +66,7 @@ export function buildAtomMeshesByElement(params: {
 export function applyAtomScaleToMeshes(
   meshes: THREE.InstancedMesh[],
   atomScale: number,
-  sphereSegments = 16
+  sphereSegments = 16,
 ): void {
   for (const m of meshes) {
     const baseRadius = m.userData.baseRadius as number | undefined;

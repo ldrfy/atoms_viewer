@@ -1,9 +1,9 @@
-import { shallowRef } from "vue";
-import type { Ref } from "vue";
-import type { LammpsTypeMapItem } from "./settings";
+import { shallowRef } from 'vue';
+import type { Ref } from 'vue';
+import type { LammpsTypeMapItem } from './settings';
 
-import type { ParseMode, ParseInfo } from "../structure/parse";
-import type { ModelLayerInfo } from "../../components/ViewerStage/modelRuntime";
+import type { ParseMode, ParseInfo } from '../structure/parse';
+import type { ModelLayerInfo } from '../../components/ViewerStage/modelRuntime';
 
 export type ViewerPublicApi = {
   // actions

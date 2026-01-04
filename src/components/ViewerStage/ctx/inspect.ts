@@ -1,5 +1,5 @@
-import { ref, type Ref } from "vue";
-import type { Atom } from "../../../lib/structure/types";
+import { ref, type Ref } from 'vue';
+import type { Atom } from '../../../lib/structure/types';
 
 export type SelectedAtom = {
   layerId: string;

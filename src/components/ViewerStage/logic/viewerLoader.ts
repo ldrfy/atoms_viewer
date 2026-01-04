@@ -1,19 +1,19 @@
 // src/components/ViewerStage/logic/viewerLoader.ts
-import { reactive, ref } from "vue";
-import type { Ref } from "vue";
-import { message } from "ant-design-vue";
+import { reactive, ref } from 'vue';
+import type { Ref } from 'vue';
+import { message } from 'ant-design-vue';
 
 import type {
   ViewerSettings,
   LammpsTypeMapItem,
   OpenSettingsPayload,
-} from "../../../lib/viewer/settings";
-import { hasUnknownElementMappingForTypeIds } from "../../../lib/viewer/settings";
-import { normalizeViewPresets } from "../../../lib/viewer/viewPresets";
+} from '../../../lib/viewer/settings';
+import { hasUnknownElementMappingForTypeIds } from '../../../lib/viewer/settings';
+import { normalizeViewPresets } from '../../../lib/viewer/viewPresets';
 
-import { parseStructure, toForcedFilename } from "../../../lib/structure/parse";
-import type { ParseMode, ParseInfo } from "../../../lib/structure/parse";
-import type { StructureModel } from "../../../lib/structure/types";
+import { parseStructure, toForcedFilename } from '../../../lib/structure/parse';
+import type { ParseMode, ParseInfo } from '../../../lib/structure/parse';
+import type { StructureModel } from '../../../lib/structure/types';
 
 import {
   buildLammpsTypeToElementMap,
@@ -21,17 +21,17 @@ import {
   mergeTypeMap,
   normalizeTypeMapRows,
   typeMapEquals,
-} from "../typeMap";
+} from '../typeMap';
 
-import { isLammpsDumpFormat } from "../../../lib/structure/parsers/lammpsDump";
-import { isLammpsDataFormat } from "../../../lib/structure/parsers/lammpsData";
-import { applyAnimationInfo } from "../animation";
+import { isLammpsDumpFormat } from '../../../lib/structure/parsers/lammpsDump';
+import { isLammpsDataFormat } from '../../../lib/structure/parsers/lammpsData';
+import { applyAnimationInfo } from '../animation';
 
-import type { ThreeStage } from "../../../lib/three/stage";
-import type { ModelRuntime } from "../modelRuntime";
-import type { InspectCtx } from "../ctx/inspect";
+import type { ThreeStage } from '../../../lib/three/stage';
+import type { ModelRuntime } from '../modelRuntime';
+import type { InspectCtx } from '../ctx/inspect';
 
-type RenderReason = "load" | "reparse";
+type RenderReason = 'load' | 'reparse';
 
 export function createViewerLoader(deps: {
   settingsRef: Readonly<Ref<ViewerSettings>>;
@@ -54,15 +54,15 @@ export function createViewerLoader(deps: {
 
   stopPlay: () => void;
 }) {
-  const parseMode = ref<ParseMode>("auto");
+  const parseMode = ref<ParseMode>('auto');
 
   const parseInfo = reactive<ParseInfo>({
-    fileName: "",
-    format: "",
+    fileName: '',
+    format: '',
     atomCount: 0,
     frameCount: 1,
     success: true,
-    errorMsg: "",
+    errorMsg: '',
     errorSeq: 0,
   });
 
@@ -76,43 +76,43 @@ export function createViewerLoader(deps: {
   }
 
   function nextFrame(): Promise<void> {
-    return new Promise((resolve) =>
-      window.requestAnimationFrame(() => resolve())
+    return new Promise(resolve =>
+      window.requestAnimationFrame(() => resolve()),
     );
   }
 
   function updateParseInfo(
     model: StructureModel,
-    displayFileName: string
+    displayFileName: string,
   ): void {
     parseInfo.fileName = displayFileName;
-    parseInfo.format = model.source?.format ?? "unknown";
+    parseInfo.format = model.source?.format ?? 'unknown';
     parseInfo.atomCount = model.atoms.length;
-    parseInfo.frameCount =
-      model.frames && model.frames.length > 0 ? model.frames.length : 1;
+    parseInfo.frameCount
+      = model.frames && model.frames.length > 0 ? model.frames.length : 1;
   }
 
   function focusSettingsToDisplaySilently(): void {
     lastLoadNeedsLammpsFocus = false;
-    deps.requestOpenSettings?.({ focusKey: "display", open: false });
+    deps.requestOpenSettings?.({ focusKey: 'display', open: false });
   }
 
   function handleLammpsTypeMapAndSettings(
     model: StructureModel,
-    reason: RenderReason
+    reason: RenderReason,
   ): void {
     const runtime = deps.getRuntime();
 
     const baseRows = (
-      (reason === "reparse"
+      (reason === 'reparse'
         ? runtime?.activeTypeMapRows.value ?? []
         : getSettings().lammpsTypeMap ?? []) as LammpsTypeMapItem[]
-    ).map((r) => ({ typeId: r.typeId, element: r.element }));
+    ).map(r => ({ typeId: r.typeId, element: r.element }));
 
-    const atoms0 =
-      model.frames && model.frames[0] ? model.frames[0] : model.atoms;
-    const { typeIds: detectedTypeIdsRaw, defaults } =
-      collectTypeIdsAndElementDefaultsFromAtoms(atoms0);
+    const atoms0
+      = model.frames && model.frames[0] ? model.frames[0] : model.atoms;
+    const { typeIds: detectedTypeIdsRaw, defaults }
+      = collectTypeIdsAndElementDefaultsFromAtoms(atoms0);
 
     let detectedTypeIds = detectedTypeIdsRaw;
     if (detectedTypeIdsRaw.length > 0) {
@@ -128,12 +128,12 @@ export function createViewerLoader(deps: {
 
     const typeMapAdded = !typeMapEquals(
       normalizeTypeMapRows(baseRows),
-      normalizeTypeMapRows(mergedRows ?? [])
+      normalizeTypeMapRows(mergedRows ?? []),
     );
 
     const hasUnknownForThisDump = hasUnknownElementMappingForTypeIds(
       (mergedRows ?? []) as any,
-      detectedTypeIds
+      detectedTypeIds,
     );
 
     lastLoadNeedsLammpsFocus = typeMapAdded || hasUnknownForThisDump;
@@ -143,13 +143,14 @@ export function createViewerLoader(deps: {
     }
 
     if (typeMapAdded || hasUnknownForThisDump) {
-      deps.requestOpenSettings?.({ focusKey: "lammps", open: true });
-    } else {
-      deps.requestOpenSettings?.({ focusKey: "display", open: false });
+      deps.requestOpenSettings?.({ focusKey: 'lammps', open: true });
+    }
+    else {
+      deps.requestOpenSettings?.({ focusKey: 'display', open: false });
     }
 
     if (hasUnknownForThisDump) {
-      message.warning(deps.t("viewer.lammps.mappingMissing"));
+      message.warning(deps.t('viewer.lammps.mappingMissing'));
     }
   }
 
@@ -157,25 +158,25 @@ export function createViewerLoader(deps: {
     text: string,
     fileName: string,
     reason: RenderReason,
-    opts?: { hidePreviousLayers?: boolean }
+    opts?: { hidePreviousLayers?: boolean },
   ): void {
     const stage = deps.getStage();
     const runtime = deps.getRuntime();
     if (!stage || !runtime) return;
 
-    if (reason === "load") deps.inspectCtx.clear();
+    if (reason === 'load') deps.inspectCtx.clear();
 
     const forcedName = toForcedFilename(fileName, parseMode.value);
 
     const model = parseStructure(text, forcedName, {
       lammpsTypeToElement: buildLammpsTypeToElementMap(
-        (getSettings().lammpsTypeMap ?? []) as LammpsTypeMapItem[]
+        (getSettings().lammpsTypeMap ?? []) as LammpsTypeMapItem[],
       ),
       lammpsSortById: true,
     });
 
-    const info =
-      reason === "reparse"
+    const info
+      = reason === 'reparse'
         ? runtime.replaceActiveLayerModel(model)
         : runtime.renderModel(model, {
             hidePreviousLayers: opts?.hidePreviousLayers,
@@ -185,30 +186,31 @@ export function createViewerLoader(deps: {
       info,
       deps.frameIndex,
       deps.frameCount,
-      deps.hasAnimation
+      deps.hasAnimation,
     );
 
     updateParseInfo(model, fileName);
 
-    const fmt = model.source?.format ?? "";
-    const atoms0 =
-      model.frames && model.frames[0] ? model.frames[0] : model.atoms;
-    const { typeIds: detectedTypeIds } =
-      collectTypeIdsAndElementDefaultsFromAtoms(atoms0);
-    const isLmp =
-      isLammpsDumpFormat(fmt) ||
-      isLammpsDataFormat(fmt) ||
-      detectedTypeIds.length > 0;
+    const fmt = model.source?.format ?? '';
+    const atoms0
+      = model.frames && model.frames[0] ? model.frames[0] : model.atoms;
+    const { typeIds: detectedTypeIds }
+      = collectTypeIdsAndElementDefaultsFromAtoms(atoms0);
+    const isLmp
+      = isLammpsDumpFormat(fmt)
+        || isLammpsDataFormat(fmt)
+        || detectedTypeIds.length > 0;
 
     if (isLmp) {
       handleLammpsTypeMapAndSettings(model, reason);
-    } else {
+    }
+    else {
       focusSettingsToDisplaySilently();
     }
 
-    if (reason === "reparse") {
+    if (reason === 'reparse') {
       message.success(
-        deps.t("viewer.parse.reparseSuccess", { format: parseInfo.format })
+        deps.t('viewer.parse.reparseSuccess', { format: parseInfo.format }),
       );
     }
   }
@@ -234,12 +236,12 @@ export function createViewerLoader(deps: {
 
     let presets = normalizeViewPresets(getSettings().viewPresets);
     if (presets.length === 0 && !!getSettings().dualViewEnabled) {
-      presets = ["front", "side"];
+      presets = ['front', 'side'];
     }
 
     if (presets.length === 0) {
       const w = stage.host.getBoundingClientRect().width;
-      presets = w >= 900 ? ["front", "side"] : ["front"];
+      presets = w >= 900 ? ['front', 'side'] : ['front'];
       if (canPatch)
         deps.patchSettings!({ viewPresets: presets, dualViewEnabled: false });
     }
@@ -257,10 +259,11 @@ export function createViewerLoader(deps: {
     try {
       deps.stopPlay();
       deps.inspectCtx.clear();
-      renderFromText(lastRawText, lastRawFileName, "reparse");
-    } catch (err) {
+      renderFromText(lastRawText, lastRawFileName, 'reparse');
+    }
+    catch (err) {
       message.error(
-        deps.t("viewer.parse.reparseFailed", { reason: (err as Error).message })
+        deps.t('viewer.parse.reparseFailed', { reason: (err as Error).message }),
       );
     }
   }
@@ -283,12 +286,13 @@ export function createViewerLoader(deps: {
 
     try {
       runtime.onTypeMapChanged();
-    } finally {
+    }
+    finally {
       const minMs = 250;
       const elapsed = performance.now() - tStart;
       if (elapsed < minMs) {
-        await new Promise((r) =>
-          window.setTimeout(r, Math.ceil(minMs - elapsed))
+        await new Promise(r =>
+          window.setTimeout(r, Math.ceil(minMs - elapsed)),
         );
       }
       deps.isLoading.value = false;
@@ -300,36 +304,36 @@ export function createViewerLoader(deps: {
     if (!deps.requestOpenSettings) return;
 
     if (lastLoadNeedsLammpsFocus) {
-      deps.requestOpenSettings({ focusKey: "lammps", open: true });
+      deps.requestOpenSettings({ focusKey: 'lammps', open: true });
       return;
     }
 
     if (runtime?.hasAnyTypeId()) {
       const rows = normalizeTypeMapRows(
-        ((runtime.activeTypeMapRows.value ?? []) as any) ?? []
+        ((runtime.activeTypeMapRows.value ?? []) as any) ?? [],
       );
       const activeAtoms = runtime.getActiveAtoms?.() ?? null;
 
       if (activeAtoms) {
-        const { typeIds } =
-          collectTypeIdsAndElementDefaultsFromAtoms(activeAtoms);
+        const { typeIds }
+          = collectTypeIdsAndElementDefaultsFromAtoms(activeAtoms);
         if (hasUnknownElementMappingForTypeIds(rows as any, typeIds)) {
-          deps.requestOpenSettings({ focusKey: "lammps", open: true });
+          deps.requestOpenSettings({ focusKey: 'lammps', open: true });
           return;
         }
       }
 
       const hasPlaceholder = rows.some((r) => {
-        const el = (r.element ?? "").toString().trim();
-        return !el || el.toUpperCase() === "E";
+        const el = (r.element ?? '').toString().trim();
+        return !el || el.toUpperCase() === 'E';
       });
       if (hasPlaceholder) {
-        deps.requestOpenSettings({ focusKey: "lammps", open: true });
+        deps.requestOpenSettings({ focusKey: 'lammps', open: true });
         return;
       }
     }
 
-    deps.requestOpenSettings({ focusKey: "layers", open: true });
+    deps.requestOpenSettings({ focusKey: 'layers', open: true });
   }
 
   async function loadInit(): Promise<void> {
@@ -344,7 +348,7 @@ export function createViewerLoader(deps: {
     t0: number,
     text: string,
     fileName: string,
-    opts?: { hidePreviousLayers?: boolean; openSettingsAfter?: boolean }
+    opts?: { hidePreviousLayers?: boolean; openSettingsAfter?: boolean },
   ): Promise<void> {
     try {
       deps.stopPlay();
@@ -352,7 +356,7 @@ export function createViewerLoader(deps: {
       lastRawText = text;
       lastRawFileName = fileName;
 
-      renderFromText(text, fileName, "load", {
+      renderFromText(text, fileName, 'load', {
         hidePreviousLayers: opts?.hidePreviousLayers,
       });
 
@@ -362,19 +366,20 @@ export function createViewerLoader(deps: {
 
       message.success(`${((performance.now() - t0) / 1000).toFixed(2)} s`);
       parseInfo.success = true;
-      parseInfo.errorMsg = "";
-    } catch (err) {
+      parseInfo.errorMsg = '';
+    }
+    catch (err) {
       parseInfo.success = false;
       parseInfo.errorMsg = (err as Error).message;
       parseInfo.errorSeq += 1;
       console.log(err);
-      message.error(`${deps.t("viewer.parse.notice")}: ${parseInfo.errorMsg}`);
+      message.error(`${deps.t('viewer.parse.notice')}: ${parseInfo.errorMsg}`);
     }
 
     deps.isLoading.value = false;
     deps.hasModel.value = true;
 
-    parseMode.value = "auto";
+    parseMode.value = 'auto';
     parseInfo.fileName = fileName;
   }
 
@@ -395,7 +400,7 @@ export function createViewerLoader(deps: {
 
   async function loadFilesInternal(
     files: File[],
-    opts: { openSettingsAfter: boolean; source: "drop" | "picker" | "api" }
+    opts: { openSettingsAfter: boolean; source: 'drop' | 'picker' | 'api' },
   ): Promise<void> {
     if (!deps.getStage() || !deps.getRuntime()) return;
     if (deps.isLoading.value) return;
@@ -408,7 +413,7 @@ export function createViewerLoader(deps: {
       deps.inspectCtx.clear();
 
       let okCount = 0;
-      let lastOkName = "";
+      let lastOkName = '';
 
       for (const f of files) {
         try {
@@ -416,13 +421,14 @@ export function createViewerLoader(deps: {
           lastRawText = text;
           lastRawFileName = f.name;
 
-          renderFromText(text, f.name, "load", {
+          renderFromText(text, f.name, 'load', {
             hidePreviousLayers: okCount === 0,
           });
 
           okCount += 1;
           lastOkName = f.name;
-        } catch (err) {
+        }
+        catch (err) {
           const msg = (err as Error).message ?? String(err);
           message.error(`${f.name}: ${msg}`);
         }
@@ -433,37 +439,40 @@ export function createViewerLoader(deps: {
 
         message.success(
           `${okCount} file(s), ${((performance.now() - t0) / 1000).toFixed(
-            2
-          )} s`
+            2,
+          )} s`,
         );
 
         parseInfo.success = true;
-        parseInfo.errorMsg = "";
+        parseInfo.errorMsg = '';
         deps.hasModel.value = true;
-        parseMode.value = "auto";
+        parseMode.value = 'auto';
         parseInfo.fileName = lastOkName || lastRawFileName!;
 
         if (opts.openSettingsAfter) focusSettingsToLayersOrLammps();
-      } else {
-        parseInfo.success = false;
-        parseInfo.errorMsg = deps.t("viewer.parse.notice");
-        parseInfo.errorSeq += 1;
-        message.error(deps.t("viewer.parse.notice"));
       }
-    } catch (err) {
+      else {
+        parseInfo.success = false;
+        parseInfo.errorMsg = deps.t('viewer.parse.notice');
+        parseInfo.errorSeq += 1;
+        message.error(deps.t('viewer.parse.notice'));
+      }
+    }
+    catch (err) {
       parseInfo.success = false;
       parseInfo.errorMsg = (err as Error).message ?? String(err);
       parseInfo.errorSeq += 1;
       console.log(err);
-      message.error(`${deps.t("viewer.parse.notice")}: ${parseInfo.errorMsg}`);
-    } finally {
+      message.error(`${deps.t('viewer.parse.notice')}: ${parseInfo.errorMsg}`);
+    }
+    finally {
       deps.isLoading.value = false;
     }
   }
 
   async function loadFiles(
     files: File[],
-    source: "drop" | "picker" | "api"
+    source: 'drop' | 'picker' | 'api',
   ): Promise<void> {
     await loadFilesInternal(files, { openSettingsAfter: true, source });
   }
@@ -471,7 +480,7 @@ export function createViewerLoader(deps: {
   async function loadFile(file: File): Promise<void> {
     await loadFilesInternal([file], {
       openSettingsAfter: false,
-      source: "api",
+      source: 'api',
     });
   }
 

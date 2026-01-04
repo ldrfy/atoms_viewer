@@ -1,19 +1,19 @@
-import { computed, ref } from "vue";
+import { computed, ref } from 'vue';
 
-export type ThemeMode = "system" | "light" | "dark";
+export type ThemeMode = 'system' | 'light' | 'dark';
 
-const STORAGE_KEY = "themeMode";
+const STORAGE_KEY = 'themeMode';
 
 function readStoredMode(): ThemeMode {
   const v = localStorage.getItem(STORAGE_KEY);
-  if (v === "light" || v === "dark" || v === "system") return v;
-  return "system";
+  if (v === 'light' || v === 'dark' || v === 'system') return v;
+  return 'system';
 }
 
 const mode = ref<ThemeMode>(readStoredMode());
 
 // 系统是否偏好 dark
-const media = window.matchMedia?.("(prefers-color-scheme: dark)");
+const media = window.matchMedia?.('(prefers-color-scheme: dark)');
 const systemPrefersDark = ref<boolean>(media?.matches ?? false);
 
 function onMediaChange(e: MediaQueryListEvent): void {
@@ -21,12 +21,12 @@ function onMediaChange(e: MediaQueryListEvent): void {
 }
 
 if (media?.addEventListener) {
-  media.addEventListener("change", onMediaChange);
+  media.addEventListener('change', onMediaChange);
 }
 
 export const isDark = computed(() => {
-  if (mode.value === "dark") return true;
-  if (mode.value === "light") return false;
+  if (mode.value === 'dark') return true;
+  if (mode.value === 'light') return false;
   return systemPrefersDark.value;
 });
 
@@ -44,19 +44,18 @@ export function setThemeMode(next: ThemeMode): void {
  */
 export function applyThemeToDom(dark: boolean): void {
   const root = document.documentElement;
-  root.dataset.theme = dark ? "dark" : "light";
+  root.dataset.theme = dark ? 'dark' : 'light';
 }
-
 
 // 设置背景时，主题要跟着改
 export function isDarkColor(hex: string): boolean {
-  const h = hex.replace("#", "");
-  const v =
-    h.length === 3
+  const h = hex.replace('#', '');
+  const v
+    = h.length === 3
       ? h
-          .split("")
-          .map((c) => c + c)
-          .join("")
+          .split('')
+          .map(c => c + c)
+          .join('')
       : h;
 
   const n = parseInt(v, 16);

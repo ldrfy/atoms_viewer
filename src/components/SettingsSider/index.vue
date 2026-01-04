@@ -10,12 +10,12 @@
     :mask-closable="drawerPlacement === 'right'"
     :destroy-on-close="false"
     :closable="false"
-    :maskStyle="drawerPlacement === 'right' ? maskStyle : undefined"
+    :mask-style="drawerPlacement === 'right' ? maskStyle : undefined"
     :width="drawerPlacement === 'right' ? drawerWidth : undefined"
     :height="drawerPlacement === 'bottom' ? mobileHeight : undefined"
     :get-container="false"
-    :contentWrapperStyle="contentWrapperStyle"
-    :bodyStyle="drawerBodyStyle"
+    :content-wrapper-style="contentWrapperStyle"
+    :body-style="drawerBodyStyle"
     @after-open-change="onAfterOpenChange"
   >
     <!-- 自定义 Header：手机端更像 bottom-sheet -->
@@ -23,13 +23,13 @@
       <div
         v-if="drawerPlacement === 'bottom'"
         class="settings-grab"
-        @pointerdown.prevent="onResizeStart"
         aria-label="resize"
         title="Resize"
         role="button"
         tabindex="0"
+        @pointerdown.prevent="onResizeStart"
       >
-        <div class="settings-grab-bar"></div>
+        <div class="settings-grab-bar" />
       </div>
 
       <div class="settings-header-row">
@@ -40,9 +40,9 @@
         <a-button
           type="text"
           size="small"
-          @click="onCloseClick"
           aria-label="close"
           title="Close"
+          @click="onCloseClick"
         >
           ✕
         </a-button>
@@ -53,7 +53,7 @@
     <div class="settings-body">
       <!-- activeKey 由父组件控制；允许多面板同时展开/折叠 -->
       <a-collapse
-        v-model:activeKey="activeKeyModel"
+        v-model:active-key="activeKeyModel"
         ghost
         class="settings-collapse"
       >
@@ -68,9 +68,9 @@
               <a-row justify="space-between" align="middle" :gutter="8">
                 <a-col>
                   <a-input-number
+                    v-model:value="exportScale"
                     aria-label="Export scale"
                     title="Export scale"
-                    v-model:value="exportScale"
                     :min="1"
                     :max="5"
                     :step="0.1"
@@ -109,9 +109,9 @@
             <a-form-item :label="t('settings.panel.files.parse.header')">
               <a-space direction="vertical" :size="6" style="width: 100%">
                 <a-select
+                  v-model:value="parseModeModel"
                   :aria-label="t('viewer.parse.mode')"
                   :title="t('viewer.parse.mode')"
-                  v-model:value="parseModeModel"
                   :options="parseModeOptions"
                   :disabled="!hasAnyLayer"
                   style="width: 100%"
@@ -200,7 +200,9 @@
                   <a-radio :checked="l.id === activeLayerId" />
                 </div>
                 <div class="layer-main">
-                  <div class="layer-name" :title="l.name">{{ l.name }}</div>
+                  <div class="layer-name" :title="l.name">
+                    {{ l.name }}
+                  </div>
                   <div class="layer-meta">
                     {{
                       t("settings.panel.layers.meta", {
@@ -271,9 +273,9 @@
                 </a-col>
                 <a-col :style="{ width: '96px' }">
                   <a-input-number
+                    v-model:value="dualViewDistanceModel"
                     :aria-label="t('settings.panel.display.dualViewDistance')"
                     :title="t('settings.panel.display.dualViewDistance')"
-                    v-model:value="dualViewDistanceModel"
                     :min="1"
                     :max="dualViewDistanceMax"
                     :step="0.5"
@@ -317,9 +319,9 @@
                 </a-col>
                 <a-col :style="{ width: '96px' }">
                   <a-input-number
+                    v-model:value="dualViewSplitPctModel"
                     :aria-label="t('settings.panel.display.dualViewSplit')"
                     :title="t('settings.panel.display.dualViewSplit')"
-                    v-model:value="dualViewSplitPctModel"
                     :min="10"
                     :max="90"
                     :step="1"
@@ -366,9 +368,9 @@
                 </a-col>
                 <a-col :style="{ width: '96px' }">
                   <a-input-number
+                    v-model:value="rotXModel"
                     :aria-label="t('settings.panel.pose.rotX')"
                     :title="t('settings.panel.pose.rotX')"
-                    v-model:value="rotXModel"
                     :min="-180"
                     :max="180"
                     :step="1"
@@ -390,9 +392,9 @@
                 </a-col>
                 <a-col :style="{ width: '96px' }">
                   <a-input-number
+                    v-model:value="rotYModel"
                     :aria-label="t('settings.panel.pose.rotY')"
                     :title="t('settings.panel.pose.rotY')"
-                    v-model:value="rotYModel"
                     :min="-180"
                     :max="180"
                     :step="1"
@@ -414,9 +416,9 @@
                 </a-col>
                 <a-col :style="{ width: '96px' }">
                   <a-input-number
+                    v-model:value="rotZModel"
                     :aria-label="t('settings.panel.pose.rotZ')"
                     :title="t('settings.panel.pose.rotZ')"
-                    v-model:value="rotZModel"
                     :min="-180"
                     :max="180"
                     :step="1"
@@ -469,7 +471,9 @@
                   </span>
                 </a-tag>
               </a-tooltip>
-              <a-typography-text v-else type="secondary">-</a-typography-text>
+              <a-typography-text v-else type="secondary">
+                -
+              </a-typography-text>
             </a-space>
 
             <a-form-item
@@ -602,9 +606,9 @@
                 </a-col>
                 <a-col :style="{ width: '96px' }">
                   <a-input-number
+                    v-model:value="atomScaleModel"
                     :aria-label="t('settings.panel.other.atomSize')"
                     :title="t('settings.panel.other.atomSize')"
-                    v-model:value="atomScaleModel"
                     :min="0.2"
                     :max="2"
                     :step="0.05"
@@ -627,9 +631,9 @@
                 </a-col>
                 <a-col :style="{ width: '96px' }">
                   <a-input-number
+                    v-model:value="recordFpsModel"
                     :aria-label="t('settings.panel.other.recordFps')"
                     :title="t('settings.panel.other.recordFps')"
-                    v-model:value="recordFpsModel"
                     :min="1"
                     :max="120"
                     :step="1"
@@ -653,22 +657,22 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch, onMounted, onBeforeUnmount } from "vue";
-import { message } from "ant-design-vue";
-import { DeleteOutlined } from "@ant-design/icons-vue";
-import type { ViewerSettings } from "../../lib/viewer/settings";
+import { computed, ref, watch, onMounted, onBeforeUnmount } from 'vue';
+import { message } from 'ant-design-vue';
+import { DeleteOutlined } from '@ant-design/icons-vue';
+import type { ViewerSettings } from '../../lib/viewer/settings';
 import {
   normalizeViewPresets,
   type ViewPreset,
-} from "../../lib/viewer/viewPresets";
+} from '../../lib/viewer/viewPresets';
 import {
   ATOMIC_SYMBOLS,
   normalizeElementSymbol,
-} from "../../lib/structure/chem";
-import { useI18n } from "vue-i18n";
-import { viewerApiRef } from "../../lib/viewer/bridge";
-import type { ParseMode } from "../../lib/structure/parse";
-import { isDark } from "../../theme/mode";
+} from '../../lib/structure/chem';
+import { useI18n } from 'vue-i18n';
+import { viewerApiRef } from '../../lib/viewer/bridge';
+import type { ParseMode } from '../../lib/structure/parse';
+import { isDark } from '../../theme/mode';
 
 /** 本地类型：避免 settings.ts 导出名不一致造成报错
  * Local type to avoid export-name mismatch in settings.ts
@@ -680,12 +684,12 @@ const { t } = useI18n();
 const viewerApi = computed(() => viewerApiRef.value);
 const layerList = computed(() => viewerApi.value?.layers.value ?? []);
 const activeLayerId = computed(
-  () => viewerApi.value?.activeLayerId.value ?? null
+  () => viewerApi.value?.activeLayerId.value ?? null,
 );
 const activeLayerInfo = computed(() => {
   const id = activeLayerId.value;
   if (!id) return null;
-  return layerList.value.find((l) => l.id === id) ?? null;
+  return layerList.value.find(l => l.id === id) ?? null;
 });
 const hasAnyLayer = computed(() => layerList.value.length > 0);
 
@@ -693,16 +697,16 @@ const exportScale = ref<number>(2);
 const exportTransparent = ref<boolean>(true);
 
 const parseModeModel = computed<ParseMode>({
-  get: () => viewerApi.value?.parseMode.value ?? "auto",
-  set: (v) => viewerApi.value?.setParseMode(v),
+  get: () => viewerApi.value?.parseMode.value ?? 'auto',
+  set: v => viewerApi.value?.setParseMode(v),
 });
 
 const parseModeOptions = computed(() => [
-  { value: "auto", label: t("viewer.parse.modeOptions.auto") },
-  { value: "xyz", label: t("viewer.parse.modeOptions.xyz") },
-  { value: "pdb", label: t("viewer.parse.modeOptions.pdb") },
-  { value: "lammpsdump", label: t("viewer.parse.modeOptions.lammpsdump") },
-  { value: "lammpsdata", label: t("viewer.parse.modeOptions.lammpsdata") },
+  { value: 'auto', label: t('viewer.parse.modeOptions.auto') },
+  { value: 'xyz', label: t('viewer.parse.modeOptions.xyz') },
+  { value: 'pdb', label: t('viewer.parse.modeOptions.pdb') },
+  { value: 'lammpsdump', label: t('viewer.parse.modeOptions.lammpsdump') },
+  { value: 'lammpsdata', label: t('viewer.parse.modeOptions.lammpsdata') },
 ]);
 
 function onOpenFile(): void {
@@ -736,14 +740,14 @@ const props = withDefaults(
     activeKey?: string[]; // <- 允许空数组（全部折叠）
   }>(),
   {
-    activeKey: () => ["display"], // <- 默认展开“显示”
-  }
+    activeKey: () => ['display'], // <- 默认展开“显示”
+  },
 );
 
 const emit = defineEmits<{
-  (e: "update:open", v: boolean): void;
-  (e: "update:settings", v: ViewerSettings): void;
-  (e: "update:activeKey", v: string[]): void;
+  (e: 'update:open', v: boolean): void;
+  (e: 'update:settings', v: ViewerSettings): void;
+  (e: 'update:activeKey', v: string[]): void;
 }>();
 
 /**
@@ -752,7 +756,7 @@ const emit = defineEmits<{
  */
 const openModel = computed({
   get: () => props.open,
-  set: (v: boolean) => emit("update:open", v),
+  set: (v: boolean) => emit('update:open', v),
 });
 
 // Keep placement stable while the drawer is open (and during its close animation).
@@ -760,7 +764,7 @@ watch(
   () => props.open,
   (v, prev) => {
     if (v) {
-      placementLock.value = isMobile.value ? "bottom" : "right";
+      placementLock.value = isMobile.value ? 'bottom' : 'right';
       freezeTopPx.value = null;
       if (releaseLockTimer != null) {
         window.clearTimeout(releaseLockTimer);
@@ -772,9 +776,9 @@ watch(
     // If the drawer is being closed programmatically (not via our close button),
     // still apply the same guards on mobile to avoid a jump.
     if (prev && !v) {
-      placementLock.value =
-        placementLock.value ?? (isMobile.value ? "bottom" : "right");
-      if (placementLock.value === "bottom" && freezeTopPx.value == null) {
+      placementLock.value
+        = placementLock.value ?? (isMobile.value ? 'bottom' : 'right');
+      if (placementLock.value === 'bottom' && freezeTopPx.value == null) {
         freezeBottomSheetTop();
         if (releaseLockTimer != null) window.clearTimeout(releaseLockTimer);
         releaseLockTimer = window.setTimeout(() => {
@@ -783,7 +787,7 @@ watch(
       }
     }
   },
-  { immediate: true }
+  { immediate: true },
 );
 
 /**
@@ -796,11 +800,11 @@ const activeKeyModel = computed<string[]>({
   get: () => props.activeKey ?? [],
   set: (v: unknown) => {
     const next = Array.isArray(v)
-      ? v.map((x) => String(x))
-      : v != null && String(v) !== ""
-      ? [String(v)]
-      : [];
-    emit("update:activeKey", next);
+      ? v.map(x => String(x))
+      : v != null && String(v) !== ''
+        ? [String(v)]
+        : [];
+    emit('update:activeKey', next);
   },
 });
 
@@ -812,7 +816,7 @@ const activeKeyModel = computed<string[]>({
 const isMobile = ref(false);
 
 // Lock placement during open/close to avoid jitter around the breakpoint.
-const placementLock = ref<"right" | "bottom" | null>(null);
+const placementLock = ref<'right' | 'bottom' | null>(null);
 // Freeze top during close on mobile to avoid a "jump" when the visual viewport changes.
 const freezeTopPx = ref<number | null>(null);
 let releaseLockTimer: number | null = null;
@@ -833,25 +837,25 @@ function getViewportHeight(): number {
 }
 
 function updateIsMobile(): void {
-  isMobile.value = window.matchMedia("(max-width: 768px)").matches;
+  isMobile.value = window.matchMedia('(max-width: 768px)').matches;
 }
 
 onMounted(() => {
   updateIsMobile();
-  window.addEventListener("resize", updateIsMobile, { passive: true });
+  window.addEventListener('resize', updateIsMobile, { passive: true });
 });
 
 onBeforeUnmount(() => {
-  window.removeEventListener("resize", updateIsMobile);
+  window.removeEventListener('resize', updateIsMobile);
   onResizeEnd(); // 确保移除监听
   clearCloseGuards();
 });
 
-const drawerPlacement = computed<"right" | "bottom">(
-  () => placementLock.value ?? (isMobile.value ? "bottom" : "right")
+const drawerPlacement = computed<'right' | 'bottom'>(
+  () => placementLock.value ?? (isMobile.value ? 'bottom' : 'right'),
 );
 
-const drawerWidth = "min(360px, calc(100vw - 24px))";
+const drawerWidth = 'min(360px, calc(100vw - 24px))';
 
 /** -----------------------------
  * Mobile height resize (bottom-sheet)
@@ -867,9 +871,9 @@ function saveNum(key: string, v: number): void {
 
 const mobileHeight = ref<number>(
   loadNum(
-    "settingsDrawer.mobileHeight",
-    Math.min(560, Math.floor(window.innerHeight * 0.75))
-  )
+    'settingsDrawer.mobileHeight',
+    Math.min(560, Math.floor(window.innerHeight * 0.75)),
+  ),
 );
 
 function freezeBottomSheetTop(): void {
@@ -881,8 +885,8 @@ function freezeBottomSheetTop(): void {
 function onCloseClick(): void {
   // If we are closing a bottom-sheet, guard against viewport changes
   // (address bar show/hide, pull-to-refresh UI) that can cause a visual "jump".
-  if (drawerPlacement.value === "bottom") {
-    placementLock.value = "bottom";
+  if (drawerPlacement.value === 'bottom') {
+    placementLock.value = 'bottom';
     freezeBottomSheetTop();
 
     // Fallback: clear guards even if the drawer does not emit after-open-change.
@@ -890,8 +894,9 @@ function onCloseClick(): void {
     releaseLockTimer = window.setTimeout(() => {
       clearCloseGuards();
     }, 500);
-  } else {
-    placementLock.value = "right";
+  }
+  else {
+    placementLock.value = 'right';
     if (releaseLockTimer != null) window.clearTimeout(releaseLockTimer);
     releaseLockTimer = window.setTimeout(() => {
       clearCloseGuards();
@@ -905,7 +910,8 @@ function onAfterOpenChange(open: boolean): void {
   // When the animation finishes, release locks.
   if (!open) {
     clearCloseGuards();
-  } else {
+  }
+  else {
     // Opening finished: no need to keep a frozen top.
     freezeTopPx.value = null;
   }
@@ -923,29 +929,29 @@ function clamp(n: number, min: number, max: number): number {
 
 function startBlockPullToRefresh(): void {
   // Chrome/Android: overscroll-behavior is effective when applied to the root.
-  document.documentElement.classList.add("resizing");
-  document.body.classList.add("resizing");
+  document.documentElement.classList.add('resizing');
+  document.body.classList.add('resizing');
 
   // iOS/Safari (and some OEM browsers): overscroll-behavior may not reliably stop pull-to-refresh.
   // During the resize gesture only, prevent default touchmove to suppress refresh / rubber-band.
   touchMoveBlocker = (ev: TouchEvent) => {
     if (resizing) ev.preventDefault();
   };
-  window.addEventListener("touchmove", touchMoveBlocker, { passive: false });
+  window.addEventListener('touchmove', touchMoveBlocker, { passive: false });
 }
 
 function stopBlockPullToRefresh(): void {
-  document.documentElement.classList.remove("resizing");
-  document.body.classList.remove("resizing");
+  document.documentElement.classList.remove('resizing');
+  document.body.classList.remove('resizing');
 
   if (touchMoveBlocker) {
-    window.removeEventListener("touchmove", touchMoveBlocker as any);
+    window.removeEventListener('touchmove', touchMoveBlocker as any);
     touchMoveBlocker = null;
   }
 }
 
 function onResizeStart(e: PointerEvent): void {
-  if (drawerPlacement.value !== "bottom") return;
+  if (drawerPlacement.value !== 'bottom') return;
 
   resizing = true;
   activePointerId = e.pointerId;
@@ -956,16 +962,17 @@ function onResizeStart(e: PointerEvent): void {
   // Also reduces the chance of losing the gesture to scroll/pull-to-refresh.
   try {
     (e.currentTarget as HTMLElement | null)?.setPointerCapture?.(e.pointerId);
-  } catch {
+  }
+  catch {
     // Ignore capture failures (older browsers)
   }
 
   startBlockPullToRefresh();
 
-  window.addEventListener("pointermove", onResizing, { passive: false });
-  window.addEventListener("pointerup", onResizeEnd, { passive: true });
-  window.addEventListener("pointercancel", onResizeEnd, { passive: true });
-  window.addEventListener("lostpointercapture", onResizeEnd as any, {
+  window.addEventListener('pointermove', onResizing, { passive: false });
+  window.addEventListener('pointerup', onResizeEnd, { passive: true });
+  window.addEventListener('pointercancel', onResizeEnd, { passive: true });
+  window.addEventListener('lostpointercapture', onResizeEnd as any, {
     passive: true,
   });
 }
@@ -978,7 +985,7 @@ function onResizing(e: PointerEvent): void {
   const dy = startY - e.clientY;
   const maxH = Math.floor(window.innerHeight * 0.92);
   mobileHeight.value = clamp(startH + dy, 260, maxH);
-  saveNum("settingsDrawer.mobileHeight", mobileHeight.value);
+  saveNum('settingsDrawer.mobileHeight', mobileHeight.value);
 
   e.preventDefault();
 }
@@ -987,10 +994,10 @@ function onResizeEnd(): void {
   if (!resizing) return;
   resizing = false;
   stopBlockPullToRefresh();
-  window.removeEventListener("pointermove", onResizing);
-  window.removeEventListener("pointerup", onResizeEnd);
-  window.removeEventListener("pointercancel", onResizeEnd);
-  window.removeEventListener("lostpointercapture", onResizeEnd as any);
+  window.removeEventListener('pointermove', onResizing);
+  window.removeEventListener('pointerup', onResizeEnd);
+  window.removeEventListener('pointercancel', onResizeEnd);
+  window.removeEventListener('lostpointercapture', onResizeEnd as any);
   activePointerId = null;
 }
 
@@ -998,30 +1005,30 @@ function onResizeEnd(): void {
  * Drawer styles
  * ----------------------------- */
 const contentWrapperStyle = computed(() => {
-  if (drawerPlacement.value === "right") {
+  if (drawerPlacement.value === 'right') {
     // 桌面端：铺满上下，避免出现/消失滚动条导致的缩放抖动
     return {
-      top: "0",
-      bottom: "0",
-      height: "100%",
-      right: "0",
-      borderRadius: "0",
-      overflow: "hidden",
-      boxShadow: "0 12px 34px rgba(0,0,0,0.16)",
+      top: '0',
+      bottom: '0',
+      height: '100%',
+      right: '0',
+      borderRadius: '0',
+      overflow: 'hidden',
+      boxShadow: '0 12px 34px rgba(0,0,0,0.16)',
     } as Record<string, any>;
   }
 
   // 手机端：bottom-sheet，圆角顶边 + safe-area
   const base = {
-    borderRadius: "14px 14px 0 0",
-    overflow: "hidden",
-    boxShadow: "0 -12px 34px rgba(0,0,0,0.14)",
+    borderRadius: '14px 14px 0 0',
+    overflow: 'hidden',
+    boxShadow: '0 -12px 34px rgba(0,0,0,0.14)',
   } as Record<string, any>;
 
   // During close, some mobile browsers change the visual viewport height (address bar).
   // A bottom-anchored fixed drawer would jump upward; freezing `top` keeps the motion smooth.
   if (freezeTopPx.value != null) {
-    return { ...base, top: `${freezeTopPx.value}px`, bottom: "auto" } as Record<
+    return { ...base, top: `${freezeTopPx.value}px`, bottom: 'auto' } as Record<
       string,
       any
     >;
@@ -1031,27 +1038,27 @@ const contentWrapperStyle = computed(() => {
 
 const drawerBodyStyle = computed(() => {
   return {
-    padding: "0",
-    height: "100%",
-    display: "flex",
-    flexDirection: "column",
+    padding: '0',
+    height: '100%',
+    display: 'flex',
+    flexDirection: 'column',
   } as Record<string, any>;
 });
 
 // Allow seeing the model behind the drawer a bit more (still blocks clicks via mask).
 const maskStyle = computed(() => {
   return {
-    background: isDark.value ? "rgba(0,0,0,0.30)" : "rgba(0,0,0,0.14)",
+    background: isDark.value ? 'rgba(0,0,0,0.30)' : 'rgba(0,0,0,0.14)',
   } as Record<string, any>;
 });
 
 /** 合并并回写 settings / Patch settings back to parent */
 function patchSettings(
-  patch: Omit<Partial<ViewerSettings>, "rotationDeg"> & {
-    rotationDeg?: Partial<ViewerSettings["rotationDeg"]>;
-  }
+  patch: Omit<Partial<ViewerSettings>, 'rotationDeg'> & {
+    rotationDeg?: Partial<ViewerSettings['rotationDeg']>;
+  },
 ): void {
-  emit("update:settings", {
+  emit('update:settings', {
     ...props.settings,
     ...patch,
     rotationDeg: {
@@ -1098,15 +1105,15 @@ const orthographicModel = computed({
 });
 
 const viewPresetOptions = computed(() => [
-  { label: t("settings.panel.display.viewPresetFront"), value: "front" },
-  { label: t("settings.panel.display.viewPresetSide"), value: "side" },
-  { label: t("settings.panel.display.viewPresetTop"), value: "top" },
+  { label: t('settings.panel.display.viewPresetFront'), value: 'front' },
+  { label: t('settings.panel.display.viewPresetSide'), value: 'side' },
+  { label: t('settings.panel.display.viewPresetTop'), value: 'top' },
 ]);
 
 // View presets selection is a controlled value so we can enforce constraints:
 // - At least one preset must be selected.
 // - At most two presets; selecting a 3rd auto-unchecks the oldest.
-const viewPresetsModel = ref<ViewPreset[]>(["front"]);
+const viewPresetsModel = ref<ViewPreset[]>(['front']);
 
 function syncViewPresetsFromProps(): void {
   const cur = normalizeViewPresets(props.settings.viewPresets);
@@ -1116,17 +1123,17 @@ function syncViewPresetsFromProps(): void {
   }
   // Backward-compat: old dualViewEnabled implies [front, side]
   if (props.settings.dualViewEnabled) {
-    viewPresetsModel.value = ["front", "side"];
+    viewPresetsModel.value = ['front', 'side'];
     return;
   }
   // Never allow empty in UI
-  viewPresetsModel.value = ["front"];
+  viewPresetsModel.value = ['front'];
 }
 
 watch(
   () => [props.settings.viewPresets, props.settings.dualViewEnabled] as const,
   () => syncViewPresetsFromProps(),
-  { immediate: true, deep: true }
+  { immediate: true, deep: true },
 );
 
 function onViewPresetsChange(nextRaw: any): void {
@@ -1134,20 +1141,20 @@ function onViewPresetsChange(nextRaw: any): void {
   // We need the raw set to correctly detect the newly added preset and drop the oldest.
   const arr = Array.isArray(nextRaw) ? nextRaw : [];
   const next = arr.filter(
-    (x): x is ViewPreset => x === "front" || x === "side" || x === "top"
+    (x): x is ViewPreset => x === 'front' || x === 'side' || x === 'top',
   );
   const prev = viewPresetsModel.value;
 
   // Prevent unselecting all
   if (!next || next.length === 0) {
-    message.warning(t("settings.panel.display.viewPresetsNeedOne"));
+    message.warning(t('settings.panel.display.viewPresetsNeedOne'));
     return;
   }
 
   // Build a stable selection order based on user actions:
   // keep previous ones that are still selected, then append newly added ones.
-  const keep = prev.filter((p) => next.includes(p));
-  const added = next.filter((p) => !prev.includes(p));
+  const keep = prev.filter(p => next.includes(p));
+  const added = next.filter(p => !prev.includes(p));
   const merged = [...keep, ...added];
 
   // Enforce max-two: drop the oldest (front of the array).
@@ -1173,8 +1180,8 @@ const dualViewDistanceMax = 500;
 // Dual view split ratio: store as 0..1 in settings, expose as 10..90 (%) in UI
 const dualViewSplitPctModel = computed({
   get: () => {
-    const r =
-      typeof props.settings.dualViewSplit === "number"
+    const r
+      = typeof props.settings.dualViewSplit === 'number'
         ? props.settings.dualViewSplit
         : 0.5;
     return Math.round(Math.max(0.1, Math.min(0.9, r)) * 100);
@@ -1207,14 +1214,14 @@ function resetPose(): void {
 function resetDistance(): void {
   // Restore the fitted distance captured on model load.
   // Do not touch model rotation so users can keep their chosen orientation.
-  const d =
-    typeof props.settings.initialDualViewDistance === "number" &&
-    Number.isFinite(props.settings.initialDualViewDistance)
+  const d
+    = typeof props.settings.initialDualViewDistance === 'number'
+      && Number.isFinite(props.settings.initialDualViewDistance)
       ? props.settings.initialDualViewDistance
-      : typeof props.settings.dualViewDistance === "number" &&
-        Number.isFinite(props.settings.dualViewDistance)
-      ? props.settings.dualViewDistance
-      : 10;
+      : typeof props.settings.dualViewDistance === 'number'
+        && Number.isFinite(props.settings.dualViewDistance)
+        ? props.settings.dualViewDistance
+        : 10;
   patchSettings({ dualViewDistance: d });
 }
 
@@ -1223,57 +1230,54 @@ function resetDistance(): void {
  * ----------------------------- */
 
 const lammpsTypeMapModel = computed<LammpsTypeMapItem[]>({
-  get: () =>
-    (viewerApi.value?.activeLayerTypeMap.value as
-      | LammpsTypeMapItem[]
-      | undefined) ?? [],
-  set: (v) => viewerApi.value?.setActiveLayerTypeMap(v),
+  get: () => (viewerApi.value?.activeLayerTypeMap.value as (LammpsTypeMapItem[] | undefined)) ?? [],
+  set: v => viewerApi.value?.setActiveLayerTypeMap(v),
 });
 
 const atomicOptions = computed(() =>
   ATOMIC_SYMBOLS.map((symRaw) => {
-    const sym = normalizeElementSymbol(symRaw) || "E";
-    return { value: sym, label: sym === "E" ? "E (Unknown)" : sym };
-  })
+    const sym = normalizeElementSymbol(symRaw) || 'E';
+    return { value: sym, label: sym === 'E' ? 'E (Unknown)' : sym };
+  }),
 );
 
 function filterAtomicOption(
   input: string,
-  option?: { value?: unknown; label?: unknown }
+  option?: { value?: unknown; label?: unknown },
 ): boolean {
-  const q = (input ?? "").trim().toLowerCase();
+  const q = (input ?? '').trim().toLowerCase();
   if (!q) return true;
 
-  const value = String(option?.value ?? "").toLowerCase();
-  const label = String(option?.label ?? "").toLowerCase();
+  const value = String(option?.value ?? '').toLowerCase();
+  const label = String(option?.label ?? '').toLowerCase();
   return value.includes(q) || label.includes(q);
 }
 
 function toInt(v: unknown, fallback: number): number {
-  const n = typeof v === "number" ? v : Number.parseFloat(String(v ?? ""));
+  const n = typeof v === 'number' ? v : Number.parseFloat(String(v ?? ''));
   if (!Number.isFinite(n)) return fallback;
   return Math.max(1, Math.floor(n));
 }
 
 function toElement(v: unknown): string {
-  return normalizeElementSymbol(String(v ?? "")) || "E";
+  return normalizeElementSymbol(String(v ?? '')) || 'E';
 }
 
 function addLammpsRow(): void {
   const used = new Set(
-    lammpsTypeMapModel.value.map((r) => toInt((r as any).typeId, 1))
+    lammpsTypeMapModel.value.map(r => toInt((r as any).typeId, 1)),
   );
   let next = 1;
   while (used.has(next)) next += 1;
   lammpsTypeMapModel.value = [
     ...lammpsTypeMapModel.value,
-    { typeId: next, element: "E" },
+    { typeId: next, element: 'E' },
   ];
 }
 
 function removeLammpsRow(idx: number): void {
   lammpsTypeMapModel.value = lammpsTypeMapModel.value.filter(
-    (_, i) => i !== idx
+    (_, i) => i !== idx,
   );
 }
 
@@ -1284,14 +1288,14 @@ function clearLammpsRows(): void {
 function onLammpsTypeId(idx: number, v: unknown): void {
   const typeId = toInt(v, 1);
   lammpsTypeMapModel.value = lammpsTypeMapModel.value.map((row, i) =>
-    i === idx ? { ...row, typeId } : row
+    i === idx ? { ...row, typeId } : row,
   );
 }
 
 function onLammpsElementChange(idx: number, v: unknown): void {
   const element = toElement(v);
   lammpsTypeMapModel.value = lammpsTypeMapModel.value.map((row, i) =>
-    i === idx ? { ...row, element } : row
+    i === idx ? { ...row, element } : row,
   );
 }
 

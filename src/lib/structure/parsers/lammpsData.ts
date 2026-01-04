@@ -1,7 +1,7 @@
 // src/lib/structure/parsers/lammpsData.ts
-import type { Atom, StructureModel } from "../types";
-import { normalizeElementSymbol } from "../chem";
-import { t } from "../../../i18n/index";
+import type { Atom, StructureModel } from '../types';
+import { normalizeElementSymbol } from '../chem';
+import { t } from '../../../i18n/index';
 
 /**
  * Options for parsing LAMMPS data files.
@@ -31,35 +31,35 @@ export type ParseLammpsDataOptions = {
   sortById?: boolean;
 };
 
-type AtomsStyle =
-  | "angle"
-  | "atomic"
-  | "body"
-  | "bond"
-  | "bpm/sphere"
-  | "charge"
-  | "dielectric"
-  | "dipole"
-  | "dpd"
-  | "edpd"
-  | "electron"
-  | "ellipsoid"
-  | "full"
-  | "line"
-  | "mdpd"
-  | "molecular"
-  | "peri"
-  | "rheo"
-  | "rheo/thermal"
-  | "smd"
-  | "sph"
-  | "sphere"
-  | "spin"
-  | "tdpd"
-  | "template"
-  | "tri"
-  | "hybrid"
-  | "unknown";
+type AtomsStyle
+  = | 'angle'
+    | 'atomic'
+    | 'body'
+    | 'bond'
+    | 'bpm/sphere'
+    | 'charge'
+    | 'dielectric'
+    | 'dipole'
+    | 'dpd'
+    | 'edpd'
+    | 'electron'
+    | 'ellipsoid'
+    | 'full'
+    | 'line'
+    | 'mdpd'
+    | 'molecular'
+    | 'peri'
+    | 'rheo'
+    | 'rheo/thermal'
+    | 'smd'
+    | 'sph'
+    | 'sphere'
+    | 'spin'
+    | 'tdpd'
+    | 'template'
+    | 'tri'
+    | 'hybrid'
+    | 'unknown';
 
 /**
  * Layout describes where "type" and xyz live in the CORE token list.
@@ -99,19 +99,19 @@ function parseAtomTypeLabels(lines: string[]): Record<number, string> {
 
   let i = 0;
   while (i < lines.length) {
-    const line = (lines[i] ?? "").trim();
+    const line = (lines[i] ?? '').trim();
     // Find section header / 查找段落头
-    if (line.startsWith("Atom Type Labels")) break;
+    if (line.startsWith('Atom Type Labels')) break;
     i += 1;
   }
   if (i >= lines.length) return map;
 
   // Skip blank lines after header / 跳过段落头后的空行
   i += 1;
-  while (i < lines.length && (lines[i] ?? "").trim() === "") i += 1;
+  while (i < lines.length && (lines[i] ?? '').trim() === '') i += 1;
 
   while (i < lines.length) {
-    const raw = lines[i] ?? "";
+    const raw = lines[i] ?? '';
     const line0 = raw.trim();
 
     // Blank line ends section / 空行表示段落结束
@@ -121,7 +121,7 @@ function parseAtomTypeLabels(lines: string[]): Record<number, string> {
     if (/^[A-Za-z]/.test(line0) && !/^\d/.test(line0)) break;
 
     // Strip inline comments / 去掉行内注释
-    const line = line0.split("#")[0]!.trim();
+    const line = line0.split('#')[0]!.trim();
     if (!line) {
       i += 1;
       continue;
@@ -140,7 +140,7 @@ function parseAtomTypeLabels(lines: string[]): Record<number, string> {
     }
 
     // Remaining part is label / 剩余部分作为标签
-    const label = parts.slice(1).join(" ").trim();
+    const label = parts.slice(1).join(' ').trim();
     if (label) map[typeId] = label;
 
     i += 1;
@@ -155,7 +155,7 @@ function parseAtomTypeLabels(lines: string[]): Record<number, string> {
  * 规范化元素符号；若无效则回退为 "E"（表示未知元素）。
  */
 function safeElementSymbol(s: string): string {
-  return normalizeElementSymbol(s) || "E";
+  return normalizeElementSymbol(s) || 'E';
 }
 
 /**
@@ -164,7 +164,7 @@ function safeElementSymbol(s: string): string {
  * 解析整数；失败则返回 fallback。
  */
 function safeParseInt(s: string | undefined, fallback: number): number {
-  const v = parseInt((s ?? "").trim(), 10);
+  const v = parseInt((s ?? '').trim(), 10);
   return Number.isFinite(v) ? v : fallback;
 }
 
@@ -231,44 +231,44 @@ function splitCoreParts(parts: string[]): {
  */
 function parseAtomsStyleFromHeader(headerLine: string): AtomsStyle {
   const m = headerLine.trim().match(/^Atoms\s*#\s*([A-Za-z0-9_/.-]+)/);
-  if (!m) return "unknown";
-  const s = (m[1] ?? "").trim().toLowerCase();
+  if (!m) return 'unknown';
+  const s = (m[1] ?? '').trim().toLowerCase();
 
   // normalize a few possible separators (LAMMPS uses '/' in many names)
   // 这里暂不做额外规范化，直接使用 LAMMPS 常见的 '/' 风格名称
   const norm = s;
 
   const known: Set<string> = new Set([
-    "angle",
-    "atomic",
-    "body",
-    "bond",
-    "bpm/sphere",
-    "charge",
-    "dielectric",
-    "dipole",
-    "dpd",
-    "edpd",
-    "electron",
-    "ellipsoid",
-    "full",
-    "line",
-    "mdpd",
-    "molecular",
-    "peri",
-    "rheo",
-    "rheo/thermal",
-    "smd",
-    "sph",
-    "sphere",
-    "spin",
-    "tdpd",
-    "template",
-    "tri",
-    "hybrid",
+    'angle',
+    'atomic',
+    'body',
+    'bond',
+    'bpm/sphere',
+    'charge',
+    'dielectric',
+    'dipole',
+    'dpd',
+    'edpd',
+    'electron',
+    'ellipsoid',
+    'full',
+    'line',
+    'mdpd',
+    'molecular',
+    'peri',
+    'rheo',
+    'rheo/thermal',
+    'smd',
+    'sph',
+    'sphere',
+    'spin',
+    'tdpd',
+    'template',
+    'tri',
+    'hybrid',
   ]);
 
-  return known.has(norm) ? (norm as AtomsStyle) : "unknown";
+  return known.has(norm) ? (norm as AtomsStyle) : 'unknown';
 }
 
 /**
@@ -290,56 +290,56 @@ function parseAtomsStyleFromHeader(headerLine: string): AtomsStyle {
  *   其他 style 往往在 xyz 前插入额外字段，因此 xyzStartIdx 不同。
  */
 const STYLE_LAYOUT: Record<string, AtomsLayout> = {
-  angle: { style: "angle", typeIdx: 2, xyzStartIdx: 3, minCoreLen: 6 }, // id mol type x y z
-  bond: { style: "bond", typeIdx: 2, xyzStartIdx: 3, minCoreLen: 6 }, // id mol type x y z
-  molecular: { style: "molecular", typeIdx: 2, xyzStartIdx: 3, minCoreLen: 6 }, // id mol type x y z
+  'angle': { style: 'angle', typeIdx: 2, xyzStartIdx: 3, minCoreLen: 6 }, // id mol type x y z
+  'bond': { style: 'bond', typeIdx: 2, xyzStartIdx: 3, minCoreLen: 6 }, // id mol type x y z
+  'molecular': { style: 'molecular', typeIdx: 2, xyzStartIdx: 3, minCoreLen: 6 }, // id mol type x y z
 
-  atomic: { style: "atomic", typeIdx: 1, xyzStartIdx: 2, minCoreLen: 5 }, // id type x y z
-  charge: { style: "charge", typeIdx: 1, xyzStartIdx: 3, minCoreLen: 6 }, // id type q x y z
-  full: { style: "full", typeIdx: 2, xyzStartIdx: 4, minCoreLen: 7 }, // id mol type q x y z
+  'atomic': { style: 'atomic', typeIdx: 1, xyzStartIdx: 2, minCoreLen: 5 }, // id type x y z
+  'charge': { style: 'charge', typeIdx: 1, xyzStartIdx: 3, minCoreLen: 6 }, // id type q x y z
+  'full': { style: 'full', typeIdx: 2, xyzStartIdx: 4, minCoreLen: 7 }, // id mol type q x y z
 
-  body: { style: "body", typeIdx: 1, xyzStartIdx: 4, minCoreLen: 7 }, // id type bodyflag mass x y z
+  'body': { style: 'body', typeIdx: 1, xyzStartIdx: 4, minCoreLen: 7 }, // id type bodyflag mass x y z
 
-  "bpm/sphere": {
-    style: "bpm/sphere",
+  'bpm/sphere': {
+    style: 'bpm/sphere',
     typeIdx: 2,
     xyzStartIdx: 5,
     minCoreLen: 8,
   }, // id mol type diameter density x y z
-  sphere: { style: "sphere", typeIdx: 1, xyzStartIdx: 4, minCoreLen: 7 }, // id type diameter density x y z
-  peri: { style: "peri", typeIdx: 1, xyzStartIdx: 4, minCoreLen: 7 }, // id type volume density x y z
-  ellipsoid: { style: "ellipsoid", typeIdx: 1, xyzStartIdx: 4, minCoreLen: 7 }, // id type ellipsoidflag density x y z
-  line: { style: "line", typeIdx: 2, xyzStartIdx: 5, minCoreLen: 8 }, // id mol type lineflag density x y z
-  tri: { style: "tri", typeIdx: 2, xyzStartIdx: 5, minCoreLen: 8 }, // id mol type triangleflag density x y z
+  'sphere': { style: 'sphere', typeIdx: 1, xyzStartIdx: 4, minCoreLen: 7 }, // id type diameter density x y z
+  'peri': { style: 'peri', typeIdx: 1, xyzStartIdx: 4, minCoreLen: 7 }, // id type volume density x y z
+  'ellipsoid': { style: 'ellipsoid', typeIdx: 1, xyzStartIdx: 4, minCoreLen: 7 }, // id type ellipsoidflag density x y z
+  'line': { style: 'line', typeIdx: 2, xyzStartIdx: 5, minCoreLen: 8 }, // id mol type lineflag density x y z
+  'tri': { style: 'tri', typeIdx: 2, xyzStartIdx: 5, minCoreLen: 8 }, // id mol type triangleflag density x y z
 
-  dipole: { style: "dipole", typeIdx: 1, xyzStartIdx: 3, minCoreLen: 9 }, // id type q x y z mux muy muz
-  dielectric: {
-    style: "dielectric",
+  'dipole': { style: 'dipole', typeIdx: 1, xyzStartIdx: 3, minCoreLen: 9 }, // id type q x y z mux muy muz
+  'dielectric': {
+    style: 'dielectric',
     typeIdx: 1,
     xyzStartIdx: 3,
     minCoreLen: 16,
   }, // id type q x y z mux muy muz area ed em epsilon curvature
 
-  dpd: { style: "dpd", typeIdx: 1, xyzStartIdx: 3, minCoreLen: 6 }, // id type theta x y z
-  mdpd: { style: "mdpd", typeIdx: 1, xyzStartIdx: 3, minCoreLen: 6 }, // id type rho x y z
-  edpd: { style: "edpd", typeIdx: 1, xyzStartIdx: 3, minCoreLen: 7 }, // id type edpd_temp edpd_cv x y z
-  electron: { style: "electron", typeIdx: 1, xyzStartIdx: 5, minCoreLen: 8 }, // id type q espin eradius x y z
+  'dpd': { style: 'dpd', typeIdx: 1, xyzStartIdx: 3, minCoreLen: 6 }, // id type theta x y z
+  'mdpd': { style: 'mdpd', typeIdx: 1, xyzStartIdx: 3, minCoreLen: 6 }, // id type rho x y z
+  'edpd': { style: 'edpd', typeIdx: 1, xyzStartIdx: 3, minCoreLen: 7 }, // id type edpd_temp edpd_cv x y z
+  'electron': { style: 'electron', typeIdx: 1, xyzStartIdx: 5, minCoreLen: 8 }, // id type q espin eradius x y z
 
-  rheo: { style: "rheo", typeIdx: 1, xyzStartIdx: 4, minCoreLen: 7 }, // id type status rho x y z
-  "rheo/thermal": {
-    style: "rheo/thermal",
+  'rheo': { style: 'rheo', typeIdx: 1, xyzStartIdx: 4, minCoreLen: 7 }, // id type status rho x y z
+  'rheo/thermal': {
+    style: 'rheo/thermal',
     typeIdx: 1,
     xyzStartIdx: 5,
     minCoreLen: 8,
   }, // id type status rho energy x y z
 
-  sph: { style: "sph", typeIdx: 1, xyzStartIdx: 4, minCoreLen: 8 }, // id type rho esph cv x y z
-  spin: { style: "spin", typeIdx: 1, xyzStartIdx: 2, minCoreLen: 9 }, // id type x y z spx spy spz sp  (xyz at 2)
-  tdpd: { style: "tdpd", typeIdx: 1, xyzStartIdx: 2, minCoreLen: 6 }, // id type x y z cc1 ...
-  template: { style: "template", typeIdx: 1, xyzStartIdx: 5, minCoreLen: 8 }, // id type molecule-ID template-index template-atom x y z
-  smd: { style: "smd", typeIdx: 1, xyzStartIdx: 11, minCoreLen: 14 }, // id type molecule volume mass kradius cradius x0 y0 z0 x y z
+  'sph': { style: 'sph', typeIdx: 1, xyzStartIdx: 4, minCoreLen: 8 }, // id type rho esph cv x y z
+  'spin': { style: 'spin', typeIdx: 1, xyzStartIdx: 2, minCoreLen: 9 }, // id type x y z spx spy spz sp  (xyz at 2)
+  'tdpd': { style: 'tdpd', typeIdx: 1, xyzStartIdx: 2, minCoreLen: 6 }, // id type x y z cc1 ...
+  'template': { style: 'template', typeIdx: 1, xyzStartIdx: 5, minCoreLen: 8 }, // id type molecule-ID template-index template-atom x y z
+  'smd': { style: 'smd', typeIdx: 1, xyzStartIdx: 11, minCoreLen: 14 }, // id type molecule volume mass kradius cradius x0 y0 z0 x y z
 
-  hybrid: { style: "hybrid", typeIdx: 1, xyzStartIdx: 2, minCoreLen: 5 }, // id type x y z sub-style...
+  'hybrid': { style: 'hybrid', typeIdx: 1, xyzStartIdx: 2, minCoreLen: 5 }, // id type x y z sub-style...
 };
 
 /**
@@ -377,7 +377,7 @@ function inferLayoutFromCore(core: string[]): AtomsLayout {
 export function parseLammpsData(
   text: string,
   fileName: string,
-  options: ParseLammpsDataOptions = {}
+  options: ParseLammpsDataOptions = {},
 ): StructureModel {
   const lines = text.split(/\r?\n/);
   const atoms: Atom[] = [];
@@ -394,25 +394,25 @@ export function parseLammpsData(
     const typeId = Number(k);
     if (!Number.isFinite(typeId) || typeId <= 0) continue;
 
-    const el = safeElementSymbol(String(v ?? ""));
-    if (!el || el === "E") continue; // do not override with placeholder / 不用占位符覆盖真实标签
+    const el = safeElementSymbol(String(v ?? ''));
+    if (!el || el === 'E') continue; // do not override with placeholder / 不用占位符覆盖真实标签
     typeToEl[typeId] = el;
   }
 
   // 3) Find Atoms section header
   // 查找 Atoms 段落头（支持 "Atoms" / "Atoms # full" 等）
   let i = 0;
-  let atomsHeaderLine = "";
+  let atomsHeaderLine = '';
   while (i < lines.length) {
-    const line = (lines[i] ?? "").trim();
-    if (line.startsWith("Atoms")) {
+    const line = (lines[i] ?? '').trim();
+    if (line.startsWith('Atoms')) {
       atomsHeaderLine = line;
       break;
     }
     i += 1;
   }
   if (i >= lines.length) {
-    throw new Error(t("errors.lammpsData.missingAtomsSection", { fileName }));
+    throw new Error(t('errors.lammpsData.missingAtomsSection', { fileName }));
   }
 
   // 解析段落头中的 style，并据此选择布局（若 unknown 则后续启发式推断）
@@ -421,12 +421,12 @@ export function parseLammpsData(
 
   // skip blank lines after header / 跳过段落头后的空行
   i += 1;
-  while (i < lines.length && (lines[i] ?? "").trim() === "") i += 1;
+  while (i < lines.length && (lines[i] ?? '').trim() === '') i += 1;
 
   // 4) Parse Atoms lines
   // 解析 Atoms 段落的每一行，直到遇到空行或下一个段落
   while (i < lines.length) {
-    const raw = lines[i] ?? "";
+    const raw = lines[i] ?? '';
     const line0 = raw.trim();
 
     // blank line ends section / 空行表示 Atoms 段落结束
@@ -436,7 +436,7 @@ export function parseLammpsData(
     if (/^[A-Za-z]/.test(line0) && !/^\d/.test(line0)) break;
 
     // strip inline comments / 去掉行内注释（# 后内容）
-    const line = line0.split("#")[0]!.trim();
+    const line = line0.split('#')[0]!.trim();
     if (!line) {
       i += 1;
       continue;
@@ -487,7 +487,7 @@ export function parseLammpsData(
 
     // map typeId -> element; fallback to "E"
     // 将 typeId 映射为元素符号；若无映射则回退为 "E"
-    const element = safeElementSymbol(String(typeToEl[typeId] ?? "E"));
+    const element = safeElementSymbol(String(typeToEl[typeId] ?? 'E'));
 
     atoms.push({
       id,
@@ -507,7 +507,7 @@ export function parseLammpsData(
   const model: StructureModel = {
     atoms,
     frames: [atoms],
-    source: { filename: fileName, format: "lammpsdata" },
+    source: { filename: fileName, format: 'lammpsdata' },
   };
 
   return model;
@@ -519,5 +519,5 @@ export function parseLammpsData(
  * 判断 format 字符串是否表示 LAMMPS data 格式。
  */
 export function isLammpsDataFormat(fmt: string): boolean {
-  return ["data", "lammpsdata"].includes(fmt);
+  return ['data', 'lammpsdata'].includes(fmt);
 }

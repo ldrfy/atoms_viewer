@@ -1,7 +1,7 @@
-export type ViewPreset = "front" | "side" | "top";
+export type ViewPreset = 'front' | 'side' | 'top';
 
 function isViewPreset(v: unknown): v is ViewPreset {
-  return v === "front" || v === "side" || v === "top";
+  return v === 'front' || v === 'side' || v === 'top';
 }
 
 /**

@@ -1,8 +1,8 @@
-import type { Atom } from "./types";
+import type { Atom } from './types';
 
-/**按元素将原子索引分组（纯结构逻辑，不依赖 THREE）。*/
+/** 按元素将原子索引分组（纯结构逻辑，不依赖 THREE）。 */
 export function groupAtomIndicesByElement(
-  atoms: Atom[]
+  atoms: Atom[],
 ): Map<string, number[]> {
   const elementToIndices = new Map<string, number[]>();
 

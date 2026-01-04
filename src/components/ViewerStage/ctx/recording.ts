@@ -1,5 +1,5 @@
-import type { RecordingBindings, CropBox } from "../recording";
-import type { MaybeRef } from "./common";
+import type { RecordingBindings, CropBox } from '../recording';
+import type { MaybeRef } from './common';
 
 /**
  * Ctx for record area selection overlay.
@@ -18,7 +18,7 @@ export type RecordSelectCtx = {
 };
 
 export function createRecordSelectCtx(
-  recording: RecordingBindings
+  recording: RecordingBindings,
 ): RecordSelectCtx {
   return {
     isSelectingRecordArea: recording.isSelectingRecordArea,
@@ -43,7 +43,7 @@ export type CropDashCtx = {
 };
 
 export function createCropDashCtx(
-  recording: RecordingBindings
+  recording: RecordingBindings,
 ): CropDashCtx {
   return {
     isRecording: recording.isRecording,

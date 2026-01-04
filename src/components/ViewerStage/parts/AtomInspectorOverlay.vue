@@ -25,14 +25,15 @@
 
             <a-space size="small">
                 <a-tooltip :title="t('viewer.inspect.measureMode')">
-                    <a-switch v-model:checked="measureMode" size="small" />
+                    <a-switch v-model:checked="measureMode" size="small" :aria-label="t('viewer.inspect.measureMode')"
+                        :title="t('viewer.inspect.measureMode')" />
                 </a-tooltip>
 
                 <a-button size="small" @click="clear" :disabled="selected.length === 0">
                     {{ t('viewer.inspect.clear') }}
                 </a-button>
 
-                <a-button type="text" size="small" @click="collapsed = true" aria-label="collapse">
+                <a-button type="text" size="small" @click="collapsed = true" aria-label="collapse" title="Collapse">
                     ⟩
                 </a-button>
             </a-space>
@@ -292,6 +293,7 @@ function fmt(v: number | null | undefined): string {
 
 .mini-handle {
     font-size: 12px;
+    -webkit-user-select: none;
     user-select: none;
     padding: 0 6px;
 }

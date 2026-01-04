@@ -16,8 +16,8 @@
         </div>
 
         <!-- 隐藏文件输入：函数 ref，避免本地变量重复 -->
-        <input :ref="stage.bindFileInput" class="file-input" type="file" multiple
-            accept=".xyz,.pdb,.dump,.lammpstrj,.traj,.data,.lmp" @change="stage.onFilePicked" />
+        <input :ref="stage.bindFileInput" class="file-input" type="file" multiple aria-label="Pick files"
+            title="Pick files" accept=".xyz,.pdb,.dump,.lammpstrj,.traj,.data,.lmp" @change="stage.onFilePicked" />
 
         <!-- 动画 + 录制控制条 -->
         <AnimBar :ctx="stage.animCtx" />

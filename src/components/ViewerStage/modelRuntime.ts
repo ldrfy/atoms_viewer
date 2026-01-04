@@ -327,13 +327,81 @@ export function createModelRuntime(args: {
   }
 
   // axes helpers are shared at stage level
-  const axesHelper = new THREE.AxesHelper(1);
+
+  // --- axes (thick mesh) / 加粗坐标轴 ---
+  // NOTE: THREE.AxesHelper uses WebGL lines whose width is effectively fixed to 1px on most platforms.
+  // To make axes visibly thicker, we render them as meshes (cylinders + cones).
+  const AXIS_RADIUS_FACTOR = 0.012; // radius ~= axisLen * factor
+  const AXIS_RADIUS_MIN = 0.02;
+  const AXIS_RADIUS_MAX = 0.25;
+
+  const ARROW_LEN_FACTOR = 0.14; // arrow length relative to axisLen
+  const ARROW_RADIUS_FACTOR = 2.4;
+
+  // Unit geometries (scaled per update)
+  const axisBodyGeo = new THREE.CylinderGeometry(1, 1, 1, 16, 1, false);
+  const axisArrowGeo = new THREE.ConeGeometry(1, 1, 16, 1, false);
+
+  const matX = new THREE.MeshBasicMaterial({ color: 0xff4444 });
+  const matY = new THREE.MeshBasicMaterial({ color: 0x44ff44 });
+  const matZ = new THREE.MeshBasicMaterial({ color: 0x4488ff });
+
+  const axesHelper = new THREE.Group();
   axesHelper.visible = false;
   stage.axesGroup.add(axesHelper);
 
-  const xLabel = makeTextLabel("X", "#ff4444", 14);
-  const yLabel = makeTextLabel("Y", "#44ff44", 14);
-  const zLabel = makeTextLabel("Z", "#4488ff", 14);
+  function makeAxisMeshes(
+    mat: THREE.Material,
+    rot: THREE.Euler
+  ): { body: THREE.Mesh; arrow: THREE.Mesh } {
+    const body = new THREE.Mesh(axisBodyGeo, mat);
+    const arrow = new THREE.Mesh(axisArrowGeo, mat);
+    body.rotation.copy(rot);
+    arrow.rotation.copy(rot);
+    axesHelper.add(body, arrow);
+    return { body, arrow };
+  }
+
+  const xAxis = makeAxisMeshes(matX, new THREE.Euler(0, 0, -Math.PI / 2));
+  const yAxis = makeAxisMeshes(matY, new THREE.Euler(0, 0, 0));
+  const zAxis = makeAxisMeshes(matZ, new THREE.Euler(Math.PI / 2, 0, 0));
+
+  function updateThickAxes(axisLen: number): {
+    axisLen: number;
+    arrowLen: number;
+  } {
+    const radius = Math.min(
+      AXIS_RADIUS_MAX,
+      Math.max(AXIS_RADIUS_MIN, axisLen * AXIS_RADIUS_FACTOR)
+    );
+    const arrowLen = Math.max(radius * 6, axisLen * ARROW_LEN_FACTOR);
+    const bodyLen = Math.max(1e-3, axisLen - arrowLen);
+    const arrowRadius = radius * ARROW_RADIUS_FACTOR;
+
+    // X
+    xAxis.body.scale.set(radius, bodyLen, radius);
+    xAxis.body.position.set(bodyLen / 2, 0, 0);
+    xAxis.arrow.scale.set(arrowRadius, arrowLen, arrowRadius);
+    xAxis.arrow.position.set(bodyLen + arrowLen / 2, 0, 0);
+
+    // Y
+    yAxis.body.scale.set(radius, bodyLen, radius);
+    yAxis.body.position.set(0, bodyLen / 2, 0);
+    yAxis.arrow.scale.set(arrowRadius, arrowLen, arrowRadius);
+    yAxis.arrow.position.set(0, bodyLen + arrowLen / 2, 0);
+
+    // Z
+    zAxis.body.scale.set(radius, bodyLen, radius);
+    zAxis.body.position.set(0, 0, bodyLen / 2);
+    zAxis.arrow.scale.set(arrowRadius, arrowLen, arrowRadius);
+    zAxis.arrow.position.set(0, 0, bodyLen + arrowLen / 2);
+
+    return { axisLen, arrowLen };
+  }
+
+  const xLabel = makeTextLabel("X", "#ff4444", 16);
+  const yLabel = makeTextLabel("Y", "#44ff44", 16);
+  const zLabel = makeTextLabel("Z", "#4488ff", 16);
   stage.axesGroup.add(xLabel, yLabel, zLabel);
 
   function getSettings(): ViewerSettings {
@@ -402,20 +470,17 @@ export function createModelRuntime(args: {
     const axisLen = Math.max(1, size.length() * 0.6);
 
     axesHelper.visible = true;
-    axesHelper.scale.set(axisLen, axisLen, axisLen);
+    const { arrowLen } = updateThickAxes(axisLen);
 
     xLabel.visible = true;
     yLabel.visible = true;
     zLabel.visible = true;
 
-    xLabel.position.set(axisLen, 0, 0);
-    yLabel.position.set(0, axisLen, 0);
-    zLabel.position.set(0, 0, axisLen);
+    const labelOffset = Math.max(0.2, arrowLen * 0.25);
 
-    // keep labels facing camera
-    xLabel.layers.set(2);
-    yLabel.layers.set(2);
-    zLabel.layers.set(2);
+    xLabel.position.set(axisLen + labelOffset, 0, 0);
+    yLabel.position.set(0, axisLen + labelOffset, 0);
+    zLabel.position.set(0, 0, axisLen + labelOffset);
   }
 
   function fitCameraToAtomsCentered(atoms: Atom[]): void {

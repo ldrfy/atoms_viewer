@@ -14,7 +14,7 @@
                 <template v-if="!isMobile">
                     <!-- 语言 -->
                     <a-dropdown trigger="click" placement="bottomLeft">
-                        <a-button type="text" class="btn-icon" aria-label="language">
+                        <a-button type="text" class="btn-icon" aria-label="language" :title="t('viewer.locale.title')">
                             <GlobalOutlined />
                         </a-button>
 
@@ -30,7 +30,7 @@
 
                     <!-- 主题 -->
                     <a-dropdown trigger="click" placement="bottomLeft">
-                        <a-button type="text" class="btn-icon" aria-label="theme">
+                        <a-button type="text" class="btn-icon" aria-label="theme" :title="t('viewer.theme.title')">
                             <BgColorsOutlined />
                         </a-button>
 
@@ -45,19 +45,21 @@
                     </a-dropdown>
 
                     <!-- GitHub -->
-                    <a-button type="text" class="btn-icon" aria-label="github" @click="openGithub">
+                    <a-button type="text" class="btn-icon" aria-label="github" :title="t('viewer.links.github')"
+                        @click="openGithub">
                         <GithubOutlined />
                     </a-button>
 
                     <!-- 设置 -->
-                    <a-button type="text" class="btn-icon" aria-label="settings" @click="emit('open-settings')">
+                    <a-button type="text" class="btn-icon" aria-label="settings" :title="t('viewer.settings')"
+                        @click="emit('open-settings')">
                         <SettingOutlined />
                     </a-button>
                 </template>
 
                 <!-- ===== 移动端 ===== -->
                 <template v-else>
-                    <a-button type="text" class="btn-icon" aria-label="menu" @click="mobileOpen = true">
+                    <a-button type="text" class="btn-icon" aria-label="menu" title="Menu" @click="mobileOpen = true">
                         <MenuOutlined />
                     </a-button>
                 </template>

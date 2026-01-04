@@ -13,6 +13,7 @@ body,
 */
 html {
   overflow-y: scroll;
+  text-size-adjust: 100%;
   /* Prevent transient horizontal scrollbar during Drawer open/close animations */
   overflow-x: clip;
   scrollbar-gutter: stable;

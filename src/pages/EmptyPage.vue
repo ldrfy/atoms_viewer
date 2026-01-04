@@ -80,8 +80,9 @@
             </a>
         </div>
 
-        <input ref="fileInputRef" class="file-input" type="file" multiple
-            accept=".xyz,.pdb,.dump,.lammpstrj,.traj,.data,.lmp" @change="onFilePicked" />
+        <input ref="fileInputRef" class="file-input" type="file" multiple :aria-label="t('viewer.empty.pickFile')"
+            :title="t('viewer.empty.pickFile')" accept=".xyz,.pdb,.dump,.lammpstrj,.traj,.data,.lmp"
+            @change="onFilePicked" />
     </div>
 </template>
 

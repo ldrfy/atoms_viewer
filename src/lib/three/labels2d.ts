@@ -26,7 +26,11 @@ export function attachCss2dRenderer(
 // 1) makeTextLabel(text, className?)
 // 2) makeTextLabel(text, color, fontSizePx)
 export function makeTextLabel(text: string, className?: string): CSS2DObject;
-export function makeTextLabel(text: string, color: string, fontSizePx: number): CSS2DObject;
+export function makeTextLabel(
+  text: string,
+  color: string,
+  fontSizePx: number
+): CSS2DObject;
 export function makeTextLabel(
   text: string,
   classNameOrColor?: string,
@@ -41,7 +45,6 @@ export function makeTextLabel(
     if (color) div.style.color = color;
     div.style.fontSize = `${Math.max(8, Math.floor(fontSizePx))}px`;
     div.style.fontWeight = "600";
-    div.style.textShadow = "0 0 2px rgba(0,0,0,0.7)";
     div.style.userSelect = "none";
   } else {
     const className = classNameOrColor;

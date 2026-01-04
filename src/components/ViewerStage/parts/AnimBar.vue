@@ -11,8 +11,8 @@
             </a-col>
 
             <a-col flex="none" style="width: 96px">
-                <a-input-number size="small" v-model:value="frameIndexModel" :min="1" :max="frameCountMax" :step="1"
-                    style="width: 100%" />
+                <a-input-number size="small" aria-label="Frame index" title="Frame index"
+                    v-model:value="frameIndexModel" :min="1" :max="frameCountMax" :step="1" style="width: 100%" />
             </a-col>
         </a-row>
 
@@ -21,8 +21,8 @@
             <a-col flex="auto" style="min-width: 0">
                 <div class="anim-field">
                     <span class="anim-field-label">{{ t("viewer.play.fps") }}</span>
-                    <a-input-number class="anim-field-input" size="small" :min="1" :max="120"
-                        v-model:value="fpsModel" />
+                    <a-input-number class="anim-field-input" size="small" :aria-label="t('viewer.play.fps')"
+                        :title="t('viewer.play.fps')" :min="1" :max="120" v-model:value="fpsModel" />
                 </div>
             </a-col>
 
@@ -39,7 +39,8 @@
                 <div class="anim-field anim-field-tight">
                     <span class="anim-field-label">{{ t("viewer.record.bg") }}</span>
 
-                    <input class="native-color" type="color" v-model="bgColorModel" :disabled="isRecording" />
+                    <input class="native-color" type="color" v-model="bgColorModel" :disabled="isRecording"
+                        :aria-label="t('viewer.record.bg')" :title="t('viewer.record.bg')" />
 
                     <a-typography-text v-if="!isRecording" class="color-hex" :content="bgColorModel" ellipsis />
                 </div>

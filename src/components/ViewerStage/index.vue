@@ -2,28 +2,28 @@
     <div class="stage" @dragenter.prevent="stage.onDragEnter" @dragover.prevent="stage.onDragOver"
         @dragleave.prevent="stage.onDragLeave" @drop.prevent="stage.onDrop">
         <!-- 录制框选/编辑遮罩 -->
-        <RecordSelectOverlay :ctx="recordSelectCtx" />
+        <RecordSelectOverlay :ctx="stage.recordSelectCtx" />
 
-        <!-- three canvas 宿主 -->
-        <div ref="canvasHostRef" class="canvas-host"></div>
+        <!-- three canvas 宿主：函数 ref，避免本地变量重复 -->
+        <div :ref="stage.bindCanvasHost" class="canvas-host"></div>
 
         <!-- 原子信息/测量面板（点击原子后显示） -->
-        <AtomInspectorOverlay :ctx="inspectCtx" />
+        <AtomInspectorOverlay :ctx="stage.inspectCtx" />
 
         <!-- 放下后开始加载：旋转图标 -->
         <div v-if="isLoading" class="loading-overlay">
             <a-spin size="large" />
         </div>
 
-        <!-- 隐藏文件输入 -->
-        <input ref="fileInputRef" class="file-input" type="file" multiple
+        <!-- 隐藏文件输入：函数 ref，避免本地变量重复 -->
+        <input :ref="stage.bindFileInput" class="file-input" type="file" multiple
             accept=".xyz,.pdb,.dump,.lammpstrj,.traj,.data,.lmp" @change="stage.onFilePicked" />
 
         <!-- 动画 + 录制控制条 -->
-        <AnimBar :ctx="animCtx" />
+        <AnimBar :ctx="stage.animCtx" />
 
         <!-- 录制中：显示裁剪虚线框（不影响操作） -->
-        <RecordCropDash :ctx="cropDashCtx" />
+        <RecordCropDash :ctx="stage.cropDashCtx" />
     </div>
 </template>
 
@@ -79,47 +79,22 @@ function patchSettings(patch: Partial<ViewerSettings>): void {
     emit("update:settings", merged);
 }
 
-const stage = useViewerStage(settingsRef, patchSettings, (payload) => emit("open-settings", payload));
+const stage = useViewerStage(settingsRef, patchSettings, (payload) =>
+    emit("open-settings", payload)
+);
 
-/** template ref 必须是本地标识符，因此这里保留解构 */
-const { fileInputRef, canvasHostRef, isLoading } = stage;
-void fileInputRef;
-void canvasHostRef;
-void isLoading;
-// ctx groups are created inside useViewerStage() and returned directly
-const { recordSelectCtx, animCtx, cropDashCtx, inspectCtx } = stage;
+// NOTE: Vue template ref auto-unwrapping is guaranteed for top-level refs.
+// Accessing nested refs (stage.isLoading) can be inconsistent depending on build/tooling.
+// Keep a top-level alias so v-if tracks the actual boolean value.
+const isLoading = stage.isLoading;
 
-// Register the current ViewerStage instance to the global Settings bridge.
-setViewerApi({
-    openFilePicker: stage.openFilePicker,
-    exportPng: stage.onExportPng,
+// ✅ 映射集中在 useViewerStage.ts：index.vue 不再重复写
+setViewerApi(stage.bridgeApi);
 
-    refreshTypeMap: stage.refreshTypeMap,
-
-    parseInfo: stage.parseInfo,
-    parseMode: stage.parseMode,
-    setParseMode: stage.setParseMode,
-
-    layers: stage.layers,
-    activeLayerId: stage.activeLayerId,
-    setActiveLayer: stage.setActiveLayer,
-    setLayerVisible: stage.setLayerVisible,
-    removeLayer: stage.removeLayer,
-
-    activeLayerTypeMap: stage.activeLayerTypeMap,
-    setActiveLayerTypeMap: stage.setActiveLayerTypeMap,
-});
+defineExpose(stage.exposedApi);
 
 onBeforeUnmount(() => {
     setViewerApi(null);
-});
-
-defineExpose({
-    exportPng: stage.onExportPng,
-    openFilePicker: stage.openFilePicker,
-    loadFile: stage.loadFile,
-    loadFiles: (files: File[]) => stage.loadFiles(files, "api"),
-    loadUrl: stage.loadUrl,
 });
 
 watch(

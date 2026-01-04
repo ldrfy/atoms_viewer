@@ -6,6 +6,35 @@ body,
   margin: 0;
 }
 
+/*
+  Prevent layout shift when Ant Design Vue Drawer/Modal toggles body overflow.
+  Keeping a stable scrollbar gutter avoids the "page zoom" effect when the
+  vertical scrollbar appears/disappears.
+*/
+html {
+  overflow-y: scroll;
+  /* Prevent transient horizontal scrollbar during Drawer open/close animations */
+  overflow-x: clip;
+  scrollbar-gutter: stable;
+}
+
+body {
+  /* Fallback for browsers that don't support overflow-x: clip */
+  overflow-x: hidden;
+}
+
+/*
+  Ant Design Vue overlays (Drawer/Modal) may add inline padding-right to <body>
+  to compensate for scrollbar removal. Because we keep a stable scrollbar gutter,
+  that compensation can create a temporary horizontal overflow (a left-right
+  scrollbar that flashes), which looks like a page "zoom".
+*/
+body.ant-scrolling-effect,
+body.ant-drawer-open,
+body.ant-modal-open {
+  padding-right: 0 !important;
+}
+
 #app {
   padding: 0;
   max-width: none;

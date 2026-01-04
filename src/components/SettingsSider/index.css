@@ -10,7 +10,6 @@
   gap: 8px;
   padding: 8px 10px;
   border-radius: 10px;
-  background: rgba(127, 127, 127, 0.08);
   cursor: pointer;
   user-select: none;
 }
@@ -48,9 +47,19 @@
   flex: 0 0 auto;
 }
 
-/* Drawer overall */
-.settings-drawer :deep(.ant-drawer-body) {
-  background: var(--ant-colorBgContainer, #fff);
+/*
+  Drawer appearance
+  - Semi-transparent background so the model is still slightly visible
+  - Backdrop blur for readability
+*/
+.settings-drawer .ant-drawer-content {
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+:root[data-theme="dark"] .settings-drawer .ant-drawer-content {
+  background: rgba(18, 18, 18, 0.62);
 }
 
 /* Header */
@@ -58,8 +67,14 @@
   position: sticky;
   top: 0;
   z-index: 2;
-  background: var(--ant-colorBgContainer, #fff);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  /* Keep the header readable over the translucent content */
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+:root[data-theme="dark"] .settings-header {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
 }
 
 .settings-header-row {

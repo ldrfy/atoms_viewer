@@ -117,7 +117,18 @@
   flex: 1;
   min-height: 0;
   overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  /* Prevent scroll chaining to the page (reduces pull-to-refresh conflicts on supporting browsers) */
+  overscroll-behavior-y: contain;
+  /* Allow vertical scrolling within the settings body */
+  touch-action: pan-y;
   padding: 10px 12px calc(12px + env(safe-area-inset-bottom));
+}
+
+/* While resizing the bottom-sheet, suppress overscroll (Chrome/Android) */
+html.resizing,
+body.resizing {
+  overscroll-behavior-y: none;
 }
 
 /* Collapse touch friendliness */

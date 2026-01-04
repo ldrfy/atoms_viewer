@@ -277,17 +277,17 @@ function fmt(v: number | null | undefined): string {
 /* Mini collapsed handle */
 .atom-inspector-mini {
     position: absolute;
-    right: 12px;
+    right: 0px;
     top: 40%;
-    width: 22px;
+    width: 24px;
     height: 72px;
     border-radius: 6px 0 0 6px;
     display: flex;
+    padding: 24px;
     align-items: center;
     justify-content: center;
     cursor: pointer;
     z-index: 25;
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
 }
 
 .mini-handle {

@@ -1,6 +1,6 @@
 <template>
     <a-drawer v-model:open="openModel" class="settings-drawer" :placement="drawerPlacement" :mask="true"
-        :mask-closable="true" :destroy-on-close="false" :closable="false"
+        :mask-closable="true" :destroy-on-close="false" :closable="false" :maskStyle="maskStyle"
         :width="drawerPlacement === 'right' ? drawerWidth : undefined"
         :height="drawerPlacement === 'bottom' ? mobileHeight : undefined" :get-container="false"
         :contentWrapperStyle="contentWrapperStyle" :bodyStyle="drawerBodyStyle">
@@ -404,6 +404,7 @@ import { ATOMIC_SYMBOLS, normalizeElementSymbol } from "../../lib/structure/chem
 import { useI18n } from "vue-i18n";
 import { viewerApiRef } from "../../lib/viewer/bridge";
 import type { ParseMode } from "../../lib/structure/parse";
+import { isDark } from "../../theme/mode";
 
 /** 本地类型：避免 settings.ts 导出名不一致造成报错
  * Local type to avoid export-name mismatch in settings.ts
@@ -576,12 +577,13 @@ function onResizeEnd(): void {
  * ----------------------------- */
 const contentWrapperStyle = computed(() => {
     if (drawerPlacement.value === "right") {
-        // 桌面端：右侧浮动一些，避免遮挡过多
+        // 桌面端：铺满上下，避免出现/消失滚动条导致的缩放抖动
         return {
-            top: "8%",
-            height: "84%",
-            right: "12px",
-            borderRadius: "12px",
+            top: "0",
+            bottom: "0",
+            height: "100%",
+            right: "0",
+            borderRadius: "0",
             overflow: "hidden",
             boxShadow: "0 12px 34px rgba(0,0,0,0.16)",
         } as Record<string, any>;
@@ -601,6 +603,13 @@ const drawerBodyStyle = computed(() => {
         height: "100%",
         display: "flex",
         flexDirection: "column",
+    } as Record<string, any>;
+});
+
+// Allow seeing the model behind the drawer a bit more (still blocks clicks via mask).
+const maskStyle = computed(() => {
+    return {
+        background: isDark.value ? "rgba(0,0,0,0.30)" : "rgba(0,0,0,0.14)",
     } as Record<string, any>;
 });
 

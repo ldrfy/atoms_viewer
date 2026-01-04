@@ -167,6 +167,15 @@
                 "meta": "{atoms} atoms · {frames} frames",
                 "hint": "Click a row to set the active layer; use the toggle to show/hide. Dragging a new model adds a layer and hides previous layers by default.",
                 "deleteConfirm": "Delete this layer?"
+            },
+            "other": {
+                "refreshBondsOnPlay": "Refresh bonds each frame while playing",
+                "header": "Other",
+                "axes": "Axes",
+                "bonds": "Bonds",
+                "atomSize": "Atom size",
+                "recordFps": "Recording FPS",
+                "recordFpsHint": "Target recording frame rate; commonly 30 / 60."
             }
         }
     },

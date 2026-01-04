@@ -1,10 +1,12 @@
 // src/components/ViewerStage/logic/viewerAnimation.ts
-import { ref } from 'vue';
+import { ref, type Ref } from 'vue';
 import type { ModelRuntime } from '../modelRuntime';
+import type { ViewerSettings } from '../../../lib/viewer/settings';
 import type { InspectCtx } from '../ctx/inspect';
 
 export function createViewerAnimationController(deps: {
   getRuntime: () => ModelRuntime | null;
+  settingsRef: Readonly<Ref<ViewerSettings>>;
   inspectCtx: InspectCtx;
   onSelectionVisualsNeedUpdate: () => void;
 }) {
@@ -25,9 +27,19 @@ export function createViewerAnimationController(deps: {
 
   function togglePlay(): void {
     if (!hasAnimation.value) return;
+
+    const wasPlaying = isPlaying.value;
     isPlaying.value = !isPlaying.value;
     animLastMs = 0;
     animAccMs = 0;
+
+    // If bonds were not refreshed during playback, refresh once when pausing
+    if (wasPlaying && !isPlaying.value) {
+      const refreshOnPlay = deps.settingsRef.value.refreshBondsOnPlay ?? true;
+      if (!refreshOnPlay) {
+        setFrame(frameIndex.value);
+      }
+    }
   }
 
   function syncFromRuntime(): void {
@@ -56,7 +68,9 @@ export function createViewerAnimationController(deps: {
     const clamped = Math.min(Math.max(0, idx), Math.max(0, n - 1));
     frameIndex.value = clamped;
 
-    runtime.applyFrameByIndex(clamped);
+    const refreshBonds = !isPlaying.value || (deps.settingsRef.value.refreshBondsOnPlay ?? true);
+
+    runtime.applyFrameByIndex(clamped, { refreshBonds });
 
     if (deps.inspectCtx.selected.value.length > 0) {
       deps.onSelectionVisualsNeedUpdate();

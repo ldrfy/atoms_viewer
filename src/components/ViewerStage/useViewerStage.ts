@@ -374,33 +374,41 @@ export function useViewerStage(
     picking.attach();
 
     if (patchSettings) {
-      const controls = stage.getControls();
-      const scheduleSync = () => {
-        if (distSyncRaf) return;
-        distSyncRaf = requestAnimationFrame(() => {
-          distSyncRaf = 0;
-          if (!stage) return;
-          const cam = stage.getCamera();
-          const c = stage.getControls();
-          const dist = cam.position.distanceTo(c.target);
-          if (!Number.isFinite(dist)) return;
-          if (
-            Number.isFinite(lastSyncedDist) &&
-            Math.abs(dist - lastSyncedDist) < 1e-6
-          )
-            return;
-          lastSyncedDist = dist;
+      let running = true;
+      let lastT = 0;
 
-          if (
-            Math.abs(dist - (settingsRef.value.dualViewDistance ?? dist)) > 1e-4
-          ) {
-            patchSettings({ dualViewDistance: dist });
-          }
-        });
+      const tick = (t: number) => {
+        if (!running) return;
+        distSyncRaf = requestAnimationFrame(tick);
+        if (!stage) return;
+
+        // Throttle sync to reduce UI churn while keeping wheel/gesture zoom responsive.
+        if (t - lastT < 50) return;
+        lastT = t;
+
+        const dist = stage.getDualViewDistance();
+        if (!Number.isFinite(dist)) return;
+
+        if (
+          Number.isFinite(lastSyncedDist) &&
+          Math.abs(dist - lastSyncedDist) < 1e-4
+        )
+          return;
+        lastSyncedDist = dist;
+
+        if (
+          Math.abs(dist - (settingsRef.value.dualViewDistance ?? dist)) > 1e-3
+        ) {
+          patchSettings({ dualViewDistance: dist });
+        }
       };
-      controls.addEventListener("change", scheduleSync);
-      removeControlsSync = () =>
-        controls.removeEventListener("change", scheduleSync);
+
+      distSyncRaf = requestAnimationFrame(tick);
+      removeControlsSync = () => {
+        running = false;
+        if (distSyncRaf) cancelAnimationFrame(distSyncRaf);
+        distSyncRaf = 0;
+      };
     }
 
     window.addEventListener("dragover", preventWindowDropDefault);

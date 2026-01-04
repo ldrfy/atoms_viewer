@@ -75,6 +75,9 @@ export type ThreeStage = {
   /** Secondary camera for the 2nd viewport (when dual view is active). */
   getAuxCamera: () => AnyCamera | null;
 
+  /** Get current dual-view distance (effective; in ortho mapped from zoom). */
+  getDualViewDistance: () => number;
+
   /** Dual view (front+side): enable/disable */
   setDualViewEnabled: (enabled: boolean) => void;
   /** Dual view camera distance (world units). For orthographic, mapped to zoom. */
@@ -173,8 +176,7 @@ export function createThreeStage(params: {
 
     const ortho = camera as THREE.OrthographicCamera;
     // Orthographic: dist <-> zoom, dist == base -> zoom 1
-    dualViewDistance =
-      dualViewOrthoBaseDist / Math.max(1e-6, (ortho.zoom ?? 1));
+    dualViewDistance = dualViewOrthoBaseDist / Math.max(1e-6, ortho.zoom ?? 1);
   };
 
   controls.addEventListener("change", onControlsChange);
@@ -281,7 +283,9 @@ export function createThreeStage(params: {
 
     // Perspective: move along current view direction.
     if (isPerspective(camera)) {
-      camera.position.copy(target.clone().add(dir.multiplyScalar(dualViewDistance)));
+      camera.position.copy(
+        target.clone().add(dir.multiplyScalar(dualViewDistance))
+      );
       camera.lookAt(target);
       camera.updateProjectionMatrix();
       controls.update();
@@ -292,9 +296,6 @@ export function createThreeStage(params: {
     const ortho = camera as THREE.OrthographicCamera;
     const z = dualViewOrthoBaseDist / Math.max(1e-6, dualViewDistance);
     ortho.zoom = Math.max(1e-3, z);
-    // Keep camera roughly at the requested distance (projection not affected, but clipping is).
-    camera.position.copy(target.clone().add(dir.multiplyScalar(dualViewDistance)));
-    camera.lookAt(target);
     ortho.updateProjectionMatrix();
 
     // Keep aux camera zoom in sync for orthographic dual-view.
@@ -304,7 +305,8 @@ export function createThreeStage(params: {
       auxOrtho.updateProjectionMatrix();
     }
 
-    controls.update();
+    // IMPORTANT: In orthographic mode, OrbitControls' dolly changes zoom.
+    // Do NOT move camera.position here; otherwise wheel/slider zoom will fight and cause jitter.
   }
 
   function syncAuxCameraPose(sizeW: number, sizeH: number): void {
@@ -322,8 +324,9 @@ export function createThreeStage(params: {
 
     // If both are orthographic, keep zoom consistent (distance maps to zoom).
     if (!isPerspective(camera) && !isPerspective(auxCamera)) {
-      (auxCamera as THREE.OrthographicCamera).zoom =
-        (camera as THREE.OrthographicCamera).zoom;
+      (auxCamera as THREE.OrthographicCamera).zoom = (
+        camera as THREE.OrthographicCamera
+      ).zoom;
       (auxCamera as THREE.OrthographicCamera).updateProjectionMatrix();
     }
 
@@ -422,6 +425,8 @@ export function createThreeStage(params: {
 
     camera = res.camera;
     controls = res.controls;
+    // Keep interaction model consistent: we rotate the model (pivot), not the camera.
+    controls.enableRotate = false;
     // Re-bind controls change listener (controls instance may change)
     controls.addEventListener("change", onControlsChange);
     orthoHalfHeight = res.orthoHalfHeight;
@@ -534,8 +539,15 @@ export function createThreeStage(params: {
   };
 
   const setDualViewDistance = (dist: number): void => {
-    // Keep settings in sync even when disabled, but only apply to the camera when dual view is enabled.
-    dualViewDistance = Math.max(0.001, dist);
+    // Keep settings in sync even when disabled, but only apply to the camera when presets are enabled.
+    const d = Math.max(0.001, dist);
+    // If this update comes from controls-sync (wheel/pinch), it may already match the stage state.
+    // Avoid re-applying to prevent feedback jitter.
+    if (Math.abs(d - dualViewDistance) < 1e-6) {
+      dualViewDistance = d;
+      return;
+    }
+    dualViewDistance = d;
     if (viewPresets.length === 0) return;
     applyViewDistance(dualViewDistance);
   };
@@ -574,6 +586,8 @@ export function createThreeStage(params: {
     setViewPresets,
     getViewPresets: () => viewPresets.slice(),
     getAuxCamera: () => auxCamera,
+
+    getDualViewDistance: () => dualViewDistance,
 
     setDualViewEnabled,
     setDualViewDistance,

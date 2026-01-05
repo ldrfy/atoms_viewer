@@ -542,7 +542,13 @@ export function createThreeStage(params: {
       }
     }
 
-    const keepAlive = autoRotateEnabled || !!onBeforeRender() || now < keepAliveUntilMs;
+    // IMPORTANT:
+    // Always run onBeforeRender() even when auto-rotation keeps the RAF loop alive.
+    // We use onBeforeRender() to advance animation state and to sync UI (e.g. auto-rotate
+    // rotation degrees back to the settings panel). Using `||` directly would short-circuit
+    // and skip the callback when `autoRotateEnabled === true`.
+    const before = onBeforeRender();
+    const keepAlive = autoRotateEnabled || !!before || now < keepAliveUntilMs;
 
     // Drive OrbitControls damping only while the loop is alive.
     // OrbitControls.update() may return void (older three) or boolean (newer).

@@ -5,6 +5,27 @@ export type LammpsTypeMapItem = {
   element: string;
 };
 
+/**
+ * Per-layer atom color mapping entry.
+ *
+ * - Common formats: element only (e.g. "C")
+ * - LAMMPS with typeId mapping: element + typeId (e.g. "C1", "C2")
+ */
+export type AtomTypeColorMapItem = {
+  element: string;
+  /** Optional; present when the source provides typeId (LAMMPS, etc.). */
+  typeId?: number;
+  /** Hex color string, e.g. "#RRGGBB". */
+  color: string;
+  /**
+   * Whether the color has been explicitly customized by the user.
+   *
+   * If false/undefined, the row is treated as "auto" and will follow built-in
+   * element colors when the LAMMPS type→element mapping changes.
+   */
+  isCustom?: boolean;
+};
+
 export type RotationDeg = {
   x: number;
   y: number;
@@ -13,6 +34,8 @@ export type RotationDeg = {
 
 export type ViewerSettings = {
   atomScale: number;
+  /** Sphere geometry segments (quality vs performance). */
+  sphereSegments: number;
   showAxes: boolean;
   showBonds: boolean;
   /** During multi-frame playback, refresh bond meshes each frame. */
@@ -49,6 +72,7 @@ export type ViewerSettings = {
 
 export const DEFAULT_SETTINGS: ViewerSettings = {
   atomScale: 1,
+  sphereSegments: 24,
   showAxes: false,
   showBonds: true,
   refreshBondsOnPlay: true,

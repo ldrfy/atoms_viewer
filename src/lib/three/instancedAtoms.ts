@@ -14,22 +14,44 @@ export function buildAtomMeshesByElement(params: {
   atomSizeFactor: number;
   atomScale: number;
   sphereSegments?: number;
+  /** Optional grouping key. Defaults to element. */
+  getColorKey?: (atom: Atom) => string;
+  /** Optional color map keyed by getColorKey result. */
+  colorMap?: Record<string, string>;
 }): THREE.InstancedMesh[] {
-  const { atoms, atomSizeFactor, atomScale, sphereSegments = 16 } = params;
+  const {
+    atoms,
+    atomSizeFactor,
+    atomScale,
+    sphereSegments = 16,
+    getColorKey,
+    colorMap,
+  } = params;
 
-  const elementToIndices = new Map<string, number[]>();
+  type Group = { element: string; indices: number[] };
+  const keyToGroup = new Map<string, Group>();
+
   for (let i = 0; i < atoms.length; i += 1) {
     const a = atoms[i];
     if (!a) continue;
-    const arr = elementToIndices.get(a.element);
-    if (arr) arr.push(i);
-    else elementToIndices.set(a.element, [i]);
+
+    const key = (getColorKey ? getColorKey(a) : a.element) || a.element;
+    const g = keyToGroup.get(key);
+    if (g) {
+      g.indices.push(i);
+    }
+    else {
+      keyToGroup.set(key, { element: a.element, indices: [i] });
+    }
   }
 
   const meshes: THREE.InstancedMesh[] = [];
   const mat = new THREE.Matrix4();
 
-  for (const [el, indices] of elementToIndices.entries()) {
+  for (const [key, group] of keyToGroup.entries()) {
+    const el = group.element;
+    const indices = group.indices;
+
     const baseRadius = getSphereBaseRadiusByElement(el, atomSizeFactor);
     const rSphere = baseRadius * atomScale;
 
@@ -38,8 +60,9 @@ export function buildAtomMeshesByElement(params: {
       sphereSegments,
       sphereSegments,
     );
+    const col = (colorMap && colorMap[key]) ? colorMap[key]! : getElementColorHex(el);
     const material = new THREE.MeshStandardMaterial({
-      color: new THREE.Color(getElementColorHex(el)),
+      color: new THREE.Color(col),
       metalness: 0.05,
       roughness: 0.9,
     });
@@ -47,6 +70,7 @@ export function buildAtomMeshesByElement(params: {
     const mesh = new THREE.InstancedMesh(geometry, material, indices.length);
     mesh.userData.baseRadius = baseRadius;
     mesh.userData.element = el;
+    mesh.userData.colorKey = key;
     mesh.userData.atomIndices = indices;
 
     for (let k = 0; k < indices.length; k += 1) {

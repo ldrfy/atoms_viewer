@@ -1,27 +1,110 @@
 <template>
+  <!--
+    Desktop: avoid Ant Drawer body scroll-lock side effects (layout “bounce”)
+    by using a lightweight fixed panel rendered via Teleport.
+  -->
+  <Teleport to="body">
+    <Transition
+      name="settings-sider-slide"
+      @after-enter="onDesktopAfterEnter"
+      @after-leave="onDesktopAfterLeave"
+    >
+      <div
+        v-show="drawerPlacement === 'right' && openModel"
+        class="settings-drawer settings-sider-fixed"
+        :style="desktopPanelStyle"
+      >
+        <div class="settings-header">
+          <div class="settings-header-row">
+            <div class="settings-title">
+              {{ t('settings.title') }}
+            </div>
+
+            <a-button
+              type="text"
+              size="small"
+              aria-label="close"
+              title="Close"
+              @click="onCloseClick"
+            >
+              ✕
+            </a-button>
+          </div>
+        </div>
+
+        <div class="settings-body">
+          <a-collapse
+            v-model:active-key="activeKeyModel"
+            ghost
+            class="settings-collapse"
+          >
+            <a-collapse-panel
+              key="files"
+              :header="t('settings.panel.files.header')"
+            >
+              <FilesPanel />
+            </a-collapse-panel>
+
+            <a-collapse-panel
+              key="layers"
+              :header="t('settings.panel.layers.header')"
+            >
+              <LayersPanel />
+            </a-collapse-panel>
+
+            <a-collapse-panel
+              key="display"
+              :header="t('settings.panel.display.header')"
+            >
+              <DisplayPanel />
+            </a-collapse-panel>
+
+            <a-collapse-panel
+              key="lammps"
+              :header="t('settings.panel.lammps.header')"
+            >
+              <LammpsPanel />
+            </a-collapse-panel>
+
+            <a-collapse-panel
+              key="colors"
+              :header="t('settings.panel.colors.header')"
+            >
+              <ColorsPanel />
+            </a-collapse-panel>
+
+            <a-collapse-panel
+              key="other"
+              :header="t('settings.panel.other.header')"
+            >
+              <OtherPanel />
+            </a-collapse-panel>
+          </a-collapse>
+        </div>
+      </div>
+    </Transition>
+  </Teleport>
+
+  <!-- Mobile bottom-sheet: keep using Ant Drawer (in-place) for touch behavior. -->
   <a-drawer
+    v-if="drawerPlacement === 'bottom'"
     v-model:open="openModel"
-    :class="[
-      'settings-drawer',
-      drawerPlacement === 'bottom' ? 'settings-drawer--bottom' : '',
-    ]"
-    :placement="drawerPlacement"
-    :mask="drawerPlacement === 'right'"
-    :mask-closable="drawerPlacement === 'right'"
+    :class="['settings-drawer', 'settings-drawer--bottom']"
+    placement="bottom"
+    :mask="true"
+    :mask-closable="true"
     :destroy-on-close="false"
     :closable="false"
-    :mask-style="drawerPlacement === 'right' ? maskStyle : undefined"
-    :width="drawerPlacement === 'right' ? drawerWidth : undefined"
-    :height="drawerPlacement === 'bottom' ? mobileHeight : undefined"
+    :mask-style="undefined"
+    :height="mobileHeight"
     :get-container="false"
     :content-wrapper-style="contentWrapperStyle"
     :body-style="drawerBodyStyle"
     @after-open-change="onAfterOpenChange"
+    @close="onCloseClick"
   >
-    <!-- 自定义 Header：手机端更像 bottom-sheet -->
     <div class="settings-header">
       <div
-        v-if="drawerPlacement === 'bottom'"
         class="settings-grab"
         aria-label="resize"
         title="Resize"
@@ -34,7 +117,7 @@
 
       <div class="settings-header-row">
         <div class="settings-title">
-          {{ t("settings.title") }}
+          {{ t('settings.title') }}
         </div>
 
         <a-button
@@ -49,620 +132,30 @@
       </div>
     </div>
 
-    <!-- 内容区：可滚动，避免撑爆 -->
     <div class="settings-body">
-      <!-- activeKey 由父组件控制；允许多面板同时展开/折叠 -->
-      <a-collapse
-        v-model:active-key="activeKeyModel"
-        ghost
-        class="settings-collapse"
-      >
-        <!-- 文件 / 导出 / 解析 -->
-        <a-collapse-panel
-          key="files"
-          :header="t('settings.panel.files.header')"
-        >
-          <a-form layout="vertical">
-            <a-form-item :label="t('settings.panel.files.export.header')">
-              <!-- 倍率 + 透明：同一行，两端对齐（移动端更紧凑） -->
-              <a-row justify="space-between" align="middle" :gutter="8">
-                <a-col>
-                  <a-input-number
-                    v-model:value="exportScale"
-                    aria-label="Export scale"
-                    title="Export scale"
-                    :min="1"
-                    :max="5"
-                    :step="0.1"
-                    :precision="1"
-                    style="width: 140px"
-                  />
-                </a-col>
-                <a-col>
-                  <a-checkbox v-model:checked="exportTransparent">
-                    {{ t("settings.panel.files.export.transparent") }}
-                  </a-checkbox>
-                </a-col>
-              </a-row>
-
-              <div style="margin-top: 8px">
-                <a-button
-                  block
-                  type="primary"
-                  :disabled="!hasAnyLayer"
-                  @click="onExport"
-                >
-                  {{ t("settings.panel.files.export.button") }}
-                </a-button>
-              </div>
-
-              <a-typography-text
-                type="secondary"
-                style="display: block; margin-top: 6px"
-              >
-                {{ t("settings.panel.files.export.hint") }}
-              </a-typography-text>
-            </a-form-item>
-
-            <a-divider style="margin: 8px 0" />
-
-            <a-form-item :label="t('settings.panel.files.parse.header')">
-              <a-space direction="vertical" :size="6" style="width: 100%">
-                <a-select
-                  v-model:value="parseModeModel"
-                  :aria-label="t('viewer.parse.mode')"
-                  :title="t('viewer.parse.mode')"
-                  :options="parseModeOptions"
-                  :disabled="!hasAnyLayer"
-                  style="width: 100%"
-                />
-
-                <a-alert
-                  v-if="viewerApi?.parseInfo.success === false"
-                  type="error"
-                  show-icon
-                  :description="viewerApi?.parseInfo.errorMsg || '-'"
-                />
-
-                <a-descriptions size="small" :column="1" bordered>
-                  <a-descriptions-item :label="t('viewer.parse.format')">
-                    <a-tag>{{ viewerApi?.parseInfo.format || "-" }}</a-tag>
-                  </a-descriptions-item>
-                  <a-descriptions-item :label="t('viewer.parse.file')">
-                    <span style="word-break: break-all">{{
-                      viewerApi?.parseInfo.fileName || "-"
-                    }}</span>
-                  </a-descriptions-item>
-                  <a-descriptions-item :label="t('viewer.parse.atoms')">
-                    {{ viewerApi?.parseInfo.atomCount ?? 0 }}
-                  </a-descriptions-item>
-                  <a-descriptions-item
-                    v-if="(viewerApi?.parseInfo.frameCount ?? 0) > 1"
-                    :label="t('viewer.parse.frames')"
-                  >
-                    {{ viewerApi?.parseInfo.frameCount }}
-                  </a-descriptions-item>
-                </a-descriptions>
-              </a-space>
-            </a-form-item>
-          </a-form>
+      <a-collapse v-model:active-key="activeKeyModel" ghost class="settings-collapse">
+        <a-collapse-panel key="files" :header="t('settings.panel.files.header')">
+          <FilesPanel />
         </a-collapse-panel>
 
-        <!-- 多模型图层 -->
-        <a-collapse-panel
-          key="layers"
-          :header="t('settings.panel.layers.header')"
-        >
-          <a-space direction="vertical" :size="8" style="width: 100%">
-            <!-- 文件选择放在“模型图层”最上方 -->
-            <div>
-              <a-button
-                type="primary"
-                block
-                :disabled="!viewerApi"
-                @click="onOpenFile"
-              >
-                {{ t("settings.panel.files.openFile") }}
-              </a-button>
-              <a-typography-text
-                type="secondary"
-                style="display: block; margin-top: 6px"
-              >
-                {{ t("settings.panel.files.openFileHint") }}
-              </a-typography-text>
-            </div>
-
-            <a-divider style="margin: 8px 0" />
-
-            <a-alert
-              v-if="!viewerApi"
-              type="info"
-              show-icon
-              :message="t('settings.panel.layers.noViewer')"
-            />
-
-            <a-alert
-              v-else-if="layerList.length === 0"
-              type="info"
-              show-icon
-              :message="t('settings.panel.layers.empty')"
-            />
-
-            <div v-else class="layers-list">
-              <div
-                v-for="l in layerList"
-                :key="l.id"
-                class="layer-row"
-                :class="{ active: l.id === activeLayerId }"
-                @click="onSetActive(l.id)"
-              >
-                <div class="layer-left">
-                  <a-radio :checked="l.id === activeLayerId" />
-                </div>
-                <div class="layer-main">
-                  <div class="layer-name" :title="l.name">
-                    {{ l.name }}
-                  </div>
-                  <div class="layer-meta">
-                    {{
-                      t("settings.panel.layers.meta", {
-                        atoms: l.atomCount,
-                        frames: l.frameCount,
-                      })
-                    }}
-                  </div>
-                </div>
-                <div class="layer-right" @click.stop>
-                  <a-space :size="4">
-                    <a-switch
-                      size="small"
-                      :checked="l.visible"
-                      :aria-label="'Visibility: ' + l.name"
-                      :title="'Visibility: ' + l.name"
-                      @change="(v: boolean) => onToggleLayer(l.id, v)"
-                    />
-                    <a-popconfirm
-                      :title="t('settings.panel.layers.deleteConfirm')"
-                      @confirm="() => onDeleteLayer(l.id)"
-                    >
-                      <a-button
-                        type="text"
-                        danger
-                        aria-label="delete layer"
-                        title="Delete layer"
-                      >
-                        <DeleteOutlined />
-                      </a-button>
-                    </a-popconfirm>
-                  </a-space>
-                </div>
-              </div>
-            </div>
-
-            <a-typography-text type="secondary" style="display: block">
-              {{ t("settings.panel.layers.hint") }}
-            </a-typography-text>
-          </a-space>
+        <a-collapse-panel key="layers" :header="t('settings.panel.layers.header')">
+          <LayersPanel />
         </a-collapse-panel>
 
-        <!-- 显示 / 视图 -->
-        <a-collapse-panel
-          key="display"
-          :header="t('settings.panel.display.header')"
-        >
-          <a-form layout="vertical">
-            <!-- 恢复原始方向：放在“显示”最上方 -->
-            <a-form-item>
-              <a-button block @click="resetDistance">
-                {{ t("settings.panel.pose.resetView") }}
-              </a-button>
-            </a-form-item>
-
-            <a-form-item
-              v-if="viewPresetsModel.length > 0"
-              :label="t('settings.panel.display.dualViewDistance')"
-            >
-              <a-row :gutter="8" align="middle">
-                <a-col :flex="1">
-                  <a-slider
-                    v-model:value="dualViewDistanceModel"
-                    :min="1"
-                    :max="dualViewDistanceMax"
-                    :step="0.5"
-                  />
-                </a-col>
-                <a-col :style="{ width: '96px' }">
-                  <a-input-number
-                    v-model:value="dualViewDistanceModel"
-                    :aria-label="t('settings.panel.display.dualViewDistance')"
-                    :title="t('settings.panel.display.dualViewDistance')"
-                    :min="1"
-                    :max="dualViewDistanceMax"
-                    :step="0.5"
-                    style="width: 100%"
-                  />
-                </a-col>
-              </a-row>
-            </a-form-item>
-            <!-- 多视角：正视 / 侧视 / 俯视
-                         - 选 1 个 => 单视图
-                         - 选 2 个 => 双视图（左右显示所选两视角） -->
-            <a-form-item :label="t('settings.panel.display.viewPresets')">
-              <!-- Use a controlled value + change handler to enforce:
-                             1) at least one preset must be selected
-                             2) at most two presets; selecting a 3rd auto-unchecks the oldest -->
-              <a-checkbox-group
-                :value="viewPresetsModel"
-                :options="viewPresetOptions"
-                @change="onViewPresetsChange"
-              />
-              <a-typography-text
-                type="secondary"
-                style="display: block; margin-top: 6px"
-              >
-                {{ t("settings.panel.display.viewPresetsHint") }}
-              </a-typography-text>
-            </a-form-item>
-
-            <a-form-item
-              v-if="viewPresetsModel.length === 2"
-              :label="t('settings.panel.display.dualViewSplit')"
-            >
-              <a-row :gutter="8" align="middle">
-                <a-col :flex="1">
-                  <a-slider
-                    v-model:value="dualViewSplitPctModel"
-                    :min="10"
-                    :max="90"
-                    :step="1"
-                  />
-                </a-col>
-                <a-col :style="{ width: '96px' }">
-                  <a-input-number
-                    v-model:value="dualViewSplitPctModel"
-                    :aria-label="t('settings.panel.display.dualViewSplit')"
-                    :title="t('settings.panel.display.dualViewSplit')"
-                    :min="10"
-                    :max="90"
-                    :step="1"
-                    style="width: 100%"
-                  />
-                </a-col>
-              </a-row>
-              <a-typography-text
-                type="secondary"
-                style="display: block; margin-top: 6px"
-              >
-                {{ t("settings.panel.display.dualViewSplitHint") }}
-              </a-typography-text>
-            </a-form-item>
-
-            <!-- 投影 -->
-            <a-form-item>
-              <a-row justify="space-between" align="middle">
-                <a-col>{{ t("settings.panel.display.perspective") }}</a-col>
-                <a-col>
-                  <a-switch
-                    v-model:checked="orthographicModel"
-                    :aria-label="t('settings.panel.display.perspective')"
-                    :title="t('settings.panel.display.perspective')"
-                  />
-                </a-col>
-              </a-row>
-            </a-form-item>
-          </a-form>
+        <a-collapse-panel key="display" :header="t('settings.panel.display.header')">
+          <DisplayPanel />
         </a-collapse-panel>
 
-        <!-- 姿态 -->
-        <a-collapse-panel key="pose" :header="t('settings.panel.pose.header')">
-          <a-form layout="vertical">
-            <a-form-item :label="t('settings.panel.pose.rotX')">
-              <a-row :gutter="8" align="middle">
-                <a-col :flex="1">
-                  <a-slider
-                    v-model:value="rotXModel"
-                    :min="-180"
-                    :max="180"
-                    :step="1"
-                  />
-                </a-col>
-                <a-col :style="{ width: '96px' }">
-                  <a-input-number
-                    v-model:value="rotXModel"
-                    :aria-label="t('settings.panel.pose.rotX')"
-                    :title="t('settings.panel.pose.rotX')"
-                    :min="-180"
-                    :max="180"
-                    :step="1"
-                    style="width: 100%"
-                  />
-                </a-col>
-              </a-row>
-            </a-form-item>
-
-            <a-form-item :label="t('settings.panel.pose.rotY')">
-              <a-row :gutter="8" align="middle">
-                <a-col :flex="1">
-                  <a-slider
-                    v-model:value="rotYModel"
-                    :min="-180"
-                    :max="180"
-                    :step="1"
-                  />
-                </a-col>
-                <a-col :style="{ width: '96px' }">
-                  <a-input-number
-                    v-model:value="rotYModel"
-                    :aria-label="t('settings.panel.pose.rotY')"
-                    :title="t('settings.panel.pose.rotY')"
-                    :min="-180"
-                    :max="180"
-                    :step="1"
-                    style="width: 100%"
-                  />
-                </a-col>
-              </a-row>
-            </a-form-item>
-
-            <a-form-item :label="t('settings.panel.pose.rotZ')">
-              <a-row :gutter="8" align="middle">
-                <a-col :flex="1">
-                  <a-slider
-                    v-model:value="rotZModel"
-                    :min="-180"
-                    :max="180"
-                    :step="1"
-                  />
-                </a-col>
-                <a-col :style="{ width: '96px' }">
-                  <a-input-number
-                    v-model:value="rotZModel"
-                    :aria-label="t('settings.panel.pose.rotZ')"
-                    :title="t('settings.panel.pose.rotZ')"
-                    :min="-180"
-                    :max="180"
-                    :step="1"
-                    style="width: 100%"
-                  />
-                </a-col>
-              </a-row>
-            </a-form-item>
-
-            <a-form-item>
-              <a-button block @click="resetPose">
-                {{ t("settings.panel.pose.resetPose") }}
-              </a-button>
-            </a-form-item>
-          </a-form>
+        <a-collapse-panel key="lammps" :header="t('settings.panel.lammps.header')">
+          <LammpsPanel />
         </a-collapse-panel>
 
-        <!-- LAMMPS dump data -->
-        <a-collapse-panel
-          key="lammps"
-          :header="t('settings.panel.lammps.header')"
-        >
-          <a-form layout="vertical">
-            <a-alert
-              type="info"
-              show-icon
-              :message="t('settings.panel.lammps.alert')"
-            />
-
-            <a-space :size="6" style="margin-top: 8px; flex-wrap: wrap">
-              <a-typography-text type="secondary">
-                {{ t("settings.panel.lammps.currentLayer") }}:
-              </a-typography-text>
-              <a-tooltip
-                v-if="activeLayerInfo"
-                :title="activeLayerInfo.sourceFileName || activeLayerInfo.id"
-              >
-                <a-tag style="max-width: 100%">
-                  <span
-                    style="
-                      display: inline-block;
-                      max-width: 260px;
-                      overflow: hidden;
-                      text-overflow: ellipsis;
-                      white-space: nowrap;
-                      vertical-align: bottom;
-                    "
-                  >
-                    {{ activeLayerInfo.name }}
-                  </span>
-                </a-tag>
-              </a-tooltip>
-              <a-typography-text v-else type="secondary">
-                -
-              </a-typography-text>
-            </a-space>
-
-            <a-form-item
-              :label="t('settings.panel.lammps.mapLabel')"
-              style="margin-top: 12px"
-            >
-              <div
-                v-for="(row, idx) in lammpsTypeMapModel"
-                :key="`${row.typeId}-${idx}`"
-                style="margin-bottom: 8px"
-              >
-                <a-row :gutter="8" align="middle">
-                  <a-col :span="8">
-                    <a-input-number
-                      :aria-label="t('settings.panel.lammps.typePlaceholder')"
-                      :title="t('settings.panel.lammps.typePlaceholder')"
-                      :min="1"
-                      :step="1"
-                      :value="row.typeId"
-                      style="width: 100%"
-                      :placeholder="t('settings.panel.lammps.typePlaceholder')"
-                      @change="onLammpsTypeId(idx, $event)"
-                    />
-                  </a-col>
-
-                  <a-col :span="10">
-                    <a-select
-                      show-search
-                      :aria-label="
-                        t('settings.panel.lammps.elementPlaceholder')
-                      "
-                      :title="t('settings.panel.lammps.elementPlaceholder')"
-                      :value="row.element"
-                      style="width: 100%"
-                      :placeholder="
-                        t('settings.panel.lammps.elementPlaceholder')
-                      "
-                      :options="atomicOptions"
-                      :filter-option="filterAtomicOption"
-                      @change="onLammpsElementChange(idx, $event)"
-                    />
-                  </a-col>
-
-                  <a-col :span="6">
-                    <a-button danger block @click="removeLammpsRow(idx)">
-                      {{ t("common.delete") }}
-                    </a-button>
-                  </a-col>
-                </a-row>
-              </div>
-
-              <a-row :gutter="8">
-                <a-col :span="12">
-                  <a-button block @click="addLammpsRow">
-                    {{ t("settings.panel.lammps.addMapping") }}
-                  </a-button>
-                </a-col>
-                <a-col :span="12">
-                  <a-button block @click="clearLammpsRows">
-                    {{ t("settings.panel.lammps.clear") }}
-                  </a-button>
-                </a-col>
-              </a-row>
-
-              <div style="margin-top: 8px">
-                <a-button
-                  block
-                  type="primary"
-                  :disabled="!viewerApi"
-                  @click="onRefreshTypeMap"
-                >
-                  {{ t("settings.panel.lammps.refresh") }}
-                </a-button>
-              </div>
-
-              <a-typography-text
-                type="secondary"
-                style="display: block; margin-top: 8px"
-              >
-                {{ t("settings.panel.lammps.hint") }}
-              </a-typography-text>
-            </a-form-item>
-          </a-form>
+        <a-collapse-panel key="colors" :header="t('settings.panel.colors.header')">
+          <ColorsPanel />
         </a-collapse-panel>
 
-        <!-- 其他 -->
-        <a-collapse-panel
-          key="other"
-          :header="t('settings.panel.other.header')"
-        >
-          <a-form layout="vertical">
-            <!-- 坐标轴 -->
-            <a-form-item>
-              <a-row justify="space-between" align="middle">
-                <a-col>{{ t("settings.panel.other.axes") }}</a-col>
-                <a-col>
-                  <a-switch
-                    v-model:checked="showAxesModel"
-                    :aria-label="t('settings.panel.other.axes')"
-                    :title="t('settings.panel.other.axes')"
-                  />
-                </a-col>
-              </a-row>
-            </a-form-item>
-
-            <!-- Bonds -->
-            <a-form-item>
-              <a-row justify="space-between" align="middle">
-                <a-col>{{ t("settings.panel.other.bonds") }}</a-col>
-                <a-col>
-                  <a-switch
-                    v-model:checked="showBondsModel"
-                    :aria-label="t('settings.panel.other.bonds')"
-                    :title="t('settings.panel.other.bonds')"
-                  />
-                </a-col>
-              </a-row>
-            </a-form-item>
-
-            <!-- 播放时键合刷新 -->
-            <a-form-item>
-              <a-row justify="space-between" align="middle">
-                <a-col>{{ t("settings.panel.other.refreshBondsOnPlay") }}</a-col>
-                <a-col>
-                  <a-switch
-                    v-model:checked="refreshBondsOnPlayModel"
-                    :aria-label="t('settings.panel.other.refreshBondsOnPlay')"
-                    :title="t('settings.panel.other.refreshBondsOnPlay')"
-                  />
-                </a-col>
-              </a-row>
-            </a-form-item>
-            <!-- 原子大小 -->
-            <a-form-item :label="t('settings.panel.other.atomSize')">
-              <a-row :gutter="8" align="middle">
-                <a-col :flex="1">
-                  <a-slider
-                    v-model:value="atomScaleModel"
-                    :min="0.2"
-                    :max="2"
-                    :step="0.05"
-                  />
-                </a-col>
-                <a-col :style="{ width: '96px' }">
-                  <a-input-number
-                    v-model:value="atomScaleModel"
-                    :aria-label="t('settings.panel.other.atomSize')"
-                    :title="t('settings.panel.other.atomSize')"
-                    :min="0.2"
-                    :max="2"
-                    :step="0.05"
-                    style="width: 100%"
-                  />
-                </a-col>
-              </a-row>
-            </a-form-item>
-
-            <!-- 录制帧率 -->
-            <a-form-item :label="t('settings.panel.other.recordFps')">
-              <a-row :gutter="8" align="middle">
-                <a-col :flex="1">
-                  <a-slider
-                    v-model:value="recordFpsModel"
-                    :min="1"
-                    :max="120"
-                    :step="1"
-                  />
-                </a-col>
-                <a-col :style="{ width: '96px' }">
-                  <a-input-number
-                    v-model:value="recordFpsModel"
-                    :aria-label="t('settings.panel.other.recordFps')"
-                    :title="t('settings.panel.other.recordFps')"
-                    :min="1"
-                    :max="120"
-                    :step="1"
-                    style="width: 100%"
-                  />
-                </a-col>
-              </a-row>
-
-              <a-typography-text
-                type="secondary"
-                style="display: block; margin-top: 6px"
-              >
-                {{ t("settings.panel.other.recordFpsHint") }}
-              </a-typography-text>
-            </a-form-item>
-          </a-form>
+        <a-collapse-panel key="other" :header="t('settings.panel.other.header')">
+          <OtherPanel />
         </a-collapse-panel>
       </a-collapse>
     </div>
@@ -670,90 +163,27 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch, onMounted, onBeforeUnmount } from 'vue';
-import { message } from 'ant-design-vue';
-import { DeleteOutlined } from '@ant-design/icons-vue';
-import type { ViewerSettings } from '../../lib/viewer/settings';
-import {
-  normalizeViewPresets,
-  type ViewPreset,
-} from '../../lib/viewer/viewPresets';
-import {
-  ATOMIC_SYMBOLS,
-  normalizeElementSymbol,
-} from '../../lib/structure/chem';
+import { computed, onBeforeUnmount, onMounted, provide, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { viewerApiRef } from '../../lib/viewer/bridge';
-import type { ParseMode } from '../../lib/structure/parse';
-import { isDark } from '../../theme/mode';
+import type { ViewerSettings } from '../../lib/viewer/settings';
 
-/** 本地类型：避免 settings.ts 导出名不一致造成报错
- * Local type to avoid export-name mismatch in settings.ts
- */
-type LammpsTypeMapItem = { typeId: number; element: string };
+import FilesPanel from './panels/FilesPanel.vue';
+import LayersPanel from './panels/LayersPanel.vue';
+import DisplayPanel from './panels/DisplayPanel.vue';
+import LammpsPanel from './panels/LammpsPanel.vue';
+import ColorsPanel from './panels/ColorsPanel.vue';
+import OtherPanel from './panels/OtherPanel.vue';
 
-const { t } = useI18n();
-
-const viewerApi = computed(() => viewerApiRef.value);
-const layerList = computed(() => viewerApi.value?.layers.value ?? []);
-const activeLayerId = computed(
-  () => viewerApi.value?.activeLayerId.value ?? null,
-);
-const activeLayerInfo = computed(() => {
-  const id = activeLayerId.value;
-  if (!id) return null;
-  return layerList.value.find(l => l.id === id) ?? null;
-});
-const hasAnyLayer = computed(() => layerList.value.length > 0);
-
-const exportScale = ref<number>(2);
-const exportTransparent = ref<boolean>(true);
-
-const parseModeModel = computed<ParseMode>({
-  get: () => viewerApi.value?.parseMode.value ?? 'auto',
-  set: v => viewerApi.value?.setParseMode(v),
-});
-
-const parseModeOptions = computed(() => [
-  { value: 'auto', label: t('viewer.parse.modeOptions.auto') },
-  { value: 'xyz', label: t('viewer.parse.modeOptions.xyz') },
-  { value: 'pdb', label: t('viewer.parse.modeOptions.pdb') },
-  { value: 'lammpsdump', label: t('viewer.parse.modeOptions.lammpsdump') },
-  { value: 'lammpsdata', label: t('viewer.parse.modeOptions.lammpsdata') },
-]);
-
-function onOpenFile(): void {
-  viewerApi.value?.openFilePicker();
-}
-
-function onExport(): void {
-  if (!viewerApi.value) return;
-  void viewerApi.value.exportPng({
-    scale: exportScale.value,
-    transparent: exportTransparent.value,
-  });
-}
-
-function onSetActive(id: string): void {
-  viewerApi.value?.setActiveLayer(id);
-}
-
-function onToggleLayer(id: string, visible: boolean): void {
-  viewerApi.value?.setLayerVisible(id, visible);
-}
-
-function onDeleteLayer(id: string): void {
-  viewerApi.value?.removeLayer(id);
-}
+import { settingsSiderContextKey, type PatchSettingsFn } from './context';
 
 const props = withDefaults(
   defineProps<{
     open: boolean;
     settings: ViewerSettings;
-    activeKey?: string[]; // <- 允许空数组（全部折叠）
+    activeKey?: string[];
   }>(),
   {
-    activeKey: () => ['display'], // <- 默认展开“显示”
+    activeKey: () => ['display'],
   },
 );
 
@@ -763,52 +193,39 @@ const emit = defineEmits<{
   (e: 'update:activeKey', v: string[]): void;
 }>();
 
+const { t } = useI18n();
+
+/**
+ * Patch settings back to parent.
+ * Panels call this via provide/inject.
+ */
+const patchSettings: PatchSettingsFn = (patch) => {
+  emit('update:settings', {
+    ...props.settings,
+    ...patch,
+    rotationDeg: {
+      ...props.settings.rotationDeg,
+      ...(patch.rotationDeg ?? {}),
+    },
+  });
+};
+
+provide(settingsSiderContextKey, {
+  settings: computed(() => props.settings),
+  patchSettings,
+});
+
 /**
  * Drawer open v-model
- * 抽屉开关双向绑定
  */
 const openModel = computed({
   get: () => props.open,
   set: (v: boolean) => emit('update:open', v),
 });
 
-// Keep placement stable while the drawer is open (and during its close animation).
-watch(
-  () => props.open,
-  (v, prev) => {
-    if (v) {
-      placementLock.value = isMobile.value ? 'bottom' : 'right';
-      freezeTopPx.value = null;
-      if (releaseLockTimer != null) {
-        window.clearTimeout(releaseLockTimer);
-        releaseLockTimer = null;
-      }
-      return;
-    }
-
-    // If the drawer is being closed programmatically (not via our close button),
-    // still apply the same guards on mobile to avoid a jump.
-    if (prev && !v) {
-      placementLock.value
-        = placementLock.value ?? (isMobile.value ? 'bottom' : 'right');
-      if (placementLock.value === 'bottom' && freezeTopPx.value == null) {
-        freezeBottomSheetTop();
-        if (releaseLockTimer != null) window.clearTimeout(releaseLockTimer);
-        releaseLockTimer = window.setTimeout(() => {
-          clearCloseGuards();
-        }, 500);
-      }
-    }
-  },
-  { immediate: true },
-);
-
 /**
  * Collapse activeKey v-model
- * 折叠面板展开项双向绑定
  */
-// Ant Design Vue 在不同模式下可能回传 string 或 string[]。
-// 这里统一规范成 string[]，支持“全部折叠”（空数组）。
 const activeKeyModel = computed<string[]>({
   get: () => props.activeKey ?? [],
   set: (v: unknown) => {
@@ -827,10 +244,7 @@ const activeKeyModel = computed<string[]>({
  * desktop: right drawer
  * ----------------------------- */
 const isMobile = ref(false);
-
-// Lock placement during open/close to avoid jitter around the breakpoint.
 const placementLock = ref<'right' | 'bottom' | null>(null);
-// Freeze top during close on mobile to avoid a "jump" when the visual viewport changes.
 const freezeTopPx = ref<number | null>(null);
 let releaseLockTimer: number | null = null;
 
@@ -844,8 +258,6 @@ function clearCloseGuards(): void {
 }
 
 function getViewportHeight(): number {
-  // Prefer VisualViewport to match the actually visible area on mobile browsers.
-  // Fallback to innerHeight when unavailable.
   return Math.round((window.visualViewport?.height ?? window.innerHeight) || 0);
 }
 
@@ -860,7 +272,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   window.removeEventListener('resize', updateIsMobile);
-  onResizeEnd(); // 确保移除监听
+  onResizeEnd();
   clearCloseGuards();
 });
 
@@ -870,9 +282,6 @@ const drawerPlacement = computed<'right' | 'bottom'>(
 
 const drawerWidth = 'min(360px, calc(100vw - 24px))';
 
-/** -----------------------------
- * Mobile height resize (bottom-sheet)
- * ----------------------------- */
 function loadNum(key: string, fallback: number): number {
   const raw = localStorage.getItem(key);
   const v = raw != null ? Number(raw) : NaN;
@@ -891,18 +300,41 @@ const mobileHeight = ref<number>(
 
 function freezeBottomSheetTop(): void {
   const vh = getViewportHeight();
-  // Keep the top edge stable: top = viewportHeight - drawerHeight.
   freezeTopPx.value = Math.max(0, vh - mobileHeight.value);
 }
 
+watch(
+  () => props.open,
+  (v, prev) => {
+    if (v) {
+      placementLock.value = isMobile.value ? 'bottom' : 'right';
+      freezeTopPx.value = null;
+      if (releaseLockTimer != null) {
+        window.clearTimeout(releaseLockTimer);
+        releaseLockTimer = null;
+      }
+      return;
+    }
+
+    if (prev && !v) {
+      placementLock.value
+        = placementLock.value ?? (isMobile.value ? 'bottom' : 'right');
+      if (placementLock.value === 'bottom' && freezeTopPx.value == null) {
+        freezeBottomSheetTop();
+        if (releaseLockTimer != null) window.clearTimeout(releaseLockTimer);
+        releaseLockTimer = window.setTimeout(() => {
+          clearCloseGuards();
+        }, 500);
+      }
+    }
+  },
+  { immediate: true },
+);
+
 function onCloseClick(): void {
-  // If we are closing a bottom-sheet, guard against viewport changes
-  // (address bar show/hide, pull-to-refresh UI) that can cause a visual "jump".
   if (drawerPlacement.value === 'bottom') {
     placementLock.value = 'bottom';
     freezeBottomSheetTop();
-
-    // Fallback: clear guards even if the drawer does not emit after-open-change.
     if (releaseLockTimer != null) window.clearTimeout(releaseLockTimer);
     releaseLockTimer = window.setTimeout(() => {
       clearCloseGuards();
@@ -920,14 +352,20 @@ function onCloseClick(): void {
 }
 
 function onAfterOpenChange(open: boolean): void {
-  // When the animation finishes, release locks.
-  if (!open) {
-    clearCloseGuards();
-  }
-  else {
-    // Opening finished: no need to keep a frozen top.
-    freezeTopPx.value = null;
-  }
+  if (!open) clearCloseGuards();
+  else freezeTopPx.value = null;
+}
+
+/**
+ * Desktop panel transition hooks.
+ * Keep close-guards cleanup aligned with the visual end of the slide animation.
+ */
+function onDesktopAfterEnter(): void {
+  onAfterOpenChange(true);
+}
+
+function onDesktopAfterLeave(): void {
+  onAfterOpenChange(false);
 }
 
 let resizing = false;
@@ -941,12 +379,8 @@ function clamp(n: number, min: number, max: number): number {
 }
 
 function startBlockPullToRefresh(): void {
-  // Chrome/Android: overscroll-behavior is effective when applied to the root.
   document.documentElement.classList.add('resizing');
   document.body.classList.add('resizing');
-
-  // iOS/Safari (and some OEM browsers): overscroll-behavior may not reliably stop pull-to-refresh.
-  // During the resize gesture only, prevent default touchmove to suppress refresh / rubber-band.
   touchMoveBlocker = (ev: TouchEvent) => {
     if (resizing) ev.preventDefault();
   };
@@ -956,7 +390,6 @@ function startBlockPullToRefresh(): void {
 function stopBlockPullToRefresh(): void {
   document.documentElement.classList.remove('resizing');
   document.body.classList.remove('resizing');
-
   if (touchMoveBlocker) {
     window.removeEventListener('touchmove', touchMoveBlocker as any);
     touchMoveBlocker = null;
@@ -971,13 +404,11 @@ function onResizeStart(e: PointerEvent): void {
   startY = e.clientY;
   startH = mobileHeight.value;
 
-  // Keep receiving pointer events even if the finger drifts outside the handle.
-  // Also reduces the chance of losing the gesture to scroll/pull-to-refresh.
   try {
     (e.currentTarget as HTMLElement | null)?.setPointerCapture?.(e.pointerId);
   }
   catch {
-    // Ignore capture failures (older browsers)
+    // Ignore
   }
 
   startBlockPullToRefresh();
@@ -994,12 +425,10 @@ function onResizing(e: PointerEvent): void {
   if (!resizing) return;
   if (activePointerId != null && e.pointerId !== activePointerId) return;
 
-  // 向上拖动 => 高度增加
   const dy = startY - e.clientY;
   const maxH = Math.floor(window.innerHeight * 0.92);
   mobileHeight.value = clamp(startH + dy, 260, maxH);
   saveNum('settingsDrawer.mobileHeight', mobileHeight.value);
-
   e.preventDefault();
 }
 
@@ -1014,12 +443,8 @@ function onResizeEnd(): void {
   activePointerId = null;
 }
 
-/** -----------------------------
- * Drawer styles
- * ----------------------------- */
 const contentWrapperStyle = computed(() => {
   if (drawerPlacement.value === 'right') {
-    // 桌面端：铺满上下，避免出现/消失滚动条导致的缩放抖动
     return {
       top: '0',
       bottom: '0',
@@ -1031,15 +456,12 @@ const contentWrapperStyle = computed(() => {
     } as Record<string, any>;
   }
 
-  // 手机端：bottom-sheet，圆角顶边 + safe-area
   const base = {
     borderRadius: '14px 14px 0 0',
     overflow: 'hidden',
     boxShadow: '0 -12px 34px rgba(0,0,0,0.14)',
   } as Record<string, any>;
 
-  // During close, some mobile browsers change the visual viewport height (address bar).
-  // A bottom-anchored fixed drawer would jump upward; freezing `top` keeps the motion smooth.
   if (freezeTopPx.value != null) {
     return { ...base, top: `${freezeTopPx.value}px`, bottom: 'auto' } as Record<
       string,
@@ -1047,6 +469,19 @@ const contentWrapperStyle = computed(() => {
     >;
   }
   return base;
+});
+
+/**
+ * Desktop panel root style.
+ * Teleport + fixed-position keeps the viewer layout stable (no body scroll-lock).
+ */
+const desktopPanelStyle = computed(() => {
+  return {
+    position: 'fixed',
+    zIndex: 1000,
+    width: drawerWidth,
+    ...contentWrapperStyle.value,
+  } as Record<string, any>;
 });
 
 const drawerBodyStyle = computed(() => {
@@ -1057,269 +492,6 @@ const drawerBodyStyle = computed(() => {
     flexDirection: 'column',
   } as Record<string, any>;
 });
-
-// Allow seeing the model behind the drawer a bit more (still blocks clicks via mask).
-const maskStyle = computed(() => {
-  return {
-    background: isDark.value ? 'rgba(0,0,0,0.30)' : 'rgba(0,0,0,0.14)',
-  } as Record<string, any>;
-});
-
-/** 合并并回写 settings / Patch settings back to parent */
-function patchSettings(
-  patch: Omit<Partial<ViewerSettings>, 'rotationDeg'> & {
-    rotationDeg?: Partial<ViewerSettings['rotationDeg']>;
-  },
-): void {
-  emit('update:settings', {
-    ...props.settings,
-    ...patch,
-    rotationDeg: {
-      ...props.settings.rotationDeg,
-      ...(patch.rotationDeg ?? {}),
-    },
-  });
-}
-
-/* -----------------------------
- * Display / Pose settings
- * ----------------------------- */
-
-const recordFpsModel = computed({
-  get: () => props.settings.frame_rate ?? 60,
-  set: (v: number) =>
-    patchSettings({ frame_rate: Math.max(1, Math.min(120, Math.floor(v))) }),
-});
-
-const atomScaleModel = computed({
-  get: () => props.settings.atomScale,
-  set: (v: number) => patchSettings({ atomScale: v }),
-});
-
-const showAxesModel = computed({
-  get: () => props.settings.showAxes,
-  set: (v: boolean) => patchSettings({ showAxes: v }),
-});
-
-const showBondsModel = computed({
-  get: () => props.settings.showBonds,
-  set: (v: boolean) => patchSettings({ showBonds: v }),
-});
-
-const refreshBondsOnPlayModel = computed({
-  get: () => props.settings.refreshBondsOnPlay ?? true,
-  set: (v: boolean) => patchSettings({ refreshBondsOnPlay: v }),
-});
-
-/**
- * 注意 / Note:
- * 你这里文案是 perspective，但变量叫 orthographicModel。
- * 当前逻辑：switch 开 = 透视，所以用 !orthographic 映射。
- * If you want "switch ON = orthographic", remove the negation.
- */
-const orthographicModel = computed({
-  get: () => !props.settings.orthographic,
-  set: (v: boolean) => patchSettings({ orthographic: !v }),
-});
-
-const viewPresetOptions = computed(() => [
-  { label: t('settings.panel.display.viewPresetFront'), value: 'front' },
-  { label: t('settings.panel.display.viewPresetSide'), value: 'side' },
-  { label: t('settings.panel.display.viewPresetTop'), value: 'top' },
-]);
-
-// View presets selection is a controlled value so we can enforce constraints:
-// - At least one preset must be selected.
-// - At most two presets; selecting a 3rd auto-unchecks the oldest.
-const viewPresetsModel = ref<ViewPreset[]>(['front']);
-
-function syncViewPresetsFromProps(): void {
-  const cur = normalizeViewPresets(props.settings.viewPresets);
-  if (cur.length > 0) {
-    viewPresetsModel.value = cur;
-    return;
-  }
-  // Backward-compat: old dualViewEnabled implies [front, side]
-  if (props.settings.dualViewEnabled) {
-    viewPresetsModel.value = ['front', 'side'];
-    return;
-  }
-  // Never allow empty in UI
-  viewPresetsModel.value = ['front'];
-}
-
-watch(
-  () => [props.settings.viewPresets, props.settings.dualViewEnabled] as const,
-  () => syncViewPresetsFromProps(),
-  { immediate: true, deep: true },
-);
-
-function onViewPresetsChange(nextRaw: any): void {
-  // Do NOT normalize here: the change payload may contain 3 items.
-  // We need the raw set to correctly detect the newly added preset and drop the oldest.
-  const arr = Array.isArray(nextRaw) ? nextRaw : [];
-  const next = arr.filter(
-    (x): x is ViewPreset => x === 'front' || x === 'side' || x === 'top',
-  );
-  const prev = viewPresetsModel.value;
-
-  // Prevent unselecting all
-  if (!next || next.length === 0) {
-    message.warning(t('settings.panel.display.viewPresetsNeedOne'));
-    return;
-  }
-
-  // Build a stable selection order based on user actions:
-  // keep previous ones that are still selected, then append newly added ones.
-  const keep = prev.filter(p => next.includes(p));
-  const added = next.filter(p => !prev.includes(p));
-  const merged = [...keep, ...added];
-
-  // Enforce max-two: drop the oldest (front of the array).
-  while (merged.length > 2) merged.shift();
-
-  viewPresetsModel.value = merged;
-  patchSettings({ viewPresets: merged, dualViewEnabled: false });
-}
-
-const dualViewDistanceModel = computed({
-  get: () => props.settings.dualViewDistance ?? 10,
-  set: (v: number) => patchSettings({ dualViewDistance: v }),
-});
-
-// Allow the distance control to represent fitted camera distances for larger models.
-// Keep a conservative minimum upper bound so the UI stays usable.
-// const dualViewDistanceMax = computed(() => {
-//     const v = props.settings.dualViewDistance ?? 10;
-//     return Math.max(200, Math.ceil(v * 1.2));
-// });
-const dualViewDistanceMax = 500;
-
-// Dual view split ratio: store as 0..1 in settings, expose as 10..90 (%) in UI
-const dualViewSplitPctModel = computed({
-  get: () => {
-    const r
-      = typeof props.settings.dualViewSplit === 'number'
-        ? props.settings.dualViewSplit
-        : 0.5;
-    return Math.round(Math.max(0.1, Math.min(0.9, r)) * 100);
-  },
-  set: (pct: number) => {
-    const r = Math.max(0.1, Math.min(0.9, pct / 100));
-    patchSettings({ dualViewSplit: r });
-  },
-});
-
-const rotXModel = computed({
-  get: () => props.settings.rotationDeg.x,
-  set: (v: number) => patchSettings({ rotationDeg: { x: v } }),
-});
-
-const rotYModel = computed({
-  get: () => props.settings.rotationDeg.y,
-  set: (v: number) => patchSettings({ rotationDeg: { y: v } }),
-});
-
-const rotZModel = computed({
-  get: () => props.settings.rotationDeg.z,
-  set: (v: number) => patchSettings({ rotationDeg: { z: v } }),
-});
-
-function resetPose(): void {
-  patchSettings({ rotationDeg: { x: 0, y: 0, z: 0 } });
-}
-
-function resetDistance(): void {
-  // Restore the fitted distance captured on model load.
-  // Do not touch model rotation so users can keep their chosen orientation.
-  const d
-    = typeof props.settings.initialDualViewDistance === 'number'
-      && Number.isFinite(props.settings.initialDualViewDistance)
-      ? props.settings.initialDualViewDistance
-      : typeof props.settings.dualViewDistance === 'number'
-        && Number.isFinite(props.settings.dualViewDistance)
-        ? props.settings.dualViewDistance
-        : 10;
-  patchSettings({ dualViewDistance: d });
-}
-
-/* -----------------------------
- * LAMMPS type -> element mapping
- * ----------------------------- */
-
-const lammpsTypeMapModel = computed<LammpsTypeMapItem[]>({
-  get: () => (viewerApi.value?.activeLayerTypeMap.value as (LammpsTypeMapItem[] | undefined)) ?? [],
-  set: v => viewerApi.value?.setActiveLayerTypeMap(v),
-});
-
-const atomicOptions = computed(() =>
-  ATOMIC_SYMBOLS.map((symRaw) => {
-    const sym = normalizeElementSymbol(symRaw) || 'E';
-    return { value: sym, label: sym === 'E' ? 'E (Unknown)' : sym };
-  }),
-);
-
-function filterAtomicOption(
-  input: string,
-  option?: { value?: unknown; label?: unknown },
-): boolean {
-  const q = (input ?? '').trim().toLowerCase();
-  if (!q) return true;
-
-  const value = String(option?.value ?? '').toLowerCase();
-  const label = String(option?.label ?? '').toLowerCase();
-  return value.includes(q) || label.includes(q);
-}
-
-function toInt(v: unknown, fallback: number): number {
-  const n = typeof v === 'number' ? v : Number.parseFloat(String(v ?? ''));
-  if (!Number.isFinite(n)) return fallback;
-  return Math.max(1, Math.floor(n));
-}
-
-function toElement(v: unknown): string {
-  return normalizeElementSymbol(String(v ?? '')) || 'E';
-}
-
-function addLammpsRow(): void {
-  const used = new Set(
-    lammpsTypeMapModel.value.map(r => toInt((r as any).typeId, 1)),
-  );
-  let next = 1;
-  while (used.has(next)) next += 1;
-  lammpsTypeMapModel.value = [
-    ...lammpsTypeMapModel.value,
-    { typeId: next, element: 'E' },
-  ];
-}
-
-function removeLammpsRow(idx: number): void {
-  lammpsTypeMapModel.value = lammpsTypeMapModel.value.filter(
-    (_, i) => i !== idx,
-  );
-}
-
-function clearLammpsRows(): void {
-  lammpsTypeMapModel.value = [];
-}
-
-function onLammpsTypeId(idx: number, v: unknown): void {
-  const typeId = toInt(v, 1);
-  lammpsTypeMapModel.value = lammpsTypeMapModel.value.map((row, i) =>
-    i === idx ? { ...row, typeId } : row,
-  );
-}
-
-function onLammpsElementChange(idx: number, v: unknown): void {
-  const element = toElement(v);
-  lammpsTypeMapModel.value = lammpsTypeMapModel.value.map((row, i) =>
-    i === idx ? { ...row, element } : row,
-  );
-}
-
-function onRefreshTypeMap(): void {
-  viewerApi.value?.refreshTypeMap();
-}
 </script>
 
 <style src="./index.css"></style>

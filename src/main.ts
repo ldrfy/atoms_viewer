@@ -6,6 +6,7 @@ import 'ant-design-vue/dist/reset.css';
 import './style.css';
 
 import {
+  Input,
   Popconfirm,
   ConfigProvider,
   Layout,
@@ -43,6 +44,7 @@ const app = createApp(App);
 app.use(i18n);
 
 app
+  .use(Input)
   .use(ConfigProvider)
   .use(List)
   .use(Popconfirm)

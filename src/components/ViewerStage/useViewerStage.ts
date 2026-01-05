@@ -5,6 +5,7 @@ import type { Ref, ComponentPublicInstance } from 'vue';
 import type {
   ViewerSettings,
   LammpsTypeMapItem,
+  AtomTypeColorMapItem,
   OpenSettingsPayload,
 } from '../../lib/viewer/settings';
 
@@ -51,6 +52,8 @@ type ViewerStageBridgeApi = {
   }) => Promise<void>;
 
   refreshTypeMap: () => void;
+  refreshColorMap: () => void;
+  refreshColorMap: () => void;
 
   parseInfo: any;
   parseMode: Ref<any>;
@@ -64,6 +67,9 @@ type ViewerStageBridgeApi = {
 
   activeLayerTypeMap: Ref<LammpsTypeMapItem[]>;
   setActiveLayerTypeMap: (rows: LammpsTypeMapItem[]) => void;
+
+  activeLayerColorMap: Ref<AtomTypeColorMapItem[]>;
+  setActiveLayerColorMap: (rows: AtomTypeColorMapItem[]) => void;
 };
 
 type ViewerStageExposedApi = {
@@ -98,6 +104,9 @@ type ViewerStageBindings = {
 
   activeLayerTypeMap: Ref<LammpsTypeMapItem[]>;
   setActiveLayerTypeMap: (rows: LammpsTypeMapItem[]) => void;
+
+  activeLayerColorMap: Ref<AtomTypeColorMapItem[]>;
+  setActiveLayerColorMap: (rows: AtomTypeColorMapItem[]) => void;
 
   removeLayer: (id: string) => void;
 
@@ -178,6 +187,10 @@ export function useViewerStage(
 
   const activeLayerTypeMap = computed<LammpsTypeMapItem[]>(() => {
     return (runtimeTick.value, runtime?.activeTypeMapRows.value ?? []);
+  });
+
+  const activeLayerColorMap = computed<AtomTypeColorMapItem[]>(() => {
+    return (runtimeTick.value, runtime?.activeColorMapRows.value ?? []);
   });
 
   // state
@@ -286,6 +299,11 @@ export function useViewerStage(
   function setActiveLayerTypeMap(rows: LammpsTypeMapItem[]): void {
     if (!runtime) return;
     runtime.setActiveLayerTypeMapRows(rows);
+  }
+
+  function setActiveLayerColorMap(rows: AtomTypeColorMapItem[]): void {
+    if (!runtime) return;
+    runtime.setActiveLayerColorMapRows(rows);
   }
 
   function removeLayer(id: string): void {
@@ -467,6 +485,7 @@ export function useViewerStage(
     exportPng: exporter.onExportPng,
 
     refreshTypeMap: () => void loader.refreshTypeMap(),
+    refreshColorMap: () => void loader.refreshColorMap(),
 
     parseInfo: loader.parseInfo,
     parseMode: loader.parseMode,
@@ -480,6 +499,9 @@ export function useViewerStage(
 
     activeLayerTypeMap,
     setActiveLayerTypeMap,
+
+    activeLayerColorMap,
+    setActiveLayerColorMap,
   };
 
   const exposedApi: ViewerStageExposedApi = {
@@ -505,6 +527,9 @@ export function useViewerStage(
 
     activeLayerTypeMap,
     setActiveLayerTypeMap,
+
+    activeLayerColorMap,
+    setActiveLayerColorMap,
     removeLayer,
 
     inspectCtx,
@@ -535,6 +560,7 @@ export function useViewerStage(
     openFilePicker,
 
     refreshTypeMap: () => void loader.refreshTypeMap(),
+    refreshColorMap: () => void loader.refreshColorMap(),
 
     onDragEnter,
     onDragOver,

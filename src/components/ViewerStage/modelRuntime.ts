@@ -5,8 +5,10 @@ import { ref, type Ref } from 'vue';
 import type {
   ViewerSettings,
   LammpsTypeMapItem,
+  AtomTypeColorMapItem,
 } from '../../lib/viewer/settings';
 import type { Atom, StructureModel } from '../../lib/structure/types';
+import { getElementColorHex } from '../../lib/structure/chem';
 
 import type { ThreeStage } from '../../lib/three/stage';
 import { makeTextLabel } from '../../lib/three/labels2d';
@@ -29,7 +31,18 @@ import {
   remapAtomsByTypeId,
 } from './typeMap';
 
-const SPHERE_SEGMENTS = 24;
+import {
+  buildColorMapRecord,
+  getAtomTypeColorKey,
+  syncColorMapRowsFromAtoms,
+} from './colorMap';
+
+const DEFAULT_SPHERE_SEGMENTS = 24;
+
+function clampInt(n: number, min: number, max: number): number {
+  const v = Math.floor(Number.isFinite(n) ? n : DEFAULT_SPHERE_SEGMENTS);
+  return Math.max(min, Math.min(max, v));
+}
 
 export type ModelLayerInfo = {
   id: string;
@@ -59,6 +72,9 @@ type LayerInternal = {
 
   /** Per-layer LAMMPS typeId->element mapping rows (NOT global). */
   typeMapRows: LammpsTypeMapItem[];
+
+  /** Per-layer atom type color mapping rows (active layer editable in Settings). */
+  colorMapRows: AtomTypeColorMapItem[];
 
   // tmp
   baseCenter: THREE.Vector3; // keep at (0,0,0) so applyFrameAtomsToMeshes == shift by current mean
@@ -139,6 +155,7 @@ export type ModelRuntime = {
   layers: Ref<ModelLayerInfo[]>;
   activeLayerId: Ref<string | null>;
   activeTypeMapRows: Ref<LammpsTypeMapItem[]>;
+  activeColorMapRows: Ref<AtomTypeColorMapItem[]>;
 
   renderModel: (
     model: StructureModel,
@@ -167,8 +184,11 @@ export type ModelRuntime = {
 
   hasAnyTypeId: () => boolean;
   onTypeMapChanged: () => void;
+  onColorMapChanged: () => void;
 
   setActiveLayerTypeMapRows: (rows: LammpsTypeMapItem[]) => void;
+
+  setActiveLayerColorMapRows: (rows: AtomTypeColorMapItem[]) => void;
 
   removeLayer: (id: string) => void;
 
@@ -199,6 +219,7 @@ export function createModelRuntime(args: {
   const layers = ref<ModelLayerInfo[]>([]);
   const activeLayerId = ref<string | null>(null);
   const activeTypeMapRows = ref<LammpsTypeMapItem[]>([]);
+  const activeColorMapRows = ref<AtomTypeColorMapItem[]>([]);
 
   const layerMap = new Map<string, LayerInternal>();
 
@@ -408,6 +429,15 @@ export function createModelRuntime(args: {
     return settingsRef.value;
   }
 
+  function getSphereSegments(): number {
+    const s = getSettings().sphereSegments;
+    return clampInt(
+      typeof s === 'number' && Number.isFinite(s) ? s : DEFAULT_SPHERE_SEGMENTS,
+      8,
+      64,
+    );
+  }
+
   function syncHasModelFlag(): void {
     hasModel.value = layers.value.length > 0;
   }
@@ -421,6 +451,11 @@ export function createModelRuntime(args: {
   function syncActiveTypeMap(): void {
     const a = getActiveLayer();
     activeTypeMapRows.value = (a?.typeMapRows ?? []) as LammpsTypeMapItem[];
+  }
+
+  function syncActiveColorMap(): void {
+    const a = getActiveLayer();
+    activeColorMapRows.value = (a?.colorMapRows ?? []) as AtomTypeColorMapItem[];
   }
 
   function expandTypeIdsContiguous(typeIdsRaw: number[]): number[] {
@@ -519,12 +554,21 @@ export function createModelRuntime(args: {
     layer.bondMeshes = [];
     layer.lastBondSegCount = 0;
 
+    const preferTypeId = !!layer.hasAnyTypeId;
+    const getColorKey = (a: Atom) =>
+      preferTypeId
+        ? getAtomTypeColorKey(a.element, a.typeId)
+        : getAtomTypeColorKey(a.element);
+    const colorMap = buildColorMapRecord(layer.colorMapRows);
+
     // atoms
     layer.atomMeshes = buildAtomMeshesByElement({
       atoms: atomsForVisuals,
       atomSizeFactor,
       atomScale: getSettings().atomScale,
-      sphereSegments: SPHERE_SEGMENTS,
+      sphereSegments: getSphereSegments(),
+      getColorKey,
+      colorMap,
     });
     for (const m of layer.atomMeshes) {
       (m.userData as any).layerId = layer.info.id;
@@ -541,6 +585,8 @@ export function createModelRuntime(args: {
         bondFactor,
         atomSizeFactor,
         bondRadius,
+        getColorKey,
+        colorMap,
       });
       layer.bondMeshes = res.meshes;
       layer.lastBondSegCount = res.segCount;
@@ -569,6 +615,7 @@ export function createModelRuntime(args: {
     if (!layerMap.has(id)) return;
     activeLayerId.value = id;
     syncActiveTypeMap();
+    syncActiveColorMap();
 
     // keep axes in sync
     applyShowAxes();
@@ -586,6 +633,7 @@ export function createModelRuntime(args: {
       const next = layers.value.find(x => x.visible && x.id !== id) ?? null;
       activeLayerId.value = next?.id ?? null;
       syncActiveTypeMap();
+      syncActiveColorMap();
       applyShowAxes();
     }
 
@@ -651,6 +699,7 @@ export function createModelRuntime(args: {
       frameIndex: 0,
       hasAnyTypeId: false,
       typeMapRows: [],
+      colorMapRows: [],
       baseCenter: new THREE.Vector3(0, 0, 0),
     };
 
@@ -671,6 +720,13 @@ export function createModelRuntime(args: {
     // Apply current per-layer type mapping (if any)
     const mappedFirstAtoms = getMappedAtomsForLayer(layer, firstAtoms);
 
+    // Initialize per-layer color mapping from (mapped) atoms
+    layer.colorMapRows = syncColorMapRowsFromAtoms(
+      layer.colorMapRows,
+      mappedFirstAtoms,
+      layer.hasAnyTypeId,
+    );
+
     // Store a model whose frame[0] uses mapped atoms for rendering (keep raw for reparse logic elsewhere)
     // We do not mutate the original model; we only render with mapped atoms.
     rebuildVisualsForLayer(layer, mappedFirstAtoms);
@@ -682,6 +738,7 @@ export function createModelRuntime(args: {
     upsertLayerInternal(layer);
     activeLayerId.value = id;
     syncActiveTypeMap();
+    syncActiveColorMap();
 
     fitCameraToAtomsCentered(mappedFirstAtoms);
     applyModelRotation();
@@ -733,6 +790,13 @@ export function createModelRuntime(args: {
 
     const mappedFirstAtoms = getMappedAtomsForLayer(active, firstAtoms);
 
+    // Keep (and sync) per-layer color mapping; preserve previous colors when possible.
+    active.colorMapRows = syncColorMapRowsFromAtoms(
+      active.colorMapRows,
+      mappedFirstAtoms,
+      active.hasAnyTypeId,
+    );
+
     rebuildVisualsForLayer(active, mappedFirstAtoms);
 
     // keep visible
@@ -741,6 +805,8 @@ export function createModelRuntime(args: {
 
     upsertLayerInternal(active);
     syncActiveTypeMap();
+    syncActiveColorMap();
+    syncActiveColorMap();
 
     fitCameraToAtomsCentered(mappedFirstAtoms);
     applyShowAxes();
@@ -763,6 +829,7 @@ export function createModelRuntime(args: {
     layers.value = [];
     activeLayerId.value = null;
     activeTypeMapRows.value = [];
+    activeColorMapRows.value = [];
 
     // axes cleanup
     axesHelper.visible = false;
@@ -836,7 +903,7 @@ export function createModelRuntime(args: {
       applyAtomScaleToMeshes(
         l.atomMeshes,
         getSettings().atomScale,
-        SPHERE_SEGMENTS,
+        getSphereSegments(),
       );
     }
 
@@ -859,11 +926,20 @@ export function createModelRuntime(args: {
     const c = computeMeanCenterInto(atoms, centerTmp2);
     const centeredAtoms = makeCenteredAtomsView(atoms, c);
 
+    const preferTypeId = !!layer.hasAnyTypeId;
+    const getColorKey = (a: Atom) =>
+      preferTypeId
+        ? getAtomTypeColorKey(a.element, a.typeId)
+        : getAtomTypeColorKey(a.element);
+    const colorMap = buildColorMapRecord(layer.colorMapRows);
+
     const res = buildBondMeshesBicolor({
       atoms: centeredAtoms,
       bondFactor,
       atomSizeFactor,
       bondRadius,
+      getColorKey,
+      colorMap,
     });
 
     layer.bondMeshes = res.meshes;
@@ -882,11 +958,20 @@ export function createModelRuntime(args: {
         const c = computeMeanCenterInto(mapped, centerTmp);
         const centeredAtoms = makeCenteredAtomsView(mapped, c);
 
+        const preferTypeId = !!l.hasAnyTypeId;
+        const getColorKey = (a: Atom) =>
+          preferTypeId
+            ? getAtomTypeColorKey(a.element, a.typeId)
+            : getAtomTypeColorKey(a.element);
+        const colorMap = buildColorMapRecord(l.colorMapRows);
+
         const res = buildBondMeshesBicolor({
           atoms: centeredAtoms,
           bondFactor,
           atomSizeFactor,
           bondRadius,
+          getColorKey,
+          colorMap,
         });
         l.bondMeshes = res.meshes;
         l.lastBondSegCount = res.segCount;
@@ -917,6 +1002,7 @@ export function createModelRuntime(args: {
     const atoms = (active.model.frames?.[active.frameIndex]
       ?? active.model.atoms) as Atom[];
     const mapped = getMappedAtomsForLayer(active, atoms);
+
     updateAxesForAtoms(mapped);
   }
 
@@ -953,6 +1039,14 @@ export function createModelRuntime(args: {
       ?? active.model.atoms) as Atom[];
     const mapped = getMappedAtomsForLayer(active, atoms);
 
+    // Type mapping can change element labels. Keep color rows in sync while preserving colors.
+    active.colorMapRows = syncColorMapRowsFromAtoms(
+      active.colorMapRows,
+      mapped,
+      active.hasAnyTypeId,
+    );
+    activeColorMapRows.value = (active.colorMapRows ?? []) as any;
+
     // atom mesh colors depend on element => must rebuild
     rebuildVisualsForLayer(active, mapped);
 
@@ -967,6 +1061,53 @@ export function createModelRuntime(args: {
     if (!active) return;
     active.typeMapRows = (rows ?? []) as any;
     activeTypeMapRows.value = (active.typeMapRows ?? []) as any;
+  }
+
+  function setActiveLayerColorMapRows(rows: AtomTypeColorMapItem[]): void {
+    const active = getActiveLayer();
+    if (!active) return;
+    active.colorMapRows = (rows ?? []) as any;
+    activeColorMapRows.value = (active.colorMapRows ?? []) as any;
+  }
+
+  function setMeshColor(mesh: THREE.InstancedMesh, color: string): void {
+    const matAny = mesh.material as any;
+    if (Array.isArray(matAny)) {
+      for (const m of matAny) {
+        if (m?.color) m.color.set(color);
+        if (m) m.needsUpdate = true;
+      }
+      return;
+    }
+    if (matAny?.color) matAny.color.set(color);
+    if (matAny) matAny.needsUpdate = true;
+  }
+
+  function onColorMapChanged(): void {
+    const active = getActiveLayer();
+    if (!active) return;
+
+    const map = buildColorMapRecord(active.colorMapRows);
+
+    // Atoms
+    for (const m of active.atomMeshes) {
+      const key = (m.userData as any).colorKey as string | undefined;
+      const el = (m.userData as any).element as string | undefined;
+      const col = (key && map[key]) ? map[key]! : getElementColorHex(el ?? 'E');
+      setMeshColor(m, col);
+    }
+
+    // Bonds
+    for (const b of active.bondMeshes) {
+      const key = (b.userData as any).colorKey as string | undefined;
+      // bond segment groups are still "by element" for default, but may be keyed by typeId
+      // If key is not found, we fall back to parsing element from the key prefix is non-trivial,
+      // so we instead use the stored element when available, else 'E'.
+      const el = (b.userData as any).element as string | undefined;
+      const fallbackEl = el ?? 'E';
+      const col = (key && map[key]) ? map[key]! : getElementColorHex(fallbackEl);
+      setMeshColor(b, col);
+    }
   }
 
   function removeLayer(id: string): void {
@@ -988,6 +1129,7 @@ export function createModelRuntime(args: {
     }
 
     syncActiveTypeMap();
+    syncActiveColorMap();
     applyShowAxes();
 
     recomputeVisibleClipRadius();
@@ -1014,6 +1156,7 @@ export function createModelRuntime(args: {
     layers,
     activeLayerId,
     activeTypeMapRows,
+    activeColorMapRows,
 
     renderModel,
     replaceActiveLayerModel,
@@ -1034,7 +1177,9 @@ export function createModelRuntime(args: {
 
     hasAnyTypeId,
     onTypeMapChanged,
+    onColorMapChanged,
     setActiveLayerTypeMapRows,
+    setActiveLayerColorMapRows,
     removeLayer,
 
     setActiveLayer,

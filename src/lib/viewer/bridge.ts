@@ -1,36 +1,63 @@
 import { shallowRef } from 'vue';
 import type { Ref } from 'vue';
-import type { LammpsTypeMapItem } from './settings';
+import type { LammpsTypeMapItem, AtomTypeColorMapItem } from './settings';
 
 import type { ParseMode, ParseInfo } from '../structure/parse';
 import type { ModelLayerInfo } from '../../components/ViewerStage/modelRuntime';
 
 export type ViewerPublicApi = {
-  // actions
+  /** Open the OS file picker and load a model into the viewer. */
   openFilePicker: () => void;
+  /** Export current viewport to a PNG image. */
   exportPng: (payload: {
     scale: number;
     transparent: boolean;
   }) => void | Promise<void>;
 
-  // LAMMPS typeId -> element mapping
+  /**
+   * Apply the current active-layer LAMMPS typeId→element mapping.
+   * This triggers a re-parse / rebuild of the active layer visuals.
+   */
   refreshTypeMap: () => void;
 
-  // parse
+  /**
+   * Apply the current active-layer color map to existing meshes.
+   * This does NOT require reloading the model data.
+   */
+  refreshColorMap: () => void;
+
+  /** Parsed metadata for the currently loaded file(s). */
   parseInfo: ParseInfo;
+  /** Current parsing mode (e.g. auto / strict). */
   parseMode: Ref<ParseMode>;
+  /** Update parsing mode; may affect how the next file is interpreted. */
   setParseMode: (mode: ParseMode) => void;
 
-  // layers
+  /** All loaded layers (multi-file and/or multi-frame). */
   layers: Ref<ModelLayerInfo[]>;
+  /** The currently selected/active layer id. */
   activeLayerId: Ref<string | null>;
+  /** Switch the active layer. */
   setActiveLayer: (id: string) => void;
+  /** Toggle visibility of a layer without removing it. */
   setLayerVisible: (id: string, visible: boolean) => void;
+  /** Remove a layer from the scene and internal state. */
   removeLayer: (id: string) => void;
 
-  // per-layer LAMMPS type map (active layer)
+  /** LAMMPS typeId→element mapping rows for the active layer (editable in Settings). */
   activeLayerTypeMap: Ref<LammpsTypeMapItem[]>;
+  /** Replace the entire active-layer type map. */
   setActiveLayerTypeMap: (rows: LammpsTypeMapItem[]) => void;
+
+  /**
+   * Per-layer atom colors for the active layer.
+   * Keying rules:
+   * - Generic formats: { element: 'C', color: '#RRGGBB' }
+   * - LAMMPS: { element: 'C', typeId: 1, color: '#RRGGBB' } -> colorKey "C1"
+   */
+  activeLayerColorMap: Ref<AtomTypeColorMapItem[]>;
+  /** Replace the entire active-layer color map. */
+  setActiveLayerColorMap: (rows: AtomTypeColorMapItem[]) => void;
 };
 
 /**

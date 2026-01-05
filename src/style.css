@@ -1,9 +1,9 @@
 html,
 body,
 #app {
-  height: 100%;
-  width: 100%;
-  margin: 0;
+    height: 100%;
+    width: 100%;
+    margin: 0;
 }
 
 /*
@@ -12,16 +12,18 @@ body,
   vertical scrollbar appears/disappears.
 */
 html {
-  overflow-y: scroll;
-  text-size-adjust: 100%;
-  /* Prevent transient horizontal scrollbar during Drawer open/close animations */
-  overflow-x: clip;
-  scrollbar-gutter: stable;
+    overflow-y: scroll;
+    text-size-adjust: 100%;
+    /* Prevent transient horizontal scrollbar during Drawer open/close animations */
+    overflow-x: clip;
+    scrollbar-gutter: stable;
 }
 
 body {
-  /* Fallback for browsers that don't support overflow-x: clip */
-  overflow-x: hidden;
+    /* Fallback for browsers that don't support overflow-x: clip */
+    overflow-x: hidden;
+    /* Keep scrollbar state stable even when Drawer tries to toggle page scroll. */
+    overflow-y: scroll !important;
 }
 
 /*
@@ -33,44 +35,47 @@ body {
 body.ant-scrolling-effect,
 body.ant-drawer-open,
 body.ant-modal-open {
-  padding-right: 0 !important;
+    padding-right: 0 !important;
+    overflow-y: scroll !important;
+    /* Ant may also set inline width: calc(100% - scrollbarSize). Override it to avoid horizontal "bounce". */
+    width: 100% !important;
 }
 
 #app {
-  padding: 0;
-  max-width: none;
+    padding: 0;
+    max-width: none;
 }
 
 /* 只显示icon的ant-btn模仿vitepress效果 */
 .ant-btn.btn-icon {
-  font-size: 20px;
+    font-size: 20px;
 
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 
-  /* make the click area consistent */
-  width: var(--ant-control-height);
-  height: var(--ant-control-height);
+    /* make the click area consistent */
+    width: var(--ant-control-height);
+    height: var(--ant-control-height);
 
-  line-height: 1;
+    line-height: 1;
 }
 
 .ant-btn.btn-icon:hover {
-  background-color: var(--ant-control-item-bg-hover);
+    background-color: var(--ant-control-item-bg-hover);
 }
 
 .ant-btn.btn-icon .anticon {
-  opacity: 0.7;
-  transition: opacity 0.15s ease, color 0.15s ease;
+    opacity: 0.7;
+    transition: opacity 0.15s ease, color 0.15s ease;
 
-  display: inline-flex;
-  align-items: center;
-  line-height: 1;
-  vertical-align: 0; /* override Ant icon baseline shift */
+    display: inline-flex;
+    align-items: center;
+    line-height: 1;
+    vertical-align: 0; /* override Ant icon baseline shift */
 }
 
 .ant-btn.btn-icon:hover .anticon {
-  opacity: 1;
-  color: var(--ant-color-text);
+    opacity: 1;
+    color: var(--ant-color-text);
 }

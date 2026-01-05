@@ -30,14 +30,19 @@ export function buildBondMeshesBicolor(params: {
   bondFactor: number;
   atomSizeFactor: number;
   bondRadius: number;
+  /** Optional grouping key. Defaults to element. */
+  getColorKey?: (atom: Atom) => string;
+  /** Optional color map keyed by getColorKey result. */
+  colorMap?: Record<string, string>;
 }): BondBuildResult {
-  const { atoms, bondFactor, atomSizeFactor, bondRadius } = params;
+  const { atoms, bondFactor, atomSizeFactor, bondRadius, getColorKey, colorMap } = params;
 
   // 纯数据：由 bondSegments.ts 生成分组后的线段数据
   // Pure data: segments grouped by element, produced by bondSegments.ts
-  const { groups, segCount } = buildBicolorBondGroups(atoms, {
+  const { groups, segCount, keyToElement } = buildBicolorBondGroups(atoms, {
     bondFactor,
     atomSizeFactor,
+    getColorKey,
   });
 
   if (segCount === 0) return { meshes: [], segCount: 0 };
@@ -64,14 +69,18 @@ export function buildBondMeshesBicolor(params: {
 
   const meshes: THREE.InstancedMesh[] = [];
 
-  for (const [el, segs] of groups.entries()) {
+  for (const [key, segs] of groups.entries()) {
+    const el = keyToElement[key] ?? 'E';
+    const col = (colorMap && colorMap[key]) ? colorMap[key]! : getElementColorHex(el);
     const material = new THREE.MeshStandardMaterial({
-      color: new THREE.Color(getElementColorHex(el)),
+      color: new THREE.Color(col),
       metalness: 0.0,
       roughness: 0.85,
     });
 
     const mesh = new THREE.InstancedMesh(geometry, material, segs.length);
+    (mesh.userData as any).colorKey = key;
+    (mesh.userData as any).element = el;
 
     for (let i = 0; i < segs.length; i += 1) {
       const seg = segs[i]!;

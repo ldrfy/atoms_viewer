@@ -124,10 +124,7 @@
                 "dualViewDistance": "View distance",
                 "dualViewSplit": "Split ratio",
                 "dualViewSplitHint": "Adjust the width ratio between front (left) and side (right) view.",
-                "perspective": "Perspective"
-            },
-            "pose": {
-                "header": "Pose (model rotation, degrees)",
+                "perspective": "Perspective",
                 "rotX": "Rotate X",
                 "rotY": "Rotate Y",
                 "rotZ": "Rotate Z",
@@ -165,6 +162,7 @@
                 "noViewer": "Viewer is not available.",
                 "empty": "No models loaded yet.",
                 "meta": "{atoms} atoms · {frames} frames",
+                "visible": "Show layer",
                 "hint": "Click a row to set the active layer; use the toggle to show/hide. Dragging a new model adds a layer and hides previous layers by default.",
                 "deleteConfirm": "Delete this layer?"
             },
@@ -174,8 +172,23 @@
                 "axes": "Axes",
                 "bonds": "Bonds",
                 "atomSize": "Atom size",
+                "sphereSegments": "Sphere segments",
+                "sphereSegmentsHint": "Higher values look smoother but are slower to render.",
                 "recordFps": "Recording FPS",
                 "recordFpsHint": "Target recording frame rate; commonly 30 / 60."
+            },
+            "colors": {
+                "header": "Atom Colors",
+                "alert": "After editing colors, click “Refresh” to apply them to the model.",
+                "currentLayer": "Current layer",
+                "mapLabel": "Color map (hex)",
+                "hexPlaceholder": "e.g. #FF8800",
+                "invalidHex": "Invalid color format. Please use #RRGGBB or #RGB.",
+                "reset": "Reset",
+                "resetTooltip": "Reset to the built-in default color of this element.",
+                "refresh": "Refresh",
+                "hint": "Tip: If the active layer has typeId (e.g. LAMMPS), colors are keyed as element+typeId (C1, C2, ...); otherwise they are keyed by element.",
+                "empty": "No editable atom types in the active layer."
             }
         }
     },

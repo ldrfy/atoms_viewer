@@ -122,6 +122,14 @@ export function bindViewerStageSettings(params: {
     ),
   );
 
+  // Sphere quality / sphere segments
+  stops.push(
+    watch(
+      () => settingsRef.value.sphereSegments,
+      () => applyAtomScale(),
+    ),
+  );
+
   // 显示键合 / show bonds
   stops.push(
     watch(

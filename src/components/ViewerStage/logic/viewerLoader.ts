@@ -299,6 +299,33 @@ export function createViewerLoader(deps: {
     }
   }
 
+  async function refreshColorMap(): Promise<void> {
+    const stage = deps.getStage();
+    const runtime = deps.getRuntime();
+    if (!stage || !runtime) return;
+    if (!deps.hasModel.value) return;
+
+    const tStart = performance.now();
+    if (!deps.isLoading.value) {
+      deps.isLoading.value = true;
+      await nextFrame();
+    }
+
+    try {
+      runtime.onColorMapChanged();
+    }
+    finally {
+      const minMs = 150;
+      const elapsed = performance.now() - tStart;
+      if (elapsed < minMs) {
+        await new Promise(r =>
+          window.setTimeout(r, Math.ceil(minMs - elapsed)),
+        );
+      }
+      deps.isLoading.value = false;
+    }
+  }
+
   function focusSettingsToLayersOrLammps(): void {
     const runtime = deps.getRuntime();
     if (!deps.requestOpenSettings) return;
@@ -489,6 +516,7 @@ export function createViewerLoader(deps: {
     parseInfo,
     setParseMode,
     refreshTypeMap,
+    refreshColorMap,
     loadFiles,
     loadFile,
     loadUrl,

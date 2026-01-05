@@ -18,11 +18,15 @@ export type BicolorBondGroupsResult = {
   groups: BondGroups2;
   bondCount: number;
   segCount: number;
+  /** Map group key -> element (used for default coloring). */
+  keyToElement: Record<string, string>;
 };
 
 type BuildBicolorBondGroupsOptions = {
   bondFactor?: number;
   atomSizeFactor?: number; // 对应你 ViewerStage 里的 ATOM_SIZE_FACTOR
+  /** Optional grouping key. Defaults to element. */
+  getColorKey?: (atom: Atom) => string;
 };
 
 /**
@@ -38,9 +42,11 @@ export function buildBicolorBondGroups(
 ): BicolorBondGroupsResult {
   const bondFactor = opts.bondFactor ?? 1.05;
   const atomSizeFactor = opts.atomSizeFactor ?? 0.5;
+  const getColorKey = opts.getColorKey;
 
   const bonds = computeBonds(atoms, bondFactor);
   const groups: BondGroups2 = new Map();
+  const keyToElement: Record<string, string> = {};
 
   let segCount = 0;
 
@@ -70,27 +76,35 @@ export function buildBicolorBondGroups(
     ];
 
     // i -> mid
-    pushGroup(groups, ai.element, pi, mid);
+    {
+      const key = (getColorKey ? getColorKey(ai) : ai.element) || ai.element;
+      keyToElement[key] = ai.element;
+      pushGroup(groups, key, pi, mid);
+    }
     // mid -> j
-    pushGroup(groups, aj.element, mid, pj);
+    {
+      const key = (getColorKey ? getColorKey(aj) : aj.element) || aj.element;
+      keyToElement[key] = aj.element;
+      pushGroup(groups, key, mid, pj);
+    }
 
     segCount += 2;
   }
 
-  return { groups, bondCount: bonds.length, segCount };
+  return { groups, bondCount: bonds.length, segCount, keyToElement };
 }
 
 function pushGroup(
   groups: BondGroups2,
-  element: string,
+  colorKey: string,
   p1: Atom['position'],
   p2: Atom['position'],
 ): void {
-  const arr = groups.get(element);
+  const arr = groups.get(colorKey);
   if (arr) {
     arr.push({ p1, p2 });
   }
   else {
-    groups.set(element, [{ p1, p2 }]);
+    groups.set(colorKey, [{ p1, p2 }]);
   }
 }

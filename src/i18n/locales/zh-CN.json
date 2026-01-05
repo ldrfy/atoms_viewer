@@ -109,6 +109,8 @@
                 "axes": "坐标轴",
                 "bonds": "键",
                 "atomSize": "原子大小",
+                "sphereSegments": "球体细分 (Sphere Segments)",
+                "sphereSegmentsHint": "影响球体光滑度与性能；数值越大越圆滑，但渲染更耗时。",
                 "recordFps": "录制帧率 (fps)",
                 "recordFpsHint": "录制输出的目标帧率；常用 30 / 60。",
                 "refreshBondsOnPlay": "播放时原子连接每帧刷新"
@@ -126,10 +128,7 @@
                 "dualViewDistance": "视距",
                 "dualViewSplit": "左右比例",
                 "dualViewSplitHint": "调整左侧（正视）与右侧（侧视）的宽度比例。",
-                "perspective": "是否透视"
-            },
-            "pose": {
-                "header": "姿态（模型旋转，单位：度）",
+                "perspective": "是否透视",
                 "rotX": "X 轴旋转",
                 "rotY": "Y 轴旋转",
                 "rotZ": "Z 轴旋转",
@@ -167,8 +166,22 @@
                 "noViewer": "当前没有可用的 Viewer 实例。",
                 "empty": "尚未加载任何模型。",
                 "meta": "{atoms} 原子 · {frames} 帧",
+                "visible": "显示图层",
                 "hint": "点击一行可设为当前图层；右侧开关控制显示/隐藏。拖入新模型会加入图层列表并默认隐藏旧图层。",
                 "deleteConfirm": "确定删除此图层吗？"
+            },
+            "colors": {
+                "header": "原子颜色",
+                "alert": "修改颜色后，需要点击“刷新显示”才会应用到模型。",
+                "currentLayer": "当前图层",
+                "mapLabel": "颜色映射（十六进制）",
+                "hexPlaceholder": "例如 #FF8800",
+                "invalidHex": "颜色格式无效，请输入 #RRGGBB 或 #RGB。",
+                "reset": "恢复默认",
+                "resetTooltip": "恢复为该元素的内置默认颜色。",
+                "refresh": "刷新显示",
+                "hint": "提示：若该图层存在 typeId（如 LAMMPS），将按元素+typeId 显示为 C1、C2…；否则按元素显示。",
+                "empty": "当前图层暂无可编辑的原子类型。"
             }
         }
     },

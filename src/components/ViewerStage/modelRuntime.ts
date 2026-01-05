@@ -1194,6 +1194,41 @@ export function createModelRuntime(args: {
     if (matAny) matAny.needsUpdate = true;
   }
 
+  function setMeshInstanceColors(
+    mesh: THREE.InstancedMesh,
+    instanceColorKeys: string[],
+    map: Record<string, string>,
+  ): void {
+    // Update per-instance instanceColor and keep the base material color neutral
+    // to avoid tinting (MeshStandardMaterial multiplies vertex/instance color
+    // by material.color).
+
+    const matAny = mesh.material as any;
+    const setNeutral = (m: any) => {
+      if (!m) return;
+      if (m.color) m.color.set('#ffffff');
+      if ('vertexColors' in m) m.vertexColors = true;
+      m.needsUpdate = true;
+    };
+    if (Array.isArray(matAny)) {
+      for (const m of matAny) setNeutral(m);
+    }
+    else {
+      setNeutral(matAny);
+    }
+
+    const tmp = new THREE.Color();
+    for (let i = 0; i < instanceColorKeys.length; i += 1) {
+      const key = instanceColorKeys[i] ?? 'E';
+      const cHex = map[key] ?? getElementColorHex(key);
+      tmp.set(cHex);
+      mesh.setColorAt(i, tmp);
+    }
+
+    const ic = mesh.instanceColor;
+    if (ic) ic.needsUpdate = true;
+  }
+
   function onColorMapChanged(): void {
     const active = getActiveLayer();
     if (!active) return;
@@ -1202,6 +1237,14 @@ export function createModelRuntime(args: {
 
     // Atoms
     for (const m of active.atomMeshes) {
+      const perInstKeys = (m.userData as any).instanceColorKeys as
+        | string[]
+        | undefined;
+      if (Array.isArray(perInstKeys) && perInstKeys.length > 0) {
+        setMeshInstanceColors(m, perInstKeys, map);
+        continue;
+      }
+
       const key = (m.userData as any).colorKey as string | undefined;
       const el = (m.userData as any).element as string | undefined;
       const col = (key && map[key]) ? map[key]! : getElementColorHex(el ?? 'E');
@@ -1210,10 +1253,16 @@ export function createModelRuntime(args: {
 
     // Bonds
     for (const b of active.bondMeshes) {
+      const perInstKeys = (b.userData as any).instanceColorKeys as
+        | string[]
+        | undefined;
+      if (Array.isArray(perInstKeys) && perInstKeys.length > 0) {
+        setMeshInstanceColors(b, perInstKeys, map);
+        continue;
+      }
+
       const key = (b.userData as any).colorKey as string | undefined;
-      // bond segment groups are still "by element" for default, but may be keyed by typeId
-      // If key is not found, we fall back to parsing element from the key prefix is non-trivial,
-      // so we instead use the stored element when available, else 'E'.
+      // bond segment groups are still "by element" for default
       const el = (b.userData as any).element as string | undefined;
       const fallbackEl = el ?? 'E';
       const col = (key && map[key]) ? map[key]! : getElementColorHex(fallbackEl);

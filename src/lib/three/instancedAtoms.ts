@@ -83,6 +83,13 @@ export function buildAtomMeshesByElement(params: {
     mesh.userData.colorKey = key;
     mesh.userData.atomIndices = indices;
 
+    // When using per-instance colors, persist the per-instance "colorKey" list
+    // so runtime updates (e.g., color-map edits) can refresh instanceColor.
+    const instanceColorKeys: string[] | null = useInstanceColor
+      ? new Array(indices.length)
+      : null;
+    if (instanceColorKeys) mesh.userData.instanceColorKeys = instanceColorKeys;
+
     for (let k = 0; k < indices.length; k += 1) {
       const a = atoms[indices[k]!]!;
       const [x, y, z] = a.position;
@@ -91,6 +98,7 @@ export function buildAtomMeshesByElement(params: {
 
       if (useInstanceColor) {
         const cKey = (getColorKey ? getColorKey(a) : a.element) || a.element;
+        if (instanceColorKeys) instanceColorKeys[k] = cKey;
         const cHex = (colorMap && colorMap[cKey]) ? colorMap[cKey]! : getElementColorHex(a.element);
         tmpColor.set(cHex);
         mesh.setColorAt(k, tmpColor);
@@ -98,7 +106,7 @@ export function buildAtomMeshesByElement(params: {
     }
 
     mesh.instanceMatrix.needsUpdate = true;
-    if (useInstanceColor && (mesh.instanceColor as any)) {
+    if (useInstanceColor) {
       const ic = mesh.instanceColor;
       if (ic) ic.needsUpdate = true;
     }

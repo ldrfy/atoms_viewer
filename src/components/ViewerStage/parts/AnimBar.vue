@@ -78,7 +78,7 @@
 
           <input
             v-model="bgColorModel"
-            class="native-color"
+            class="color-picker"
             type="color"
             :disabled="isRecording"
             :aria-label="t('viewer.record.bg')"

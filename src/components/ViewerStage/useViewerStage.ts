@@ -53,7 +53,6 @@ type ViewerStageBridgeApi = {
 
   refreshTypeMap: () => void;
   refreshColorMap: () => void;
-  refreshColorMap: () => void;
 
   parseInfo: any;
   parseMode: Ref<any>;
@@ -133,6 +132,7 @@ type ViewerStageBindings = {
   }) => Promise<void>;
 
   refreshTypeMap: () => void;
+  refreshColorMap: () => void;
 
   hasAnimation: Ref<boolean>;
   frameIndex: Ref<number>;

@@ -52,17 +52,89 @@
   Drawer appearance
   - Semi-transparent background so the model is still slightly visible
   - Backdrop blur for readability
+
+  Note: on mobile, Ant Drawer has several internal wrappers; we keep them
+  transparent so our blurred translucent surface is always visible.
 */
-.settings-drawer .ant-drawer-content,
+.settings-drawer,
 .settings-sider-fixed {
-    background: rgba(255, 255, 255, 0.78);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    --settings-panel-bg: rgba(255, 255, 255, 0.78);
+    --settings-panel-blur: 12px;
 }
 
-:root[data-theme="dark"] .settings-drawer .ant-drawer-content,
+:root[data-theme="dark"] .settings-drawer,
 :root[data-theme="dark"] .settings-sider-fixed {
-    background: rgba(18, 18, 18, 0.62);
+    --settings-panel-bg: rgba(18, 18, 18, 0.62);
+}
+
+/* Apply blur surface to:
+   - Ant Drawer content (legacy mobile implementation)
+   - Desktop fixed panel
+   - Mobile Teleport bottom sheet panel */
+.settings-drawer .ant-drawer-content,
+.settings-drawer .ant-drawer-content-wrapper,
+.settings-sider-fixed,
+.settings-drawer.settings-sheet {
+    background: var(--settings-panel-bg) !important;
+    backdrop-filter: blur(var(--settings-panel-blur)) !important;
+    -webkit-backdrop-filter: blur(var(--settings-panel-blur)) !important;
+}
+
+/* Ensure Ant internal wrappers don't paint opaque layers over our blur */
+.settings-drawer .ant-drawer-wrapper-body,
+.settings-drawer .ant-drawer-body {
+    background: transparent;
+}
+
+/* Mobile Teleport mask (captures outside clicks). Keep it subtle so blur stays visible. */
+.settings-sheet-mask {
+    position: fixed;
+    inset: 0;
+    z-index: 999;
+    background: rgba(0, 0, 0, 0);
+    pointer-events: none;
+}
+
+/* Mobile Teleport bottom sheet panel layout */
+.settings-drawer.settings-sheet {
+    display: flex;
+    flex-direction: column;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Mobile sheet open/close motion */
+.settings-sheet-slide-enter-active,
+.settings-sheet-slide-leave-active {
+    transition: transform 180ms ease, opacity 180ms ease;
+    will-change: transform, opacity;
+}
+
+.settings-sheet-slide-enter-from,
+.settings-sheet-slide-leave-to {
+    transform: translateY(18px);
+    opacity: 0;
+}
+
+.settings-sheet-slide-enter-to,
+.settings-sheet-slide-leave-from {
+    transform: translateY(0);
+    opacity: 1;
+}
+
+/* Mobile mask fade */
+.settings-mask-fade-enter-active,
+.settings-mask-fade-leave-active {
+    transition: opacity 160ms ease;
+}
+
+.settings-mask-fade-enter-from,
+.settings-mask-fade-leave-to {
+    opacity: 0;
+}
+
+.settings-mask-fade-enter-to,
+.settings-mask-fade-leave-from {
+    opacity: 1;
 }
 
 /* Desktop teleported panel layout */
@@ -94,13 +166,15 @@
 
 /* Header */
 .settings-header {
+    flex: 0 0 auto;
     position: sticky;
     top: 0;
     z-index: 2;
+    background: var(--settings-panel-bg);
     border-bottom: 1px solid rgba(0, 0, 0, 0.08);
     /* Keep the header readable over the translucent content */
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(var(--settings-panel-blur));
+    -webkit-backdrop-filter: blur(var(--settings-panel-blur));
 }
 
 :root[data-theme="dark"] .settings-header {
@@ -143,15 +217,12 @@
 
 /* Body scroll container */
 .settings-body {
-    flex: 1;
-    min-height: 0;
-    overflow: auto;
+    flex: 1 1 auto;
+    min-height: 0; /* 非常关键：否则 iOS/某些浏览器不滚 */
+    overflow-y: auto;
     -webkit-overflow-scrolling: touch;
-    /* Prevent scroll chaining to the page (reduces pull-to-refresh conflicts on supporting browsers) */
-    overscroll-behavior-y: contain;
-    /* Allow vertical scrolling within the settings body */
-    touch-action: pan-y;
-    padding: 10px 12px calc(12px + env(safe-area-inset-bottom));
+    overscroll-behavior: contain; /* 防止滚动穿透到页面 */
+    touch-action: pan-y; /* 明确允许纵向滚动手势 */
 }
 
 /* While resizing the bottom-sheet, suppress overscroll (Chrome/Android) */
@@ -174,22 +245,6 @@ body.resizing {
 .color-picker {
     width: 100%;
     height: 32px;
-    padding: 0;
-    border: none;
-    background: transparent;
-}
-
-.color-picker::-webkit-color-swatch-wrapper {
-    padding: 0;
-}
-
-.color-picker::-webkit-color-swatch {
-    border-radius: 6px;
-    border: 1px solid rgba(0, 0, 0, 0.18);
-}
-
-:root[data-theme="dark"] .color-picker::-webkit-color-swatch {
-    border: 1px solid rgba(255, 255, 255, 0.22);
 }
 
 /* Make InputNumber steppers easier to tap on mobile */

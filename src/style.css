@@ -79,3 +79,23 @@ body.ant-modal-open {
     opacity: 1;
     color: var(--ant-color-text);
 }
+
+/* Native color input (used in Atom Colors panel) */
+.color-picker {
+    padding: 2px;
+    border: none;
+    background: transparent;
+}
+
+.color-picker::-webkit-color-swatch-wrapper {
+    padding: 2px;
+}
+
+.color-picker::-webkit-color-swatch {
+    border-radius: 6px;
+    border: 1px solid rgba(0, 0, 0, 0.18);
+}
+
+:root[data-theme="dark"] .color-picker::-webkit-color-swatch {
+    border: 1px solid rgba(255, 255, 255, 0.22);
+}

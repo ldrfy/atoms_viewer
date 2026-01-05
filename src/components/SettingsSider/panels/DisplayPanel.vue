@@ -237,7 +237,11 @@ const dualViewDistanceModel = computed({
   set: (v: number) => patchSettings({ dualViewDistance: v }),
 });
 
-const dualViewDistanceMax = 500;
+const dualViewDistanceMax = computed(() => {
+  const v = settings.value.dualViewDistance ?? 10;
+  return Math.max(200, Math.ceil(v * 1.2));
+});
+// const dualViewDistanceMax = 500;
 
 const dualViewSplitPctModel = computed({
   get: () => {

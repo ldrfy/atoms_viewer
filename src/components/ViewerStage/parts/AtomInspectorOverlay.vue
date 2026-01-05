@@ -1,168 +1,172 @@
 <template>
-  <!-- Mini collapsed bar -->
-  <div
-    v-if="visible && collapsed"
-    class="atom-inspector-mini"
-    role="button"
-    tabindex="0"
-    @click="collapsed = false"
-    @keydown.enter.prevent="collapsed = false"
-    @keydown.space.prevent="collapsed = false"
-  >
-    <a-button class="mini-handle" size="small">
-      ⟨
-    </a-button>
-  </div>
-
-  <!-- Drawer -->
-  <a-drawer
-    v-if="visible"
-    :placement="placement"
-    :open="visible && !collapsed"
-    :closable="false"
-    :mask="false"
-    :get-container="false"
-    :style="drawerRootStyle"
-    :content-wrapper-style="contentWrapperStyle"
-    :body-style="drawerBodyStyle"
-    :width="placement === 'right' ? desktopWidth : undefined"
-    :height="placement === 'bottom' ? mobileHeight : undefined"
-  >
-    <!-- Resize handle -->
-    <div
-      class="atom-inspector__resizer"
-      :class="placement === 'right' ? 'is-right' : 'is-bottom'"
-      @mousedown.prevent="onResizeStart"
-    />
-
-    <!-- Header -->
-    <div class="atom-inspector__header">
-      <div class="atom-inspector__title">
-        {{ t('viewer.inspect.title') }}
-        <a-typography-text v-if="selected.length" type="secondary" class="atom-inspector__count">
-          ({{ selected.length }})
-        </a-typography-text>
-      </div>
-
-      <a-space size="small">
-        <a-tooltip :title="t('viewer.inspect.measureMode')">
-          <a-switch
-            v-model:checked="measureMode"
-            size="small"
-            :aria-label="t('viewer.inspect.measureMode')"
-            :title="t('viewer.inspect.measureMode')"
-          />
-        </a-tooltip>
-
-        <a-button size="small" :disabled="selected.length === 0" @click="clear">
-          {{ t('viewer.inspect.clear') }}
+  <Teleport to="body">
+    <!-- Mini collapsed handle -->
+    <Transition name="atom-inspector-mini-fade">
+      <div
+        v-show="visible && collapsed"
+        class="atom-inspector-mini"
+        :class="placement === 'bottom' ? 'is-bottom' : 'is-left'"
+        role="button"
+        tabindex="0"
+        @click="collapsed = false"
+        @keydown.enter.prevent="collapsed = false"
+        @keydown.space.prevent="collapsed = false"
+      >
+        <a-button class="mini-handle" size="small">
+          {{ expandIcon }}
         </a-button>
-
-        <a-button
-          type="text"
-          size="small"
-          aria-label="collapse"
-          title="Collapse"
-          @click="collapsed = true"
-        >
-          ⟩
-        </a-button>
-      </a-space>
-    </div>
-
-    <!-- Body -->
-    <div class="atom-inspector__body">
-      <div v-if="selected.length === 0" class="atom-inspector__empty">
-        <a-typography-text type="secondary">
-          {{ t('viewer.inspect.hint') }}
-        </a-typography-text>
       </div>
+    </Transition>
 
-      <div v-else class="atom-inspector__content">
-        <!-- Scrollable list -->
-        <div class="atom-inspector__list">
-          <a-list size="small" :data-source="selected" :split="false">
-            <template #renderItem="{ item, index }">
-              <a-list-item class="atom-item">
-                <div class="atom-row">
-                  <div class="atom-index">
-                    <a-tag color="blue">
-                      {{ index + 1 }}
-                    </a-tag>
-                  </div>
+    <!-- Floating panel (no Ant Drawer) -->
+    <Transition :name="panelTransitionName">
+      <div
+        v-show="visible && !collapsed"
+        class="atom-inspector-panel"
+        :class="placement === 'bottom' ? 'is-bottom' : 'is-left'"
+        :style="panelStyle"
+      >
+        <!-- Resize handle -->
+        <div
+          class="atom-inspector__resizer"
+          :class="placement === 'bottom' ? 'is-bottom' : 'is-right'"
+          role="separator"
+          aria-label="resize"
+          @pointerdown.prevent="onResizeStart"
+        />
 
-                  <div class="atom-body">
-                    <div class="atom-header">
-                      <a-typography-text strong class="atom-element">
-                        {{ item.element }}
-                      </a-typography-text>
+        <div class="atom-inspector-panel__inner">
+          <!-- Header -->
+          <div class="atom-inspector__header">
+            <div class="atom-inspector__title">
+              {{ t('viewer.inspect.title') }}
+              <a-typography-text v-if="selected.length" type="secondary" class="atom-inspector__count">
+                ({{ selected.length }})
+              </a-typography-text>
+            </div>
 
-                      <div class="atom-meta">
-                        <a-typography-text type="secondary">
-                          Z={{ item.atomicNumber }}
-                        </a-typography-text>
-                        <a-typography-text type="secondary">
-                          idx={{ item.atomIndex + 1 }}
-                        </a-typography-text>
-                        <a-typography-text v-if="item.id != null" type="secondary">
-                          id={{ item.id }}
-                        </a-typography-text>
-                        <a-typography-text v-if="item.typeId != null" type="secondary">
-                          type={{ item.typeId }}
-                        </a-typography-text>
+            <a-space size="small">
+              <a-tooltip :title="t('viewer.inspect.measureMode')">
+                <a-switch
+                  v-model:checked="measureMode"
+                  size="small"
+                  :aria-label="t('viewer.inspect.measureMode')"
+                  :title="t('viewer.inspect.measureMode')"
+                />
+              </a-tooltip>
+
+              <a-button size="small" :disabled="selected.length === 0" @click="clear">
+                {{ t('viewer.inspect.clear') }}
+              </a-button>
+
+              <a-button
+                type="text"
+                size="small"
+                aria-label="collapse"
+                title="Collapse"
+                @click="collapsed = true"
+              >
+                {{ collapseIcon }}
+              </a-button>
+            </a-space>
+          </div>
+
+          <!-- Body -->
+          <div class="atom-inspector__body">
+            <div v-if="selected.length === 0" class="atom-inspector__empty">
+              <a-typography-text type="secondary">
+                {{ t('viewer.inspect.hint') }}
+              </a-typography-text>
+            </div>
+
+            <div v-else class="atom-inspector__content">
+              <!-- Scrollable list -->
+              <div class="atom-inspector__list">
+                <a-list size="small" :data-source="selected" :split="false">
+                  <template #renderItem="{ item, index }">
+                    <a-list-item class="atom-item">
+                      <div class="atom-row">
+                        <div class="atom-index">
+                          <a-tag color="blue">
+                            {{ index + 1 }}
+                          </a-tag>
+                        </div>
+
+                        <div class="atom-body">
+                          <div class="atom-header">
+                            <a-typography-text strong class="atom-element">
+                              {{ item.element }}
+                            </a-typography-text>
+
+                            <div class="atom-meta">
+                              <a-typography-text type="secondary">
+                                Z={{ item.atomicNumber }}
+                              </a-typography-text>
+                              <a-typography-text type="secondary">
+                                idx={{ item.atomIndex + 1 }}
+                              </a-typography-text>
+                              <a-typography-text v-if="item.id != null" type="secondary">
+                                id={{ item.id }}
+                              </a-typography-text>
+                              <a-typography-text v-if="item.typeId != null" type="secondary">
+                                type={{ item.typeId }}
+                              </a-typography-text>
+                            </div>
+                          </div>
+
+                          <div class="atom-inspector__coords">
+                            x={{ fmt(item.position?.[0]) }},
+                            y={{ fmt(item.position?.[1]) }},
+                            z={{ fmt(item.position?.[2]) }}
+                          </div>
+                        </div>
                       </div>
-                    </div>
+                    </a-list-item>
+                  </template>
+                </a-list>
+              </div>
 
-                    <div class="atom-inspector__coords">
-                      x={{ fmt(item.position?.[0]) }},
-                      y={{ fmt(item.position?.[1]) }},
-                      z={{ fmt(item.position?.[2]) }}
-                    </div>
-                  </div>
-                </div>
-              </a-list-item>
-            </template>
-          </a-list>
-        </div>
+              <!-- Fixed footer: measures -->
+              <div class="atom-inspector__footer">
+                <a-divider style="margin: 10px 0" />
 
-        <!-- Fixed footer: measures -->
-        <div class="atom-inspector__footer">
-          <a-divider style="margin: 10px 0" />
+                <a-descriptions size="small" :column="1">
+                  <a-descriptions-item
+                    v-if="measureMode && measure.distance12 != null"
+                    :label="`${t('viewer.inspect.distance')} (1–2)`"
+                  >
+                    {{ fmt(measure.distance12) }} Å
+                  </a-descriptions-item>
 
-          <a-descriptions size="small" :column="1">
-            <a-descriptions-item
-              v-if="measureMode && measure.distance12 != null"
-              :label="`${t('viewer.inspect.distance')} (1–2)`"
-            >
-              {{ fmt(measure.distance12) }} Å
-            </a-descriptions-item>
+                  <a-descriptions-item
+                    v-if="measureMode && measure.distance23 != null"
+                    :label="`${t('viewer.inspect.distance')} (2–3)`"
+                  >
+                    {{ fmt(measure.distance23) }} Å
+                  </a-descriptions-item>
 
-            <a-descriptions-item
-              v-if="measureMode && measure.distance23 != null"
-              :label="`${t('viewer.inspect.distance')} (2–3)`"
-            >
-              {{ fmt(measure.distance23) }} Å
-            </a-descriptions-item>
+                  <a-descriptions-item
+                    v-if="measureMode && measure.angleDeg != null"
+                    :label="t('viewer.inspect.angle')"
+                  >
+                    {{ fmt(measure.angleDeg) }}°
+                  </a-descriptions-item>
+                </a-descriptions>
 
-            <a-descriptions-item
-              v-if="measureMode && measure.angleDeg != null"
-              :label="t('viewer.inspect.angle')"
-            >
-              {{ fmt(measure.angleDeg) }}°
-            </a-descriptions-item>
-          </a-descriptions>
-
-          <a-typography-text
-            v-if="measureMode && selected.length > 1"
-            type="secondary"
-            class="atom-inspector__measureHint"
-          >
-            {{ t('viewer.inspect.orderHint') }}
-          </a-typography-text>
+                <a-typography-text
+                  v-if="measureMode && selected.length > 1"
+                  type="secondary"
+                  class="atom-inspector__measureHint"
+                >
+                  {{ t('viewer.inspect.orderHint') }}
+                </a-typography-text>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
-  </a-drawer>
+    </Transition>
+  </Teleport>
 </template>
 
 <script setup lang="ts">
@@ -181,7 +185,7 @@ const clear = props.ctx.clear;
 
 const visible = computed(() => enabled.value);
 
-/** --- Responsive placement (desktop: right, mobile: bottom) --- */
+/** --- Responsive placement (desktop: left, mobile: bottom) --- */
 const isMobile = ref(false);
 function updateIsMobile() {
   isMobile.value = window.matchMedia('(max-width: 768px)').matches;
@@ -194,7 +198,13 @@ onBeforeUnmount(() => {
   window.removeEventListener('resize', updateIsMobile);
 });
 
-const placement = computed<'right' | 'bottom'>(() => (isMobile.value ? 'bottom' : 'right'));
+const placement = computed<'left' | 'bottom'>(() => (isMobile.value ? 'bottom' : 'left'));
+
+const expandIcon = computed(() => (placement.value === 'left' ? '⟩' : '⌃'));
+const collapseIcon = computed(() => (placement.value === 'left' ? '⟨' : '⌄'));
+const panelTransitionName = computed(() =>
+  placement.value === 'left' ? 'atom-inspector-slide-left' : 'atom-inspector-slide-up',
+);
 
 /** --- collapsed logic ---
  * - no atoms -> collapsed
@@ -213,6 +223,14 @@ watch(
   () => visible.value,
   (v) => {
     if (!v) collapsed.value = true;
+    if (!v) onResizeEnd();
+  },
+);
+
+watch(
+  () => collapsed.value,
+  (v) => {
+    if (v) onResizeEnd();
   },
 );
 
@@ -229,39 +247,78 @@ function saveNum(key: string, v: number) {
 const desktopWidth = ref(loadNum('atomInspector.desktopWidth', 360)); // px
 const mobileHeight = ref(loadNum('atomInspector.mobileHeight', 280)); // px
 
-const resizing = ref(false);
-let startX = 0;
-let startY = 0;
-let startW = 0;
-let startH = 0;
-
 function clamp(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n));
 }
 
-function onResizeStart(e: MouseEvent) {
-  resizing.value = true;
+let resizing = false;
+let startX = 0;
+let startY = 0;
+let startW = 0;
+let startH = 0;
+let activePointerId: number | null = null;
+let touchMoveBlocker: ((e: TouchEvent) => void) | null = null;
+let pullToRefreshBlocked = false;
+
+function startBlockPullToRefresh(): void {
+  document.documentElement.classList.add('resizing');
+  document.body.classList.add('resizing');
+  pullToRefreshBlocked = true;
+  touchMoveBlocker = (ev: TouchEvent) => {
+    if (resizing) ev.preventDefault();
+  };
+  window.addEventListener('touchmove', touchMoveBlocker, { passive: false });
+}
+
+function stopBlockPullToRefresh(): void {
+  if (pullToRefreshBlocked) {
+    document.documentElement.classList.remove('resizing');
+    document.body.classList.remove('resizing');
+    pullToRefreshBlocked = false;
+  }
+  if (touchMoveBlocker) {
+    window.removeEventListener('touchmove', touchMoveBlocker as any);
+    touchMoveBlocker = null;
+  }
+}
+
+function onResizeStart(e: PointerEvent) {
+  resizing = true;
+  activePointerId = e.pointerId;
   startX = e.clientX;
   startY = e.clientY;
   startW = desktopWidth.value;
   startH = mobileHeight.value;
 
-  window.addEventListener('mousemove', onResizing, { passive: false });
-  window.addEventListener('mouseup', onResizeEnd, { passive: true });
+  try {
+    (e.currentTarget as HTMLElement | null)?.setPointerCapture?.(e.pointerId);
+  }
+  catch {
+    // ignore
+  }
+
+  // Only needed for mobile (bottom sheet): suppress pull-to-refresh overscroll while resizing.
+  if (placement.value === 'bottom') startBlockPullToRefresh();
+
+  window.addEventListener('pointermove', onResizing, { passive: false });
+  window.addEventListener('pointerup', onResizeEnd, { passive: true });
+  window.addEventListener('pointercancel', onResizeEnd, { passive: true });
+  window.addEventListener('lostpointercapture', onResizeEnd as any, { passive: true });
 }
 
-function onResizing(e: MouseEvent) {
-  if (!resizing.value) return;
+function onResizing(e: PointerEvent) {
+  if (!resizing) return;
+  if (activePointerId != null && e.pointerId !== activePointerId) return;
 
-  if (placement.value === 'right') {
-    // drag handle on left edge: moving left increases width
-    const dx = startX - e.clientX;
+  if (placement.value === 'left') {
+    // drag handle on right edge: dragging right increases width
+    const dx = e.clientX - startX;
     const maxW = Math.floor(window.innerWidth * 0.7);
     desktopWidth.value = clamp(startW + dx, 260, Math.max(260, maxW));
     saveNum('atomInspector.desktopWidth', desktopWidth.value);
   }
   else {
-    // bottom drawer: dragging up increases height
+    // bottom panel: dragging up increases height
     const dy = startY - e.clientY;
     const maxH = Math.floor(window.innerHeight * 0.7);
     mobileHeight.value = clamp(startH + dy, 200, Math.max(200, maxH));
@@ -272,44 +329,40 @@ function onResizing(e: MouseEvent) {
 }
 
 function onResizeEnd() {
-  resizing.value = false;
-  window.removeEventListener('mousemove', onResizing);
-  window.removeEventListener('mouseup', onResizeEnd);
+  if (!resizing) return;
+  resizing = false;
+  activePointerId = null;
+  stopBlockPullToRefresh();
+  window.removeEventListener('pointermove', onResizing);
+  window.removeEventListener('pointerup', onResizeEnd);
+  window.removeEventListener('pointercancel', onResizeEnd);
+  window.removeEventListener('lostpointercapture', onResizeEnd as any);
 }
 onBeforeUnmount(() => onResizeEnd());
 
-/** --- Drawer styles --- */
-const drawerRootStyle = {
-  position: 'absolute',
-};
-
-const contentWrapperStyle = computed(() => {
-  // Make it feel like a floating inspector panel instead of a full-screen drawer.
-  if (placement.value === 'right') {
+const panelStyle = computed(() => {
+  const z = 220;
+  if (placement.value === 'left') {
     return {
+      position: 'fixed',
+      zIndex: z,
+      left: '12px',
       top: '18%',
       height: '64%',
-      right: '12px',
+      width: `${desktopWidth.value}px`,
       borderRadius: '10px',
-      overflow: 'hidden',
-      boxShadow: '0 10px 30px rgba(0,0,0,0.15)',
     } as Record<string, any>;
   }
   return {
-    left: '0',
-    right: '0',
+    position: 'fixed',
+    zIndex: z,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: `${mobileHeight.value}px`,
     borderRadius: '10px 10px 0 0',
-    overflow: 'hidden',
-    boxShadow: '0 -10px 30px rgba(0,0,0,0.12)',
   } as Record<string, any>;
 });
-
-const drawerBodyStyle = {
-  padding: '10px 12px',
-  height: '100%',
-  display: 'flex',
-  flexDirection: 'column',
-};
 
 function fmt(v: number | null | undefined): string {
   if (v == null || !Number.isFinite(v)) return '-';
@@ -317,152 +370,243 @@ function fmt(v: number | null | undefined): string {
 }
 </script>
 
-<style scoped>
-/* Mini collapsed handle */
+<style>
+/*
+  Atom inspector uses a Teleport + fixed-position floating panel.
+  Avoid Ant Drawer so glass / blur works consistently across desktop & mobile.
+*/
+
+:root {
+  --atom-inspector-bg: rgba(255, 255, 255, 0.60);
+  --atom-inspector-blur: 12px;
+  --atom-inspector-border: rgba(0, 0, 0, 0.10);
+}
+
+:root[data-theme="dark"] {
+  --atom-inspector-bg: rgba(18, 18, 18, 0.55);
+  --atom-inspector-border: rgba(255, 255, 255, 0.14);
+}
+
+.atom-inspector-panel {
+  background: var(--atom-inspector-bg);
+  backdrop-filter: blur(var(--atom-inspector-blur));
+  -webkit-backdrop-filter: blur(var(--atom-inspector-blur));
+  border: 1px solid var(--atom-inspector-border);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  pointer-events: auto;
+}
+
+.atom-inspector-panel.is-bottom {
+  box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.12);
+}
+
+.atom-inspector-panel__inner {
+  position: relative;
+  height: 100%;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* Mini collapsed handle (also glass) */
 .atom-inspector-mini {
-    position: absolute;
-    right: 0px;
-    top: 40%;
-    width: 24px;
-    height: 72px;
-    border-radius: 6px 0 0 6px;
-    display: flex;
-    padding: 24px;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    z-index: 25;
+  position: fixed;
+  z-index: 221;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  pointer-events: auto;
+
+  background: var(--atom-inspector-bg);
+  backdrop-filter: blur(var(--atom-inspector-blur));
+  -webkit-backdrop-filter: blur(var(--atom-inspector-blur));
+  border: 1px solid var(--atom-inspector-border);
+}
+
+.atom-inspector-mini.is-left {
+  left: 0px;
+  top: 40%;
+  border-radius: 0 6px 6px 0;
+}
+
+.atom-inspector-mini.is-bottom {
+  left: 50%;
+  bottom: 12px;
+  transform: translateX(-50%);
+  border-radius: 999px;
+  padding: 4px 6px;
 }
 
 .mini-handle {
-    font-size: 12px;
-    -webkit-user-select: none;
-    user-select: none;
-    padding: 0 6px;
+  font-size: 12px;
+  -webkit-user-select: none;
+  user-select: none;
+  padding: 0 12px;
+  background: none;
 }
 
+/* Transitions */
+.atom-inspector-slide-left-enter-active,
+.atom-inspector-slide-left-leave-active {
+  transition: transform 180ms ease, opacity 180ms ease;
+}
+.atom-inspector-slide-left-enter-from,
+.atom-inspector-slide-left-leave-to {
+  transform: translateX(-12px);
+  opacity: 0;
+}
+
+.atom-inspector-slide-up-enter-active,
+.atom-inspector-slide-up-leave-active {
+  transition: transform 200ms ease, opacity 200ms ease;
+}
+.atom-inspector-slide-up-enter-from,
+.atom-inspector-slide-up-leave-to {
+  transform: translateY(18px);
+  opacity: 0;
+}
+
+.atom-inspector-mini-fade-enter-active,
+.atom-inspector-mini-fade-leave-active {
+  transition: opacity 160ms ease;
+}
+.atom-inspector-mini-fade-enter-from,
+.atom-inspector-mini-fade-leave-to {
+  opacity: 0;
+}
+</style>
+
+<style scoped>
 /* Resize handle */
 .atom-inspector__resizer {
-    position: absolute;
-    z-index: 2;
-    background: transparent;
+  position: absolute;
+  z-index: 2;
+  background: transparent;
 }
 
 .atom-inspector__resizer.is-right {
-    left: 0;
-    top: 0;
-    bottom: 0;
-    width: 8px;
-    cursor: col-resize;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 8px;
+  cursor: col-resize;
 }
 
 .atom-inspector__resizer.is-bottom {
-    left: 0;
-    right: 0;
-    top: 0;
-    height: 8px;
-    cursor: row-resize;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 8px;
+  cursor: row-resize;
 }
 
 /* Header */
 .atom-inspector__header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    padding-bottom: 8px;
-    margin-bottom: 6px;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-bottom: 8px;
+  margin-bottom: 6px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+:root[data-theme="dark"] .atom-inspector__header {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
 }
 
 .atom-inspector__title {
-    font-weight: 600;
-    font-size: 13px;
-    line-height: 1.2;
-    display: flex;
-    align-items: baseline;
-    gap: 6px;
+  font-weight: 600;
+  font-size: 13px;
+  line-height: 1.2;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
 }
 
 .atom-inspector__count {
-    font-size: 12px;
+  font-size: 12px;
 }
 
 /* Body layout */
 .atom-inspector__body {
-    font-size: 12px;
-    flex: 1;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
+  font-size: 12px;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .atom-inspector__empty {
-    padding: 10px 0;
+  padding: 10px 0;
 }
 
 .atom-inspector__content {
-    flex: 1;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .atom-inspector__list {
-    flex: 1;
-    min-height: 0;
-    overflow: auto;
-    padding-right: 4px;
-    /* avoid scrollbar overlapping text */
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding-right: 4px;
 }
 
 .atom-inspector__footer {
-    flex: 0 0 auto;
+  flex: 0 0 auto;
 }
 
 /* Rows */
 .atom-row {
-    display: flex;
-    gap: 8px;
+  display: flex;
+  gap: 8px;
 }
 
 .atom-body {
-    flex: 1;
-    min-width: 0;
+  flex: 1;
+  min-width: 0;
 }
 
 .atom-header {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 8px;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
 }
 
 .atom-meta {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    justify-content: flex-end;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
 }
 
 .atom-element {
-    white-space: nowrap;
+  white-space: nowrap;
 }
 
 /* coords */
 .atom-inspector__coords {
-    margin-top: 2px;
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    word-break: break-all;
+  margin-top: 2px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  word-break: break-all;
 }
 
 /* list item spacing */
 .atom-item :deep(.ant-list-item) {
-    padding: 6px 0;
+  padding: 6px 0;
 }
 
 .atom-inspector__measureHint {
-    display: block;
-    margin-top: 6px;
+  display: block;
+  margin-top: 6px;
 }
 </style>

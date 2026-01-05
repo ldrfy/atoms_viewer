@@ -14,166 +14,52 @@
         class="settings-drawer settings-sider-fixed"
         :style="desktopPanelStyle"
       >
-        <div class="settings-header">
-          <div class="settings-header-row">
-            <div class="settings-title">
-              {{ t('settings.title') }}
-            </div>
-
-            <a-button
-              type="text"
-              size="small"
-              aria-label="close"
-              title="Close"
-              @click="onCloseClick"
-            >
-              ✕
-            </a-button>
-          </div>
-        </div>
-
-        <div class="settings-body">
-          <a-collapse
-            v-model:active-key="activeKeyModel"
-            ghost
-            class="settings-collapse"
-          >
-            <a-collapse-panel
-              key="files"
-              :header="t('settings.panel.files.header')"
-            >
-              <FilesPanel />
-            </a-collapse-panel>
-
-            <a-collapse-panel
-              key="layers"
-              :header="t('settings.panel.layers.header')"
-            >
-              <LayersPanel />
-            </a-collapse-panel>
-
-            <a-collapse-panel
-              key="display"
-              :header="t('settings.panel.display.header')"
-            >
-              <DisplayPanel />
-            </a-collapse-panel>
-
-            <a-collapse-panel
-              key="lammps"
-              :header="t('settings.panel.lammps.header')"
-            >
-              <LammpsPanel />
-            </a-collapse-panel>
-
-            <a-collapse-panel
-              key="colors"
-              :header="t('settings.panel.colors.header')"
-            >
-              <ColorsPanel />
-            </a-collapse-panel>
-
-            <a-collapse-panel
-              key="other"
-              :header="t('settings.panel.other.header')"
-            >
-              <OtherPanel />
-            </a-collapse-panel>
-          </a-collapse>
-        </div>
+        <SettingsContent
+          v-model:active-key="activeKeyModel"
+          :show-grab="false"
+          @close="onCloseClick"
+        />
       </div>
     </Transition>
   </Teleport>
 
-  <!-- Mobile bottom-sheet: keep using Ant Drawer (in-place) for touch behavior. -->
-  <a-drawer
-    v-if="drawerPlacement === 'bottom'"
-    v-model:open="openModel"
-    :class="['settings-drawer', 'settings-drawer--bottom']"
-    placement="bottom"
-    :mask="true"
-    :mask-closable="true"
-    :destroy-on-close="false"
-    :closable="false"
-    :mask-style="undefined"
-    :height="mobileHeight"
-    :get-container="false"
-    :content-wrapper-style="contentWrapperStyle"
-    :body-style="drawerBodyStyle"
-    @after-open-change="onAfterOpenChange"
-    @close="onCloseClick"
-  >
-    <div class="settings-header">
+  <!-- Mobile: use the same Teleport-based panel as desktop (bottom sheet) so
+       backdrop-blur / translucency is consistent across platforms. -->
+  <Teleport to="body">
+    <Transition name="settings-mask-fade">
       <div
-        class="settings-grab"
-        aria-label="resize"
-        title="Resize"
-        role="button"
-        tabindex="0"
-        @pointerdown.prevent="onResizeStart"
+        v-show="drawerPlacement === 'bottom' && openModel"
+        class="settings-sheet-mask"
+        aria-hidden="true"
+      />
+    </Transition>
+
+    <Transition
+      name="settings-sheet-slide"
+      @after-enter="onMobileAfterEnter"
+      @after-leave="onMobileAfterLeave"
+    >
+      <div
+        v-show="drawerPlacement === 'bottom' && openModel"
+        class="settings-drawer settings-sheet settings-drawer--bottom"
+        :style="mobileSheetStyle"
       >
-        <div class="settings-grab-bar" />
+        <SettingsContent
+          v-model:active-key="activeKeyModel"
+          :show-grab="true"
+          @close="onCloseClick"
+          @resize-start="onResizeStart"
+        />
       </div>
-
-      <div class="settings-header-row">
-        <div class="settings-title">
-          {{ t('settings.title') }}
-        </div>
-
-        <a-button
-          type="text"
-          size="small"
-          aria-label="close"
-          title="Close"
-          @click="onCloseClick"
-        >
-          ✕
-        </a-button>
-      </div>
-    </div>
-
-    <div class="settings-body">
-      <a-collapse v-model:active-key="activeKeyModel" ghost class="settings-collapse">
-        <a-collapse-panel key="files" :header="t('settings.panel.files.header')">
-          <FilesPanel />
-        </a-collapse-panel>
-
-        <a-collapse-panel key="layers" :header="t('settings.panel.layers.header')">
-          <LayersPanel />
-        </a-collapse-panel>
-
-        <a-collapse-panel key="display" :header="t('settings.panel.display.header')">
-          <DisplayPanel />
-        </a-collapse-panel>
-
-        <a-collapse-panel key="lammps" :header="t('settings.panel.lammps.header')">
-          <LammpsPanel />
-        </a-collapse-panel>
-
-        <a-collapse-panel key="colors" :header="t('settings.panel.colors.header')">
-          <ColorsPanel />
-        </a-collapse-panel>
-
-        <a-collapse-panel key="other" :header="t('settings.panel.other.header')">
-          <OtherPanel />
-        </a-collapse-panel>
-      </a-collapse>
-    </div>
-  </a-drawer>
+    </Transition>
+  </Teleport>
 </template>
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, provide, ref, watch } from 'vue';
-import { useI18n } from 'vue-i18n';
 import type { ViewerSettings } from '../../lib/viewer/settings';
 
-import FilesPanel from './panels/FilesPanel.vue';
-import LayersPanel from './panels/LayersPanel.vue';
-import DisplayPanel from './panels/DisplayPanel.vue';
-import LammpsPanel from './panels/LammpsPanel.vue';
-import ColorsPanel from './panels/ColorsPanel.vue';
-import OtherPanel from './panels/OtherPanel.vue';
-
+import SettingsContent from './SettingsContent.vue';
 import { settingsSiderContextKey, type PatchSettingsFn } from './context';
 
 const props = withDefaults(
@@ -192,8 +78,6 @@ const emit = defineEmits<{
   (e: 'update:settings', v: ViewerSettings): void;
   (e: 'update:activeKey', v: string[]): void;
 }>();
-
-const { t } = useI18n();
 
 /**
  * Patch settings back to parent.
@@ -368,6 +252,14 @@ function onDesktopAfterLeave(): void {
   onAfterOpenChange(false);
 }
 
+function onMobileAfterEnter(): void {
+  onAfterOpenChange(true);
+}
+
+function onMobileAfterLeave(): void {
+  onAfterOpenChange(false);
+}
+
 let resizing = false;
 let startY = 0;
 let startH = 0;
@@ -484,12 +376,25 @@ const desktopPanelStyle = computed(() => {
   } as Record<string, any>;
 });
 
-const drawerBodyStyle = computed(() => {
+/**
+ * Mobile bottom sheet root style.
+ * Use fixed-position Teleport panel (no Ant Drawer) so blur/translucency always works.
+ */
+const mobileSheetStyle = computed(() => {
+  const vh = getViewportHeight();
+  const top = freezeTopPx.value != null
+    ? freezeTopPx.value
+    : Math.max(0, vh - mobileHeight.value);
   return {
-    padding: '0',
-    height: '100%',
-    display: 'flex',
-    flexDirection: 'column',
+    position: 'fixed',
+    zIndex: 1000,
+    left: 0,
+    right: 0,
+    top: `${top}px`,
+    height: `${mobileHeight.value}px`,
+    borderRadius: '14px 14px 0 0',
+    overflow: 'hidden',
+    boxShadow: '0 -12px 34px rgba(0,0,0,0.14)',
   } as Record<string, any>;
 });
 </script>

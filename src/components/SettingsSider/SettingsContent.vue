@@ -50,6 +50,7 @@ import { useI18n } from 'vue-i18n';
 import FilesPanel from './panels/FilesPanel.vue';
 import LayersPanel from './panels/LayersPanel.vue';
 import DisplayPanel from './panels/DisplayPanel.vue';
+import AutoRotatePanel from './panels/AutoRotatePanel.vue';
 import LammpsPanel from './panels/LammpsPanel.vue';
 import ColorsPanel from './panels/ColorsPanel.vue';
 import OtherPanel from './panels/OtherPanel.vue';
@@ -76,6 +77,7 @@ const panels = [
   { key: 'files', headerKey: 'settings.panel.files.header', comp: FilesPanel },
   { key: 'layers', headerKey: 'settings.panel.layers.header', comp: LayersPanel },
   { key: 'display', headerKey: 'settings.panel.display.header', comp: DisplayPanel },
+  { key: 'autoRotate', headerKey: 'settings.panel.autoRotate.header', comp: AutoRotatePanel },
   { key: 'lammps', headerKey: 'settings.panel.lammps.header', comp: LammpsPanel },
   { key: 'colors', headerKey: 'settings.panel.colors.header', comp: ColorsPanel },
   { key: 'other', headerKey: 'settings.panel.other.header', comp: OtherPanel },

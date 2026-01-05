@@ -12,6 +12,7 @@ import type {
 import { useI18n } from 'vue-i18n';
 
 import { createThreeStage, type ThreeStage } from '../../lib/three/stage';
+import { getAutoRotatePreset } from '../../lib/viewer/autoRotate';
 import { bindViewerStageSettings } from './bindSettings';
 import {
   createModelRuntime,
@@ -173,6 +174,69 @@ export function useViewerStage(
   let stage: ThreeStage | null = null;
   let runtime: ModelRuntime | null = null;
   let stopBind: (() => void) | null = null;
+
+  // Keep Display panel rotation degrees in sync while auto-rotation is running.
+  let pendingRotationSyncRaf = 0;
+  let lastRotationSyncMs = 0;
+
+  function radToDeg(rad: number): number {
+    return (rad * 180) / Math.PI;
+  }
+
+  function wrapDeg(deg: number): number {
+    // Normalize into (-180, 180]
+    let d = deg % 360;
+    if (d <= -180) d += 360;
+    if (d > 180) d -= 360;
+    return d;
+  }
+
+  function round2(v: number): number {
+    return Math.round(v * 100) / 100;
+  }
+
+  function scheduleAutoRotateRotationSync(): void {
+    if (!patchSettings) return;
+    if (!stage) return;
+    if (pendingRotationSyncRaf) return;
+
+    pendingRotationSyncRaf = window.requestAnimationFrame(() => {
+      pendingRotationSyncRaf = 0;
+      if (!patchSettings) return;
+      if (!stage) return;
+
+      const now = performance.now();
+      // Avoid spamming Vue updates while still keeping the UI responsive.
+      if (now - lastRotationSyncMs < 80) return;
+      lastRotationSyncMs = now;
+
+      const a = settingsRef.value.autoRotate;
+      const preset = getAutoRotatePreset(a.presetId);
+      const sp = a.speedDegPerSec;
+      const speedDegPerSec = Number.isFinite(sp) ? sp : preset.speedDegPerSec;
+
+      const enabled = !!a.enabled && preset.id !== 'off' && Math.abs(speedDegPerSec) > 1e-8;
+      if (!enabled) return;
+
+      const e = stage.pivotGroup.rotation;
+      const next = {
+        x: round2(wrapDeg(radToDeg(e.x))),
+        y: round2(wrapDeg(radToDeg(e.y))),
+        z: round2(wrapDeg(radToDeg(e.z))),
+      };
+
+      const cur = settingsRef.value.rotationDeg;
+      if (
+        Math.abs(cur.x - next.x) < 1e-2
+        && Math.abs(cur.y - next.y) < 1e-2
+        && Math.abs(cur.z - next.z) < 1e-2
+      ) {
+        return;
+      }
+
+      patchSettings({ rotationDeg: next });
+    });
+  }
 
   const runtimeTick = ref(0);
 
@@ -348,6 +412,7 @@ export function useViewerStage(
       onBeforeRender: () => {
         anim.tickAnimation();
         runtime?.tickCameraClipping();
+        scheduleAutoRotateRotationSync();
         // Keep the RAF loop alive during animation playback.
         return anim.isPlaying.value;
       },
@@ -377,6 +442,8 @@ export function useViewerStage(
       applyShowBonds: () => runtime?.applyShowBonds(),
       applyShowAxes: () => runtime?.applyShowAxes(),
       applyModelRotation: () => runtime?.applyModelRotation(),
+
+      setAutoRotateConfig: cfg => stage?.setAutoRotateConfig(cfg),
 
       hasModel,
       hasAnyTypeId: () => runtime?.hasAnyTypeId() ?? false,
@@ -451,6 +518,11 @@ export function useViewerStage(
     stopBind = null;
 
     anim.stopPlay();
+
+    if (pendingRotationSyncRaf) {
+      window.cancelAnimationFrame(pendingRotationSyncRaf);
+      pendingRotationSyncRaf = 0;
+    }
 
     runtime?.clearModel();
     runtime = null;

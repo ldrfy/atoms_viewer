@@ -173,10 +173,11 @@ export function bindViewerStageSettings(params: {
   // 模型旋转 / model rotation
   stops.push(
     watch(
-      () => {
-        const s = settingsRef.value.rotationDeg;
-        return [s.x, s.y, s.z];
-      },
+      [
+        () => settingsRef.value.rotationDeg.x,
+        () => settingsRef.value.rotationDeg.y,
+        () => settingsRef.value.rotationDeg.z,
+      ],
       () => applyModelRotation(),
       { immediate: true },
     ),
@@ -185,16 +186,13 @@ export function bindViewerStageSettings(params: {
   // Auto rotation / 自动旋转
   stops.push(
     watch(
-      () => {
-        const a = settingsRef.value.autoRotate;
-        return [
-          a.enabled,
-          a.presetId,
-          (a as any).speedDegPerSec,
-          a.pauseOnInteract,
-          a.resumeDelayMs,
-        ] as const;
-      },
+      [
+        () => settingsRef.value.autoRotate.enabled,
+        () => settingsRef.value.autoRotate.presetId,
+        () => settingsRef.value.autoRotate.speedDegPerSec,
+        () => settingsRef.value.autoRotate.pauseOnInteract,
+        () => settingsRef.value.autoRotate.resumeDelayMs,
+      ],
       () => {
         const a = settingsRef.value.autoRotate;
         // Legacy: earlier versions allowed "presetId=off".
@@ -203,7 +201,7 @@ export function bindViewerStageSettings(params: {
         const preset = getAutoRotatePreset(
           legacyOff ? DEFAULT_AUTO_ROTATE_PRESET_ID : a.presetId,
         );
-        const sp = (a as any).speedDegPerSec;
+        const sp = a.speedDegPerSec;
         const speedDegPerSec = Number.isFinite(sp) ? sp : preset.speedDegPerSec;
         setAutoRotateConfig({
           enabled: !!a.enabled && !legacyOff,

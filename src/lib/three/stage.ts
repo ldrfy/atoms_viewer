@@ -34,6 +34,9 @@ export type ThreeStage = {
   /** 旋转枢轴组 / Pivot group (rotation center) */
   pivotGroup: THREE.Group;
 
+  /** Auto-rotation group (nested under pivotGroup). */
+  autoRotateGroup: THREE.Group;
+
   /** 模型组（相对 pivot 偏移） / Model group (offset relative to pivot) */
   modelGroup: THREE.Group;
 
@@ -86,6 +89,15 @@ export type ThreeStage = {
   setDualViewDistance: (dist: number) => void;
   /** Dual view split ratio for left viewport (0..1). */
   setDualViewSplit: (ratio: number) => void;
+
+  /** Configure auto rotation (arbitrary axis + constant speed). */
+  setAutoRotateConfig: (cfg: {
+    enabled: boolean;
+    axis: [number, number, number];
+    speedDegPerSec: number;
+    pauseOnInteract: boolean;
+    resumeDelayMs: number;
+  }) => void;
 };
 
 /**
@@ -115,11 +127,16 @@ export function createThreeStage(params: {
   scene.background = null;
 
   const pivotGroup = new THREE.Group();
+  // Split manual rotation (pivotGroup) and continuous auto rotation (autoRotateGroup)
+  // so they do not fight each other.
+  const autoRotateGroup = new THREE.Group();
+  pivotGroup.add(autoRotateGroup);
+
   const modelGroup = new THREE.Group();
-  pivotGroup.add(modelGroup);
+  autoRotateGroup.add(modelGroup);
 
   const axesGroup = new THREE.Group();
-  pivotGroup.add(axesGroup);
+  autoRotateGroup.add(axesGroup);
 
   scene.add(pivotGroup);
 
@@ -238,6 +255,16 @@ export function createThreeStage(params: {
   let inFrame = false;
   let keepAliveUntilMs = 0;
 
+  // --- auto rotation (continuous) ---
+  let autoRotateEnabled = false;
+  const autoRotateAxis = new THREE.Vector3(0, 1, 0);
+  let autoRotateSpeedRadPerSec = 0;
+  let autoRotatePauseOnInteract = true;
+  let autoRotateResumeDelayMs = 600;
+  let autoRotateUserInteracting = false;
+  let autoRotateResumeAtMs = 0;
+  let lastFrameMs = 0;
+
   const KEEP_ALIVE_TAIL_MS = 450; // allow OrbitControls damping tail after interaction
 
   const scheduleFrame = (): void => {
@@ -259,10 +286,17 @@ export function createThreeStage(params: {
     };
     const onStart = (): void => {
       bump();
+      if (autoRotateEnabled && autoRotatePauseOnInteract) {
+        autoRotateUserInteracting = true;
+      }
       invalidate();
     };
     const onEnd = (): void => {
       bump();
+      if (autoRotateEnabled && autoRotatePauseOnInteract) {
+        autoRotateUserInteracting = false;
+        autoRotateResumeAtMs = performance.now() + Math.max(0, autoRotateResumeDelayMs);
+      }
       invalidate();
     };
 
@@ -283,6 +317,42 @@ export function createThreeStage(params: {
     syncSize();
     invalidate();
   });
+
+  function setAutoRotateConfig(cfg: {
+    enabled: boolean;
+    axis: [number, number, number];
+    speedDegPerSec: number;
+    pauseOnInteract: boolean;
+    resumeDelayMs: number;
+  }): void {
+    const speedDeg = Number.isFinite(cfg.speedDegPerSec) ? cfg.speedDegPerSec : 0;
+    autoRotateEnabled = !!cfg.enabled && Math.abs(speedDeg) > 1e-8;
+    autoRotatePauseOnInteract = !!cfg.pauseOnInteract;
+    autoRotateResumeDelayMs = Number.isFinite(cfg.resumeDelayMs)
+      ? Math.max(0, cfg.resumeDelayMs)
+      : 600;
+
+    const ax = cfg.axis?.[0];
+    const ay = cfg.axis?.[1];
+    const az = cfg.axis?.[2];
+    autoRotateAxis.set(
+      Number.isFinite(ax) ? ax : 0,
+      Number.isFinite(ay) ? ay : 1,
+      Number.isFinite(az) ? az : 0,
+    );
+    if (autoRotateAxis.lengthSq() < 1e-12) autoRotateAxis.set(0, 1, 0);
+    autoRotateAxis.normalize();
+
+    autoRotateSpeedRadPerSec = THREE.MathUtils.degToRad(speedDeg);
+
+    // When turning on, resume immediately.
+    if (autoRotateEnabled) {
+      autoRotateResumeAtMs = 0;
+      autoRotateUserInteracting = false;
+    }
+
+    invalidate();
+  }
 
   const tmpV3 = new THREE.Vector3();
   const tmpV3b = new THREE.Vector3();
@@ -455,7 +525,24 @@ export function createThreeStage(params: {
     inFrame = true;
 
     const now = performance.now();
-    const keepAlive = !!onBeforeRender() || now < keepAliveUntilMs;
+    // dt (seconds). Clamp to avoid big jumps after tab hidden.
+    const dt = lastFrameMs > 0 ? Math.min(50, now - lastFrameMs) / 1000 : 0;
+    lastFrameMs = now;
+
+    // Apply continuous auto rotation before rendering.
+    if (autoRotateEnabled && dt > 0) {
+      const canRotate
+        = !autoRotatePauseOnInteract
+          || (!autoRotateUserInteracting && now >= autoRotateResumeAtMs);
+      if (canRotate && Math.abs(autoRotateSpeedRadPerSec) > 1e-10) {
+        pivotGroup.rotateOnWorldAxis(
+          autoRotateAxis,
+          autoRotateSpeedRadPerSec * dt,
+        );
+      }
+    }
+
+    const keepAlive = autoRotateEnabled || !!onBeforeRender() || now < keepAliveUntilMs;
 
     // Drive OrbitControls damping only while the loop is alive.
     // OrbitControls.update() may return void (older three) or boolean (newer).
@@ -657,6 +744,7 @@ export function createThreeStage(params: {
     renderer,
     labelRenderer,
     pivotGroup,
+    autoRotateGroup,
     modelGroup,
     axesGroup,
 
@@ -684,5 +772,7 @@ export function createThreeStage(params: {
     setDualViewEnabled,
     setDualViewDistance,
     setDualViewSplit,
+
+    setAutoRotateConfig,
   };
 }

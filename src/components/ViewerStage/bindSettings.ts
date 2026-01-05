@@ -4,6 +4,10 @@ import {
   normalizeViewPresets,
   type ViewPreset,
 } from '../../lib/viewer/viewPresets';
+import {
+  DEFAULT_AUTO_ROTATE_PRESET_ID,
+  getAutoRotatePreset,
+} from '../../lib/viewer/autoRotate';
 
 /**
  * 绑定 ViewerStage 与 settings 的 watch 逻辑，并返回统一的 stop 函数。
@@ -24,6 +28,14 @@ export function bindViewerStageSettings(params: {
   applyShowAxes: () => void;
   applyModelRotation: () => void;
 
+  setAutoRotateConfig: (cfg: {
+    enabled: boolean;
+    axis: [number, number, number];
+    speedDegPerSec: number;
+    pauseOnInteract: boolean;
+    resumeDelayMs: number;
+  }) => void;
+
   setViewPresets: (presets: ViewPreset[]) => void;
   setDualViewDistance: (dist: number) => void;
   setDualViewSplit: (ratio: number) => void;
@@ -41,6 +53,8 @@ export function bindViewerStageSettings(params: {
     applyShowBonds,
     applyShowAxes,
     applyModelRotation,
+
+    setAutoRotateConfig,
     setViewPresets,
     setDualViewDistance,
     setDualViewSplit,
@@ -164,6 +178,41 @@ export function bindViewerStageSettings(params: {
         return [s.x, s.y, s.z];
       },
       () => applyModelRotation(),
+      { immediate: true },
+    ),
+  );
+
+  // Auto rotation / 自动旋转
+  stops.push(
+    watch(
+      () => {
+        const a = settingsRef.value.autoRotate;
+        return [
+          a.enabled,
+          a.presetId,
+          (a as any).speedDegPerSec,
+          a.pauseOnInteract,
+          a.resumeDelayMs,
+        ] as const;
+      },
+      () => {
+        const a = settingsRef.value.autoRotate;
+        // Legacy: earlier versions allowed "presetId=off".
+        // Now ON/OFF is controlled solely by a.enabled.
+        const legacyOff = a.presetId === 'off';
+        const preset = getAutoRotatePreset(
+          legacyOff ? DEFAULT_AUTO_ROTATE_PRESET_ID : a.presetId,
+        );
+        const sp = (a as any).speedDegPerSec;
+        const speedDegPerSec = Number.isFinite(sp) ? sp : preset.speedDegPerSec;
+        setAutoRotateConfig({
+          enabled: !!a.enabled && !legacyOff,
+          axis: preset.axis,
+          speedDegPerSec,
+          pauseOnInteract: !!a.pauseOnInteract,
+          resumeDelayMs: Number.isFinite(a.resumeDelayMs) ? a.resumeDelayMs : 600,
+        });
+      },
       { immediate: true },
     ),
   );

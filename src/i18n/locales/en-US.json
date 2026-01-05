@@ -131,6 +131,57 @@
                 "resetPose": "Reset rotation",
                 "resetView": "Reset original distance"
             },
+            "autoRotate": {
+                "header": "Auto rotation",
+                "enable": "Enable",
+                "mode": "Axis preset",
+                "speed": "Speed (°/s)",
+                "speedHint": "Speed is adjusted independently; the preset only defines the axis (direction).",
+                "pauseOnInteract": "Pause while interacting",
+                "resumeDelay": "Resume delay (ms)",
+                "presets": {
+                    "off": {
+                        "name": "Off",
+                        "hint": "No continuous rotation"
+                    },
+                    "diag": {
+                        "name": "Diagonal axis",
+                        "hint": "A common isometric-like diagonal axis"
+                    },
+                    "y": {
+                        "name": "Y axis",
+                        "hint": "Rotate around the Y axis"
+                    },
+                    "x": {
+                        "name": "X axis",
+                        "hint": "Rotate around the X axis"
+                    },
+                    "z": {
+                        "name": "Z axis",
+                        "hint": "Rotate around the Z axis"
+                    },
+                    "diagXY": {
+                        "name": "XY plane diagonal",
+                        "hint": "Rotate around the diagonal direction in the XY plane"
+                    },
+                    "diagYZ": {
+                        "name": "YZ plane diagonal",
+                        "hint": "Rotate around the diagonal direction in the YZ plane"
+                    },
+                    "diagXZ": {
+                        "name": "XZ plane diagonal",
+                        "hint": "Rotate around the diagonal direction in the XZ plane"
+                    },
+                    "space": {
+                        "name": "Space diagonal",
+                        "hint": "Rotate around the (1,1,1) direction"
+                    },
+                    "tilt": {
+                        "name": "Tilted axis",
+                        "hint": "A slightly tilted axis that often looks good"
+                    }
+                }
+            },
             "lammps": {
                 "header": "LAMMPS",
                 "alert": "When a LAMMPS dump or LAMMPS data file provides only numeric types, specify the element symbol for each type here to ensure correct color/radius, bond inference, and stable rendering.",

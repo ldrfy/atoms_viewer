@@ -137,6 +137,57 @@
                 "resetPose": "回到旋转前",
                 "resetView": "恢复原始视距"
             },
+            "autoRotate": {
+                "header": "自动旋转",
+                "enable": "启用",
+                "mode": "旋转轴预设",
+                "speed": "旋转速度 (°/s)",
+                "speedHint": "速度可单独调节：旋转类型只决定旋转轴（方向）。",
+                "pauseOnInteract": "交互时暂停",
+                "resumeDelay": "恢复延迟 (ms)",
+                "presets": {
+                    "off": {
+                        "name": "关闭",
+                        "hint": "不进行自动旋转"
+                    },
+                    "diag": {
+                        "name": "斜轴（通用）",
+                        "hint": "常用的等轴视角斜轴方向"
+                    },
+                    "y": {
+                        "name": "绕 Y 轴",
+                        "hint": "绕 Y 轴旋转（经典展示）"
+                    },
+                    "x": {
+                        "name": "绕 X 轴",
+                        "hint": "绕 X 轴旋转"
+                    },
+                    "z": {
+                        "name": "绕 Z 轴",
+                        "hint": "绕 Z 轴旋转"
+                    },
+                    "diagXY": {
+                        "name": "XY 平面对角",
+                        "hint": "绕 XY 平面对角方向旋转"
+                    },
+                    "diagYZ": {
+                        "name": "YZ 平面对角",
+                        "hint": "绕 YZ 平面对角方向旋转"
+                    },
+                    "diagXZ": {
+                        "name": "XZ 平面对角",
+                        "hint": "绕 XZ 平面对角方向旋转"
+                    },
+                    "space": {
+                        "name": "空间对角",
+                        "hint": "绕 (1,1,1) 方向旋转"
+                    },
+                    "tilt": {
+                        "name": "倾斜轴",
+                        "hint": "略倾斜的旋转轴，通常观感较好"
+                    }
+                }
+            },
             "lammps": {
                 "header": "LAMMPS",
                 "alert": "当 LAMMPS dump 以及 LAMMPS data 只提供 type（数字）时，需要在这里指定 type 对应元素符号，用于颜色/半径/键推断与稳定显示。",

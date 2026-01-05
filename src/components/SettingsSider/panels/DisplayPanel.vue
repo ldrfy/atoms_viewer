@@ -174,12 +174,10 @@
 </template>
 
 <script setup lang="ts">
-
 import { computed, ref, watch } from 'vue';
 import { message } from 'ant-design-vue';
 import { useI18n } from 'vue-i18n';
 import { normalizeViewPresets, type ViewPreset } from '../../../lib/viewer/viewPresets';
-
 import { useSettingsSiderContext } from '../useSettingsSiderContext';
 
 const { t } = useI18n();

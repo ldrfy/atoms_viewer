@@ -521,8 +521,26 @@ export function createViewerPickingController(deps: RenderDeps) {
       if (dx === 0 && dy === 0) return;
 
       if (!dragRotationDeg) {
-        const cur = deps.settingsRef.value.rotationDeg;
-        dragRotationDeg = { x: cur.x, y: cur.y, z: cur.z };
+        // IMPORTANT:
+        // When auto-rotation is enabled, settings.rotationDeg is updated on a throttled
+        // cadence. During user interaction (especially when auto-rotation pauses),
+        // using the settings snapshot as the drag baseline can appear to “restart”
+        // from an older angle.
+        //
+        // Always use the stage's *actual* current rotation as the drag baseline.
+        const stage = deps.getStage();
+        if (stage) {
+          const eul = stage.pivotGroup.rotation;
+          dragRotationDeg = {
+            x: wrapDeg180(THREE.MathUtils.radToDeg(eul.x)),
+            y: wrapDeg180(THREE.MathUtils.radToDeg(eul.y)),
+            z: wrapDeg180(THREE.MathUtils.radToDeg(eul.z)),
+          };
+        }
+        else {
+          const cur = deps.settingsRef.value.rotationDeg;
+          dragRotationDeg = { x: cur.x, y: cur.y, z: cur.z };
+        }
       }
 
       dragRotationDeg.x = wrapDeg180(

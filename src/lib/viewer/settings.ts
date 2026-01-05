@@ -1,5 +1,6 @@
 import { isDark } from '../../theme/mode';
 import type { ViewPreset } from './viewPresets';
+import type { AutoRotatePresetId } from './autoRotate';
 export type LammpsTypeMapItem = {
   typeId: number;
   element: string;
@@ -32,6 +33,19 @@ export type RotationDeg = {
   z: number;
 };
 
+export type AutoRotateSettings = {
+  /** Enable auto rotation in the render loop. */
+  enabled: boolean;
+  /** Built-in preset id (UI maps it to an axis direction). */
+  presetId: AutoRotatePresetId;
+  /** Angular speed in degrees per second (independent from preset). */
+  speedDegPerSec: number;
+  /** Pause auto-rotation while user is interacting (OrbitControls start/end). */
+  pauseOnInteract: boolean;
+  /** Resume delay after interaction end (ms). */
+  resumeDelayMs: number;
+};
+
 export type ViewerSettings = {
   atomScale: number;
   /** Sphere geometry segments (quality vs performance). */
@@ -43,6 +57,9 @@ export type ViewerSettings = {
   /** During multi-frame playback, refresh bond meshes each frame. */
   refreshBondsOnPlay: boolean;
   rotationDeg: RotationDeg;
+
+  /** Auto rotation (around an arbitrary axis with a constant speed). */
+  autoRotate: AutoRotateSettings;
   // 新增：是否正交（关闭透视）
   orthographic: boolean;
 
@@ -82,6 +99,15 @@ export const DEFAULT_SETTINGS: ViewerSettings = {
   // large models. Default to OFF; users can enable explicitly when needed.
   refreshBondsOnPlay: true,
   rotationDeg: { x: 0, y: 0, z: 0 },
+
+  autoRotate: {
+    enabled: false,
+    presetId: 'diag',
+    speedDegPerSec: 8,
+    pauseOnInteract: true,
+    resumeDelayMs: 600,
+  },
+
   orthographic: false,
   resetViewSeq: 0,
 

@@ -63,9 +63,17 @@ type LayerInternal = {
   atomMeshes: THREE.InstancedMesh[];
   bondMeshes: THREE.InstancedMesh[];
   lastBondSegCount: number;
+  /** The bondFactor used to build current bondMeshes. */
+  bondFactorUsed: number;
 
   // animation
   frameIndex: number;
+  /** Current raw frame atoms (no typeId->element mapping applied). */
+  currentFrameAtoms: Atom[];
+  /** Cached mapped atoms for the current frame (computed lazily). */
+  currentMappedAtoms: Atom[] | null;
+  /** Frame index for which currentMappedAtoms is valid. */
+  mappedFrameIndex: number;
 
   // LAMMPS
   hasAnyTypeId: boolean;
@@ -120,12 +128,14 @@ function computeCenteredBox(
   const c = computeMeanCenterInto(atoms, tmpCenter);
 
   const box = new THREE.Box3();
+  const tmpP = new THREE.Vector3();
   let maxSphere = 0;
   for (const a of atoms) {
     const x = a.position[0] - c.x;
     const y = a.position[1] - c.y;
     const z = a.position[2] - c.z;
-    box.expandByPoint(new THREE.Vector3(x, y, z));
+    tmpP.set(x, y, z);
+    box.expandByPoint(tmpP);
     maxSphere = Math.max(
       maxSphere,
       getSphereBaseRadiusByElement(a.element, 0.5),
@@ -216,6 +226,11 @@ export function createModelRuntime(args: {
     bondRadius,
   } = args;
 
+  const invalidate = (): void => {
+    // On-demand rendering: any scene/camera/material change should request a redraw.
+    stage.invalidate();
+  };
+
   const layers = ref<ModelLayerInfo[]>([]);
   const activeLayerId = ref<string | null>(null);
   const activeTypeMapRows = ref<LammpsTypeMapItem[]>([]);
@@ -254,7 +269,7 @@ export function createModelRuntime(args: {
 
       const atoms0 = (l.model.frames?.[l.frameIndex]
         ?? l.model.atoms) as Atom[];
-      const atoms = getMappedAtomsForLayer(l, atoms0);
+      const atoms = mapAtomsByTypeMap(l, atoms0);
 
       if (!atoms || atoms.length === 0) continue;
       any = true;
@@ -438,6 +453,13 @@ export function createModelRuntime(args: {
     );
   }
 
+  function getBondFactor(): number {
+    const v = getSettings().bondFactor;
+    const n = typeof v === 'number' && Number.isFinite(v) ? v : bondFactor;
+    // Keep this in sync with the Settings UI range.
+    return Math.max(0.8, Math.min(1.3, n));
+  }
+
   function syncHasModelFlag(): void {
     hasModel.value = layers.value.length > 0;
   }
@@ -467,14 +489,25 @@ export function createModelRuntime(args: {
     return typeIdsRaw;
   }
 
-  function getMappedAtomsForLayer(
-    layer: LayerInternal,
-    atoms0: Atom[],
-  ): Atom[] {
+  function mapAtomsByTypeMap(layer: LayerInternal, atoms0: Atom[]): Atom[] {
     const rows = (layer.typeMapRows ?? []) as any;
     const hasRows = Array.isArray(rows) && rows.length > 0;
     if (layer.hasAnyTypeId && hasRows) return remapAtomsByTypeId(atoms0, rows);
     return atoms0;
+  }
+
+  function getMappedAtomsForCurrentFrame(layer: LayerInternal): Atom[] {
+    // Cache mapped atoms per-frame to avoid repeated remapping (e.g. picking
+    // / inspector reads). Mapping is invalidated when frameIndex changes or the
+    // layer's typeMap changes.
+    if (layer.currentMappedAtoms && layer.mappedFrameIndex === layer.frameIndex) {
+      return layer.currentMappedAtoms;
+    }
+
+    const mapped = mapAtomsByTypeMap(layer, layer.currentFrameAtoms);
+    layer.currentMappedAtoms = mapped;
+    layer.mappedFrameIndex = layer.frameIndex;
+    return mapped;
   }
 
   function disposeLayer(layer: LayerInternal): void {
@@ -483,6 +516,7 @@ export function createModelRuntime(args: {
     layer.atomMeshes = [];
     layer.bondMeshes = [];
     layer.lastBondSegCount = 0;
+    layer.bondFactorUsed = NaN;
 
     // best-effort dispose remaining children (if any)
     disposeGroupChildren(layer.group);
@@ -553,12 +587,14 @@ export function createModelRuntime(args: {
     layer.atomMeshes = [];
     layer.bondMeshes = [];
     layer.lastBondSegCount = 0;
+    layer.bondFactorUsed = NaN;
 
     const preferTypeId = !!layer.hasAnyTypeId;
     const getColorKey = (a: Atom) =>
       preferTypeId
         ? getAtomTypeColorKey(a.element, a.typeId)
         : getAtomTypeColorKey(a.element);
+    const getGroupKey = preferTypeId ? (a: Atom) => a.element : undefined;
     const colorMap = buildColorMapRecord(layer.colorMapRows);
 
     // atoms
@@ -567,8 +603,10 @@ export function createModelRuntime(args: {
       atomSizeFactor,
       atomScale: getSettings().atomScale,
       sphereSegments: getSphereSegments(),
+      getGroupKey,
       getColorKey,
       colorMap,
+      useInstanceColor: preferTypeId,
     });
     for (const m of layer.atomMeshes) {
       (m.userData as any).layerId = layer.info.id;
@@ -580,9 +618,10 @@ export function createModelRuntime(args: {
       const c = computeMeanCenterInto(atomsForVisuals, centerTmp);
       const centeredAtoms = makeCenteredAtomsView(atomsForVisuals, c);
 
+      const bf = getBondFactor();
       const res = buildBondMeshesBicolor({
         atoms: centeredAtoms,
-        bondFactor,
+        bondFactor: bf,
         atomSizeFactor,
         bondRadius,
         getColorKey,
@@ -590,6 +629,7 @@ export function createModelRuntime(args: {
       });
       layer.bondMeshes = res.meshes;
       layer.lastBondSegCount = res.segCount;
+      layer.bondFactorUsed = bf;
       for (const b of layer.bondMeshes) layer.group.add(b);
     }
 
@@ -643,6 +683,8 @@ export function createModelRuntime(args: {
 
     layers.value = [...layers.value];
     syncHasModelFlag();
+
+    invalidate();
   }
 
   function upsertLayerInternal(layer: LayerInternal): void {
@@ -696,7 +738,11 @@ export function createModelRuntime(args: {
       atomMeshes: [],
       bondMeshes: [],
       lastBondSegCount: 0,
+      bondFactorUsed: NaN,
       frameIndex: 0,
+      currentFrameAtoms: firstAtoms,
+      currentMappedAtoms: null,
+      mappedFrameIndex: -1,
       hasAnyTypeId: false,
       typeMapRows: [],
       colorMapRows: [],
@@ -718,7 +764,9 @@ export function createModelRuntime(args: {
     }
 
     // Apply current per-layer type mapping (if any)
-    const mappedFirstAtoms = getMappedAtomsForLayer(layer, firstAtoms);
+    const mappedFirstAtoms = mapAtomsByTypeMap(layer, firstAtoms);
+    layer.currentMappedAtoms = mappedFirstAtoms;
+    layer.mappedFrameIndex = 0;
 
     // Initialize per-layer color mapping from (mapped) atoms
     layer.colorMapRows = syncColorMapRowsFromAtoms(
@@ -747,6 +795,8 @@ export function createModelRuntime(args: {
 
     recomputeVisibleClipRadius();
     tickCameraClipping(true);
+
+    invalidate();
 
     return { frameCount, hasAnimation };
   }
@@ -788,7 +838,13 @@ export function createModelRuntime(args: {
       active.typeMapRows = [];
     }
 
-    const mappedFirstAtoms = getMappedAtomsForLayer(active, firstAtoms);
+    active.currentFrameAtoms = firstAtoms;
+    active.currentMappedAtoms = null;
+    active.mappedFrameIndex = -1;
+
+    const mappedFirstAtoms = mapAtomsByTypeMap(active, firstAtoms);
+    active.currentMappedAtoms = mappedFirstAtoms;
+    active.mappedFrameIndex = 0;
 
     // Keep (and sync) per-layer color mapping; preserve previous colors when possible.
     active.colorMapRows = syncColorMapRowsFromAtoms(
@@ -813,6 +869,8 @@ export function createModelRuntime(args: {
 
     recomputeVisibleClipRadius();
     tickCameraClipping(true);
+
+    invalidate();
 
     return {
       frameCount: active.info.frameCount,
@@ -842,6 +900,7 @@ export function createModelRuntime(args: {
     lastClipRadius = -1;
 
     syncHasModelFlag();
+    invalidate();
   }
 
   function getFrameCount(): number {
@@ -859,11 +918,20 @@ export function createModelRuntime(args: {
     if (!active) return null;
 
     const frames = active.model.frames;
-    if (frames && frames.length > 0) {
-      const idx = Math.min(Math.max(0, active.frameIndex), frames.length - 1);
-      return frames[idx] ?? null;
+    const frameAtoms = (frames && frames.length > 0)
+      ? (frames[Math.min(Math.max(0, active.frameIndex), frames.length - 1)] ?? null)
+      : active.model.atoms;
+    if (!frameAtoms) return null;
+
+    // Keep the runtime's "current frame" pointers consistent even if callers
+    // query atoms without going through applyFrameByIndex.
+    if (active.currentFrameAtoms !== frameAtoms || active.mappedFrameIndex !== active.frameIndex) {
+      active.currentFrameAtoms = frameAtoms;
+      active.currentMappedAtoms = null;
+      active.mappedFrameIndex = -1;
     }
-    return active.model.atoms;
+
+    return getMappedAtomsForCurrentFrame(active);
   }
 
   function applyFrameByIndex(idx: number, opts?: { refreshBonds?: boolean }): void {
@@ -879,12 +947,15 @@ export function createModelRuntime(args: {
     const clamped = Math.min(Math.max(0, idx), frames.length - 1);
     active.frameIndex = clamped;
 
-    // apply type mapping to the frame atoms before updating meshes
+    // Update instance transforms using raw frame atoms (positions only).
+    // TypeId->element remapping is computed lazily (only when needed).
     const frameAtoms = frames[clamped] ?? active.model.atoms;
-    const mapped = getMappedAtomsForLayer(active, frameAtoms);
+    active.currentFrameAtoms = frameAtoms;
+    active.currentMappedAtoms = null;
+    active.mappedFrameIndex = -1;
 
     applyFrameAtomsToMeshes({
-      frameAtoms: mapped,
+      frameAtoms,
       atomMeshes: active.atomMeshes,
       baseCenter: active.baseCenter,
       centerTmp: centerTmp,
@@ -892,10 +963,18 @@ export function createModelRuntime(args: {
     });
 
     if (opts?.refreshBonds) {
-      rebuildBondsForLayer(active, mapped);
+      // Safety: rebuilding bonds every frame can be O(N^2) if the cutoff is large,
+      // and is expensive even with spatial hashing. Guard against accidental freezes.
+      const MAX_ATOMS_FOR_BONDS_REFRESH = 5000;
+      if (frameAtoms.length <= MAX_ATOMS_FOR_BONDS_REFRESH) {
+        const mappedForBonds = getMappedAtomsForCurrentFrame(active);
+        rebuildBondsForLayer(active, mappedForBonds);
+      }
     }
 
-    if (getSettings().showAxes) updateAxesForAtoms(mapped);
+    if (getSettings().showAxes) updateAxesForAtoms(frameAtoms);
+
+    invalidate();
   }
 
   function applyAtomScale(): void {
@@ -909,6 +988,7 @@ export function createModelRuntime(args: {
 
     recomputeVisibleClipRadius();
     tickCameraClipping(true);
+    invalidate();
   }
   function rebuildBondsForLayer(layer: LayerInternal, atoms: Atom[]): void {
     // Rebuild (and re-center) bond meshes to match the current frame.
@@ -933,9 +1013,10 @@ export function createModelRuntime(args: {
         : getAtomTypeColorKey(a.element);
     const colorMap = buildColorMapRecord(layer.colorMapRows);
 
+    const bf = getBondFactor();
     const res = buildBondMeshesBicolor({
       atoms: centeredAtoms,
-      bondFactor,
+      bondFactor: bf,
       atomSizeFactor,
       bondRadius,
       getColorKey,
@@ -944,17 +1025,31 @@ export function createModelRuntime(args: {
 
     layer.bondMeshes = res.meshes;
     layer.lastBondSegCount = res.segCount;
+    layer.bondFactorUsed = bf;
     for (const b of layer.bondMeshes) layer.group.add(b);
   }
 
   function applyShowBonds(): void {
+    const enabled = getSettings().showBonds;
+    const bf = getBondFactor();
+
     for (const l of layerMap.values()) {
-      if (getSettings().showBonds) {
-        if (l.bondMeshes.length > 0) continue;
+      if (enabled) {
+        const needRebuild
+          = l.bondMeshes.length === 0
+            || !Number.isFinite(l.bondFactorUsed)
+            || Math.abs(l.bondFactorUsed - bf) > 1e-6;
+        if (!needRebuild) continue;
+
+        if (l.bondMeshes.length > 0) {
+          removeAndDisposeInstancedMeshes(l.group, l.bondMeshes);
+          l.bondMeshes = [];
+          l.lastBondSegCount = 0;
+        }
 
         const atoms = (l.model.frames?.[l.frameIndex]
           ?? l.model.atoms) as Atom[];
-        const mapped = getMappedAtomsForLayer(l, atoms);
+        const mapped = mapAtomsByTypeMap(l, atoms);
         const c = computeMeanCenterInto(mapped, centerTmp);
         const centeredAtoms = makeCenteredAtomsView(mapped, c);
 
@@ -967,7 +1062,7 @@ export function createModelRuntime(args: {
 
         const res = buildBondMeshesBicolor({
           atoms: centeredAtoms,
-          bondFactor,
+          bondFactor: bf,
           atomSizeFactor,
           bondRadius,
           getColorKey,
@@ -975,6 +1070,7 @@ export function createModelRuntime(args: {
         });
         l.bondMeshes = res.meshes;
         l.lastBondSegCount = res.segCount;
+        l.bondFactorUsed = bf;
         for (const b of l.bondMeshes) l.group.add(b);
       }
       else {
@@ -982,8 +1078,11 @@ export function createModelRuntime(args: {
         removeAndDisposeInstancedMeshes(l.group, l.bondMeshes);
         l.bondMeshes = [];
         l.lastBondSegCount = 0;
+        l.bondFactorUsed = NaN;
       }
     }
+
+    invalidate();
   }
 
   function applyShowAxes(): void {
@@ -993,17 +1092,21 @@ export function createModelRuntime(args: {
       xLabel.visible = false;
       yLabel.visible = false;
       zLabel.visible = false;
+      invalidate();
       return;
     }
 
     const active = getActiveLayer();
     if (!active) return;
 
+    // Axes length only depends on positions; avoid remapping.
     const atoms = (active.model.frames?.[active.frameIndex]
       ?? active.model.atoms) as Atom[];
-    const mapped = getMappedAtomsForLayer(active, atoms);
-
-    updateAxesForAtoms(mapped);
+    active.currentFrameAtoms = atoms;
+    active.currentMappedAtoms = null;
+    active.mappedFrameIndex = -1;
+    updateAxesForAtoms(atoms);
+    invalidate();
   }
 
   function applyModelRotation(): void {
@@ -1013,12 +1116,14 @@ export function createModelRuntime(args: {
       THREE.MathUtils.degToRad(r.y),
       THREE.MathUtils.degToRad(r.z),
     );
+    invalidate();
   }
 
   function applyBackgroundColor(): void {
     const col = new THREE.Color(getSettings().backgroundColor);
     const alpha = getSettings().backgroundTransparent ? 0 : 1;
     stage.renderer.setClearColor(col, alpha);
+    invalidate();
   }
 
   function hasAnyTypeId(): boolean {
@@ -1037,7 +1142,12 @@ export function createModelRuntime(args: {
 
     const atoms = (active.model.frames?.[active.frameIndex]
       ?? active.model.atoms) as Atom[];
-    const mapped = getMappedAtomsForLayer(active, atoms);
+    active.currentFrameAtoms = atoms;
+    active.currentMappedAtoms = null;
+    active.mappedFrameIndex = -1;
+    const mapped = mapAtomsByTypeMap(active, atoms);
+    active.currentMappedAtoms = mapped;
+    active.mappedFrameIndex = active.frameIndex;
 
     // Type mapping can change element labels. Keep color rows in sync while preserving colors.
     active.colorMapRows = syncColorMapRowsFromAtoms(
@@ -1054,6 +1164,7 @@ export function createModelRuntime(args: {
 
     recomputeVisibleClipRadius();
     tickCameraClipping(true);
+    invalidate();
   }
 
   function setActiveLayerTypeMapRows(rows: LammpsTypeMapItem[]): void {
@@ -1108,6 +1219,8 @@ export function createModelRuntime(args: {
       const col = (key && map[key]) ? map[key]! : getElementColorHex(fallbackEl);
       setMeshColor(b, col);
     }
+
+    invalidate();
   }
 
   function removeLayer(id: string): void {
@@ -1137,6 +1250,8 @@ export function createModelRuntime(args: {
 
     layers.value = [...layers.value];
     syncHasModelFlag();
+
+    invalidate();
   }
 
   function getActiveAtomMeshes(): THREE.InstancedMesh[] {

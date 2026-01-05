@@ -94,11 +94,14 @@ export function createViewerAnimationController(deps: {
     const n = runtime.getFrameCount();
     if (n <= 1) return;
 
-    while (animAccMs >= step) {
-      const next = frameIndex.value + 1;
-      setFrame(next >= n ? 0 : next);
-      animAccMs -= step;
-    }
+    // Avoid calling setFrame() in a tight loop (can trigger expensive work like
+    // bond refresh / UI sync). Instead, jump directly by the number of steps.
+    const steps = Math.floor(animAccMs / step);
+    if (steps <= 0) return;
+
+    const next = (frameIndex.value + steps) % n;
+    setFrame(next);
+    animAccMs -= steps * step;
   }
 
   return {

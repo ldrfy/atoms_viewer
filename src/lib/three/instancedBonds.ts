@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import type { Atom } from '../structure/types';
-import { getElementColorHex } from '../structure/chem';
-import { buildBicolorBondGroups } from '../structure/bondSegments';
+import { getCovalentRadiusAng, getElementColorHex } from '../structure/chem';
+import { computeBonds } from '../structure/bonds';
 
 /**
  * 键合渲染构建结果（InstancedMesh 列表 + 段数）。
@@ -11,6 +11,13 @@ import { buildBicolorBondGroups } from '../structure/bondSegments';
 export type BondBuildResult = {
   meshes: THREE.InstancedMesh[];
   segCount: number;
+};
+
+type BondSeg = {
+  p1: Atom['position'];
+  p2: Atom['position'];
+  colorKey: string;
+  el: string;
 };
 
 /**
@@ -37,13 +44,44 @@ export function buildBondMeshesBicolor(params: {
 }): BondBuildResult {
   const { atoms, bondFactor, atomSizeFactor, bondRadius, getColorKey, colorMap } = params;
 
-  // 纯数据：由 bondSegments.ts 生成分组后的线段数据
-  // Pure data: segments grouped by element, produced by bondSegments.ts
-  const { groups, segCount, keyToElement } = buildBicolorBondGroups(atoms, {
-    bondFactor,
-    atomSizeFactor,
-    getColorKey,
-  });
+  // Build segments and group by *element* to keep draw calls bounded, while still
+  // supporting typeId-based colors via per-instance instanceColor.
+  const groups = new Map<string, BondSeg[]>();
+
+  const bonds = computeBonds(atoms, bondFactor);
+  let segCount = 0;
+
+  for (let k = 0; k < bonds.length; k += 1) {
+    const b = bonds[k]!;
+    const ai = atoms[b.i]!;
+    const aj = atoms[b.j]!;
+
+    const d = b.length;
+    if (d < 1.0e-9) continue;
+
+    const ri = atomSizeFactor * getCovalentRadiusAng(ai.element);
+    const rj = atomSizeFactor * getCovalentRadiusAng(aj.element);
+
+    const rat = (0.5 * (rj - ri)) / d;
+    const alpha = 0.5 + rat;
+    const beta = 0.5 - rat;
+
+    const pi = ai.position;
+    const pj = aj.position;
+
+    const mid: Atom['position'] = [
+      pi[0] * alpha + pj[0] * beta,
+      pi[1] * alpha + pj[1] * beta,
+      pi[2] * alpha + pj[2] * beta,
+    ];
+
+    const keyI = (getColorKey ? getColorKey(ai) : ai.element) || ai.element;
+    const keyJ = (getColorKey ? getColorKey(aj) : aj.element) || aj.element;
+
+    pushSeg(groups, ai.element, { p1: pi, p2: mid, colorKey: keyI, el: ai.element });
+    pushSeg(groups, aj.element, { p1: mid, p2: pj, colorKey: keyJ, el: aj.element });
+    segCount += 2;
+  }
 
   if (segCount === 0) return { meshes: [], segCount: 0 };
 
@@ -69,17 +107,17 @@ export function buildBondMeshesBicolor(params: {
 
   const meshes: THREE.InstancedMesh[] = [];
 
-  for (const [key, segs] of groups.entries()) {
-    const el = keyToElement[key] ?? 'E';
-    const col = (colorMap && colorMap[key]) ? colorMap[key]! : getElementColorHex(el);
+  const tmpColor = new THREE.Color();
+
+  for (const [el, segs] of groups.entries()) {
     const material = new THREE.MeshStandardMaterial({
-      color: new THREE.Color(col),
+      color: new THREE.Color('#ffffff'),
       metalness: 0.0,
       roughness: 0.85,
+      vertexColors: true,
     });
 
     const mesh = new THREE.InstancedMesh(geometry, material, segs.length);
-    (mesh.userData as any).colorKey = key;
     (mesh.userData as any).element = el;
 
     for (let i = 0; i < segs.length; i += 1) {
@@ -110,11 +148,25 @@ export function buildBondMeshesBicolor(params: {
 
       mat.compose(center, quat, scale);
       mesh.setMatrixAt(i, mat);
+
+      const cHex = (colorMap && colorMap[seg.colorKey])
+        ? colorMap[seg.colorKey]!
+        : getElementColorHex(el);
+      tmpColor.set(cHex);
+      mesh.setColorAt(i, tmpColor);
     }
 
     mesh.instanceMatrix.needsUpdate = true;
+    const ic = mesh.instanceColor;
+    if (ic) ic.needsUpdate = true;
     meshes.push(mesh);
   }
 
   return { meshes, segCount };
+}
+
+function pushSeg(groups: Map<string, BondSeg[]>, el: string, seg: BondSeg): void {
+  const arr = groups.get(el);
+  if (arr) arr.push(seg);
+  else groups.set(el, [seg]);
 }

@@ -220,10 +220,11 @@ export function fitCameraToAtoms(params: {
   const box = new THREE.Box3();
   let maxSphere = 0;
 
+  const tmpP = new THREE.Vector3();
+
   for (const a of atoms) {
-    box.expandByPoint(
-      new THREE.Vector3(a.position[0], a.position[1], a.position[2]),
-    );
+    tmpP.set(a.position[0], a.position[1], a.position[2]);
+    box.expandByPoint(tmpP);
     maxSphere = Math.max(maxSphere, getSphereRadiusByElement(a.element));
   }
 
@@ -231,8 +232,10 @@ export function fitCameraToAtoms(params: {
   const pad = Math.max(0.5, maxSphere * 2.0);
   box.expandByScalar(pad);
 
-  const size = box.getSize(new THREE.Vector3());
-  const center = box.getCenter(new THREE.Vector3());
+  const size = new THREE.Vector3();
+  box.getSize(size);
+  const center = new THREE.Vector3();
+  box.getCenter(center);
 
   controls.target.copy(center);
 

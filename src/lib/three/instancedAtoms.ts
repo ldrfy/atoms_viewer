@@ -14,18 +14,24 @@ export function buildAtomMeshesByElement(params: {
   atomSizeFactor: number;
   atomScale: number;
   sphereSegments?: number;
-  /** Optional grouping key. Defaults to element. */
+  /** Optional grouping key. Defaults to element (or getColorKey if provided). */
+  getGroupKey?: (atom: Atom) => string;
+  /** Optional color key (used for either group coloring or per-instance colors). */
   getColorKey?: (atom: Atom) => string;
   /** Optional color map keyed by getColorKey result. */
   colorMap?: Record<string, string>;
+  /** If true, set per-instance colors (reduces draw calls for many typeIds). */
+  useInstanceColor?: boolean;
 }): THREE.InstancedMesh[] {
   const {
     atoms,
     atomSizeFactor,
     atomScale,
     sphereSegments = 16,
+    getGroupKey,
     getColorKey,
     colorMap,
+    useInstanceColor = false,
   } = params;
 
   type Group = { element: string; indices: number[] };
@@ -35,7 +41,9 @@ export function buildAtomMeshesByElement(params: {
     const a = atoms[i];
     if (!a) continue;
 
-    const key = (getColorKey ? getColorKey(a) : a.element) || a.element;
+    const key = (getGroupKey
+      ? getGroupKey(a)
+      : (getColorKey ? getColorKey(a) : a.element)) || a.element;
     const g = keyToGroup.get(key);
     if (g) {
       g.indices.push(i);
@@ -47,6 +55,7 @@ export function buildAtomMeshesByElement(params: {
 
   const meshes: THREE.InstancedMesh[] = [];
   const mat = new THREE.Matrix4();
+  const tmpColor = new THREE.Color();
 
   for (const [key, group] of keyToGroup.entries()) {
     const el = group.element;
@@ -62,9 +71,10 @@ export function buildAtomMeshesByElement(params: {
     );
     const col = (colorMap && colorMap[key]) ? colorMap[key]! : getElementColorHex(el);
     const material = new THREE.MeshStandardMaterial({
-      color: new THREE.Color(col),
+      color: new THREE.Color(useInstanceColor ? '#ffffff' : col),
       metalness: 0.05,
       roughness: 0.9,
+      vertexColors: useInstanceColor,
     });
 
     const mesh = new THREE.InstancedMesh(geometry, material, indices.length);
@@ -78,9 +88,20 @@ export function buildAtomMeshesByElement(params: {
       const [x, y, z] = a.position;
       mat.makeTranslation(x, y, z);
       mesh.setMatrixAt(k, mat);
+
+      if (useInstanceColor) {
+        const cKey = (getColorKey ? getColorKey(a) : a.element) || a.element;
+        const cHex = (colorMap && colorMap[cKey]) ? colorMap[cKey]! : getElementColorHex(a.element);
+        tmpColor.set(cHex);
+        mesh.setColorAt(k, tmpColor);
+      }
     }
 
     mesh.instanceMatrix.needsUpdate = true;
+    if (useInstanceColor && (mesh.instanceColor as any)) {
+      const ic = mesh.instanceColor;
+      if (ic) ic.needsUpdate = true;
+    }
     meshes.push(mesh);
   }
 

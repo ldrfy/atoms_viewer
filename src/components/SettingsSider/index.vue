@@ -264,6 +264,7 @@ let resizing = false;
 let startY = 0;
 let startH = 0;
 let activePointerId: number | null = null;
+let mobileHeightDirty = false;
 let touchMoveBlocker: ((e: TouchEvent) => void) | null = null;
 
 function clamp(n: number, min: number, max: number): number {
@@ -320,13 +321,19 @@ function onResizing(e: PointerEvent): void {
   const dy = startY - e.clientY;
   const maxH = Math.floor(window.innerHeight * 0.92);
   mobileHeight.value = clamp(startH + dy, 260, maxH);
-  saveNum('settingsDrawer.mobileHeight', mobileHeight.value);
+  mobileHeightDirty = true;
   e.preventDefault();
 }
 
 function onResizeEnd(): void {
   if (!resizing) return;
   resizing = false;
+
+  // Persist once on release to avoid synchronous storage writes on every move.
+  if (mobileHeightDirty) {
+    saveNum('settingsDrawer.mobileHeight', mobileHeight.value);
+    mobileHeightDirty = false;
+  }
   stopBlockPullToRefresh();
   window.removeEventListener('pointermove', onResizing);
   window.removeEventListener('pointerup', onResizeEnd);

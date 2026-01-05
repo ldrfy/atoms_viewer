@@ -139,6 +139,14 @@ export function bindViewerStageSettings(params: {
     ),
   );
 
+  // Bond inference factor: rebuild bond meshes when changed.
+  stops.push(
+    watch(
+      () => settingsRef.value.bondFactor,
+      () => applyShowBonds(),
+    ),
+  );
+
   // 显示坐标轴 / show axes
   stops.push(
     watch(

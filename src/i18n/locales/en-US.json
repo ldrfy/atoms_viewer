@@ -171,6 +171,8 @@
                 "header": "Other",
                 "axes": "Axes",
                 "bonds": "Bonds",
+                "bondFactor": "Bond cutoff factor (bondFactor)",
+                "bondFactorHint": "Used to infer bonds: cutoff = (r_i + r_j) × bondFactor. Larger values create bonds more easily.",
                 "atomSize": "Atom size",
                 "sphereSegments": "Sphere segments",
                 "sphereSegmentsHint": "Higher values look smoother but are slower to render.",

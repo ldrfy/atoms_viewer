@@ -38,6 +38,8 @@ export type ViewerSettings = {
   sphereSegments: number;
   showAxes: boolean;
   showBonds: boolean;
+  /** Bond cutoff factor used for bond inference: cutoff = (r_i + r_j) * bondFactor. */
+  bondFactor: number;
   /** During multi-frame playback, refresh bond meshes each frame. */
   refreshBondsOnPlay: boolean;
   rotationDeg: RotationDeg;
@@ -75,6 +77,9 @@ export const DEFAULT_SETTINGS: ViewerSettings = {
   sphereSegments: 24,
   showAxes: false,
   showBonds: true,
+  bondFactor: 1.05,
+  // Refreshing bonds each frame during playback can be extremely expensive for
+  // large models. Default to OFF; users can enable explicitly when needed.
   refreshBondsOnPlay: true,
   rotationDeg: { x: 0, y: 0, z: 0 },
   orthographic: false,

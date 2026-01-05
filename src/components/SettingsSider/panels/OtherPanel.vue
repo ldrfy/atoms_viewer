@@ -11,15 +11,6 @@
 
     <a-form-item>
       <a-row justify="space-between" align="middle">
-        <a-col>{{ t('settings.panel.other.bonds') }}</a-col>
-        <a-col>
-          <a-switch v-model:checked="showBondsModel" :aria-label="t('settings.panel.other.bonds')" :title="t('settings.panel.other.bonds')" />
-        </a-col>
-      </a-row>
-    </a-form-item>
-
-    <a-form-item>
-      <a-row justify="space-between" align="middle">
         <a-col>{{ t('settings.panel.other.refreshBondsOnPlay') }}</a-col>
         <a-col>
           <a-switch
@@ -29,6 +20,43 @@
           />
         </a-col>
       </a-row>
+    </a-form-item>
+
+    <a-form-item>
+      <a-row justify="space-between" align="middle">
+        <a-col>{{ t('settings.panel.other.bonds') }}</a-col>
+        <a-col>
+          <a-switch v-model:checked="showBondsModel" :aria-label="t('settings.panel.other.bonds')" :title="t('settings.panel.other.bonds')" />
+        </a-col>
+      </a-row>
+    </a-form-item>
+
+    <a-form-item :label="t('settings.panel.other.bondFactor')">
+      <a-row :gutter="8" align="middle">
+        <a-col :flex="1">
+          <a-slider
+            v-model:value="bondFactorModel"
+            :min="0.8"
+            :max="1.3"
+            :step="0.01"
+          />
+        </a-col>
+        <a-col :style="{ width: '96px' }">
+          <a-input-number
+            v-model:value="bondFactorModel"
+            :aria-label="t('settings.panel.other.bondFactor')"
+            :title="t('settings.panel.other.bondFactor')"
+            :min="0.8"
+            :max="1.3"
+            :step="0.01"
+            style="width: 100%"
+          />
+        </a-col>
+      </a-row>
+
+      <a-typography-text type="secondary" style="display: block; margin-top: 6px">
+        {{ t('settings.panel.other.bondFactorHint') }}
+      </a-typography-text>
     </a-form-item>
 
     <a-form-item :label="t('settings.panel.other.atomSize')">
@@ -132,8 +160,18 @@ const showBondsModel = computed({
   set: (v: boolean) => patchSettings({ showBonds: v }),
 });
 
+const bondFactorModel = computed({
+  get: () => settings.value.bondFactor ?? 1.05,
+  set: (v: number) => {
+    const n = Number(v);
+    const clamped = Number.isFinite(n) ? Math.max(0.8, Math.min(1.3, n)) : 1.05;
+    // Keep two decimals stability to reduce noisy updates.
+    patchSettings({ bondFactor: Math.round(clamped * 100) / 100 });
+  },
+});
+
 const refreshBondsOnPlayModel = computed({
-  get: () => settings.value.refreshBondsOnPlay ?? true,
+  get: () => settings.value.refreshBondsOnPlay ?? false,
   set: (v: boolean) => patchSettings({ refreshBondsOnPlay: v }),
 });
 

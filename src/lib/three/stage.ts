@@ -2,7 +2,6 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import type { CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js';
 
-import { createRafLoop, type RafLoop } from './loop';
 import { observeElementResize, syncRenderersToHost } from './resize';
 import { attachCss2dRenderer } from './labels2d';
 import {
@@ -65,6 +64,9 @@ export type ThreeStage = {
   /** 停止渲染循环 / Stop render loop */
   stop: () => void;
 
+  /** 请求一次重绘（按需渲染模式）。/ Request a redraw (invalidate-on-demand). */
+  invalidate: () => void;
+
   /** 释放资源 / Dispose resources */
   dispose: () => void;
 
@@ -100,7 +102,11 @@ export type ThreeStage = {
 export function createThreeStage(params: {
   host: HTMLDivElement;
   orthoHalfHeight: number;
-  onBeforeRender: () => void;
+  /**
+   * Called before each render tick.
+   * Return true to keep the RAF loop alive (e.g., animation playback).
+   */
+  onBeforeRender: () => boolean | void;
 }): ThreeStage {
   const { host, onBeforeRender } = params;
 
@@ -226,8 +232,56 @@ export function createThreeStage(params: {
     return size;
   };
 
+  // --- RAF / invalidate-on-demand ---
+  let rafId = 0;
+  let invalidated = true;
+  let inFrame = false;
+  let keepAliveUntilMs = 0;
+
+  const KEEP_ALIVE_TAIL_MS = 450; // allow OrbitControls damping tail after interaction
+
+  const scheduleFrame = (): void => {
+    if (rafId) return;
+    rafId = window.requestAnimationFrame(frame);
+  };
+
+  const invalidate = (): void => {
+    invalidated = true;
+    if (!inFrame) scheduleFrame();
+  };
+
+  const bindControlsForRedraw = (c: OrbitControls): (() => void) => {
+    const bump = (): void => {
+      keepAliveUntilMs = Math.max(
+        keepAliveUntilMs,
+        performance.now() + KEEP_ALIVE_TAIL_MS,
+      );
+    };
+    const onStart = (): void => {
+      bump();
+      invalidate();
+    };
+    const onEnd = (): void => {
+      bump();
+      invalidate();
+    };
+
+    c.addEventListener('change', invalidate);
+    c.addEventListener('start', onStart);
+    c.addEventListener('end', onEnd);
+
+    return () => {
+      c.removeEventListener('change', invalidate);
+      c.removeEventListener('start', onStart);
+      c.removeEventListener('end', onEnd);
+    };
+  };
+
+  let unbindControlsRedraw = bindControlsForRedraw(controls);
+
   const disposeResize = observeElementResize(host, () => {
     syncSize();
+    invalidate();
   });
 
   const tmpV3 = new THREE.Vector3();
@@ -350,9 +404,7 @@ export function createThreeStage(params: {
     (auxCamera as any).updateProjectionMatrix?.();
   }
 
-  const rafLoop: RafLoop = createRafLoop(() => {
-    onBeforeRender();
-    controls.update();
+  function renderOnce(): void {
     // Keep dual-view distance in sync (used by the distance slider and ortho mapping).
     onControlsChange();
 
@@ -369,7 +421,7 @@ export function createThreeStage(params: {
     const leftW = Math.floor(w * dualViewSplit);
     const rightW = Math.max(1, w - leftW);
 
-    // Update aux camera pose each frame.
+    // Update aux camera pose.
     syncAuxCameraPose(w, h);
 
     const prevAutoClear = renderer.autoClear;
@@ -396,7 +448,34 @@ export function createThreeStage(params: {
 
     // Labels: render only for the left view.
     labelRenderer?.render(scene, camera);
-  });
+  }
+
+  function frame(): void {
+    rafId = 0;
+    inFrame = true;
+
+    const now = performance.now();
+    const keepAlive = !!onBeforeRender() || now < keepAliveUntilMs;
+
+    // Drive OrbitControls damping only while the loop is alive.
+    // OrbitControls.update() may return void (older three) or boolean (newer).
+    const changed = (controls.update() as any) === true;
+
+    // If controls changed, OrbitControls will usually emit a 'change' event. Still keep a tail.
+    if (changed) keepAliveUntilMs = Math.max(keepAliveUntilMs, now + KEEP_ALIVE_TAIL_MS);
+
+    if (invalidated || keepAlive || changed) {
+      renderOnce();
+      invalidated = false;
+    }
+
+    inFrame = false;
+
+    // Continue while we have work.
+    if (invalidated || keepAlive || changed || now < keepAliveUntilMs) {
+      scheduleFrame();
+    }
+  }
 
   /**
    * 切换透视/正交相机。
@@ -430,6 +509,9 @@ export function createThreeStage(params: {
     controls.enableRotate = false;
     // Re-bind controls change listener (controls instance may change)
     controls.addEventListener('change', onControlsChange);
+    // Re-bind on-demand redraw hooks.
+    unbindControlsRedraw();
+    unbindControlsRedraw = bindControlsForRedraw(controls);
     orthoHalfHeight = res.orthoHalfHeight;
 
     // Update cached base distance used by dist <-> zoom mapping.
@@ -468,21 +550,26 @@ export function createThreeStage(params: {
 
     // Re-sync size for the current render mode (single vs dual)
     syncSize();
+    invalidate();
   };
 
   const start = (): void => {
     syncSize();
-    rafLoop.start();
+    invalidate();
   };
 
   const stop = (): void => {
-    rafLoop.stop();
+    if (rafId) window.cancelAnimationFrame(rafId);
+    rafId = 0;
+    invalidated = true;
+    keepAliveUntilMs = 0;
   };
 
   const dispose = (): void => {
     stop();
     disposeResize();
 
+    unbindControlsRedraw();
     controls.dispose();
 
     if (labelRenderer) {
@@ -532,6 +619,7 @@ export function createThreeStage(params: {
     }
 
     syncSize();
+    invalidate();
   };
 
   const setDualViewEnabled = (enabled: boolean): void => {
@@ -551,6 +639,7 @@ export function createThreeStage(params: {
     dualViewDistance = d;
     if (viewPresets.length === 0) return;
     applyViewDistance(dualViewDistance);
+    invalidate();
   };
 
   const setDualViewSplit = (ratio: number): void => {
@@ -559,6 +648,7 @@ export function createThreeStage(params: {
     dualViewSplit = r;
     if (viewPresets.length !== 2) return;
     syncSize();
+    invalidate();
   };
 
   return {
@@ -582,6 +672,7 @@ export function createThreeStage(params: {
     syncSize,
     start,
     stop,
+    invalidate,
     dispose,
 
     setViewPresets,

@@ -329,8 +329,8 @@ export function useViewerStage(
     controls.saveState();
   }
 
-  // sync dual-view distance back to settings on zoom
-  let distSyncRaf = 0;
+  // Sync dual-view distance back to settings on zoom.
+  // Event-driven (OrbitControls "change") instead of a polling RAF loop.
   let lastSyncedDist = NaN;
   let removeControlsSync: (() => void) | null = null;
 
@@ -348,6 +348,8 @@ export function useViewerStage(
       onBeforeRender: () => {
         anim.tickAnimation();
         runtime?.tickCameraClipping();
+        // Keep the RAF loop alive during animation playback.
+        return anim.isPlaying.value;
       },
     });
 
@@ -391,12 +393,12 @@ export function useViewerStage(
     picking.attach();
 
     if (patchSettings) {
-      let running = true;
+      const controls = stage.getControls();
+      let pendingRaf = 0;
       let lastT = 0;
 
-      const tick = (t: number) => {
-        if (!running) return;
-        distSyncRaf = requestAnimationFrame(tick);
+      const sync = (t: number) => {
+        pendingRaf = 0;
         if (!stage) return;
 
         // Throttle sync to reduce UI churn while keeping wheel/gesture zoom responsive.
@@ -413,18 +415,22 @@ export function useViewerStage(
           return;
         lastSyncedDist = dist;
 
-        if (
-          Math.abs(dist - (settingsRef.value.dualViewDistance ?? dist)) > 1e-3
-        ) {
+        if (Math.abs(dist - (settingsRef.value.dualViewDistance ?? dist)) > 1e-3) {
           patchSettings({ dualViewDistance: dist });
         }
       };
 
-      distSyncRaf = requestAnimationFrame(tick);
+      const onControlsChange = (): void => {
+        // Coalesce multiple change events into one write per frame.
+        if (pendingRaf) return;
+        pendingRaf = requestAnimationFrame(sync);
+      };
+
+      controls.addEventListener('change', onControlsChange);
       removeControlsSync = () => {
-        running = false;
-        if (distSyncRaf) cancelAnimationFrame(distSyncRaf);
-        distSyncRaf = 0;
+        controls.removeEventListener('change', onControlsChange);
+        if (pendingRaf) cancelAnimationFrame(pendingRaf);
+        pendingRaf = 0;
       };
     }
 

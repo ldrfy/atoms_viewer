@@ -151,6 +151,8 @@ export function createViewerPickingController(deps: RenderDeps) {
     const stage = deps.getStage();
     if (!stage) return;
 
+    const requestRedraw = () => stage.invalidate();
+
     ensureSelectionVisuals();
     if (!selectionGroup || markerMeshes.length === 0) return;
 
@@ -161,7 +163,10 @@ export function createViewerPickingController(deps: RenderDeps) {
     if (line12) line12.visible = false;
     if (line23) line23.visible = false;
 
-    if (sel.length === 0 || selectionVisuals.length === 0) return;
+    if (sel.length === 0 || selectionVisuals.length === 0) {
+      requestRedraw();
+      return;
+    }
 
     const pts: THREE.Vector3[] = [];
     for (let i = 0; i < Math.min(3, sel.length); i += 1) {
@@ -205,6 +210,8 @@ export function createViewerPickingController(deps: RenderDeps) {
       ]);
       line23.visible = true;
     }
+
+    requestRedraw();
   }
 
   // Patch inspectCtx.clear to also clear visuals tracking (no need to duplicate in callers)
@@ -446,6 +453,8 @@ export function createViewerPickingController(deps: RenderDeps) {
       THREE.MathUtils.degToRad(dragRotationDeg.y),
       THREE.MathUtils.degToRad(dragRotationDeg.z),
     );
+
+    stage.invalidate();
   }
 
   function attach(): void {

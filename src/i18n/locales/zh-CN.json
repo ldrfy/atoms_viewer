@@ -108,6 +108,8 @@
                 "header": "其他",
                 "axes": "坐标轴",
                 "bonds": "键",
+                "bondFactor": "键长阈值系数 (bondFactor)",
+                "bondFactorHint": "用于判断两原子是否成键：阈值 = (r_i + r_j) × bondFactor；数值越大越容易生成键。",
                 "atomSize": "原子大小",
                 "sphereSegments": "球体细分 (Sphere Segments)",
                 "sphereSegmentsHint": "影响球体光滑度与性能；数值越大越圆滑，但渲染更耗时。",

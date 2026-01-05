@@ -12,7 +12,7 @@
         @keydown.enter.prevent="collapsed = false"
         @keydown.space.prevent="collapsed = false"
       >
-        <a-button class="mini-handle" size="small">
+        <a-button class="mini-handle">
           {{ expandIcon }}
         </a-button>
       </div>
@@ -23,7 +23,6 @@
       <div
         v-show="visible && !collapsed"
         class="atom-inspector-panel"
-        :class="placement === 'bottom' ? 'is-bottom' : 'is-left'"
         :style="panelStyle"
       >
         <!-- Resize handle -->
@@ -128,7 +127,7 @@
 
               <!-- Fixed footer: measures -->
               <div class="atom-inspector__footer">
-                <a-divider style="margin: 10px 0" />
+                <a-divider v-if="measureMode && measure.distance12 != null" style="margin: 10px 0" />
 
                 <a-descriptions size="small" :column="1">
                   <a-descriptions-item
@@ -421,25 +420,8 @@ function fmt(v: number | null | undefined): string {
   justify-content: center;
   cursor: pointer;
   pointer-events: auto;
-
-  background: var(--atom-inspector-bg);
-  backdrop-filter: blur(var(--atom-inspector-blur));
-  -webkit-backdrop-filter: blur(var(--atom-inspector-blur));
-  border: 1px solid var(--atom-inspector-border);
-}
-
-.atom-inspector-mini.is-left {
   left: 0px;
   top: 40%;
-  border-radius: 0 6px 6px 0;
-}
-
-.atom-inspector-mini.is-bottom {
-  left: 50%;
-  bottom: 12px;
-  transform: translateX(-50%);
-  border-radius: 999px;
-  padding: 4px 6px;
 }
 
 .mini-handle {

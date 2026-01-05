@@ -594,7 +594,12 @@ export function createModelRuntime(args: {
       preferTypeId
         ? getAtomTypeColorKey(a.element, a.typeId)
         : getAtomTypeColorKey(a.element);
-    const getGroupKey = preferTypeId ? (a: Atom) => a.element : undefined;
+    // NOTE: For LAMMPS layers, atoms can share the same element but differ by typeId.
+    // In practice, relying on InstancedMesh instanceColor has proven fragile across
+    // builds/drivers when users refresh the color map or type map. To guarantee that
+    // atom colors always follow the Settings (and match bond updates), group atoms by
+    // the type-aware color key (e.g. "C1", "O2") and use a uniform material color per mesh.
+    const getGroupKey = preferTypeId ? getColorKey : undefined;
     const colorMap = buildColorMapRecord(layer.colorMapRows);
 
     // atoms
@@ -606,7 +611,7 @@ export function createModelRuntime(args: {
       getGroupKey,
       getColorKey,
       colorMap,
-      useInstanceColor: preferTypeId,
+      useInstanceColor: false,
     });
     for (const m of layer.atomMeshes) {
       (m.userData as any).layerId = layer.info.id;

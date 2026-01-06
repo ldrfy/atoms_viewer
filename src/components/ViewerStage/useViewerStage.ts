@@ -264,12 +264,16 @@ export function useViewerStage(
   // inspect
   const inspectCtx = createInspectCtx();
 
+  // model file name provider (set after loader is created)
+  let modelFileNameProvider: () => string | undefined = () => undefined;
+
   // recording
   const recording = createRecordingController({
     getStage: () => stage,
     patchSettings,
     t,
     getRecordFps: () => settingsRef.value.frame_rate ?? 60,
+    getModelFileName: () => modelFileNameProvider(),
   });
 
   // picking (attach after stage created)
@@ -292,13 +296,6 @@ export function useViewerStage(
     onSelectionVisualsNeedUpdate: () => picking.updateSelectionVisuals(),
   });
 
-  // exporter
-  const exporter = createPngExporter({
-    getStage: () => stage,
-    getSettings: () => settingsRef.value,
-    t,
-  });
-
   // loader (parse/load/refreshTypeMap)
   const loader = createViewerLoader({
     settingsRef,
@@ -314,6 +311,17 @@ export function useViewerStage(
     frameCount: anim.frameCount,
     hasAnimation: anim.hasAnimation,
     stopPlay: anim.stopPlay,
+  });
+
+  // now that loader exists, wire model file name provider
+  modelFileNameProvider = () => loader.parseInfo.fileName;
+
+  // exporter
+  const exporter = createPngExporter({
+    getStage: () => stage,
+    getSettings: () => settingsRef.value,
+    getModelFileName: () => loader.parseInfo.fileName,
+    t,
   });
 
   // file drop depends on loadFiles

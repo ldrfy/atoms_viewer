@@ -77,6 +77,10 @@
                 "loadFailed": "Failed to load: {error} (switched to built-in sample)",
                 "empty": "No samples available",
                 "builtinSuffix": "(Built-in)"
+            },
+            "footer": {
+                "localOnly": "All data is computed and rendered locally. No uploads or data collection.",
+                "copyright": "Copyright © {years} {author}. All rights reserved."
             }
         },
         "export": {
@@ -85,6 +89,7 @@
             "scaleTip": "Additional export scaling based on the current view. To avoid excessive scaling errors, zoom in on the model with the mouse wheel first.",
             "scalePlaceholder": "Higher = clearer",
             "pngSuccess": "Exported PNG (transparent background)",
+            "scaleCapped": "Export scale was capped from {requested} to {used} (GPU limit: {limit}px).",
             "fail": "Export failed: {reason}"
         },
         "lammps": {

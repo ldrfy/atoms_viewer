@@ -75,18 +75,23 @@
 
     <!-- 底部：Footer（页面底部） -->
     <div class="page-footer">
-      <a
-        class="footer-link"
-        :href="APP_YUHLDR_URL"
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        <span>v{{ APP_VERSION }}</span>
-        <template v-if="APP_AUTHOR">
+      <div class="footer-lines">
+        <a
+          v-if="APP_AUTHOR"
+          class="footer-link footer-line"
+          :href="APP_YUHLDR_URL"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          v{{ APP_VERSION }}
           <span class="sep">·</span>
-          <span>{{ APP_AUTHOR }}</span>
-        </template>
-      </a>
+          {{ t('viewer.empty.footer.copyright', { years: copyrightYearsText, author: APP_AUTHOR }) }}
+        </a>
+
+        <div class="footer-line footer-privacy">
+          {{ t('viewer.empty.footer.localOnly') }}
+        </div>
+      </div>
     </div>
 
     <input
@@ -112,6 +117,13 @@ import { APP_AUTHOR, APP_DISPLAY_NAME, APP_VERSION, APP_YUHLDR_URL } from '../li
 import { fetchWithTimeout } from '../lib/net/index.ts';
 
 const { t } = useI18n();
+
+const COPYRIGHT_START_YEAR = 2025;
+const copyrightEndYear = new Date().getFullYear();
+const copyrightYearsText
+  = copyrightEndYear > COPYRIGHT_START_YEAR
+    ? `${COPYRIGHT_START_YEAR}–${copyrightEndYear}`
+    : String(COPYRIGHT_START_YEAR);
 
 const props = withDefaults(
   defineProps<{
@@ -309,8 +321,26 @@ const logoSrc = props.logoSrc;
 
 /* 页面底部 footer */
 .page-footer {
-    margin-bottom: 16px;
+    margin: 12px 0 16px;
+    padding: 0 14px;
     text-align: center;
+}
+
+.footer-lines {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    align-items: center;
+}
+
+.footer-line {
+    line-height: 1.4;
+    font-size: 12px;
+}
+
+.footer-privacy {
+    max-width: min(720px, 92vw);
+    word-break: break-word;
 }
 
 .footer-link {

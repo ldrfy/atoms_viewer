@@ -232,6 +232,7 @@
                 "header": "原子颜色",
                 "alert": "修改颜色后，需要点击“刷新显示”才会应用到模型。",
                 "currentLayer": "当前图层",
+                "applyAll": "同时修改所有图层",
                 "mapLabel": "颜色映射（十六进制）",
                 "hexPlaceholder": "例如 #FF8800",
                 "invalidHex": "颜色格式无效，请输入 #RRGGBB 或 #RGB。",
@@ -240,6 +241,19 @@
                 "refresh": "刷新显示",
                 "hint": "提示：若该图层存在 typeId（如 LAMMPS），将按元素+typeId 显示为 C1、C2…；否则按元素显示。",
                 "empty": "当前图层暂无可编辑的原子类型。"
+            },
+            "layerDisplay": {
+                "header": "图层外观",
+                "alert": "以下设置按图层保存，开启“同时修改所有图层”可一次广播到全部图层。",
+                "currentLayer": "当前图层",
+                "applyAll": "同时修改所有图层",
+                "hint": "原子大小和键参数默认只影响当前图层，除非你选择同步到所有图层。",
+                "bonds": "显示键",
+                "bondFactor": "键长阈值系数（bondFactor）",
+                "bondFactorHint": "用于推断键合：cutoff = (r_i + r_j) × bondFactor，数值越大越容易生成键。",
+                "atomSize": "原子大小",
+                "sphereSegments": "球体细分",
+                "sphereSegmentsHint": "数值越大越圆滑，但渲染开销越高。"
             }
         }
     },

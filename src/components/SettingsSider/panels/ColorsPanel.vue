@@ -27,6 +27,22 @@
       </a-typography-text>
     </a-space>
 
+    <a-row justify="space-between" align="middle" style="margin-top: 8px">
+      <a-col>
+        <a-typography-text type="secondary">
+          {{ t('settings.panel.colors.applyAll') }}
+        </a-typography-text>
+      </a-col>
+      <a-col>
+        <a-switch
+          v-model:checked="applyToAllLayers"
+          :disabled="!viewerApi || layerList.length === 0"
+          :aria-label="t('settings.panel.colors.applyAll')"
+          :title="t('settings.panel.colors.applyAll')"
+        />
+      </a-col>
+    </a-row>
+
     <a-form-item :label="t('settings.panel.colors.mapLabel')" style="margin-top: 12px">
       <template v-if="colorMapModel.length === 0">
         <a-alert type="info" show-icon :message="t('settings.panel.colors.empty')" />
@@ -102,7 +118,7 @@
 
 <script setup lang="ts">
 import { ReloadOutlined } from '@ant-design/icons-vue';
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { message } from 'ant-design-vue';
 import { useI18n } from 'vue-i18n';
 
@@ -117,6 +133,7 @@ const { t } = useI18n();
 const viewerApi = computed(() => viewerApiRef.value);
 const layerList = computed(() => viewerApi.value?.layers.value ?? []);
 const activeLayerId = computed(() => viewerApi.value?.activeLayerId.value ?? null);
+const applyToAllLayers = ref(false);
 const activeLayerInfo = computed(() => {
   const id = activeLayerId.value;
   if (!id) return null;
@@ -125,7 +142,11 @@ const activeLayerInfo = computed(() => {
 
 const colorMapModel = computed<AtomTypeColorMapItem[]>({
   get: () => (viewerApi.value?.activeLayerColorMap.value as (AtomTypeColorMapItem[] | undefined)) ?? [],
-  set: v => viewerApi.value?.setActiveLayerColorMap(v),
+  set: (v) => {
+    if (!viewerApi.value) return;
+    if (applyToAllLayers.value) viewerApi.value.setAllLayersColorMap(v);
+    else viewerApi.value.setActiveLayerColorMap(v);
+  },
 });
 
 function formatColorKey(row: AtomTypeColorMapItem): string {
@@ -194,6 +215,6 @@ function onColorPickerChange(idx: number, v: unknown): void {
 }
 
 function onRefreshColorMap(): void {
-  viewerApi.value?.refreshColorMap();
+  viewerApi.value?.refreshColorMap({ applyToAll: applyToAllLayers.value });
 }
 </script>

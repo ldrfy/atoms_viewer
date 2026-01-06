@@ -6,6 +6,7 @@ import type {
   ViewerSettings,
   LammpsTypeMapItem,
   AtomTypeColorMapItem,
+  LayerDisplaySettings,
 } from '../../lib/viewer/settings';
 import type { Atom, StructureModel } from '../../lib/structure/types';
 import { getElementColorHex } from '../../lib/structure/chem';
@@ -43,6 +44,47 @@ function clampInt(n: number, min: number, max: number): number {
   const v = Math.floor(Number.isFinite(n) ? n : DEFAULT_SPHERE_SEGMENTS);
   return Math.max(min, Math.min(max, v));
 }
+
+function normalizeLayerDisplay(
+  patch: Partial<LayerDisplaySettings>,
+  base: LayerDisplaySettings,
+): LayerDisplaySettings {
+  const atomScaleRaw = patch.atomScale;
+  const atomScale
+    = Number.isFinite(atomScaleRaw)
+      ? Math.max(0.2, Math.min(2, Number(atomScaleRaw)))
+      : base.atomScale;
+
+  const sphereSegmentsRaw = patch.sphereSegments;
+  const sphereSegments = clampInt(
+    Number.isFinite(sphereSegmentsRaw) ? Number(sphereSegmentsRaw) : base.sphereSegments,
+    8,
+    64,
+  );
+
+  const bondFactorRaw = patch.bondFactor;
+  const bondFactor
+    = Number.isFinite(bondFactorRaw)
+      ? Math.max(0.8, Math.min(1.3, Number(bondFactorRaw)))
+      : base.bondFactor;
+
+  const showBonds
+    = typeof patch.showBonds === 'boolean' ? patch.showBonds : base.showBonds;
+
+  return {
+    atomScale,
+    showBonds,
+    sphereSegments,
+    bondFactor,
+  };
+}
+
+const DEFAULT_LAYER_DISPLAY_LOCAL: LayerDisplaySettings = {
+  atomScale: 1,
+  showBonds: true,
+  sphereSegments: 24,
+  bondFactor: 1.05,
+};
 
 export type ModelLayerInfo = {
   id: string;
@@ -83,6 +125,9 @@ type LayerInternal = {
 
   /** Per-layer atom type color mapping rows (active layer editable in Settings). */
   colorMapRows: AtomTypeColorMapItem[];
+
+  /** Per-layer display settings (atom size, bonds, quality). */
+  display: LayerDisplaySettings;
 
   // tmp
   baseCenter: THREE.Vector3; // keep at (0,0,0) so applyFrameAtomsToMeshes == shift by current mean
@@ -166,6 +211,7 @@ export type ModelRuntime = {
   activeLayerId: Ref<string | null>;
   activeTypeMapRows: Ref<LammpsTypeMapItem[]>;
   activeColorMapRows: Ref<AtomTypeColorMapItem[]>;
+  activeDisplaySettings: Ref<LayerDisplaySettings | null>;
 
   renderModel: (
     model: StructureModel,
@@ -194,16 +240,22 @@ export type ModelRuntime = {
 
   hasAnyTypeId: () => boolean;
   onTypeMapChanged: () => void;
-  onColorMapChanged: () => void;
+  onColorMapChanged: (opts?: { applyToAll?: boolean }) => void;
 
   setActiveLayerTypeMapRows: (rows: LammpsTypeMapItem[]) => void;
 
   setActiveLayerColorMapRows: (rows: AtomTypeColorMapItem[]) => void;
+  setAllLayersColorMapRows: (rows: AtomTypeColorMapItem[]) => void;
 
   removeLayer: (id: string) => void;
 
   setActiveLayer: (id: string) => void;
   setLayerVisible: (id: string, visible: boolean) => void;
+
+  setActiveLayerDisplaySettings: (
+    patch: Partial<LayerDisplaySettings>,
+    opts?: { applyToAll?: boolean },
+  ) => void;
 
   getActiveAtomMeshes: () => THREE.InstancedMesh[];
   getVisibleAtomMeshes: () => THREE.InstancedMesh[];
@@ -214,7 +266,6 @@ export function createModelRuntime(args: {
   settingsRef: Readonly<Ref<ViewerSettings>>;
   hasModel: Ref<boolean>;
   atomSizeFactor: number;
-  bondFactor: number;
   bondRadius: number;
 }): ModelRuntime {
   const {
@@ -222,7 +273,6 @@ export function createModelRuntime(args: {
     settingsRef,
     hasModel,
     atomSizeFactor,
-    bondFactor,
     bondRadius,
   } = args;
 
@@ -235,6 +285,7 @@ export function createModelRuntime(args: {
   const activeLayerId = ref<string | null>(null);
   const activeTypeMapRows = ref<LammpsTypeMapItem[]>([]);
   const activeColorMapRows = ref<AtomTypeColorMapItem[]>([]);
+  const activeDisplaySettings = ref<LayerDisplaySettings | null>(null);
 
   const layerMap = new Map<string, LayerInternal>();
 
@@ -261,11 +312,9 @@ export function createModelRuntime(args: {
     let maxSphere = 0;
     let any = false;
 
-    const settings = getSettings();
-    const atomScale = settings.atomScale;
-
     for (const l of layerMap.values()) {
       if (!l.info.visible) continue;
+      const display = getLayerDisplay(l);
 
       const atoms0 = (l.model.frames?.[l.frameIndex]
         ?? l.model.atoms) as Atom[];
@@ -289,7 +338,8 @@ export function createModelRuntime(args: {
         if (z > maxZ) maxZ = z;
 
         const r
-          = getSphereBaseRadiusByElement(a.element, atomSizeFactor) * atomScale;
+          = getSphereBaseRadiusByElement(a.element, atomSizeFactor)
+            * display.atomScale;
         if (r > maxSphere) maxSphere = r;
       }
     }
@@ -444,20 +494,28 @@ export function createModelRuntime(args: {
     return settingsRef.value;
   }
 
-  function getSphereSegments(): number {
-    const s = getSettings().sphereSegments;
-    return clampInt(
-      typeof s === 'number' && Number.isFinite(s) ? s : DEFAULT_SPHERE_SEGMENTS,
-      8,
-      64,
+  function getDisplayDefaults(): LayerDisplaySettings {
+    return normalizeLayerDisplay(
+      {
+        atomScale: getSettings().atomScale,
+        showBonds: getSettings().showBonds,
+        sphereSegments: getSettings().sphereSegments,
+        bondFactor: getSettings().bondFactor,
+      },
+      DEFAULT_LAYER_DISPLAY_LOCAL,
     );
   }
 
-  function getBondFactor(): number {
-    const v = getSettings().bondFactor;
-    const n = typeof v === 'number' && Number.isFinite(v) ? v : bondFactor;
-    // Keep this in sync with the Settings UI range.
-    return Math.max(0.8, Math.min(1.3, n));
+  function getLayerDisplay(layer: LayerInternal): LayerDisplaySettings {
+    if (!layer.display) {
+      layer.display = getDisplayDefaults();
+    }
+    return layer.display;
+  }
+
+  function getActiveDisplay(): LayerDisplaySettings | null {
+    const a = getActiveLayer();
+    return a ? getLayerDisplay(a) : null;
   }
 
   function syncHasModelFlag(): void {
@@ -478,6 +536,11 @@ export function createModelRuntime(args: {
   function syncActiveColorMap(): void {
     const a = getActiveLayer();
     activeColorMapRows.value = (a?.colorMapRows ?? []) as AtomTypeColorMapItem[];
+  }
+
+  function syncActiveDisplay(): void {
+    const d = getActiveDisplay();
+    activeDisplaySettings.value = d ? { ...d } : null;
   }
 
   function expandTypeIdsContiguous(typeIdsRaw: number[]): number[] {
@@ -552,9 +615,13 @@ export function createModelRuntime(args: {
     zLabel.position.set(0, 0, axisLen + labelOffset);
   }
 
-  function fitCameraToAtomsCentered(atoms: Atom[]): void {
+  function fitCameraToAtomsCentered(
+    layer: LayerInternal,
+    atoms: Atom[],
+  ): void {
     const camera = stage.getCamera();
     const controls = stage.getControls();
+    const display = getLayerDisplay(layer);
 
     // center by current mean to match applyFrameAtomsToMeshes(baseCenter=0)
     const c = computeMeanCenterInto(atoms, centerTmp);
@@ -567,7 +634,7 @@ export function createModelRuntime(args: {
       host: stage.host,
       getSphereRadiusByElement: el =>
         getSphereBaseRadiusByElement(el, atomSizeFactor)
-        * getSettings().atomScale,
+        * display.atomScale,
       orthoHalfHeight: stage.getOrthoHalfHeight(),
       margin: 1.25,
     });
@@ -581,6 +648,8 @@ export function createModelRuntime(args: {
     layer: LayerInternal,
     atomsForVisuals: Atom[],
   ): void {
+    const display = getLayerDisplay(layer);
+
     // clear old
     removeAndDisposeInstancedMeshes(layer.group, layer.atomMeshes);
     removeAndDisposeInstancedMeshes(layer.group, layer.bondMeshes);
@@ -606,8 +675,8 @@ export function createModelRuntime(args: {
     layer.atomMeshes = buildAtomMeshesByElement({
       atoms: atomsForVisuals,
       atomSizeFactor,
-      atomScale: getSettings().atomScale,
-      sphereSegments: getSphereSegments(),
+      atomScale: display.atomScale,
+      sphereSegments: display.sphereSegments,
       getGroupKey,
       getColorKey,
       colorMap,
@@ -619,11 +688,11 @@ export function createModelRuntime(args: {
     for (const m of layer.atomMeshes) layer.group.add(m);
 
     // bonds (optional)
-    if (getSettings().showBonds) {
+    if (display.showBonds) {
       const c = computeMeanCenterInto(atomsForVisuals, centerTmp);
       const centeredAtoms = makeCenteredAtomsView(atomsForVisuals, c);
 
-      const bf = getBondFactor();
+      const bf = display.bondFactor;
       const res = buildBondMeshesBicolor({
         atoms: centeredAtoms,
         bondFactor: bf,
@@ -661,6 +730,7 @@ export function createModelRuntime(args: {
     activeLayerId.value = id;
     syncActiveTypeMap();
     syncActiveColorMap();
+    syncActiveDisplay();
 
     // keep axes in sync
     applyShowAxes();
@@ -673,13 +743,28 @@ export function createModelRuntime(args: {
     layer.info.visible = visible;
     layer.group.visible = visible;
 
-    // if active layer is hidden, pick a visible one as active
-    if (activeLayerId.value === id && !visible) {
-      const next = layers.value.find(x => x.visible && x.id !== id) ?? null;
-      activeLayerId.value = next?.id ?? null;
-      syncActiveTypeMap();
-      syncActiveColorMap();
-      applyShowAxes();
+    if (!visible) {
+      // if active layer is hidden, pick a visible one as active
+      if (activeLayerId.value === id) {
+        const next = layers.value.find(x => x.visible && x.id !== id) ?? null;
+        activeLayerId.value = next?.id ?? null;
+        syncActiveTypeMap();
+        syncActiveColorMap();
+        syncActiveDisplay();
+        applyShowAxes();
+      }
+    }
+    else {
+      // If nothing is active (or active is not visible), promote this layer.
+      const active = activeLayerId.value ? layerMap.get(activeLayerId.value) : null;
+      const activeVisible = !!active?.info.visible;
+      if (!activeVisible) {
+        activeLayerId.value = id;
+        syncActiveTypeMap();
+        syncActiveColorMap();
+        syncActiveDisplay();
+        applyShowAxes();
+      }
     }
 
     // Update camera clip planes based on all visible layers
@@ -751,6 +836,7 @@ export function createModelRuntime(args: {
       hasAnyTypeId: false,
       typeMapRows: [],
       colorMapRows: [],
+      display: getDisplayDefaults(),
       baseCenter: new THREE.Vector3(0, 0, 0),
     };
 
@@ -792,8 +878,9 @@ export function createModelRuntime(args: {
     activeLayerId.value = id;
     syncActiveTypeMap();
     syncActiveColorMap();
+    syncActiveDisplay();
 
-    fitCameraToAtomsCentered(mappedFirstAtoms);
+    fitCameraToAtomsCentered(layer, mappedFirstAtoms);
     applyModelRotation();
     applyBackgroundColor();
     applyShowAxes();
@@ -867,9 +954,9 @@ export function createModelRuntime(args: {
     upsertLayerInternal(active);
     syncActiveTypeMap();
     syncActiveColorMap();
-    syncActiveColorMap();
+    syncActiveDisplay();
 
-    fitCameraToAtomsCentered(mappedFirstAtoms);
+    fitCameraToAtomsCentered(active, mappedFirstAtoms);
     applyShowAxes();
 
     recomputeVisibleClipRadius();
@@ -893,6 +980,7 @@ export function createModelRuntime(args: {
     activeLayerId.value = null;
     activeTypeMapRows.value = [];
     activeColorMapRows.value = [];
+    activeDisplaySettings.value = null;
 
     // axes cleanup
     axesHelper.visible = false;
@@ -984,10 +1072,11 @@ export function createModelRuntime(args: {
 
   function applyAtomScale(): void {
     for (const l of layerMap.values()) {
+      const display = getLayerDisplay(l);
       applyAtomScaleToMeshes(
         l.atomMeshes,
-        getSettings().atomScale,
-        getSphereSegments(),
+        display.atomScale,
+        display.sphereSegments,
       );
     }
 
@@ -1000,7 +1089,8 @@ export function createModelRuntime(args: {
     // This is intentionally separated from applyShowBonds so playback can
     // refresh bonds conditionally without toggling visibility.
 
-    if (!getSettings().showBonds) return;
+    const display = getLayerDisplay(layer);
+    if (!display.showBonds) return;
 
     if (layer.bondMeshes.length > 0) {
       removeAndDisposeInstancedMeshes(layer.group, layer.bondMeshes);
@@ -1018,7 +1108,7 @@ export function createModelRuntime(args: {
         : getAtomTypeColorKey(a.element);
     const colorMap = buildColorMapRecord(layer.colorMapRows);
 
-    const bf = getBondFactor();
+    const bf = display.bondFactor;
     const res = buildBondMeshesBicolor({
       atoms: centeredAtoms,
       bondFactor: bf,
@@ -1035,11 +1125,10 @@ export function createModelRuntime(args: {
   }
 
   function applyShowBonds(): void {
-    const enabled = getSettings().showBonds;
-    const bf = getBondFactor();
-
     for (const l of layerMap.values()) {
-      if (enabled) {
+      const display = getLayerDisplay(l);
+      const bf = display.bondFactor;
+      if (display.showBonds) {
         const needRebuild
           = l.bondMeshes.length === 0
             || !Number.isFinite(l.bondFactorUsed)
@@ -1179,11 +1268,61 @@ export function createModelRuntime(args: {
     activeTypeMapRows.value = (active.typeMapRows ?? []) as any;
   }
 
+  function cloneColorRows(rows: AtomTypeColorMapItem[]): AtomTypeColorMapItem[] {
+    return (rows ?? []).map(r => ({ ...r }));
+  }
+
   function setActiveLayerColorMapRows(rows: AtomTypeColorMapItem[]): void {
     const active = getActiveLayer();
     if (!active) return;
-    active.colorMapRows = (rows ?? []) as any;
+    active.colorMapRows = cloneColorRows(rows ?? []);
     activeColorMapRows.value = (active.colorMapRows ?? []) as any;
+  }
+
+  function setAllLayersColorMapRows(rows: AtomTypeColorMapItem[]): void {
+    const rowsSafe = cloneColorRows(rows ?? []);
+    for (const l of layerMap.values()) {
+      l.colorMapRows = cloneColorRows(rowsSafe);
+    }
+    const active = getActiveLayer();
+    if (active) {
+      activeColorMapRows.value = (active.colorMapRows ?? []) as any;
+    }
+  }
+
+  function setActiveLayerDisplaySettings(
+    patch: Partial<LayerDisplaySettings>,
+    opts?: { applyToAll?: boolean },
+  ): void {
+    const active = getActiveLayer();
+    if (!active) return;
+
+    const targets = opts?.applyToAll
+      ? Array.from(layerMap.values())
+      : [active];
+
+    let atomScaleChanged = false;
+    let bondsChanged = false;
+
+    for (const l of targets) {
+      const prev = getLayerDisplay(l);
+      const next = normalizeLayerDisplay(patch, prev);
+      const atomChanged
+        = Math.abs(prev.atomScale - next.atomScale) > 1e-6
+          || prev.sphereSegments !== next.sphereSegments;
+      const bondChanged
+        = prev.showBonds !== next.showBonds
+          || Math.abs(prev.bondFactor - next.bondFactor) > 1e-6;
+
+      l.display = next;
+      atomScaleChanged = atomScaleChanged || atomChanged;
+      bondsChanged = bondsChanged || bondChanged;
+    }
+
+    if (atomScaleChanged) applyAtomScale();
+    if (bondsChanged) applyShowBonds();
+
+    syncActiveDisplay();
   }
 
   function setMeshColor(mesh: THREE.InstancedMesh, color: string): void {
@@ -1234,44 +1373,51 @@ export function createModelRuntime(args: {
     if (ic) ic.needsUpdate = true;
   }
 
-  function onColorMapChanged(): void {
-    const active = getActiveLayer();
-    if (!active) return;
+  function onColorMapChanged(opts?: { applyToAll?: boolean }): void {
+    const targets = opts?.applyToAll
+      ? Array.from(layerMap.values())
+      : (() => {
+          const a = getActiveLayer();
+          return a ? [a] : [];
+        })();
+    if (targets.length === 0) return;
 
-    const map = buildColorMapRecord(active.colorMapRows);
+    for (const layer of targets) {
+      const map = buildColorMapRecord(layer.colorMapRows);
 
-    // Atoms
-    for (const m of active.atomMeshes) {
-      const perInstKeys = (m.userData as any).instanceColorKeys as
-        | string[]
-        | undefined;
-      if (Array.isArray(perInstKeys) && perInstKeys.length > 0) {
-        setMeshInstanceColors(m, perInstKeys, map);
-        continue;
+      // Atoms
+      for (const m of layer.atomMeshes) {
+        const perInstKeys = (m.userData as any).instanceColorKeys as
+          | string[]
+          | undefined;
+        if (Array.isArray(perInstKeys) && perInstKeys.length > 0) {
+          setMeshInstanceColors(m, perInstKeys, map);
+          continue;
+        }
+
+        const key = (m.userData as any).colorKey as string | undefined;
+        const el = (m.userData as any).element as string | undefined;
+        const col = (key && map[key]) ? map[key]! : getElementColorHex(el ?? 'E');
+        setMeshColor(m, col);
       }
 
-      const key = (m.userData as any).colorKey as string | undefined;
-      const el = (m.userData as any).element as string | undefined;
-      const col = (key && map[key]) ? map[key]! : getElementColorHex(el ?? 'E');
-      setMeshColor(m, col);
-    }
+      // Bonds
+      for (const b of layer.bondMeshes) {
+        const perInstKeys = (b.userData as any).instanceColorKeys as
+          | string[]
+          | undefined;
+        if (Array.isArray(perInstKeys) && perInstKeys.length > 0) {
+          setMeshInstanceColors(b, perInstKeys, map);
+          continue;
+        }
 
-    // Bonds
-    for (const b of active.bondMeshes) {
-      const perInstKeys = (b.userData as any).instanceColorKeys as
-        | string[]
-        | undefined;
-      if (Array.isArray(perInstKeys) && perInstKeys.length > 0) {
-        setMeshInstanceColors(b, perInstKeys, map);
-        continue;
+        const key = (b.userData as any).colorKey as string | undefined;
+        // bond segment groups are still "by element" for default
+        const el = (b.userData as any).element as string | undefined;
+        const fallbackEl = el ?? 'E';
+        const col = (key && map[key]) ? map[key]! : getElementColorHex(fallbackEl);
+        setMeshColor(b, col);
       }
-
-      const key = (b.userData as any).colorKey as string | undefined;
-      // bond segment groups are still "by element" for default
-      const el = (b.userData as any).element as string | undefined;
-      const fallbackEl = el ?? 'E';
-      const col = (key && map[key]) ? map[key]! : getElementColorHex(fallbackEl);
-      setMeshColor(b, col);
     }
 
     invalidate();
@@ -1297,6 +1443,7 @@ export function createModelRuntime(args: {
 
     syncActiveTypeMap();
     syncActiveColorMap();
+    syncActiveDisplay();
     applyShowAxes();
 
     recomputeVisibleClipRadius();
@@ -1326,6 +1473,7 @@ export function createModelRuntime(args: {
     activeLayerId,
     activeTypeMapRows,
     activeColorMapRows,
+    activeDisplaySettings,
 
     renderModel,
     replaceActiveLayerModel,
@@ -1349,6 +1497,8 @@ export function createModelRuntime(args: {
     onColorMapChanged,
     setActiveLayerTypeMapRows,
     setActiveLayerColorMapRows,
+    setAllLayersColorMapRows,
+    setActiveLayerDisplaySettings,
     removeLayer,
 
     setActiveLayer,

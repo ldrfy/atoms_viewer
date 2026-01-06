@@ -239,6 +239,7 @@
                 "header": "Atom Colors",
                 "alert": "After editing colors, click “Refresh” to apply them to the model.",
                 "currentLayer": "Current layer",
+                "applyAll": "Edit all layers",
                 "mapLabel": "Color map (hex)",
                 "hexPlaceholder": "e.g. #FF8800",
                 "invalidHex": "Invalid color format. Please use #RRGGBB or #RGB.",
@@ -247,6 +248,19 @@
                 "refresh": "Refresh",
                 "hint": "Tip: If the active layer has typeId (e.g. LAMMPS), colors are keyed as element+typeId (C1, C2, ...); otherwise they are keyed by element.",
                 "empty": "No editable atom types in the active layer."
+            },
+            "layerDisplay": {
+                "header": "Layer Appearance",
+                "alert": "These options are saved per layer. Turn on “Edit all layers” to broadcast changes.",
+                "currentLayer": "Current layer",
+                "applyAll": "Edit all layers",
+                "hint": "Atom size and bond settings do not affect other layers unless you choose to edit all layers.",
+                "bonds": "Show bonds",
+                "bondFactor": "Bond cutoff factor (bondFactor)",
+                "bondFactorHint": "Used to infer bonds: cutoff = (r_i + r_j) × bondFactor. Larger values create bonds more easily.",
+                "atomSize": "Atom size",
+                "sphereSegments": "Sphere segments",
+                "sphereSegmentsHint": "Higher values look smoother but are slower to render."
             }
         }
     },

@@ -306,7 +306,7 @@ export function createViewerLoader(deps: {
     }
   }
 
-  async function refreshColorMap(): Promise<void> {
+  async function refreshColorMap(opts?: { applyToAll?: boolean }): Promise<void> {
     const stage = deps.getStage();
     const runtime = deps.getRuntime();
     if (!stage || !runtime) return;
@@ -319,7 +319,7 @@ export function createViewerLoader(deps: {
     }
 
     try {
-      runtime.onColorMapChanged();
+      runtime.onColorMapChanged(opts);
     }
     finally {
       const minMs = 150;

@@ -1,6 +1,10 @@
 import { shallowRef } from 'vue';
 import type { Ref } from 'vue';
-import type { LammpsTypeMapItem, AtomTypeColorMapItem } from './settings';
+import type {
+  LammpsTypeMapItem,
+  AtomTypeColorMapItem,
+  LayerDisplaySettings,
+} from './settings';
 
 import type { ParseMode, ParseInfo } from '../structure/parse';
 import type { ModelLayerInfo } from '../../components/ViewerStage/modelRuntime';
@@ -24,7 +28,7 @@ export type ViewerPublicApi = {
    * Apply the current active-layer color map to existing meshes.
    * This does NOT require reloading the model data.
    */
-  refreshColorMap: () => void;
+  refreshColorMap: (opts?: { applyToAll?: boolean }) => void;
 
   /** Parsed metadata for the currently loaded file(s). */
   parseInfo: ParseInfo;
@@ -58,6 +62,16 @@ export type ViewerPublicApi = {
   activeLayerColorMap: Ref<AtomTypeColorMapItem[]>;
   /** Replace the entire active-layer color map. */
   setActiveLayerColorMap: (rows: AtomTypeColorMapItem[]) => void;
+  /** Replace all layers' color maps at once (duplicate rows per layer). */
+  setAllLayersColorMap: (rows: AtomTypeColorMapItem[]) => void;
+
+  /** Per-layer display settings (atom size / bond visibility / quality) for the active layer. */
+  activeLayerDisplay: Ref<LayerDisplaySettings | null>;
+  /** Patch active-layer display settings; optionally apply to all layers. */
+  setActiveLayerDisplay: (
+    patch: Partial<LayerDisplaySettings>,
+    opts?: { applyToAll?: boolean },
+  ) => void;
 };
 
 /**

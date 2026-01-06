@@ -52,7 +52,9 @@
 
             <div class="atom-inspector__header-row">
               <div class="atom-inspector__title">
-                {{ t('viewer.inspect.title') }}
+                <a-typography-text strong>
+                  {{ t('viewer.inspect.title') }}
+                </a-typography-text>
                 <a-typography-text v-if="selected.length" type="secondary" class="atom-inspector__count">
                   ({{ selected.length }})
                 </a-typography-text>

@@ -76,9 +76,9 @@ const { t } = useI18n();
 
 const panels = [
   { key: 'files', headerKey: 'settings.panel.files.header', comp: FilesPanel },
-  { key: 'layers', headerKey: 'settings.panel.layers.header', comp: LayersPanel },
   { key: 'display', headerKey: 'settings.panel.display.header', comp: DisplayPanel },
   { key: 'autoRotate', headerKey: 'settings.panel.autoRotate.header', comp: AutoRotatePanel },
+  { key: 'layers', headerKey: 'settings.panel.layers.header', comp: LayersPanel },
   { key: 'lammps', headerKey: 'settings.panel.lammps.header', comp: LammpsPanel },
   { key: 'colors', headerKey: 'settings.panel.colors.header', comp: ColorsPanel },
   { key: 'layerDisplay', headerKey: 'settings.panel.layerDisplay.header', comp: LayerDisplayPanel },

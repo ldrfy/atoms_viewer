@@ -99,3 +99,19 @@ body.ant-modal-open {
 :root[data-theme="dark"] .color-picker::-webkit-color-swatch {
     border: 1px solid rgba(255, 255, 255, 0.22);
 }
+
+
+/*
+  Global glass surface variables
+  Used by Settings panel and Atom Inspector to keep translucency consistent.
+*/
+:root {
+    --glass-panel-bg: rgba(255, 255, 255, 0.78);
+    --glass-panel-header-bg: rgba(255, 255, 255, 0.92);
+    --glass-panel-blur: 12px;
+}
+
+:root[data-theme="dark"] {
+    --glass-panel-bg: rgba(18, 18, 18, 0.62);
+    --glass-panel-header-bg: rgba(18, 18, 18, 0.82);
+}

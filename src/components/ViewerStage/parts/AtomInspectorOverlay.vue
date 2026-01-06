@@ -35,39 +35,54 @@
         />
 
         <div class="atom-inspector-panel__inner">
-          <!-- Header -->
+          <!-- Header (glass title bar) -->
           <div class="atom-inspector__header">
-            <div class="atom-inspector__title">
-              {{ t('viewer.inspect.title') }}
-              <a-typography-text v-if="selected.length" type="secondary" class="atom-inspector__count">
-                ({{ selected.length }})
-              </a-typography-text>
+            <!-- Mobile only: grab handle (same UX as SettingsSider settings-grab) -->
+            <div
+              v-if="placement === 'bottom'"
+              class="atom-inspector__grab"
+              aria-label="resize"
+              title="Resize"
+              role="button"
+              tabindex="0"
+              @pointerdown.prevent="onResizeStart"
+            >
+              <div class="atom-inspector__grab-bar" />
             </div>
 
-            <a-space size="small">
-              <a-tooltip :title="t('viewer.inspect.measureMode')">
-                <a-switch
-                  v-model:checked="measureMode"
+            <div class="atom-inspector__header-row">
+              <div class="atom-inspector__title">
+                {{ t('viewer.inspect.title') }}
+                <a-typography-text v-if="selected.length" type="secondary" class="atom-inspector__count">
+                  ({{ selected.length }})
+                </a-typography-text>
+              </div>
+
+              <a-space size="small">
+                <a-tooltip :title="t('viewer.inspect.measureMode')">
+                  <a-switch
+                    v-model:checked="measureMode"
+                    size="small"
+                    :aria-label="t('viewer.inspect.measureMode')"
+                    :title="t('viewer.inspect.measureMode')"
+                  />
+                </a-tooltip>
+
+                <a-button size="small" :disabled="selected.length === 0" @click="clear">
+                  {{ t('viewer.inspect.clear') }}
+                </a-button>
+
+                <a-button
+                  type="text"
                   size="small"
-                  :aria-label="t('viewer.inspect.measureMode')"
-                  :title="t('viewer.inspect.measureMode')"
-                />
-              </a-tooltip>
-
-              <a-button size="small" :disabled="selected.length === 0" @click="clear">
-                {{ t('viewer.inspect.clear') }}
-              </a-button>
-
-              <a-button
-                type="text"
-                size="small"
-                aria-label="collapse"
-                title="Collapse"
-                @click="collapsed = true"
-              >
-                {{ collapseIcon }}
-              </a-button>
-            </a-space>
+                  aria-label="collapse"
+                  title="Collapse"
+                  @click="collapsed = true"
+                >
+                  {{ collapseIcon }}
+                </a-button>
+              </a-space>
+            </div>
           </div>
 
           <!-- Body -->
@@ -172,6 +187,11 @@
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
 import { useI18n } from 'vue-i18n';
 import type { InspectCtx } from '../ctx/inspect';
+import {
+  blockPullToRefresh,
+  unblockPullToRefresh,
+  type PullToRefreshBlockToken,
+} from '../../../lib/dom/pullToRefreshBlock';
 
 const props = defineProps<{ ctx: InspectCtx }>();
 const { t } = useI18n();
@@ -256,32 +276,30 @@ let startY = 0;
 let startW = 0;
 let startH = 0;
 let activePointerId: number | null = null;
-let touchMoveBlocker: ((e: TouchEvent) => void) | null = null;
-let pullToRefreshBlocked = false;
+let ptrBlockToken: PullToRefreshBlockToken | null = null;
 
 function startBlockPullToRefresh(): void {
-  document.documentElement.classList.add('resizing');
-  document.body.classList.add('resizing');
-  pullToRefreshBlocked = true;
-  touchMoveBlocker = (ev: TouchEvent) => {
-    if (resizing) ev.preventDefault();
-  };
-  window.addEventListener('touchmove', touchMoveBlocker, { passive: false });
+  // Ref-counted global blocker shared by all panels.
+  if (!ptrBlockToken) ptrBlockToken = blockPullToRefresh();
 }
 
 function stopBlockPullToRefresh(): void {
-  if (pullToRefreshBlocked) {
-    document.documentElement.classList.remove('resizing');
-    document.body.classList.remove('resizing');
-    pullToRefreshBlocked = false;
-  }
-  if (touchMoveBlocker) {
-    window.removeEventListener('touchmove', touchMoveBlocker as any);
-    touchMoveBlocker = null;
+  if (ptrBlockToken) {
+    unblockPullToRefresh(ptrBlockToken);
+    ptrBlockToken = null;
   }
 }
 
 function onResizeStart(e: PointerEvent) {
+  // Prevent browser default panning / pull-to-refresh gesture from starting.
+  try {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+  catch {
+    // ignore
+  }
+
   resizing = true;
   activePointerId = e.pointerId;
   startX = e.clientX;
@@ -309,6 +327,15 @@ function onResizing(e: PointerEvent) {
   if (!resizing) return;
   if (activePointerId != null && e.pointerId !== activePointerId) return;
 
+  // Cancel default panning while dragging (important on mobile Firefox).
+  try {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+  catch {
+    // ignore
+  }
+
   if (placement.value === 'left') {
     // drag handle on right edge: dragging right increases width
     const dx = e.clientX - startX;
@@ -323,8 +350,6 @@ function onResizing(e: PointerEvent) {
     mobileHeight.value = clamp(startH + dy, 200, Math.max(200, maxH));
     saveNum('atomInspector.mobileHeight', mobileHeight.value);
   }
-
-  e.preventDefault();
 }
 
 function onResizeEnd() {
@@ -376,13 +401,13 @@ function fmt(v: number | null | undefined): string {
 */
 
 :root {
-  --atom-inspector-bg: rgba(255, 255, 255, 0.60);
-  --atom-inspector-blur: 12px;
+  --atom-inspector-bg: var(--glass-panel-bg);
+  --atom-inspector-header-bg: var(--glass-panel-header-bg);
+  --atom-inspector-blur: var(--glass-panel-blur);
   --atom-inspector-border: rgba(0, 0, 0, 0.10);
 }
 
 :root[data-theme="dark"] {
-  --atom-inspector-bg: rgba(18, 18, 18, 0.55);
   --atom-inspector-border: rgba(255, 255, 255, 0.14);
 }
 
@@ -405,7 +430,7 @@ function fmt(v: number | null | undefined): string {
 .atom-inspector-panel__inner {
   position: relative;
   height: 100%;
-  padding: 10px 12px;
+  padding: 0;
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -464,11 +489,34 @@ function fmt(v: number | null | undefined): string {
 </style>
 
 <style scoped>
+/* Mobile grab handle (resize hotzone) */
+.atom-inspector__grab {
+  padding: 10px 0 6px;
+  cursor: row-resize;
+  display: flex;
+  justify-content: center;
+  touch-action: none;
+}
+
+.atom-inspector__grab-bar {
+  width: 44px;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.18);
+}
+
+:root[data-theme="dark"] .atom-inspector__grab-bar {
+  /* On dark theme the handle must be bright enough to be visible */
+  background: rgba(255, 255, 255, 0.26);
+}
+
 /* Resize handle */
 .atom-inspector__resizer {
   position: absolute;
   z-index: 2;
   background: transparent;
+  /* Critical on mobile Firefox: prevent default panning / pull-to-refresh while dragging */
+  touch-action: none;
 }
 
 .atom-inspector__resizer.is-right {
@@ -487,19 +535,27 @@ function fmt(v: number | null | undefined): string {
   cursor: row-resize;
 }
 
-/* Header */
+/* Header (glass title bar, matches SettingsSider header) */
 .atom-inspector__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding-bottom: 8px;
-  margin-bottom: 6px;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--atom-inspector-header-bg);
+  backdrop-filter: blur(var(--atom-inspector-blur));
+  -webkit-backdrop-filter: blur(var(--atom-inspector-blur));
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
 }
 
 :root[data-theme="dark"] .atom-inspector__header {
   border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.atom-inspector__header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
 }
 
 .atom-inspector__title {
@@ -517,6 +573,7 @@ function fmt(v: number | null | undefined): string {
 
 /* Body layout */
 .atom-inspector__body {
+  padding: 10px 12px;
   font-size: 12px;
   flex: 1;
   min-height: 0;
@@ -540,6 +597,8 @@ function fmt(v: number | null | undefined): string {
   min-height: 0;
   overflow: auto;
   padding-right: 4px;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }
 
 .atom-inspector__footer {

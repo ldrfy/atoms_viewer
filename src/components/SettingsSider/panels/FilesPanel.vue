@@ -50,7 +50,7 @@
           :aria-label="t('viewer.parse.mode')"
           :title="t('viewer.parse.mode')"
           :options="parseModeOptions"
-          :disabled="!hasAnyLayer"
+          :disabled="!canChangeParseMode"
           style="width: 100%"
         />
 
@@ -96,6 +96,15 @@ const { t } = useI18n();
 
 const viewerApi = computed(() => viewerApiRef.value);
 const hasAnyLayer = computed(() => (viewerApi.value?.layers.value.length ?? 0) > 0);
+
+// Allow switching parse mode even if no layer was created, as long as a file was attempted.
+const canChangeParseMode = computed(() => {
+  const api = viewerApi.value;
+  if (!api) return false;
+  if (hasAnyLayer.value) return true;
+  const fn = api.parseInfo?.fileName;
+  return typeof fn === 'string' && fn.trim().length > 0;
+});
 
 const exportScale = ref<number>(2);
 const exportTransparent = ref<boolean>(true);

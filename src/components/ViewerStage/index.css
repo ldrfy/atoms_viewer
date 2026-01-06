@@ -37,6 +37,12 @@
 
 .parse-pop-content {
     width: 100%;
+    /* Prevent scroll-chain to page (avoid triggering pull-to-refresh when swiping inside popover) */
+    max-height: min(60vh, 420px);
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
 }
 
 .parse-pop-title {
@@ -340,3 +346,11 @@
 }
 
 /* 无模型：左上角项目名 */
+
+
+/* While resizing overlay panels, suppress browser pull-to-refresh / overscroll */
+html.resizing,
+body.resizing {
+  overscroll-behavior-y: none;
+  touch-action: none;
+}

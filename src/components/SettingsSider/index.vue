@@ -58,6 +58,11 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, provide, ref, watch } from 'vue';
 import type { ViewerSettings } from '../../lib/viewer/settings';
+import {
+  blockPullToRefresh,
+  unblockPullToRefresh,
+  type PullToRefreshBlockToken,
+} from '../../lib/dom/pullToRefreshBlock';
 
 import SettingsContent from './SettingsContent.vue';
 import { settingsSiderContextKey, type PatchSettingsFn } from './context';
@@ -265,32 +270,35 @@ let startY = 0;
 let startH = 0;
 let activePointerId: number | null = null;
 let mobileHeightDirty = false;
-let touchMoveBlocker: ((e: TouchEvent) => void) | null = null;
+let ptrBlockToken: PullToRefreshBlockToken | null = null;
 
 function clamp(n: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, n));
 }
 
 function startBlockPullToRefresh(): void {
-  document.documentElement.classList.add('resizing');
-  document.body.classList.add('resizing');
-  touchMoveBlocker = (ev: TouchEvent) => {
-    if (resizing) ev.preventDefault();
-  };
-  window.addEventListener('touchmove', touchMoveBlocker, { passive: false });
+  // Ref-counted global blocker shared by all panels.
+  if (!ptrBlockToken) ptrBlockToken = blockPullToRefresh();
 }
 
 function stopBlockPullToRefresh(): void {
-  document.documentElement.classList.remove('resizing');
-  document.body.classList.remove('resizing');
-  if (touchMoveBlocker) {
-    window.removeEventListener('touchmove', touchMoveBlocker as any);
-    touchMoveBlocker = null;
+  if (ptrBlockToken) {
+    unblockPullToRefresh(ptrBlockToken);
+    ptrBlockToken = null;
   }
 }
 
 function onResizeStart(e: PointerEvent): void {
   if (drawerPlacement.value !== 'bottom') return;
+
+  // Prevent browser default panning / pull-to-refresh gesture from starting.
+  try {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+  catch {
+    // ignore
+  }
 
   resizing = true;
   activePointerId = e.pointerId;

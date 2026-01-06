@@ -89,6 +89,20 @@ export type ViewerSettings = {
   frame_rate: number;
 };
 
+export type LayerDisplaySettings = {
+  atomScale: number;
+  showBonds: boolean;
+  sphereSegments: number;
+  bondFactor: number;
+};
+
+export const DEFAULT_LAYER_DISPLAY: LayerDisplaySettings = {
+  atomScale: 1,
+  showBonds: true,
+  sphereSegments: 24,
+  bondFactor: 1.05,
+};
+
 export const DEFAULT_SETTINGS: ViewerSettings = {
   atomScale: 1,
   sphereSegments: 24,

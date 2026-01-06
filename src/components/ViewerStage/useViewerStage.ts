@@ -7,6 +7,7 @@ import type {
   LammpsTypeMapItem,
   AtomTypeColorMapItem,
   OpenSettingsPayload,
+  LayerDisplaySettings,
 } from '../../lib/viewer/settings';
 
 import { useI18n } from 'vue-i18n';
@@ -53,7 +54,7 @@ type ViewerStageBridgeApi = {
   }) => Promise<void>;
 
   refreshTypeMap: () => void;
-  refreshColorMap: () => void;
+  refreshColorMap: (opts?: { applyToAll?: boolean }) => void;
 
   parseInfo: any;
   parseMode: Ref<any>;
@@ -70,6 +71,13 @@ type ViewerStageBridgeApi = {
 
   activeLayerColorMap: Ref<AtomTypeColorMapItem[]>;
   setActiveLayerColorMap: (rows: AtomTypeColorMapItem[]) => void;
+  setAllLayersColorMap: (rows: AtomTypeColorMapItem[]) => void;
+
+  activeLayerDisplay: Ref<LayerDisplaySettings | null>;
+  setActiveLayerDisplay: (
+    patch: Partial<LayerDisplaySettings>,
+    opts?: { applyToAll?: boolean },
+  ) => void;
 };
 
 type ViewerStageExposedApi = {
@@ -107,6 +115,13 @@ type ViewerStageBindings = {
 
   activeLayerColorMap: Ref<AtomTypeColorMapItem[]>;
   setActiveLayerColorMap: (rows: AtomTypeColorMapItem[]) => void;
+  setAllLayersColorMap: (rows: AtomTypeColorMapItem[]) => void;
+
+  activeLayerDisplay: Ref<LayerDisplaySettings | null>;
+  setActiveLayerDisplay: (
+    patch: Partial<LayerDisplaySettings>,
+    opts?: { applyToAll?: boolean },
+  ) => void;
 
   removeLayer: (id: string) => void;
 
@@ -133,7 +148,7 @@ type ViewerStageBindings = {
   }) => Promise<void>;
 
   refreshTypeMap: () => void;
-  refreshColorMap: () => void;
+  refreshColorMap: (opts?: { applyToAll?: boolean }) => void;
 
   hasAnimation: Ref<boolean>;
   frameIndex: Ref<number>;
@@ -257,6 +272,10 @@ export function useViewerStage(
     return (runtimeTick.value, runtime?.activeColorMapRows.value ?? []);
   });
 
+  const activeLayerDisplay = computed<LayerDisplaySettings | null>(() => {
+    return (runtimeTick.value, runtime?.activeDisplaySettings.value ?? null);
+  });
+
   // state
   const hasModel = ref(false);
   const isLoading = ref(false);
@@ -378,6 +397,20 @@ export function useViewerStage(
     runtime.setActiveLayerColorMapRows(rows);
   }
 
+  function setAllLayersColorMap(rows: AtomTypeColorMapItem[]): void {
+    if (!runtime) return;
+    runtime.setAllLayersColorMapRows(rows);
+  }
+
+  function setActiveLayerDisplay(
+    patch: Partial<LayerDisplaySettings>,
+    opts?: { applyToAll?: boolean },
+  ): void {
+    if (!runtime) return;
+    runtime.setActiveLayerDisplaySettings(patch, opts);
+    syncUiFromRuntime();
+  }
+
   function removeLayer(id: string): void {
     if (!runtime) return;
     inspectCtx.clear();
@@ -431,7 +464,6 @@ export function useViewerStage(
       settingsRef,
       hasModel,
       atomSizeFactor: 0.5,
-      bondFactor: 1.05,
       bondRadius: 0.09,
     });
 
@@ -571,7 +603,7 @@ export function useViewerStage(
     exportPng: exporter.onExportPng,
 
     refreshTypeMap: () => void loader.refreshTypeMap(),
-    refreshColorMap: () => void loader.refreshColorMap(),
+    refreshColorMap: opts => void loader.refreshColorMap(opts),
 
     parseInfo: loader.parseInfo,
     parseMode: loader.parseMode,
@@ -588,6 +620,10 @@ export function useViewerStage(
 
     activeLayerColorMap,
     setActiveLayerColorMap,
+    setAllLayersColorMap,
+
+    activeLayerDisplay,
+    setActiveLayerDisplay,
   };
 
   const exposedApi: ViewerStageExposedApi = {
@@ -616,6 +652,10 @@ export function useViewerStage(
 
     activeLayerColorMap,
     setActiveLayerColorMap,
+    setAllLayersColorMap,
+
+    activeLayerDisplay,
+    setActiveLayerDisplay,
     removeLayer,
 
     inspectCtx,
@@ -646,7 +686,7 @@ export function useViewerStage(
     openFilePicker,
 
     refreshTypeMap: () => void loader.refreshTypeMap(),
-    refreshColorMap: () => void loader.refreshColorMap(),
+    refreshColorMap: opts => void loader.refreshColorMap(opts),
 
     onDragEnter,
     onDragOver,

@@ -53,6 +53,7 @@ import DisplayPanel from './panels/DisplayPanel.vue';
 import AutoRotatePanel from './panels/AutoRotatePanel.vue';
 import LammpsPanel from './panels/LammpsPanel.vue';
 import ColorsPanel from './panels/ColorsPanel.vue';
+import LayerDisplayPanel from './panels/LayerDisplayPanel.vue';
 import OtherPanel from './panels/OtherPanel.vue';
 
 const props = withDefaults(
@@ -80,6 +81,7 @@ const panels = [
   { key: 'autoRotate', headerKey: 'settings.panel.autoRotate.header', comp: AutoRotatePanel },
   { key: 'lammps', headerKey: 'settings.panel.lammps.header', comp: LammpsPanel },
   { key: 'colors', headerKey: 'settings.panel.colors.header', comp: ColorsPanel },
+  { key: 'layerDisplay', headerKey: 'settings.panel.layerDisplay.header', comp: LayerDisplayPanel },
   { key: 'other', headerKey: 'settings.panel.other.header', comp: OtherPanel },
 ] as const;
 

@@ -159,3 +159,163 @@ const bgColorModel = computed<string>({
     }),
 });
 </script>
+
+<style>
+
+/* ===============================
+   动画控制条：不换行 & 不溢出
+   =============================== */
+.anim-bar {
+    position: absolute;
+    left: 12px;
+    bottom: 12px;
+    z-index: 20;
+    pointer-events: auto;
+
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+
+    /* 桌面不太宽 + 手机不超出横向宽度 */
+    width: min(340px, calc(100vw - 24px));
+    max-width: calc(100vw - 24px);
+    overflow: hidden;
+}
+
+/* 第一行/第二行/第三行：通用行容器 */
+.anim-row {
+    width: 100%;
+}
+
+/* 第一行：帧序号 + slider（flex） */
+.anim-left-full {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    /* 允许 slider 收缩 */
+}
+
+/* 第二/三行：两列布局（不换行时推荐用 a-row :wrap="false"，CSS 只做配合） */
+.anim-left {
+    min-width: 0;
+    display: flex;
+    align-items: center;
+}
+
+/* 右侧区域（当你用 a-space 包按钮时，这里主要负责不被撑爆） */
+.anim-right {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    max-width: 100%;
+}
+
+/* 帧序号 */
+.anim-frame-text {
+    min-width: 72px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+/* slider：自适应宽度（不要固定像素宽） */
+.anim-slider {
+    width: 100%;
+    min-width: 0;
+}
+
+/* label 通用（原来的 anim-label 也保留） */
+.anim-label {
+    opacity: 0.85;
+}
+
+/* 左侧字段：label + 输入挨着，并允许整体被压缩 */
+.anim-field {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    /* “词”和输入框挨着：关键 */
+    min-width: 0;
+    /* 允许压缩 */
+}
+
+/* 第三行更紧凑一点（可选） */
+.anim-field-tight {
+    gap: 4px;
+}
+
+/* 为了 fps 和 bg 两行左侧对齐：给 label 固定宽度 */
+.anim-field-label {
+    width: 72px;
+    /* 需要更齐可以调 64~90 */
+    opacity: 0.85;
+    text-align: left;
+    white-space: nowrap;
+    flex: 0 0 auto;
+}
+
+/* fps 输入框宽度（紧凑） */
+.anim-field-input {
+    width: 80px;
+}
+
+/* 颜色输入控件 */
+.color-picker {
+    width: 48px;
+    height: 32px;
+    flex: 0 0 auto;
+}
+
+/* 颜色 hex：必须能省略，否则手机会横向溢出 */
+.color-hex {
+    min-width: 0;
+    max-width: 80px;
+    /* 手机关键：控制住 */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+
+    min-width: 72px;
+    /* 若你想更紧，可删掉这一行 */
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+        "Liberation Mono", "Courier New", monospace;
+    font-variant-numeric: tabular-nums;
+    opacity: 0.85;
+}
+
+/* 按钮文字不折行（不然会把高度撑得很怪） */
+.anim-action-btn {
+    white-space: nowrap;
+}
+
+/* REC tag */
+.anim-rec-tag {
+    margin-left: 2px;
+}
+
+/* 超小屏进一步收紧，避免任何溢出 */
+@media (max-width: 360px) {
+    .anim-bar {
+        width: min(320px, calc(100vw - 24px));
+    }
+
+    .anim-frame-text {
+        min-width: 64px;
+    }
+
+    .anim-field-label {
+        width: 64px;
+    }
+
+    .anim-field-input {
+        width: 72px;
+    }
+
+    .color-hex {
+        max-width: 64px;
+        min-width: 0;
+    }
+}
+
+</style>

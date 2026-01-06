@@ -108,3 +108,42 @@ watch(
   },
 );
 </script>
+
+<style>
+
+.parse-overlay {
+    position: absolute;
+    left: 18px;
+    top: 52%;
+    transform: translateY(-50%);
+    z-index: 25;
+    pointer-events: auto;
+}
+
+/* 把手按钮 */
+.parse-handle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Popover 容器的宽度控制：桌面固定，手机不溢出 */
+:deep(.parse-popover .ant-popover-inner) {
+    width: min(320px, calc(100vw - 24px));
+}
+
+.parse-pop-content {
+    width: 100%;
+    /* Prevent scroll-chain to page (avoid triggering pull-to-refresh when swiping inside popover) */
+    max-height: min(60vh, 420px);
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
+}
+
+.parse-pop-title {
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+</style>

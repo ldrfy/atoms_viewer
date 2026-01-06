@@ -9,6 +9,7 @@ export function createViewerAnimationController(deps: {
   settingsRef: Readonly<Ref<ViewerSettings>>;
   inspectCtx: InspectCtx;
   onSelectionVisualsNeedUpdate: () => void;
+  wakeRender?: () => void;
 }) {
   const hasAnimation = ref(false);
   const frameIndex = ref(0);
@@ -32,6 +33,9 @@ export function createViewerAnimationController(deps: {
     isPlaying.value = !isPlaying.value;
     animLastMs = 0;
     animAccMs = 0;
+
+    // Ensure render loop wakes up immediately after点击播放.
+    if (!wasPlaying && isPlaying.value) deps.wakeRender?.();
 
     // If bonds were not refreshed during playback, refresh once when pausing
     if (wasPlaying && !isPlaying.value) {

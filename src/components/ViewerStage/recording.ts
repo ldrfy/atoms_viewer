@@ -81,6 +81,66 @@ export function createRecordingController(
   let cropCanvas: HTMLCanvasElement | null = null;
   let cropCtx: CanvasRenderingContext2D | null = null;
   let cropRafId: number | null = null;
+  /** Whether the capture pump is running. */
+  let pumpActive = false;
+  /** Cached crop parameters (in device pixels). */
+  let pumpSx = 0;
+  let pumpSy = 0;
+  let pumpSw = 1;
+  let pumpSh = 1;
+
+  const stopPump = (): void => {
+    pumpActive = false;
+    if (cropRafId) {
+      cancelAnimationFrame(cropRafId);
+      cropRafId = null;
+    }
+  };
+
+  const startPump = (): void => {
+    const st = getStage();
+    if (!st || !cropCanvas || !cropCtx) return;
+
+    // Ensure any previous pump is stopped.
+    stopPump();
+    pumpActive = true;
+
+    // Kick the stage loop first so it can render before our first capture.
+    st.invalidate();
+
+    const pump = (): void => {
+      if (!pumpActive) return;
+      const s = getStage();
+      if (!cropCtx || !cropCanvas || !s) return;
+
+      cropCtx.clearRect(0, 0, cropCanvas.width, cropCanvas.height);
+      cropCtx.drawImage(
+        s.renderer.domElement,
+        pumpSx,
+        pumpSy,
+        pumpSw,
+        pumpSh,
+        0,
+        0,
+        cropCanvas.width,
+        cropCanvas.height,
+      );
+
+      // stopPump() may be called while this callback is running.
+      if (!pumpActive) return;
+
+      // Ask the stage to render again for the next pump tick.
+      // The stage is invalidate-on-demand; without this, a static scene may stop rendering and
+      // some browsers can produce an almost-empty WebM.
+      if (!pumpActive) return;
+      s.invalidate();
+
+      if (!pumpActive) return;
+      cropRafId = window.requestAnimationFrame(pump);
+    };
+
+    cropRafId = window.requestAnimationFrame(pump);
+  };
 
   let mediaRecorder: MediaRecorder | null = null;
   let recordedChunks: Blob[] = [];
@@ -191,7 +251,9 @@ export function createRecordingController(
     cropCtx = cropCanvas.getContext('2d', { alpha: true });
     if (!cropCtx) return;
 
-    const dpr = window.devicePixelRatio || 1;
+    // IMPORTANT: use renderer pixel ratio (may be clamped, e.g. to 2) instead of
+    // window.devicePixelRatio; otherwise crop coordinates can be wrong on high-DPR devices.
+    const dpr = stage.renderer.getPixelRatio?.() ?? (window.devicePixelRatio || 1);
 
     // 选择框是 CSS 像素，src 实际像素乘 dpr
     const sx = Math.round(recordCropRect.x * dpr);
@@ -202,25 +264,12 @@ export function createRecordingController(
     cropCanvas.width = Math.max(1, sw);
     cropCanvas.height = Math.max(1, sh);
 
-    // 每帧拷贝裁剪区域
-    const pump = (): void => {
-      const st = getStage();
-      if (!cropCtx || !cropCanvas || !st) return;
-      cropCtx.clearRect(0, 0, cropCanvas.width, cropCanvas.height);
-      cropCtx.drawImage(
-        st.renderer.domElement,
-        sx,
-        sy,
-        sw,
-        sh,
-        0,
-        0,
-        cropCanvas.width,
-        cropCanvas.height,
-      );
-      cropRafId = window.requestAnimationFrame(pump);
-    };
-    pump();
+    // Cache pump parameters and start pump.
+    pumpSx = sx;
+    pumpSy = sy;
+    pumpSw = Math.max(1, sw);
+    pumpSh = Math.max(1, sh);
+    startPump();
 
     const stream = cropCanvas.captureStream(streamFps);
 
@@ -246,12 +295,12 @@ export function createRecordingController(
     const mr = mediaRecorder;
     if (!mr || !stage) return;
 
+    // Stop pumping immediately to avoid wasting CPU and to stop forcing the stage loop.
+    stopPump();
+
     // 先挂 onstop（关键：避免竞态）
     mr.onstop = () => {
-      if (cropRafId) {
-        cancelAnimationFrame(cropRafId);
-        cropRafId = null;
-      }
+      stopPump();
 
       const blob = new Blob(recordedChunks, { type: 'video/webm' });
       const url = URL.createObjectURL(blob);
@@ -292,11 +341,17 @@ export function createRecordingController(
       mediaRecorder.pause();
       pauseRecordTimer();
       isRecordPaused.value = true;
+
+      // Stop the capture pump while paused to avoid unnecessary renders/CPU.
+      stopPump();
     }
     else if (mediaRecorder.state === 'paused') {
       mediaRecorder.resume();
       resumeRecordTimer();
       isRecordPaused.value = false;
+
+      // Resume pump (and keep the stage rendering) when recording resumes.
+      startPump();
     }
   }
 

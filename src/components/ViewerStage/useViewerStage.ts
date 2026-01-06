@@ -313,6 +313,7 @@ export function useViewerStage(
     settingsRef,
     inspectCtx,
     onSelectionVisualsNeedUpdate: () => picking.updateSelectionVisuals(),
+    wakeRender: () => stage?.invalidate(),
   });
 
   // loader (parse/load/refreshTypeMap)

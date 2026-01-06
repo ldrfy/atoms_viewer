@@ -14,9 +14,9 @@
     </div>
 
     <div class="settings-header-row">
-      <div class="settings-title">
+      <a-typography-text strong>
         {{ t('settings.title') }}
-      </div>
+      </a-typography-text>
 
       <a-button
         type="text"

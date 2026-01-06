@@ -58,13 +58,9 @@
 */
 .settings-drawer,
 .settings-sider-fixed {
-    --settings-panel-bg: rgba(255, 255, 255, 0.78);
-    --settings-panel-blur: 12px;
-}
-
-:root[data-theme="dark"] .settings-drawer,
-:root[data-theme="dark"] .settings-sider-fixed {
-    --settings-panel-bg: rgba(18, 18, 18, 0.62);
+    --settings-panel-bg: var(--glass-panel-bg);
+    --settings-panel-header-bg: var(--glass-panel-header-bg);
+    --settings-panel-blur: var(--glass-panel-blur);
 }
 
 /* Apply blur surface to:
@@ -170,7 +166,7 @@
     position: sticky;
     top: 0;
     z-index: 2;
-    background: var(--settings-panel-bg);
+    background: var(--settings-panel-header-bg);
     border-bottom: 1px solid rgba(0, 0, 0, 0.08);
     /* Keep the header readable over the translucent content */
     backdrop-filter: blur(var(--settings-panel-blur));
@@ -229,6 +225,7 @@
 html.resizing,
 body.resizing {
     overscroll-behavior-y: none;
+    touch-action: none;
 }
 
 /* Collapse touch friendliness */

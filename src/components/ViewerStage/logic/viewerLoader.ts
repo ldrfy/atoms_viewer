@@ -97,6 +97,13 @@ export function createViewerLoader(deps: {
     deps.requestOpenSettings?.({ focusKey: 'display', open: false });
   }
 
+  function focusSettingsToFilesAndOpen(): void {
+    // When parsing fails and user needs to manually choose a parse mode,
+    // automatically open Settings and focus the Files panel.
+    lastLoadNeedsLammpsFocus = false;
+    deps.requestOpenSettings?.({ focusKey: 'files', open: true });
+  }
+
   function handleLammpsTypeMapAndSettings(
     model: StructureModel,
     reason: RenderReason,
@@ -401,6 +408,7 @@ export function createViewerLoader(deps: {
       parseInfo.errorSeq += 1;
       console.log(err);
       message.error(`${deps.t('viewer.parse.notice')}: ${parseInfo.errorMsg}`);
+      focusSettingsToFilesAndOpen();
     }
 
     deps.isLoading.value = false;
@@ -482,7 +490,12 @@ export function createViewerLoader(deps: {
         parseInfo.success = false;
         parseInfo.errorMsg = deps.t('viewer.parse.notice');
         parseInfo.errorSeq += 1;
+        parseInfo.fileName = lastRawFileName ?? '';
+        parseInfo.format = '';
+        parseInfo.atomCount = 0;
+        parseInfo.frameCount = 1;
         message.error(deps.t('viewer.parse.notice'));
+        focusSettingsToFilesAndOpen();
       }
     }
     catch (err) {
@@ -491,6 +504,7 @@ export function createViewerLoader(deps: {
       parseInfo.errorSeq += 1;
       console.log(err);
       message.error(`${deps.t('viewer.parse.notice')}: ${parseInfo.errorMsg}`);
+      focusSettingsToFilesAndOpen();
     }
     finally {
       deps.isLoading.value = false;

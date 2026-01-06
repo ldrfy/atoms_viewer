@@ -23,3 +23,20 @@ const style = computed<CSSProperties>(() => {
   };
 });
 </script>
+
+<style>
+
+.record-crop-dash {
+    position: absolute;
+    z-index: 45;
+    /* 介于画布(默认)与控制条(20)/遮罩(50)之间即可 */
+    pointer-events: none;
+    /* 不抢事件 */
+    border: 2px dashed rgba(255, 255, 255, 0.95);
+    border-radius: 6px;
+    box-sizing: border-box;
+    /* 可选：轻微外发光，暗背景更明显 */
+    filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.5));
+}
+
+</style>

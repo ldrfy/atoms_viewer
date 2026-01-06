@@ -126,4 +126,39 @@ watch(
 </script>
 
 <!-- 关键修改：去掉 scoped，让 index.css 能作用到子组件内部 DOM -->
-<style src="./index.css"></style>
+<style>
+    .stage {
+    position: relative;
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+    /* 容器显式禁止浏览器触控行为 */
+    touch-action: none;
+}
+
+.canvas-host {
+    /* 容器显式禁止浏览器触控行为 */
+    touch-action: none;
+    height: 100%;
+    width: 100%;
+}
+
+.loading-overlay {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    pointer-events: none;
+    z-index: 30;
+}
+
+/* 无模型：左上角项目名 */
+
+/* While resizing overlay panels, suppress browser pull-to-refresh / overscroll */
+html.resizing,
+body.resizing {
+    overscroll-behavior-y: none;
+    touch-action: none;
+}
+
+</style>

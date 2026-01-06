@@ -139,6 +139,7 @@
     flex-direction: column;
     /* match Ant Drawer look/feel */
     -webkit-overflow-scrolling: touch;
+    border-radius: 14px !important;
 }
 
 /* Desktop slide motion (no mask, no body scroll lock, no layout shift) */

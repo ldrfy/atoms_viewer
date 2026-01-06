@@ -2,6 +2,7 @@
 import { computed, ref, type ComputedRef, type Ref } from 'vue';
 import { message } from 'ant-design-vue';
 import type { ThreeStage } from '../../lib/three/stage';
+import { buildExportFilename } from '../../lib/file/filename';
 
 export type CropBox = { x: number; y: number; w: number; h: number };
 
@@ -42,6 +43,9 @@ type CreateRecordingControllerArgs = {
 
   /** 录制帧率（从 settings 读） */
   getRecordFps?: () => number;
+
+  /** 当前模型文件名（用于生成下载文件名） */
+  getModelFileName?: () => string | undefined;
 };
 
 export function createRecordingController(
@@ -307,7 +311,10 @@ export function createRecordingController(
 
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'three-record.webm';
+      a.download = buildExportFilename({
+        modelFileName: args.getModelFileName?.(),
+        ext: '.webm',
+      });
       a.click();
 
       // 不要立刻 revoke，延迟释放更稳

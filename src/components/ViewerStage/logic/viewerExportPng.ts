@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { message } from 'ant-design-vue';
 import { normalizeViewPresets } from '../../../lib/viewer/viewPresets';
 import { cropCanvasToPngBlob, downloadBlob } from '../../../lib/image/cropPng';
+import { buildExportFilename } from '../../../lib/file/filename';
 import {
   isPerspective,
   updateCameraForSize,
@@ -14,6 +15,7 @@ import type { ThreeStage } from '../../../lib/three/stage';
 export function createPngExporter(deps: {
   getStage: () => ThreeStage | null;
   getSettings: () => ViewerSettings;
+  getModelFileName?: () => string | undefined;
   t: (key: string, args?: any) => string;
 }) {
   async function onExportPng(payload: {
@@ -42,10 +44,30 @@ export function createPngExporter(deps: {
       const rect = stage.host.getBoundingClientRect();
       const w = Math.max(1, Math.floor(rect.width));
       const h = Math.max(1, Math.floor(rect.height));
-      const s = Math.max(1, scale);
+      const sRequested = Math.max(1, scale);
+
+      // Clamp export scale to GPU limits to avoid blank/white exports on some devices.
+      const gl = stage.renderer.getContext();
+      const maxTexParam = Number(gl.getParameter(gl.MAX_TEXTURE_SIZE) ?? 0);
+      const maxRbParam = Number(gl.getParameter(gl.MAX_RENDERBUFFER_SIZE) ?? 0);
+      const capTex = Number(stage.renderer.capabilities.maxTextureSize ?? 0);
+      const limits = [maxTexParam, maxRbParam, capTex].filter(v => Number.isFinite(v) && v > 0);
+      const limit = limits.length ? Math.min(...limits) : 4096;
+      const maxScale = Math.max(1, Math.floor(Math.min(limit / w, limit / h)));
+      const s = Math.min(sRequested, maxScale);
+
+      if (s !== sRequested) {
+        message.warning(
+          deps.t('viewer.export.scaleCapped', {
+            requested: sRequested,
+            used: s,
+            limit,
+          }),
+        );
+      }
 
       stage.renderer.setPixelRatio(1);
-      stage.renderer.setSize(w * s, h * s, false);
+      stage.renderer.setSize(Math.floor(w * s), Math.floor(h * s), false);
 
       const settings = deps.getSettings();
       const orthoHalfHeight = stage.getOrthoHalfHeight();
@@ -141,7 +163,11 @@ export function createPngExporter(deps: {
         alphaThreshold: 8,
         padding: 3,
       });
-      downloadBlob(blob, 'snapshot.png');
+      const filename = buildExportFilename({
+        modelFileName: deps.getModelFileName?.(),
+        ext: '.png',
+      });
+      downloadBlob(blob, filename);
 
       message.success(deps.t('viewer.export.pngSuccess'));
     }
@@ -158,6 +184,7 @@ export function createPngExporter(deps: {
       stage.renderer.autoClear = prevAutoClear;
       stage.renderer.setScissorTest(false);
       stage.syncSize();
+      stage.invalidate();
     }
   }
 

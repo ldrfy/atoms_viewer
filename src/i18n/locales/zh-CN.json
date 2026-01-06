@@ -78,6 +78,10 @@
                 "loadFailed": "加载失败：{error}（已切换到内置样例）",
                 "empty": "无可用样例",
                 "builtinSuffix": "（内置）"
+            },
+            "footer": {
+                "localOnly": "所有数据均在本地计算与渲染，不会上传或收集任何信息。",
+                "copyright": "版权所有 © {years} {author}"
             }
         },
         "export": {
@@ -86,6 +90,7 @@
             "scaleTip": "下方模型基础上，再次放大的倍率。为避免放大过多导致错误，请先滑动鼠标放大下面的模型",
             "scalePlaceholder": "越大越清晰",
             "pngSuccess": "已导出 PNG（透明背景）",
+            "scaleCapped": "导出缩放已自动从 {requested} 降到 {used}（受限于 GPU 最大尺寸 {limit}px）。",
             "fail": "导出失败：{reason}"
         },
         "lammps": {

@@ -2,22 +2,13 @@
   <a-form layout="vertical">
     <a-alert type="info" show-icon :message="t('settings.panel.lammps.alert')" />
 
-    <a-space :size="6" style="margin-top: 8px; flex-wrap: wrap">
+    <a-space :size="6" class="settings-gap-top-sm settings-flex-wrap">
       <a-typography-text type="secondary">
         {{ t('settings.panel.lammps.currentLayer') }}:
       </a-typography-text>
       <a-tooltip v-if="activeLayerInfo" :title="activeLayerInfo.sourceFileName || activeLayerInfo.id">
-        <a-tag style="max-width: 100%">
-          <span
-            style="
-                display: inline-block;
-                max-width: 260px;
-                overflow: hidden;
-                text-overflow: ellipsis;
-                white-space: nowrap;
-                vertical-align: bottom;
-              "
-          >
+        <a-tag class="settings-tag-full">
+          <span class="settings-tag-ellipsis">
             {{ activeLayerInfo.name }}
           </span>
         </a-tag>
@@ -27,11 +18,11 @@
       </a-typography-text>
     </a-space>
 
-    <a-form-item :label="t('settings.panel.lammps.mapLabel')" style="margin-top: 12px">
+    <a-form-item :label="t('settings.panel.lammps.mapLabel')" class="settings-gap-top-md">
       <div
         v-for="(row, idx) in lammpsTypeMapModel"
         :key="`${row.typeId}-${idx}`"
-        style="margin-bottom: 8px"
+        class="settings-gap-bottom-sm"
       >
         <a-row :gutter="8" align="middle">
           <a-col :span="8">
@@ -41,7 +32,7 @@
               :min="1"
               :step="1"
               :value="row.typeId"
-              style="width: 100%"
+              class="settings-full-width"
               :placeholder="t('settings.panel.lammps.typePlaceholder')"
               @change="onLammpsTypeId(idx, $event)"
             />
@@ -53,7 +44,7 @@
               :aria-label="t('settings.panel.lammps.elementPlaceholder')"
               :title="t('settings.panel.lammps.elementPlaceholder')"
               :value="row.element"
-              style="width: 100%"
+              class="settings-full-width"
               :placeholder="t('settings.panel.lammps.elementPlaceholder')"
               :options="atomicOptions"
               :filter-option="filterAtomicOption"
@@ -82,7 +73,7 @@
         </a-col>
       </a-row>
 
-      <div style="margin-top: 8px">
+      <div class="settings-gap-top-sm">
         <a-button
           block
           type="primary"
@@ -93,7 +84,7 @@
         </a-button>
       </div>
 
-      <a-typography-text type="secondary" style="display: block; margin-top: 8px">
+      <a-typography-text type="secondary" class="settings-text-secondary-tight">
         {{ t('settings.panel.lammps.hint') }}
       </a-typography-text>
     </a-form-item>
@@ -111,10 +102,9 @@ import { ATOMIC_SYMBOLS, normalizeElementSymbol } from '../../../lib/structure/c
 type LammpsTypeMapItem = { typeId: number; element: string };
 
 const { t } = useI18n();
-const { patchSettings } = useSettingsSiderContext();
+const { patchSettings, hasAnyLayer } = useSettingsSiderContext();
 
 const viewerApi = computed(() => viewerApiRef.value);
-const hasAnyLayer = computed(() => (viewerApi.value?.layers.value.length ?? 0) > 0);
 const layerList = computed(() => viewerApi.value?.layers.value ?? []);
 const activeLayerId = computed(() => viewerApi.value?.activeLayerId.value ?? null);
 const activeLayerInfo = computed(() => {

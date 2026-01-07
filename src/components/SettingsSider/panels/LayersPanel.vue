@@ -1,5 +1,5 @@
 <template>
-  <a-space direction="vertical" :size="8" style="width: 100%">
+  <a-space direction="vertical" :size="8" class="settings-full-width">
     <!-- 文件选择放在“模型图层”最上方 -->
     <div>
       <a-button
@@ -10,12 +10,12 @@
       >
         {{ t('settings.panel.files.openFile') }}
       </a-button>
-      <a-typography-text type="secondary" style="display: block; margin-top: 6px">
+      <a-typography-text type="secondary" class="settings-text-secondary">
         {{ t('settings.panel.files.openFileHint') }}
       </a-typography-text>
     </div>
 
-    <a-divider style="margin: 8px 0" />
+    <a-divider class="settings-divider" />
 
     <a-alert
       v-if="!viewerApi"
@@ -82,7 +82,7 @@
       </div>
     </div>
 
-    <a-typography-text type="secondary" style="display: block">
+    <a-typography-text type="secondary" class="settings-block">
       {{ t('settings.panel.layers.hint') }}
     </a-typography-text>
   </a-space>

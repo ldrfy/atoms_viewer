@@ -23,8 +23,9 @@
               <div class="hint">
                 <a-typography-text type="secondary">
                   {{
-                    t("viewer.empty.subtitle") ??
-                      "Drag & drop a file here, or use the buttons below."
+                    t("viewer.empty.subtitle", {
+                      action: t("viewer.empty.preloadDefault"),
+                    })
                   }}
                 </a-typography-text>
               </div>
@@ -149,6 +150,12 @@ const FALLBACK_SAMPLES: SampleManifestItem[] = [
     label: 'graphene.xyz',
     url: import.meta.env.BASE_URL + 'samples/graphene.xyz',
     size: 0.003,
+  },
+  {
+    fileName: 'cnt.xyz',
+    label: 'cnt.xyz',
+    url: import.meta.env.BASE_URL + 'samples/cnt.xyz',
+    size: 0.009,
   },
   {
     fileName: 'cnt.data',

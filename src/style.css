@@ -22,24 +22,8 @@ html {
 body {
     /* Fallback for browsers that don't support overflow-x: clip */
     overflow-x: hidden;
-    /* Keep scrollbar state stable even when Drawer tries to toggle page scroll. */
-    overflow-y: scroll !important;
 }
 
-/*
-  Ant Design Vue overlays (Drawer/Modal) may add inline padding-right to <body>
-  to compensate for scrollbar removal. Because we keep a stable scrollbar gutter,
-  that compensation can create a temporary horizontal overflow (a left-right
-  scrollbar that flashes), which looks like a page "zoom".
-*/
-body.ant-scrolling-effect,
-body.ant-drawer-open,
-body.ant-modal-open {
-    padding-right: 0 !important;
-    overflow-y: scroll !important;
-    /* Ant may also set inline width: calc(100% - scrollbarSize). Override it to avoid horizontal "bounce". */
-    width: 100% !important;
-}
 
 #app {
     padding: 0;
@@ -72,7 +56,8 @@ body.ant-modal-open {
     display: inline-flex;
     align-items: center;
     line-height: 1;
-    vertical-align: 0; /* override Ant icon baseline shift */
+    vertical-align: 0;
+    /* override Ant icon baseline shift */
 }
 
 .ant-btn.btn-icon:hover .anticon {
@@ -106,12 +91,12 @@ body.ant-modal-open {
   Used by Settings panel and Atom Inspector to keep translucency consistent.
 */
 :root {
-    --glass-panel-bg: rgba(255, 255, 255, 0.78);
-    --glass-panel-header-bg: rgba(255, 255, 255, 0.92);
+    --glass-panel-bg: rgba(255, 255, 255, 0.72);
+    --glass-panel-header-bg: rgba(255, 255, 255, 0.72);
     --glass-panel-blur: 12px;
 }
 
 :root[data-theme="dark"] {
-    --glass-panel-bg: rgba(18, 18, 18, 0.62);
-    --glass-panel-header-bg: rgba(18, 18, 18, 0.82);
+    --glass-panel-bg: rgba(18, 18, 18, 0.72);
+    --glass-panel-header-bg: rgba(18, 18, 18, 0.72);
 }

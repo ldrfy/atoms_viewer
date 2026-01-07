@@ -25,7 +25,7 @@
         title="Close"
         @click="emit('close')"
       >
-        ✕
+        <CloseOutlined />
       </a-button>
     </div>
   </div>
@@ -59,6 +59,7 @@ import { useI18n } from 'vue-i18n';
 import {
   AppstoreOutlined,
   BgColorsOutlined,
+  CloseOutlined,
   EyeOutlined,
   FolderOpenOutlined,
   SettingOutlined,

@@ -63,6 +63,18 @@
     --settings-panel-blur: var(--glass-panel-blur);
 }
 
+/* Smoothly animate between desktop and mobile panel geometry. */
+.settings-drawer {
+    transition:
+        top 200ms ease,
+        right 200ms ease,
+        left 200ms ease,
+        width 200ms ease,
+        height 200ms ease,
+        border-radius 200ms ease,
+        box-shadow 200ms ease;
+}
+
 /* Apply blur surface to:
    - Ant Drawer content (legacy mobile implementation)
    - Desktop fixed panel
@@ -215,12 +227,37 @@
 /* Body scroll container */
 .settings-body {
     flex: 1 1 auto;
-    min-height: 0; /* 非常关键：否则 iOS/某些浏览器不滚 */
+    min-height: 0;
+    /* 非常关键：否则 iOS/某些浏览器不滚 */
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
-    overscroll-behavior: contain; /* 防止滚动穿透到页面 */
-    touch-action: pan-y; /* 明确允许纵向滚动手势 */
+    overscroll-behavior: contain;
+    /* 防止滚动穿透到页面 */
+    touch-action: pan-y;
+    /* 明确允许纵向滚动手势 */
 }
+
+/* Settings panel scrollbars (soft, theme-aware) */
+.settings-body {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(120, 120, 120, 0.35) transparent;
+}
+
+.settings-body::-webkit-scrollbar {
+    width: 8px;
+}
+
+.settings-body::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.settings-body::-webkit-scrollbar-thumb {
+    background-color: rgba(120, 120, 120, 0.35);
+    border-radius: 999px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+}
+
 
 /* While resizing the bottom-sheet, suppress overscroll (Chrome/Android) */
 html.resizing,

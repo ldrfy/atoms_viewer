@@ -1,30 +1,8 @@
 <template>
   <!--
-    Desktop: avoid Ant Drawer body scroll-lock side effects (layout “bounce”)
-    by using a lightweight fixed panel rendered via Teleport.
+    Teleported settings panel: reuse one panel for desktop + mobile so the
+    layout change is smooth when the breakpoint flips.
   -->
-  <Teleport to="body">
-    <Transition
-      name="settings-sider-slide"
-      @after-enter="onDesktopAfterEnter"
-      @after-leave="onDesktopAfterLeave"
-    >
-      <div
-        v-show="drawerPlacement === 'right' && openModel"
-        class="settings-drawer settings-sider-fixed"
-        :style="desktopPanelStyle"
-      >
-        <SettingsContent
-          v-model:active-key="activeKeyModel"
-          :show-grab="false"
-          @close="onCloseClick"
-        />
-      </div>
-    </Transition>
-  </Teleport>
-
-  <!-- Mobile: use the same Teleport-based panel as desktop (bottom sheet) so
-       backdrop-blur / translucency is consistent across platforms. -->
   <Teleport to="body">
     <Transition name="settings-mask-fade">
       <div
@@ -35,18 +13,18 @@
     </Transition>
 
     <Transition
-      name="settings-sheet-slide"
-      @after-enter="onMobileAfterEnter"
-      @after-leave="onMobileAfterLeave"
+      :name="panelTransitionName"
+      @after-enter="onPanelAfterEnter"
+      @after-leave="onPanelAfterLeave"
     >
       <div
-        v-show="drawerPlacement === 'bottom' && openModel"
-        class="settings-drawer settings-sheet settings-drawer--bottom"
-        :style="mobileSheetStyle"
+        v-show="openModel"
+        :class="panelClassName"
+        :style="panelStyle"
       >
         <SettingsContent
           v-model:active-key="activeKeyModel"
-          :show-grab="true"
+          :show-grab="drawerPlacement === 'bottom'"
           @close="onCloseClick"
           @resize-start="onResizeStart"
         />
@@ -196,7 +174,7 @@ watch(
   () => props.open,
   (v, prev) => {
     if (v) {
-      placementLock.value = isMobile.value ? 'bottom' : 'right';
+      placementLock.value = null;
       freezeTopPx.value = null;
       if (releaseLockTimer != null) {
         window.clearTimeout(releaseLockTimer);
@@ -246,22 +224,14 @@ function onAfterOpenChange(open: boolean): void {
 }
 
 /**
- * Desktop panel transition hooks.
+ * Panel transition hooks.
  * Keep close-guards cleanup aligned with the visual end of the slide animation.
  */
-function onDesktopAfterEnter(): void {
+function onPanelAfterEnter(): void {
   onAfterOpenChange(true);
 }
 
-function onDesktopAfterLeave(): void {
-  onAfterOpenChange(false);
-}
-
-function onMobileAfterEnter(): void {
-  onAfterOpenChange(true);
-}
-
-function onMobileAfterLeave(): void {
+function onPanelAfterLeave(): void {
   onAfterOpenChange(false);
 }
 
@@ -357,6 +327,7 @@ const contentWrapperStyle = computed(() => {
       bottom: '0',
       height: '100%',
       right: '0',
+      left: 'auto',
       borderRadius: '0',
       overflow: 'hidden',
       boxShadow: '0 12px 34px rgba(0,0,0,0.16)',
@@ -411,6 +382,24 @@ const mobileSheetStyle = computed(() => {
     overflow: 'hidden',
     boxShadow: '0 -12px 34px rgba(0,0,0,0.14)',
   } as Record<string, any>;
+});
+
+const panelStyle = computed(() => {
+  return drawerPlacement.value === 'bottom'
+    ? mobileSheetStyle.value
+    : desktopPanelStyle.value;
+});
+
+const panelClassName = computed(() => {
+  return drawerPlacement.value === 'bottom'
+    ? 'settings-drawer settings-sheet settings-drawer--bottom'
+    : 'settings-drawer settings-sider-fixed';
+});
+
+const panelTransitionName = computed(() => {
+  return drawerPlacement.value === 'bottom'
+    ? 'settings-sheet-slide'
+    : 'settings-sider-slide';
 });
 </script>
 

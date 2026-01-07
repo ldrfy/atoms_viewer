@@ -32,7 +32,7 @@
             :step="1"
           />
         </a-col>
-        <a-col :style="{ width: '96px' }">
+        <a-col class="settings-col-compact">
           <a-input-number
             v-model:value="recordFpsModel"
             :aria-label="t('settings.panel.other.recordFps')"
@@ -40,12 +40,12 @@
             :min="1"
             :max="120"
             :step="1"
-            style="width: 100%"
+            class="settings-full-width"
           />
         </a-col>
       </a-row>
 
-      <a-typography-text type="secondary" style="display: block; margin-top: 6px">
+      <a-typography-text type="secondary" class="settings-text-secondary">
         {{ t('settings.panel.other.recordFpsHint') }}
       </a-typography-text>
     </a-form-item>

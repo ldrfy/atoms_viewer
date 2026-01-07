@@ -246,6 +246,91 @@
     gap: 8px;
 }
 
+.settings-gap-top-xs {
+    margin-top: 6px;
+}
+
+.settings-gap-top-sm {
+    margin-top: 8px;
+}
+
+.settings-gap-top-md {
+    margin-top: 12px;
+}
+
+.settings-gap-bottom-sm {
+    margin-bottom: 8px;
+}
+
+.settings-block {
+    display: block;
+}
+
+.settings-center {
+    display: flex;
+    justify-content: center;
+}
+
+.settings-text-center {
+    text-align: center;
+}
+
+.settings-flex-wrap {
+    flex-wrap: wrap;
+}
+
+.settings-input-wide {
+    width: 140px;
+}
+
+.settings-col-compact {
+    width: 96px;
+}
+
+.settings-col-wide {
+    width: 140px;
+}
+
+.settings-full-width {
+    width: 100%;
+}
+
+.settings-divider {
+    margin: 8px 0;
+}
+
+.settings-dropdown-caret {
+    margin-left: 6px;
+    opacity: 0.75;
+}
+
+.settings-tag-ellipsis {
+    display: inline-block;
+    max-width: 260px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: bottom;
+}
+
+.settings-tag-full {
+    max-width: 100%;
+}
+
+.settings-text-secondary {
+    display: block;
+    margin-top: 6px;
+}
+
+.settings-text-secondary-tight {
+    display: block;
+    margin-top: 8px;
+}
+
+.settings-text-secondary-compact {
+    margin-bottom: 2px;
+}
+
 .settings-clear-confirm .ant-modal-body {
     padding: 16px 20px;
 }

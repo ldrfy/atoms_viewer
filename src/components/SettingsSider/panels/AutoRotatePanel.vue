@@ -18,7 +18,7 @@
       <a-dropdown trigger="click">
         <a-button block :disabled="!hasAnyLayer">
           {{ currentAutoRotatePresetLabel }}
-          <span style="margin-left: 6px; opacity: 0.75">▾</span>
+          <DownOutlined class="settings-dropdown-caret" />
         </a-button>
         <template #overlay>
           <a-menu
@@ -32,7 +32,7 @@
         </template>
       </a-dropdown>
 
-      <a-typography-text type="secondary" style="display: block; margin-top: 6px">
+      <a-typography-text type="secondary" class="settings-text-secondary">
         {{ currentAutoRotatePresetHint }}
       </a-typography-text>
     </a-form-item>
@@ -48,7 +48,7 @@
             :disabled="!hasAnyLayer"
           />
         </a-col>
-        <a-col :style="{ width: '96px' }">
+        <a-col class="settings-col-compact">
           <a-input-number
             v-model:value="autoRotateSpeedModel"
             :aria-label="t('settings.panel.autoRotate.speed')"
@@ -57,11 +57,11 @@
             :max="120"
             :step="1"
             :disabled="!hasAnyLayer"
-            style="width: 100%"
+            class="settings-full-width"
           />
         </a-col>
       </a-row>
-      <a-typography-text type="secondary" style="display: block; margin-top: 6px">
+      <a-typography-text type="secondary" class="settings-text-secondary">
         {{ t('settings.panel.autoRotate.speedHint') }}
       </a-typography-text>
     </a-form-item>
@@ -94,7 +94,7 @@
             :disabled="!hasAnyLayer"
           />
         </a-col>
-        <a-col :style="{ width: '96px' }">
+        <a-col class="settings-col-compact">
           <a-input-number
             v-model:value="autoRotateResumeDelayMsModel"
             :aria-label="t('settings.panel.autoRotate.resumeDelay')"
@@ -103,7 +103,7 @@
             :max="2000"
             :step="50"
             :disabled="!hasAnyLayer"
-            style="width: 100%"
+            class="settings-full-width"
           />
         </a-col>
       </a-row>
@@ -114,6 +114,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { DownOutlined } from '@ant-design/icons-vue';
 
 import {
   AUTO_ROTATE_PRESETS,
@@ -122,13 +123,10 @@ import {
   type AutoRotatePresetId,
 } from '../../../lib/viewer/autoRotate';
 
-import { viewerApiRef } from '../../../lib/viewer/bridge';
 import { useSettingsSiderContext } from '../useSettingsSiderContext';
 
 const { t } = useI18n();
-const { settings, patchSettings } = useSettingsSiderContext();
-const viewerApi = computed(() => viewerApiRef.value);
-const hasAnyLayer = computed(() => (viewerApi.value?.layers.value.length ?? 0) > 0);
+const { settings, patchSettings, hasAnyLayer } = useSettingsSiderContext();
 
 function patchAutoRotate(patch: Partial<(typeof settings.value)['autoRotate']>): void {
   patchSettings({

@@ -49,6 +49,7 @@ import {
   type PatchSettingsFn,
 } from './context';
 import { createSettingsShadow } from '../../lib/viewer/mergeSettings';
+import { viewerApiRef } from '../../lib/viewer/bridge';
 
 const props = withDefaults(
   defineProps<{
@@ -94,6 +95,7 @@ function replaceSettings(next: ViewerSettings): void {
 provide(settingsSiderContextKey, {
   settings: computed(() => props.settings),
   patchSettings,
+  hasAnyLayer: computed(() => (viewerApiRef.value?.layers.value.length ?? 0) > 0),
 });
 
 provide(settingsSiderControlContextKey, {

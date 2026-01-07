@@ -12,7 +12,7 @@
             :max="5"
             :step="0.1"
             :precision="1"
-            style="width: 140px"
+            class="settings-input-wide"
           />
         </a-col>
         <a-col>
@@ -22,7 +22,7 @@
         </a-col>
       </a-row>
 
-      <div style="margin-top: 8px">
+      <div class="settings-gap-top-sm">
         <a-button
           block
           type="primary"
@@ -35,23 +35,23 @@
 
       <a-typography-text
         type="secondary"
-        style="display: block; margin-top: 6px"
+        class="settings-text-secondary"
       >
         {{ t('settings.panel.files.export.hint') }}
       </a-typography-text>
     </a-form-item>
 
-    <a-divider style="margin: 8px 0" />
+    <a-divider class="settings-divider" />
 
     <a-form-item :label="t('settings.panel.files.parse.header')">
-      <a-space direction="vertical" :size="6" style="width: 100%">
+      <a-space direction="vertical" :size="6" class="settings-full-width">
         <a-select
           v-model:value="parseModeModel"
           :aria-label="t('viewer.parse.mode')"
           :title="t('viewer.parse.mode')"
           :options="parseModeOptions"
           :disabled="!canChangeParseMode"
-          style="width: 100%"
+          class="settings-full-width"
         />
 
         <a-alert
@@ -90,13 +90,13 @@ import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import { viewerApiRef } from '../../../lib/viewer/bridge';
+import { useSettingsSiderContext } from '../useSettingsSiderContext';
 import type { ParseMode } from '../../../lib/structure/parse';
 
 const { t } = useI18n();
+const { hasAnyLayer } = useSettingsSiderContext();
 
 const viewerApi = computed(() => viewerApiRef.value);
-const hasAnyLayer = computed(() => (viewerApi.value?.layers.value.length ?? 0) > 0);
-
 // Allow switching parse mode even if no layer was created, as long as a file was attempted.
 const canChangeParseMode = computed(() => {
   const api = viewerApi.value;

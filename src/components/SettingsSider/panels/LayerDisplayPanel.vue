@@ -2,22 +2,13 @@
   <a-form layout="vertical">
     <a-alert type="info" show-icon :message="t('settings.panel.layerDisplay.alert')" />
 
-    <a-space :size="6" style="margin-top: 8px; flex-wrap: wrap">
+    <a-space :size="6" class="settings-gap-top-sm settings-flex-wrap">
       <a-typography-text type="secondary">
         {{ t('settings.panel.layerDisplay.currentLayer') }}:
       </a-typography-text>
       <a-tooltip v-if="activeLayerInfo" :title="activeLayerInfo.sourceFileName || activeLayerInfo.id">
-        <a-tag style="max-width: 100%">
-          <span
-            style="
-                display: inline-block;
-                max-width: 260px;
-                overflow: hidden;
-                text-overflow: ellipsis;
-                white-space: nowrap;
-                vertical-align: bottom;
-              "
-          >
+        <a-tag class="settings-tag-full">
+          <span class="settings-tag-ellipsis">
             {{ activeLayerInfo.name }}
           </span>
         </a-tag>
@@ -27,7 +18,7 @@
       </a-typography-text>
     </a-space>
 
-    <a-row justify="space-between" align="middle" style="margin-top: 8px">
+    <a-row justify="space-between" align="middle" class="settings-gap-top-sm">
       <a-col>
         <a-typography-text type="secondary">
           {{ t('settings.panel.layerDisplay.applyAll') }}
@@ -43,7 +34,7 @@
       </a-col>
     </a-row>
 
-    <a-typography-text type="secondary" style="display: block; margin: 6px 0 2px">
+    <a-typography-text type="secondary" class="settings-text-secondary settings-text-secondary-compact">
       {{ t('settings.panel.layerDisplay.hint') }}
     </a-typography-text>
 
@@ -72,7 +63,7 @@
             :disabled="controlsDisabled || !showBondsModel"
           />
         </a-col>
-        <a-col :style="{ width: '96px' }">
+        <a-col class="settings-col-compact">
           <a-input-number
             v-model:value="bondFactorModel"
             :aria-label="t('settings.panel.layerDisplay.bondFactor')"
@@ -81,12 +72,12 @@
             :max="1.3"
             :step="0.01"
             :disabled="controlsDisabled || !showBondsModel"
-            style="width: 100%"
+            class="settings-full-width"
           />
         </a-col>
       </a-row>
 
-      <a-typography-text type="secondary" style="display: block; margin-top: 6px">
+      <a-typography-text type="secondary" class="settings-text-secondary">
         {{ t('settings.panel.layerDisplay.bondFactorHint') }}
       </a-typography-text>
     </a-form-item>
@@ -102,7 +93,7 @@
             :disabled="controlsDisabled || !showBondsModel"
           />
         </a-col>
-        <a-col :style="{ width: '96px' }">
+        <a-col class="settings-col-compact">
           <a-input-number
             v-model:value="bondRadiusModel"
             :aria-label="t('settings.panel.layerDisplay.bondRadius')"
@@ -111,7 +102,7 @@
             :max="0.2"
             :step="0.01"
             :disabled="controlsDisabled || !showBondsModel"
-            style="width: 100%"
+            class="settings-full-width"
           />
         </a-col>
       </a-row>
@@ -128,7 +119,7 @@
             :disabled="controlsDisabled"
           />
         </a-col>
-        <a-col :style="{ width: '96px' }">
+        <a-col class="settings-col-compact">
           <a-input-number
             v-model:value="atomScaleModel"
             :aria-label="t('settings.panel.layerDisplay.atomSize')"
@@ -137,7 +128,7 @@
             :max="2"
             :step="0.05"
             :disabled="controlsDisabled"
-            style="width: 100%"
+            class="settings-full-width"
           />
         </a-col>
       </a-row>
@@ -154,7 +145,7 @@
             :disabled="controlsDisabled"
           />
         </a-col>
-        <a-col :style="{ width: '96px' }">
+        <a-col class="settings-col-compact">
           <a-input-number
             v-model:value="sphereSegmentsModel"
             :aria-label="t('settings.panel.layerDisplay.sphereSegments')"
@@ -163,12 +154,12 @@
             :max="64"
             :step="1"
             :disabled="controlsDisabled"
-            style="width: 100%"
+            class="settings-full-width"
           />
         </a-col>
       </a-row>
 
-      <a-typography-text type="secondary" style="display: block; margin-top: 6px">
+      <a-typography-text type="secondary" class="settings-text-secondary">
         {{ t('settings.panel.layerDisplay.sphereSegmentsHint') }}
       </a-typography-text>
     </a-form-item>
@@ -186,11 +177,12 @@ import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { DEFAULT_LAYER_DISPLAY, type LayerDisplaySettings } from '../../../lib/viewer/settings';
 import { viewerApiRef } from '../../../lib/viewer/bridge';
+import { useSettingsSiderContext } from '../useSettingsSiderContext';
 
 const { t } = useI18n();
+const { hasAnyLayer } = useSettingsSiderContext();
 
 const viewerApi = computed(() => viewerApiRef.value);
-const hasAnyLayer = computed(() => (viewerApi.value?.layers.value.length ?? 0) > 0);
 const layerList = computed(() => viewerApi.value?.layers.value ?? []);
 const activeLayerId = computed(() => viewerApi.value?.activeLayerId.value ?? null);
 const activeLayerInfo = computed(() => {

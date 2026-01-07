@@ -1,7 +1,7 @@
 <template>
   <a-form layout="vertical">
     <a-form-item :label="t('settings.panel.display.viewPresets')">
-      <div style="display: flex; justify-content: center;">
+      <div class="settings-center">
         <a-checkbox-group
           :value="viewPresetsModel"
           :options="viewPresetOptions"
@@ -10,7 +10,7 @@
         />
       </div>
 
-      <a-typography-text type="secondary" style="display: block; margin-top: 6px; text-align: center;">
+      <a-typography-text type="secondary" class="settings-text-secondary settings-text-center">
         {{ t('settings.panel.display.viewPresetsHint') }}
       </a-typography-text>
     </a-form-item>
@@ -29,7 +29,7 @@
             :disabled="!hasAnyLayer"
           />
         </a-col>
-        <a-col :style="{ width: '96px' }">
+        <a-col class="settings-col-compact">
           <a-input-number
             v-model:value="dualViewSplitPctModel"
             :aria-label="t('settings.panel.display.dualViewSplit')"
@@ -38,11 +38,11 @@
             :max="90"
             :step="1"
             :disabled="!hasAnyLayer"
-            style="width: 100%"
+            class="settings-full-width"
           />
         </a-col>
       </a-row>
-      <a-typography-text type="secondary" style="display: block; margin-top: 6px">
+      <a-typography-text type="secondary" class="settings-text-secondary">
         {{ t('settings.panel.display.dualViewSplitHint') }}
       </a-typography-text>
     </a-form-item>
@@ -75,7 +75,7 @@
             :disabled="!hasAnyLayer"
           />
         </a-col>
-        <a-col :style="{ width: '96px' }">
+        <a-col class="settings-col-compact">
           <a-input-number
             v-model:value="dualViewDistanceModel"
             :aria-label="t('settings.panel.display.dualViewDistance')"
@@ -84,7 +84,7 @@
             :max="dualViewDistanceMax"
             :step="0.5"
             :disabled="!hasAnyLayer"
-            style="width: 100%"
+            class="settings-full-width"
           />
         </a-col>
       </a-row>
@@ -101,7 +101,7 @@
             :disabled="!hasAnyLayer"
           />
         </a-col>
-        <a-col :style="{ width: '96px' }">
+        <a-col class="settings-col-compact">
           <a-input-number
             v-model:value="rotXModel"
             :aria-label="t('settings.panel.display.rotX')"
@@ -110,7 +110,7 @@
             :max="180"
             :step="1"
             :disabled="!hasAnyLayer"
-            style="width: 100%"
+            class="settings-full-width"
           />
         </a-col>
       </a-row>
@@ -127,7 +127,7 @@
             :disabled="!hasAnyLayer"
           />
         </a-col>
-        <a-col :style="{ width: '96px' }">
+        <a-col class="settings-col-compact">
           <a-input-number
             v-model:value="rotYModel"
             :aria-label="t('settings.panel.display.rotY')"
@@ -136,7 +136,7 @@
             :max="180"
             :step="1"
             :disabled="!hasAnyLayer"
-            style="width: 100%"
+            class="settings-full-width"
           />
         </a-col>
       </a-row>
@@ -153,7 +153,7 @@
             :disabled="!hasAnyLayer"
           />
         </a-col>
-        <a-col :style="{ width: '96px' }">
+        <a-col class="settings-col-compact">
           <a-input-number
             v-model:value="rotZModel"
             :aria-label="t('settings.panel.display.rotZ')"
@@ -162,7 +162,7 @@
             :max="180"
             :step="1"
             :disabled="!hasAnyLayer"
-            style="width: 100%"
+            class="settings-full-width"
           />
         </a-col>
       </a-row>
@@ -190,13 +190,10 @@ import { computed, ref, watch } from 'vue';
 import { message } from 'ant-design-vue';
 import { useI18n } from 'vue-i18n';
 import { normalizeViewPresets, type ViewPreset } from '../../../lib/viewer/viewPresets';
-import { viewerApiRef } from '../../../lib/viewer/bridge';
 import { useSettingsSiderContext } from '../useSettingsSiderContext';
 
 const { t } = useI18n();
-const { settings, patchSettings } = useSettingsSiderContext();
-const viewerApi = computed(() => viewerApiRef.value);
-const hasAnyLayer = computed(() => (viewerApi.value?.layers.value.length ?? 0) > 0);
+const { settings, patchSettings, hasAnyLayer } = useSettingsSiderContext();
 
 const viewPresetOptions = computed(() => [
   { label: t('settings.panel.display.viewPresetFront'), value: 'front' as const },

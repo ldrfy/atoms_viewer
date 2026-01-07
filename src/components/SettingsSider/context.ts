@@ -17,6 +17,7 @@ export type PatchSettingsFn = (
 export interface SettingsSiderContext {
   settings: ComputedRef<ViewerSettings>;
   patchSettings: PatchSettingsFn;
+  hasAnyLayer: ComputedRef<boolean>;
 }
 
 export const settingsSiderContextKey: InjectionKey<SettingsSiderContext> = Symbol(

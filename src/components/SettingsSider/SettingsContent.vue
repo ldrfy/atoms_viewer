@@ -58,7 +58,7 @@
       <a-button block @click="onClearStorage">
         {{ t('settings.clearStorage') }}
       </a-button>
-      <a-typography-text type="secondary" style="display: block; margin-top: 6px">
+      <a-typography-text type="secondary" class="settings-text-secondary">
         {{ t('settings.clearStorageHint') }}
       </a-typography-text>
     </div>

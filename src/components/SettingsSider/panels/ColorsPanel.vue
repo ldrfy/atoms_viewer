@@ -2,21 +2,14 @@
   <a-form layout="vertical">
     <a-alert type="info" show-icon :message="t('settings.panel.colors.alert')" />
 
-    <a-space :size="6" style="margin-top: 8px; flex-wrap: wrap">
+    <a-space :size="6" class="settings-gap-top-sm settings-flex-wrap">
       <a-typography-text type="secondary">
         {{ t('settings.panel.colors.currentLayer') }}:
       </a-typography-text>
       <a-tooltip v-if="activeLayerInfo" :title="activeLayerInfo.sourceFileName || activeLayerInfo.id">
-        <a-tag style="max-width: 100%">
+        <a-tag class="settings-tag-full">
           <span
-            style="
-                display: inline-block;
-                max-width: 260px;
-                overflow: hidden;
-                text-overflow: ellipsis;
-                white-space: nowrap;
-                vertical-align: bottom;
-              "
+            class="settings-tag-ellipsis"
           >
             {{ activeLayerInfo.name }}
           </span>
@@ -27,7 +20,7 @@
       </a-typography-text>
     </a-space>
 
-    <a-row justify="space-between" align="middle" style="margin-top: 8px">
+    <a-row justify="space-between" align="middle" class="settings-gap-top-sm">
       <a-col>
         <a-typography-text type="secondary">
           {{ t('settings.panel.colors.applyAll') }}
@@ -43,7 +36,7 @@
       </a-col>
     </a-row>
 
-    <a-form-item :label="t('settings.panel.colors.mapLabel')" style="margin-top: 12px">
+    <a-form-item :label="t('settings.panel.colors.mapLabel')" class="settings-gap-top-md">
       <template v-if="colorMapModel.length === 0">
         <a-alert type="info" show-icon :message="t('settings.panel.colors.empty')" />
       </template>
@@ -52,7 +45,7 @@
         <div
           v-for="(row, idx) in colorMapModel"
           :key="`${row.element}-${row.typeId ?? 0}-${idx}`"
-          style="margin-bottom: 8px"
+          class="settings-gap-bottom-sm"
         >
           <a-row :gutter="8" align="middle">
             <a-col :span="8">
@@ -98,7 +91,7 @@
         </div>
       </template>
 
-      <a-typography-text type="secondary" style="display: block; margin-top: 8px">
+      <a-typography-text type="secondary" class="settings-text-secondary-tight">
         {{ t('settings.panel.colors.hint') }}
       </a-typography-text>
     </a-form-item>
@@ -119,10 +112,9 @@ import { getElementColorHex } from '../../../lib/structure/chem';
 import { getAtomTypeColorKey } from '../../ViewerStage/colorMap';
 
 const { t } = useI18n();
-const { patchSettings } = useSettingsSiderContext();
+const { patchSettings, hasAnyLayer } = useSettingsSiderContext();
 
 const viewerApi = computed(() => viewerApiRef.value);
-const hasAnyLayer = computed(() => (viewerApi.value?.layers.value.length ?? 0) > 0);
 const layerList = computed(() => viewerApi.value?.layers.value ?? []);
 const activeLayerId = computed(() => viewerApi.value?.activeLayerId.value ?? null);
 const applyToAllLayers = ref(false);

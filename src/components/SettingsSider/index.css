@@ -235,6 +235,17 @@ body.resizing {
     font-size: 13px;
 }
 
+.settings-panel-header {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.settings-panel-icon {
+    font-size: 14px;
+    opacity: 0.85;
+}
+
 .settings-collapse :deep(.ant-collapse-content-box) {
     padding: 0 0 12px 0 !important;
 }

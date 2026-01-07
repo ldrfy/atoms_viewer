@@ -31,12 +31,22 @@
   </div>
 
   <div class="settings-body">
-    <a-collapse v-model:active-key="activeKeyProxy" ghost class="settings-collapse">
+    <a-collapse
+      v-model:active-key="activeKeyProxy"
+      ghost
+      class="settings-collapse"
+      expand-icon-position="end"
+    >
       <a-collapse-panel
         v-for="p in panels"
         :key="p.key"
-        :header="t(p.headerKey)"
       >
+        <template #header>
+          <span class="settings-panel-header">
+            <component :is="p.icon" class="settings-panel-icon" />
+            <span>{{ t(p.headerKey) }}</span>
+          </span>
+        </template>
         <component :is="p.comp" />
       </a-collapse-panel>
     </a-collapse>
@@ -46,6 +56,16 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
+import {
+  AppstoreOutlined,
+  BgColorsOutlined,
+  EyeOutlined,
+  FolderOpenOutlined,
+  SettingOutlined,
+  SlidersOutlined,
+  SwapOutlined,
+  SyncOutlined,
+} from '@ant-design/icons-vue';
 
 import FilesPanel from './panels/FilesPanel.vue';
 import LayersPanel from './panels/LayersPanel.vue';
@@ -75,14 +95,14 @@ const emit = defineEmits<{
 const { t } = useI18n();
 
 const panels = [
-  { key: 'files', headerKey: 'settings.panel.files.header', comp: FilesPanel },
-  { key: 'display', headerKey: 'settings.panel.display.header', comp: DisplayPanel },
-  { key: 'autoRotate', headerKey: 'settings.panel.autoRotate.header', comp: AutoRotatePanel },
-  { key: 'layers', headerKey: 'settings.panel.layers.header', comp: LayersPanel },
-  { key: 'lammps', headerKey: 'settings.panel.lammps.header', comp: LammpsPanel },
-  { key: 'colors', headerKey: 'settings.panel.colors.header', comp: ColorsPanel },
-  { key: 'layerDisplay', headerKey: 'settings.panel.layerDisplay.header', comp: LayerDisplayPanel },
-  { key: 'other', headerKey: 'settings.panel.other.header', comp: OtherPanel },
+  { key: 'files', headerKey: 'settings.panel.files.header', comp: FilesPanel, icon: FolderOpenOutlined },
+  { key: 'display', headerKey: 'settings.panel.display.header', comp: DisplayPanel, icon: EyeOutlined },
+  { key: 'autoRotate', headerKey: 'settings.panel.autoRotate.header', comp: AutoRotatePanel, icon: SyncOutlined },
+  { key: 'layers', headerKey: 'settings.panel.layers.header', comp: LayersPanel, icon: AppstoreOutlined },
+  { key: 'lammps', headerKey: 'settings.panel.lammps.header', comp: LammpsPanel, icon: SwapOutlined },
+  { key: 'colors', headerKey: 'settings.panel.colors.header', comp: ColorsPanel, icon: BgColorsOutlined },
+  { key: 'layerDisplay', headerKey: 'settings.panel.layerDisplay.header', comp: LayerDisplayPanel, icon: SlidersOutlined },
+  { key: 'other', headerKey: 'settings.panel.other.header', comp: OtherPanel, icon: SettingOutlined },
 ] as const;
 
 const activeKeyProxy = computed<string[]>({

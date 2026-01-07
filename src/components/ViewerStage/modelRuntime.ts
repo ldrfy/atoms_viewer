@@ -68,6 +68,12 @@ function normalizeLayerDisplay(
       ? Math.max(0.8, Math.min(1.3, Number(bondFactorRaw)))
       : base.bondFactor;
 
+  const bondRadiusRaw = patch.bondRadius;
+  const bondRadius
+    = Number.isFinite(bondRadiusRaw)
+      ? Math.max(0.03, Math.min(0.2, Number(bondRadiusRaw)))
+      : base.bondRadius;
+
   const showBonds
     = typeof patch.showBonds === 'boolean' ? patch.showBonds : base.showBonds;
 
@@ -76,6 +82,7 @@ function normalizeLayerDisplay(
     showBonds,
     sphereSegments,
     bondFactor,
+    bondRadius,
   };
 }
 
@@ -84,6 +91,7 @@ const DEFAULT_LAYER_DISPLAY_LOCAL: LayerDisplaySettings = {
   showBonds: true,
   sphereSegments: 24,
   bondFactor: 1.05,
+  bondRadius: 0.09,
 };
 
 export type ModelLayerInfo = {
@@ -107,6 +115,8 @@ type LayerInternal = {
   lastBondSegCount: number;
   /** The bondFactor used to build current bondMeshes. */
   bondFactorUsed: number;
+  /** The bondRadius used to build current bondMeshes. */
+  bondRadiusUsed: number;
 
   // animation
   frameIndex: number;
@@ -266,14 +276,12 @@ export function createModelRuntime(args: {
   settingsRef: Readonly<Ref<ViewerSettings>>;
   hasModel: Ref<boolean>;
   atomSizeFactor: number;
-  bondRadius: number;
 }): ModelRuntime {
   const {
     stage,
     settingsRef,
     hasModel,
     atomSizeFactor,
-    bondRadius,
   } = args;
 
   const invalidate = (): void => {
@@ -501,6 +509,7 @@ export function createModelRuntime(args: {
         showBonds: getSettings().showBonds,
         sphereSegments: getSettings().sphereSegments,
         bondFactor: getSettings().bondFactor,
+        bondRadius: getSettings().bondRadius,
       },
       DEFAULT_LAYER_DISPLAY_LOCAL,
     );
@@ -697,13 +706,14 @@ export function createModelRuntime(args: {
         atoms: centeredAtoms,
         bondFactor: bf,
         atomSizeFactor,
-        bondRadius,
+        bondRadius: display.bondRadius,
         getColorKey,
         colorMap,
       });
       layer.bondMeshes = res.meshes;
       layer.lastBondSegCount = res.segCount;
       layer.bondFactorUsed = bf;
+      layer.bondRadiusUsed = display.bondRadius;
       for (const b of layer.bondMeshes) layer.group.add(b);
     }
 
@@ -829,6 +839,7 @@ export function createModelRuntime(args: {
       bondMeshes: [],
       lastBondSegCount: 0,
       bondFactorUsed: NaN,
+      bondRadiusUsed: NaN,
       frameIndex: 0,
       currentFrameAtoms: firstAtoms,
       currentMappedAtoms: null,
@@ -1113,7 +1124,7 @@ export function createModelRuntime(args: {
       atoms: centeredAtoms,
       bondFactor: bf,
       atomSizeFactor,
-      bondRadius,
+      bondRadius: display.bondRadius,
       getColorKey,
       colorMap,
     });
@@ -1121,6 +1132,7 @@ export function createModelRuntime(args: {
     layer.bondMeshes = res.meshes;
     layer.lastBondSegCount = res.segCount;
     layer.bondFactorUsed = bf;
+    layer.bondRadiusUsed = display.bondRadius;
     for (const b of layer.bondMeshes) layer.group.add(b);
   }
 
@@ -1132,7 +1144,9 @@ export function createModelRuntime(args: {
         const needRebuild
           = l.bondMeshes.length === 0
             || !Number.isFinite(l.bondFactorUsed)
-            || Math.abs(l.bondFactorUsed - bf) > 1e-6;
+            || Math.abs(l.bondFactorUsed - bf) > 1e-6
+            || !Number.isFinite(l.bondRadiusUsed)
+            || Math.abs(l.bondRadiusUsed - display.bondRadius) > 1e-6;
         if (!needRebuild) continue;
 
         if (l.bondMeshes.length > 0) {
@@ -1158,13 +1172,14 @@ export function createModelRuntime(args: {
           atoms: centeredAtoms,
           bondFactor: bf,
           atomSizeFactor,
-          bondRadius,
+          bondRadius: display.bondRadius,
           getColorKey,
           colorMap,
         });
         l.bondMeshes = res.meshes;
         l.lastBondSegCount = res.segCount;
         l.bondFactorUsed = bf;
+        l.bondRadiusUsed = display.bondRadius;
         for (const b of l.bondMeshes) l.group.add(b);
       }
       else {
@@ -1173,6 +1188,7 @@ export function createModelRuntime(args: {
         l.bondMeshes = [];
         l.lastBondSegCount = 0;
         l.bondFactorUsed = NaN;
+        l.bondRadiusUsed = NaN;
       }
     }
 
@@ -1312,7 +1328,8 @@ export function createModelRuntime(args: {
           || prev.sphereSegments !== next.sphereSegments;
       const bondChanged
         = prev.showBonds !== next.showBonds
-          || Math.abs(prev.bondFactor - next.bondFactor) > 1e-6;
+          || Math.abs(prev.bondFactor - next.bondFactor) > 1e-6
+          || Math.abs(prev.bondRadius - next.bondRadius) > 1e-6;
 
       l.display = next;
       atomScaleChanged = atomScaleChanged || atomChanged;

@@ -410,6 +410,7 @@ export function useViewerStage(
     if (!runtime) return;
     runtime.setActiveLayerDisplaySettings(patch, opts);
     syncUiFromRuntime();
+    picking.updateSelectionVisuals();
   }
 
   function removeLayer(id: string): void {
@@ -465,7 +466,6 @@ export function useViewerStage(
       settingsRef,
       hasModel,
       atomSizeFactor: 0.5,
-      bondRadius: 0.09,
     });
 
     runtimeTick.value += 1;

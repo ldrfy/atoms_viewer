@@ -54,6 +54,8 @@ export type ViewerSettings = {
   showBonds: boolean;
   /** Bond cutoff factor used for bond inference: cutoff = (r_i + r_j) * bondFactor. */
   bondFactor: number;
+  /** Bond cylinder radius (world units). */
+  bondRadius: number;
   /** During multi-frame playback, refresh bond meshes each frame. */
   refreshBondsOnPlay: boolean;
   rotationDeg: RotationDeg;
@@ -94,6 +96,7 @@ export type LayerDisplaySettings = {
   showBonds: boolean;
   sphereSegments: number;
   bondFactor: number;
+  bondRadius: number;
 };
 
 export const DEFAULT_LAYER_DISPLAY: LayerDisplaySettings = {
@@ -101,6 +104,7 @@ export const DEFAULT_LAYER_DISPLAY: LayerDisplaySettings = {
   showBonds: true,
   sphereSegments: 24,
   bondFactor: 1.05,
+  bondRadius: 0.09,
 };
 
 export const DEFAULT_SETTINGS: ViewerSettings = {
@@ -109,6 +113,7 @@ export const DEFAULT_SETTINGS: ViewerSettings = {
   showAxes: false,
   showBonds: true,
   bondFactor: 1.05,
+  bondRadius: 0.09,
   // Refreshing bonds each frame during playback can be extremely expensive for
   // large models. Default to OFF; users can enable explicitly when needed.
   refreshBondsOnPlay: true,

@@ -52,8 +52,10 @@ export function createViewerPickingController(deps: RenderDeps) {
   // selection visuals
   let selectionGroup: THREE.Group | null = null;
   let markerMeshes: THREE.Mesh[] = [];
-  let line12: THREE.Line | null = null;
-  let line23: THREE.Line | null = null;
+  let line12: THREE.Mesh | null = null;
+  let line23: THREE.Mesh | null = null;
+  let lineGeometry: THREE.CylinderGeometry | null = null;
+  let lineMaterial: THREE.MeshBasicMaterial | null = null;
 
   let selectionVisuals: Array<{
     mesh: THREE.InstancedMesh;
@@ -61,6 +63,13 @@ export function createViewerPickingController(deps: RenderDeps) {
   }> = [];
   const tmpMat = new THREE.Matrix4();
   const tmpPos = new THREE.Vector3();
+  const lineUp = new THREE.Vector3(0, 1, 0);
+  const lineDir = new THREE.Vector3();
+  const lineQuat = new THREE.Quaternion();
+  const lineScale = new THREE.Vector3();
+  const lineCenter = new THREE.Vector3();
+  const lineP1 = new THREE.Vector3();
+  const lineP2 = new THREE.Vector3();
 
   function wrapDeg180(deg: number): number {
     let x = ((((deg + 180) % 360) + 360) % 360) - 180;
@@ -125,16 +134,16 @@ export function createViewerPickingController(deps: RenderDeps) {
     });
     for (const m of markerMeshes) selectionGroup.add(m);
 
-    const makeLine = (): THREE.Line => {
-      const g = new THREE.BufferGeometry();
-      g.setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
-      const lm = new THREE.LineBasicMaterial({
-        color: 0xffd400,
-        transparent: true,
-        opacity: 0.95,
-        depthTest: false,
-      });
-      const ln = new THREE.Line(g, lm);
+    lineGeometry = new THREE.CylinderGeometry(1, 1, 1, 12, 1, false);
+    lineMaterial = new THREE.MeshBasicMaterial({
+      color: 0xffd400,
+      transparent: true,
+      opacity: 0.95,
+      depthTest: false,
+    });
+
+    const makeLine = (): THREE.Mesh => {
+      const ln = new THREE.Mesh(lineGeometry!, lineMaterial!);
       ln.visible = false;
       ln.renderOrder = 9;
       ln.frustumCulled = false;
@@ -196,19 +205,45 @@ export function createViewerPickingController(deps: RenderDeps) {
       pts.push(tmpPos.clone());
     }
 
+    const runtime = deps.getRuntime();
+    const display = runtime?.activeDisplaySettings?.value;
+    const baseBondRadius = Number.isFinite(display?.bondRadius)
+      ? (display!.bondRadius as number)
+      : (Number.isFinite(deps.settingsRef.value.bondRadius)
+          ? deps.settingsRef.value.bondRadius
+          : 0.09);
+    const lineRadius = Math.min(
+      Math.max(0.008, baseBondRadius * 0.7),
+      baseBondRadius * 0.9,
+    );
+
+    const updateLine = (mesh: THREE.Mesh, a: THREE.Vector3, b: THREE.Vector3) => {
+      lineP1.copy(a);
+      lineP2.copy(b);
+
+      lineCenter.addVectors(lineP1, lineP2).multiplyScalar(0.5);
+      lineDir.subVectors(lineP2, lineP1);
+      const len = lineDir.length();
+      if (len < 1.0e-7) {
+        mesh.visible = false;
+        return;
+      }
+
+      lineDir.multiplyScalar(1 / len);
+      lineQuat.setFromUnitVectors(lineUp, lineDir);
+      lineScale.set(lineRadius, len, lineRadius);
+
+      mesh.position.copy(lineCenter);
+      mesh.quaternion.copy(lineQuat);
+      mesh.scale.copy(lineScale);
+      mesh.visible = true;
+    };
+
     if (pts.length >= 2 && line12) {
-      (line12.geometry as THREE.BufferGeometry).setFromPoints([
-        pts[0]!,
-        pts[1]!,
-      ]);
-      line12.visible = true;
+      updateLine(line12, pts[0]!, pts[1]!);
     }
     if (pts.length >= 3 && line23) {
-      (line23.geometry as THREE.BufferGeometry).setFromPoints([
-        pts[1]!,
-        pts[2]!,
-      ]);
-      line23.visible = true;
+      updateLine(line23, pts[1]!, pts[2]!);
     }
 
     requestRedraw();

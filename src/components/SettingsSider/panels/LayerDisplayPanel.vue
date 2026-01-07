@@ -91,6 +91,32 @@
       </a-typography-text>
     </a-form-item>
 
+    <a-form-item :label="t('settings.panel.layerDisplay.bondRadius')">
+      <a-row :gutter="8" align="middle">
+        <a-col :flex="1">
+          <a-slider
+            v-model:value="bondRadiusModel"
+            :min="0.03"
+            :max="0.2"
+            :step="0.01"
+            :disabled="controlsDisabled || !showBondsModel"
+          />
+        </a-col>
+        <a-col :style="{ width: '96px' }">
+          <a-input-number
+            v-model:value="bondRadiusModel"
+            :aria-label="t('settings.panel.layerDisplay.bondRadius')"
+            :title="t('settings.panel.layerDisplay.bondRadius')"
+            :min="0.03"
+            :max="0.2"
+            :step="0.01"
+            :disabled="controlsDisabled || !showBondsModel"
+            style="width: 100%"
+          />
+        </a-col>
+      </a-row>
+    </a-form-item>
+
     <a-form-item :label="t('settings.panel.layerDisplay.atomSize')">
       <a-row :gutter="8" align="middle">
         <a-col :flex="1">
@@ -193,6 +219,15 @@ const bondFactorModel = computed({
     const n = Number(v);
     const clamped = Number.isFinite(n) ? Math.max(0.8, Math.min(1.3, n)) : 1.05;
     patchDisplay({ bondFactor: Math.round(clamped * 100) / 100 });
+  },
+});
+
+const bondRadiusModel = computed({
+  get: () => displayModel.value?.bondRadius ?? 0.09,
+  set: (v: number) => {
+    const n = Number(v);
+    const clamped = Number.isFinite(n) ? Math.max(0.03, Math.min(0.2, n)) : 0.09;
+    patchDisplay({ bondRadius: Math.round(clamped * 100) / 100 });
   },
 });
 

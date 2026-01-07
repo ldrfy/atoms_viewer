@@ -13,14 +13,14 @@
             {{ t("viewer.parse.mode") }}
           </div>
 
-          <a-space direction="vertical" :size="6" style="width: 100%">
+          <a-space direction="vertical" :size="6" class="parse-full-width">
             <a-select
               v-model:value="parseModeModel"
               size="small"
               :aria-label="t('viewer.parse.mode')"
               :title="t('viewer.parse.mode')"
               :options="parseModeOptions"
-              style="width: 100%"
+              class="parse-full-width"
             />
 
             <a-alert
@@ -75,6 +75,7 @@
 import { computed, ref, unref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import type { ParseMode } from '../../../lib/structure/parse';
+import { buildParseModeOptions } from '../../../lib/structure/parseOptions';
 import { ExclamationCircleOutlined } from '@ant-design/icons-vue';
 
 import type { ParseCtx } from '../ctx';
@@ -90,13 +91,7 @@ const parseModeModel = computed<ParseMode>({
   set: v => props.ctx.setParseMode(v),
 });
 
-const parseModeOptions = computed(() => [
-  { value: 'auto', label: t('viewer.parse.modeOptions.auto') },
-  { value: 'xyz', label: t('viewer.parse.modeOptions.xyz') },
-  { value: 'pdb', label: t('viewer.parse.modeOptions.pdb') },
-  { value: 'lammpsdump', label: t('viewer.parse.modeOptions.lammpsdump') },
-  { value: 'lammpsdata', label: t('viewer.parse.modeOptions.lammpsdata') },
-]);
+const parseModeOptions = computed(() => buildParseModeOptions(t));
 
 /** 解析出错时自动打开 popover（原来在 index.vue 的 watch） */
 watch(
@@ -120,6 +115,10 @@ watch(
     pointer-events: auto;
 }
 
+.parse-full-width {
+    width: 100%;
+}
+
 /* 把手按钮 */
 .parse-handle {
     display: inline-flex;
@@ -128,7 +127,7 @@ watch(
 }
 
 /* Popover 容器的宽度控制：桌面固定，手机不溢出 */
-:deep(.parse-popover .ant-popover-inner) {
+.parse-popover .ant-popover-inner {
     width: min(320px, calc(100vw - 24px));
 }
 

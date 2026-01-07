@@ -374,6 +374,10 @@ function inferLayoutFromCore(core: string[]): AtomsLayout {
   return STYLE_LAYOUT.atomic!;
 }
 
+/**
+ * Parse LAMMPS data (read_data, typically single-frame).
+ * 解析 LAMMPS data（read_data，通常单帧）。
+ */
 export function parseLammpsData(
   text: string,
   fileName: string,
@@ -517,6 +521,10 @@ export function parseLammpsData(
  * Check whether a format string indicates LAMMPS data-like data.
  *
  * 判断 format 字符串是否表示 LAMMPS data 格式。
+ */
+/**
+ * Check if a format string indicates LAMMPS data.
+ * 判断格式字符串是否为 LAMMPS data。
  */
 export function isLammpsDataFormat(fmt: string): boolean {
   return ['data', 'lammpsdata'].includes(fmt);

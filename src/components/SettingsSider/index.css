@@ -228,6 +228,7 @@
 .settings-body {
     flex: 1 1 auto;
     min-height: 0;
+    padding: 0 12px 12px;
     /* 非常关键：否则 iOS/某些浏览器不滚 */
     overflow-y: auto;
     scrollbar-gutter: stable;
@@ -240,14 +241,10 @@
 
 .settings-reset {
     margin-top: 12px;
-    padding: 0 8px 12px;
+    padding: 0 0 12px;
     display: flex;
     flex-direction: column;
     gap: 8px;
-}
-
-.settings-gap-top-xs {
-    margin-top: 6px;
 }
 
 .settings-gap-top-sm {
@@ -287,12 +284,12 @@
     width: 96px;
 }
 
-.settings-col-wide {
-    width: 140px;
-}
-
 .settings-full-width {
     width: 100%;
+}
+
+.settings-word-break {
+    word-break: break-all;
 }
 
 .settings-divider {
@@ -373,7 +370,7 @@ body.resizing {
 }
 
 /* Collapse touch friendliness */
-.settings-collapse :deep(.ant-collapse-header) {
+.settings-collapse .ant-collapse-header {
     padding: 12px 0 !important;
     font-size: 13px;
 }
@@ -385,13 +382,9 @@ body.resizing {
 }
 
 .settings-panel-icon {
-    font-size: 18px;
+    font-size: 16px;
 }
 
-.settings-panel-header > span:last-child {
-    font-size: 15px;
-    font-weight: 600;
-}
 
 .settings-panel-dirty {
     width: 6px;
@@ -401,8 +394,8 @@ body.resizing {
     box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.15);
 }
 
-.settings-collapse :deep(.ant-collapse-content-box) {
-    padding: 0 0 12px 0 !important;
+.settings-collapse .ant-collapse-content-box {
+    padding: 0 12px 12px !important;
 }
 
 /* Native color input (used in Atom Colors panel) */
@@ -413,15 +406,15 @@ body.resizing {
 
 /* Make InputNumber steppers easier to tap on mobile */
 @media (max-width: 768px) {
-    .settings-drawer :deep(.ant-input-number-handler-wrap) {
+    .settings-drawer .ant-input-number-handler-wrap {
         width: 32px;
     }
 
-    .settings-drawer :deep(.ant-input-number-handler) {
+    .settings-drawer .ant-input-number-handler {
         height: 50%;
     }
 
-    .settings-drawer :deep(.ant-form-item-label > label) {
+    .settings-drawer .ant-form-item-label > label {
         font-size: 13px;
     }
 }

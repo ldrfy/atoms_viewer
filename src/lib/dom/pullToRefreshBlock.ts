@@ -1,11 +1,19 @@
 /**
  * Global pull-to-refresh / overscroll blocker (ref-counted).
+ * 全局下拉刷新/过度滚动屏蔽器（引用计数）。
  *
  * Used by mobile drag-resize interactions (e.g., Settings bottom sheet, Atom Inspector).
+ * 用于移动端拖拽缩放交互（如设置面板、原子检查器）。
+ *
  * Mobile Firefox can still trigger pull-to-refresh unless we:
  * - lock page scroll via body { position: fixed; top: -scrollY }
  * - add document-level (capture) touchstart/touchmove listeners with passive:false
  * - temporarily set html/body overscrollBehaviorY + touchAction
+ *
+ * 在移动端 Firefox 中，需要：
+ * - 固定 body 防止页面滚动
+ * - 捕获 touch 事件并阻止默认行为
+ * - 临时设置 html/body 的 overscroll/touchAction
  */
 
 export type PullToRefreshBlockToken = symbol;

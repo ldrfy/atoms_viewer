@@ -10,6 +10,11 @@ const V_UP_TOP = new THREE.Vector3(0, 0, 1);
  * - front: camera at +Z, up +Y
  * - side:  camera at +X, up +Y
  * - top:   camera at +Y, up +Z
+ *
+ * 将相机设置为轴对齐预设姿态。
+ * - front：相机在 +Z，向上 +Y
+ * - side： 相机在 +X，向上 +Y
+ * - top：  相机在 +Y，向上 +Z
  */
 export function applyCameraPoseForPreset(params: {
   camera: AnyCamera;

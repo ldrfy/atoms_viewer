@@ -2,6 +2,7 @@
 import * as THREE from 'three';
 import { message } from 'ant-design-vue';
 import { normalizeViewPresets } from '../../../lib/viewer/viewPresets';
+import { clampDualViewSplit } from '../../../lib/viewer/viewLayout';
 import { cropCanvasToPngBlob, downloadBlob } from '../../../lib/image/cropPng';
 import { buildExportFilename } from '../../../lib/file/filename';
 import {
@@ -85,10 +86,7 @@ export function createPngExporter(deps: {
       })();
 
       if (presets.length === 2) {
-        const split = Math.max(
-          0.1,
-          Math.min(0.9, settings.dualViewSplit ?? 0.5),
-        );
+        const split = clampDualViewSplit(settings.dualViewSplit ?? 0.5);
         const leftW = Math.floor(w * split);
         const rightW = Math.max(1, w - leftW);
 

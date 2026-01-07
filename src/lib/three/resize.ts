@@ -3,6 +3,10 @@ import type { CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js';
 
 export type ElementSize = { w: number; h: number };
 
+/**
+ * Measure element size in pixels (floor, min 1).
+ * 获取元素像素尺寸（向下取整，最小 1）。
+ */
 export function getElementSize(el: HTMLElement): ElementSize {
   const rect = el.getBoundingClientRect();
   return {
@@ -12,6 +16,10 @@ export function getElementSize(el: HTMLElement): ElementSize {
 }
 
 /** 监听元素尺寸变化，返回 disposer。 */
+/**
+ * Observe element size changes with ResizeObserver (fallback-safe).
+ * 使用 ResizeObserver 监听元素尺寸变化（含兼容处理）。
+ */
 export function observeElementResize(
   el: HTMLElement,
   onResize: (size: ElementSize) => void,
@@ -25,7 +33,10 @@ export function observeElementResize(
   return () => ro.disconnect();
 }
 
-/** 同步 WebGLRenderer / CSS2DRenderer 尺寸到 host，返回 (w,h)。 */
+/**
+ * Sync renderer sizes to host and return (w,h).
+ * 同步 WebGL/CSS2D 渲染器尺寸到 host，返回 (w,h)。
+ */
 export function syncRenderersToHost(
   host: HTMLElement,
   renderer: THREE.WebGLRenderer,

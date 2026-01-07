@@ -16,6 +16,10 @@ export type AutoRotatePresetId
     | 'space'
     | 'tilt';
 
+/**
+ * Auto-rotate preset definition.
+ * 自动旋转预设定义。
+ */
 export type AutoRotatePreset = {
   id: AutoRotatePresetId;
   /** Unit axis vector in world space. */
@@ -67,6 +71,10 @@ const LEGACY_PRESET_ALIAS: Record<string, AutoRotatePresetId> = {
   fast: 'tilt',
 };
 
+/**
+ * Type guard for auto-rotate preset id.
+ * 自动旋转预设 id 的类型守卫。
+ */
 export function isAutoRotatePresetId(x: unknown): x is AutoRotatePresetId {
   return (
     x === 'off'
@@ -82,6 +90,10 @@ export function isAutoRotatePresetId(x: unknown): x is AutoRotatePresetId {
   );
 }
 
+/**
+ * Resolve preset id to a valid preset (fallback-safe).
+ * 将预设 id 解析为有效预设（带回退）。
+ */
 export function getAutoRotatePreset(
   id: unknown,
   fallback: AutoRotatePresetId = DEFAULT_AUTO_ROTATE_PRESET_ID,

@@ -3,7 +3,9 @@ import {
   type ViewerSettings,
 } from './settings';
 
+// Local storage key for viewer settings. / 本地设置存储键名。
 export const SETTINGS_STORAGE_KEY = 'atomsViewer.settings.v1';
+// Storage schema version. / 本地设置存储版本号。
 export const SETTINGS_STORAGE_VERSION = 1;
 
 type StoredSettings = {
@@ -11,6 +13,10 @@ type StoredSettings = {
   data: ViewerSettings;
 };
 
+/**
+ * Build a fresh default settings object (deep-ish copy).
+ * 构建一份新的默认设置（避免引用共享）。
+ */
 export function buildDefaultSettings(): ViewerSettings {
   return {
     ...DEFAULT_SETTINGS,
@@ -24,6 +30,10 @@ export function buildDefaultSettings(): ViewerSettings {
   };
 }
 
+/**
+ * Normalize incoming settings (merge with defaults, fill missing fields).
+ * 归一化输入设置（合并默认值，补齐缺失字段）。
+ */
 export function normalizeSettings(input: Partial<ViewerSettings> | null): ViewerSettings {
   const base = buildDefaultSettings();
   if (!input || typeof input !== 'object') return base;
@@ -57,6 +67,10 @@ function migrateSettings(
   return normalizeSettings(raw);
 }
 
+/**
+ * Load settings from localStorage with migration fallback.
+ * 从本地读取设置，必要时进行迁移与回退。
+ */
 export function loadSettingsFromStorage(): ViewerSettings {
   try {
     const raw = localStorage.getItem(SETTINGS_STORAGE_KEY);
@@ -82,6 +96,10 @@ export function loadSettingsFromStorage(): ViewerSettings {
   }
 }
 
+/**
+ * Save settings to localStorage (system auto-rotate is never persisted).
+ * 保存设置到本地（系统自动启用旋转不会持久化）。
+ */
 export function saveSettingsToStorage(settings: ViewerSettings): void {
   try {
     const data: ViewerSettings = {
@@ -104,6 +122,10 @@ export function saveSettingsToStorage(settings: ViewerSettings): void {
   }
 }
 
+/**
+ * Clear persisted settings from localStorage.
+ * 清理本地持久化设置。
+ */
 export function clearSettingsStorage(): void {
   try {
     localStorage.removeItem(SETTINGS_STORAGE_KEY);

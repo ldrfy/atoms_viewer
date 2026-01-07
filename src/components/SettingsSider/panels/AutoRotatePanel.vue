@@ -42,8 +42,8 @@
         <a-col :flex="1">
           <a-slider
             v-model:value="autoRotateSpeedModel"
-            :min="0"
-            :max="120"
+            :min="AUTO_ROTATE_SPEED_MIN"
+            :max="AUTO_ROTATE_SPEED_MAX"
             :step="1"
             :disabled="!hasAnyLayer"
           />
@@ -53,8 +53,8 @@
             v-model:value="autoRotateSpeedModel"
             :aria-label="t('settings.panel.autoRotate.speed')"
             :title="t('settings.panel.autoRotate.speed')"
-            :min="0"
-            :max="120"
+            :min="AUTO_ROTATE_SPEED_MIN"
+            :max="AUTO_ROTATE_SPEED_MAX"
             :step="1"
             :disabled="!hasAnyLayer"
             class="settings-full-width"
@@ -88,8 +88,8 @@
         <a-col :flex="1">
           <a-slider
             v-model:value="autoRotateResumeDelayMsModel"
-            :min="0"
-            :max="2000"
+            :min="AUTO_ROTATE_RESUME_MIN"
+            :max="AUTO_ROTATE_RESUME_MAX"
             :step="50"
             :disabled="!hasAnyLayer"
           />
@@ -99,8 +99,8 @@
             v-model:value="autoRotateResumeDelayMsModel"
             :aria-label="t('settings.panel.autoRotate.resumeDelay')"
             :title="t('settings.panel.autoRotate.resumeDelay')"
-            :min="0"
-            :max="2000"
+            :min="AUTO_ROTATE_RESUME_MIN"
+            :max="AUTO_ROTATE_RESUME_MAX"
             :step="50"
             :disabled="!hasAnyLayer"
             class="settings-full-width"
@@ -122,6 +122,13 @@ import {
   getAutoRotatePreset,
   type AutoRotatePresetId,
 } from '../../../lib/viewer/autoRotate';
+import { clampNumber } from '../../../lib/utils/number';
+import {
+  AUTO_ROTATE_SPEED_MIN,
+  AUTO_ROTATE_SPEED_MAX,
+  AUTO_ROTATE_RESUME_MIN,
+  AUTO_ROTATE_RESUME_MAX,
+} from '../../../lib/viewer/ranges';
 
 import { useSettingsSiderContext } from '../useSettingsSiderContext';
 
@@ -175,10 +182,14 @@ const autoRotatePresetIdModel = computed({
 const autoRotateSpeedModel = computed({
   get: () => {
     const n = settings.value.autoRotate.speedDegPerSec;
-    return Number.isFinite(n) ? Math.max(0, Math.min(120, n)) : 8;
+    return Number.isFinite(n)
+      ? clampNumber(n, AUTO_ROTATE_SPEED_MIN, AUTO_ROTATE_SPEED_MAX)
+      : 8;
   },
   set: (v: number) => {
-    const n = Number.isFinite(v) ? Math.max(0, Math.min(120, v)) : 8;
+    const n = Number.isFinite(v)
+      ? clampNumber(v, AUTO_ROTATE_SPEED_MIN, AUTO_ROTATE_SPEED_MAX)
+      : 8;
     patchAutoRotate({ speedDegPerSec: n });
   },
 });
@@ -191,10 +202,14 @@ const autoRotatePauseOnInteractModel = computed({
 const autoRotateResumeDelayMsModel = computed({
   get: () => {
     const n = settings.value.autoRotate.resumeDelayMs;
-    return Number.isFinite(n) ? Math.max(0, Math.min(2000, n)) : 600;
+    return Number.isFinite(n)
+      ? clampNumber(n, AUTO_ROTATE_RESUME_MIN, AUTO_ROTATE_RESUME_MAX)
+      : 600;
   },
   set: (v: number) => {
-    const n = Number.isFinite(v) ? Math.max(0, Math.min(2000, v)) : 600;
+    const n = Number.isFinite(v)
+      ? clampNumber(v, AUTO_ROTATE_RESUME_MIN, AUTO_ROTATE_RESUME_MAX)
+      : 600;
     patchAutoRotate({ resumeDelayMs: n });
   },
 });

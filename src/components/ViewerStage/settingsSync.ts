@@ -9,6 +9,8 @@ export type SettingsSync = {
 };
 
 export function createSettingsSync(patchSettings?: PatchSettingsFn): SettingsSync {
+  // Suppress settings writes for a short window to avoid feedback loops.
+  // 短时间内抑制设置写回，避免视图/控件间的反馈回环。
   let suppressUntil = 0;
 
   const isSuppressed = (): boolean => performance.now() < suppressUntil;

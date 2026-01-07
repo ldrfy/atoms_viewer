@@ -15,6 +15,10 @@ function pad2(n: number): string {
  * Formats a timestamp using local time, safe for filenames.
  * Example: 20260106_132045
  */
+/**
+ * Format timestamp for filename-safe string.
+ * 生成适合文件名的时间戳字符串。
+ */
 export function formatTimestampForFilename(d: Date = new Date()): string {
   const y = d.getFullYear();
   const mo = pad2(d.getMonth() + 1);
@@ -25,6 +29,10 @@ export function formatTimestampForFilename(d: Date = new Date()): string {
   return `${y}${mo}${da}_${hh}${mm}${ss}`;
 }
 
+/**
+ * Strip file extension from a path-like string.
+ * 去除文件扩展名（支持路径字符串）。
+ */
 export function stripFileExtension(name: string): string {
   const n = (name ?? '').trim();
   const base = n.split(/[\\/]/).pop() ?? '';
@@ -33,6 +41,10 @@ export function stripFileExtension(name: string): string {
   return base.slice(0, idx);
 }
 
+/**
+ * Sanitize filename stem by removing invalid characters.
+ * 清理文件名主体，替换非法字符。
+ */
 export function sanitizeFileStem(stem: string): string {
   // Windows-reserved/invalid characters + control chars.
   const invalid = new RegExp(String.raw`[\\/:*?"<>|\x00-\x1F]`, 'g');
@@ -48,6 +60,10 @@ export function sanitizeFileStem(stem: string): string {
   return safe.slice(0, 80);
 }
 
+/**
+ * Build export filename using model stem + timestamp.
+ * 使用模型名 + 时间戳构建导出文件名。
+ */
 export function buildExportFilename(params: {
   modelFileName?: string;
   ext: string; // ".png" or "png" etc

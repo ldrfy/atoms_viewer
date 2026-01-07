@@ -12,6 +12,7 @@ import {
 } from './camera';
 import { normalizeViewPresets, type ViewPreset } from '../viewer/viewPresets';
 import { applyCameraPoseForPreset } from './viewPresets';
+import { clampDualViewSplit } from '../viewer/viewLayout';
 
 /**
  * Three.js 舞台对象：负责 renderer/scene/camera/controls/resize/loop 等生命周期管理。
@@ -720,8 +721,14 @@ export function createThreeStage(params: {
     setViewPresets(enabled ? ['front', 'side'] : []);
   };
 
+  /**
+ * Update dual-view camera distance (keeps settings in sync).
+ * 更新双视图视距（同步设置并避免抖动回环）。
+ */
   const setDualViewDistance = (dist: number): void => {
     // Keep settings in sync even when disabled, but only apply to the camera when presets are enabled.
+    // Use a tiny epsilon to avoid invalid near/far values.
+    // 使用极小值避免 near/far 非法。
     const d = Math.max(0.001, dist);
     // If this update comes from controls-sync (wheel/pinch), it may already match the stage state.
     // Avoid re-applying to prevent feedback jitter.
@@ -735,10 +742,13 @@ export function createThreeStage(params: {
     invalidate();
   };
 
+  /**
+ * Update dual-view split ratio (left viewport fraction).
+ * 更新双视图分割比例（左视口占比）。
+ */
   const setDualViewSplit = (ratio: number): void => {
     // clamp to avoid unusable viewport sizes
-    const r = Math.max(0.1, Math.min(0.9, ratio));
-    dualViewSplit = r;
+    dualViewSplit = clampDualViewSplit(ratio);
     if (viewPresets.length !== 2) return;
     syncSize();
     invalidate();

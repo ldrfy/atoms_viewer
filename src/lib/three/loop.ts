@@ -3,6 +3,10 @@ export type RafLoop = {
   stop: () => void;
 };
 
+/**
+ * Create a requestAnimationFrame loop with start/stop.
+ * 创建带启停控制的 requestAnimationFrame 循环。
+ */
 export function createRafLoop(tick: () => void): RafLoop {
   let rafId = 0;
 

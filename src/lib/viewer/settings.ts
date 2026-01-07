@@ -111,6 +111,10 @@ export const DEFAULT_LAYER_DISPLAY: LayerDisplaySettings = {
   bondRadius: 0.09,
 };
 
+/**
+ * Default viewer settings for a fresh session.
+ * 初始默认设置（首次进入或清理后使用）。
+ */
 export const DEFAULT_SETTINGS: ViewerSettings = {
   atomScale: 1,
   sphereSegments: 24,
@@ -122,8 +126,10 @@ export const DEFAULT_SETTINGS: ViewerSettings = {
   // Refreshing bonds each frame during playback can be extremely expensive for
   // large models. Default to OFF; users can enable explicitly when needed.
   refreshBondsOnPlay: true,
+  // Default camera rotation in degrees. / 默认相机旋转角度（度）。
   rotationDeg: { x: 0, y: 0, z: 0 },
 
+  // Auto-rotation defaults. / 自动旋转默认值。
   autoRotate: {
     enabled: false,
     presetId: 'diag',
@@ -132,6 +138,7 @@ export const DEFAULT_SETTINGS: ViewerSettings = {
     resumeDelayMs: 600,
   },
 
+  // false = perspective (UI switch is inverted). / false 表示透视（UI 开关反向）。
   orthographic: false,
   resetViewSeq: 0,
 
@@ -141,8 +148,10 @@ export const DEFAULT_SETTINGS: ViewerSettings = {
 
   // Enforce "at least one view" at the settings level. This avoids the UI being in an
   // undefined state for first-time users and ensures distance syncing works consistently.
+  // Ensure at least one view preset is selected. / 保证至少选择一个视图预设。
   viewPresets: ['front'],
 
+  // Dual-view defaults. / 双视图默认参数。
   dualViewEnabled: false,
   dualViewDistance: 10,
   initialDualViewDistance: 10,

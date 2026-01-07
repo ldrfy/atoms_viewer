@@ -57,8 +57,8 @@
         <a-col :flex="1">
           <a-slider
             v-model:value="bondFactorModel"
-            :min="0.8"
-            :max="1.3"
+            :min="BOND_FACTOR_MIN"
+            :max="BOND_FACTOR_MAX"
             :step="0.01"
             :disabled="controlsDisabled || !showBondsModel"
           />
@@ -68,8 +68,8 @@
             v-model:value="bondFactorModel"
             :aria-label="t('settings.panel.layerDisplay.bondFactor')"
             :title="t('settings.panel.layerDisplay.bondFactor')"
-            :min="0.8"
-            :max="1.3"
+            :min="BOND_FACTOR_MIN"
+            :max="BOND_FACTOR_MAX"
             :step="0.01"
             :disabled="controlsDisabled || !showBondsModel"
             class="settings-full-width"
@@ -87,8 +87,8 @@
         <a-col :flex="1">
           <a-slider
             v-model:value="bondRadiusModel"
-            :min="0.03"
-            :max="0.2"
+            :min="BOND_RADIUS_MIN"
+            :max="BOND_RADIUS_MAX"
             :step="0.01"
             :disabled="controlsDisabled || !showBondsModel"
           />
@@ -98,8 +98,8 @@
             v-model:value="bondRadiusModel"
             :aria-label="t('settings.panel.layerDisplay.bondRadius')"
             :title="t('settings.panel.layerDisplay.bondRadius')"
-            :min="0.03"
-            :max="0.2"
+            :min="BOND_RADIUS_MIN"
+            :max="BOND_RADIUS_MAX"
             :step="0.01"
             :disabled="controlsDisabled || !showBondsModel"
             class="settings-full-width"
@@ -113,8 +113,8 @@
         <a-col :flex="1">
           <a-slider
             v-model:value="atomScaleModel"
-            :min="0.2"
-            :max="2"
+            :min="ATOM_SCALE_MIN"
+            :max="ATOM_SCALE_MAX"
             :step="0.05"
             :disabled="controlsDisabled"
           />
@@ -124,8 +124,8 @@
             v-model:value="atomScaleModel"
             :aria-label="t('settings.panel.layerDisplay.atomSize')"
             :title="t('settings.panel.layerDisplay.atomSize')"
-            :min="0.2"
-            :max="2"
+            :min="ATOM_SCALE_MIN"
+            :max="ATOM_SCALE_MAX"
             :step="0.05"
             :disabled="controlsDisabled"
             class="settings-full-width"
@@ -139,8 +139,8 @@
         <a-col :flex="1">
           <a-slider
             v-model:value="sphereSegmentsModel"
-            :min="8"
-            :max="64"
+            :min="SPHERE_SEGMENTS_MIN"
+            :max="SPHERE_SEGMENTS_MAX"
             :step="1"
             :disabled="controlsDisabled"
           />
@@ -150,8 +150,8 @@
             v-model:value="sphereSegmentsModel"
             :aria-label="t('settings.panel.layerDisplay.sphereSegments')"
             :title="t('settings.panel.layerDisplay.sphereSegments')"
-            :min="8"
-            :max="64"
+            :min="SPHERE_SEGMENTS_MIN"
+            :max="SPHERE_SEGMENTS_MAX"
             :step="1"
             :disabled="controlsDisabled"
             class="settings-full-width"
@@ -178,6 +178,17 @@ import { useI18n } from 'vue-i18n';
 import { DEFAULT_LAYER_DISPLAY, type LayerDisplaySettings } from '../../../lib/viewer/settings';
 import { viewerApiRef } from '../../../lib/viewer/bridge';
 import { useSettingsSiderContext } from '../useSettingsSiderContext';
+import { clampNumber, clampInt } from '../../../lib/utils/number';
+import {
+  ATOM_SCALE_MIN,
+  ATOM_SCALE_MAX,
+  BOND_FACTOR_MIN,
+  BOND_FACTOR_MAX,
+  BOND_RADIUS_MIN,
+  BOND_RADIUS_MAX,
+  SPHERE_SEGMENTS_MIN,
+  SPHERE_SEGMENTS_MAX,
+} from '../../../lib/viewer/ranges';
 
 const { t } = useI18n();
 const { hasAnyLayer } = useSettingsSiderContext();
@@ -215,8 +226,7 @@ const showBondsModel = computed({
 const bondFactorModel = computed({
   get: () => displayModel.value?.bondFactor ?? 1.05,
   set: (v: number) => {
-    const n = Number(v);
-    const clamped = Number.isFinite(n) ? Math.max(0.8, Math.min(1.3, n)) : 1.05;
+    const clamped = clampNumber(Number(v), BOND_FACTOR_MIN, BOND_FACTOR_MAX);
     patchDisplay({ bondFactor: Math.round(clamped * 100) / 100 });
   },
 });
@@ -224,8 +234,7 @@ const bondFactorModel = computed({
 const bondRadiusModel = computed({
   get: () => displayModel.value?.bondRadius ?? 0.09,
   set: (v: number) => {
-    const n = Number(v);
-    const clamped = Number.isFinite(n) ? Math.max(0.03, Math.min(0.2, n)) : 0.09;
+    const clamped = clampNumber(Number(v), BOND_RADIUS_MIN, BOND_RADIUS_MAX);
     patchDisplay({ bondRadius: Math.round(clamped * 100) / 100 });
   },
 });
@@ -233,8 +242,7 @@ const bondRadiusModel = computed({
 const atomScaleModel = computed({
   get: () => displayModel.value?.atomScale ?? 1,
   set: (v: number) => {
-    const n = Number(v);
-    const clamped = Number.isFinite(n) ? Math.max(0.2, Math.min(2, n)) : 1;
+    const clamped = clampNumber(Number(v), ATOM_SCALE_MIN, ATOM_SCALE_MAX);
     patchDisplay({ atomScale: Math.round(clamped * 100) / 100 });
   },
 });
@@ -242,8 +250,8 @@ const atomScaleModel = computed({
 const sphereSegmentsModel = computed({
   get: () => displayModel.value?.sphereSegments ?? 24,
   set: (v: number) => {
-    const n = Math.floor(Number(v));
-    const clamped = Number.isFinite(n) ? Math.max(8, Math.min(64, n)) : 24;
+    const n = Number(v);
+    const clamped = Number.isFinite(n) ? clampInt(n, SPHERE_SEGMENTS_MIN, SPHERE_SEGMENTS_MAX) : 24;
     patchDisplay({ sphereSegments: clamped });
   },
 });

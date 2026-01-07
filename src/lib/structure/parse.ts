@@ -26,6 +26,10 @@ export type StructureParseOptions = {
  *
  * Parse structure text (XYZ / PDB / LAMMPS dump / LAMMPS data).
  */
+/**
+ * Parse structure text into a normalized model (frames + source info).
+ * 将结构文本解析为统一模型（帧数据 + 来源信息）。
+ */
 export function parseStructure(
   text: string,
   filename?: string,
@@ -117,6 +121,10 @@ function getExt(filename?: string): string {
  * Returns:
  * - format: "xyz" | "pdb" | "dump" | "lammpstrj" | "traj" | "lammpsdump" | "data" | "unknown"
  * - extNormalized: 用于报错展示的扩展名（unknown 时用）
+ */
+/**
+ * Detect the most likely format from extension + content.
+ * 基于扩展名与内容嗅探识别最可能的格式。
  */
 function detectFormat(
   text: string,

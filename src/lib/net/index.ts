@@ -1,3 +1,7 @@
+/**
+ * Fetch with timeout using AbortController.
+ * 使用 AbortController 实现超时的 fetch。
+ */
 export async function fetchWithTimeout(
   input: RequestInfo | URL,
   init: RequestInit = {},

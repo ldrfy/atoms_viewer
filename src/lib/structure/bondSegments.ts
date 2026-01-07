@@ -30,11 +30,12 @@ type BuildBicolorBondGroupsOptions = {
 };
 
 /**
- * 构建“双色键”分段，并按元素分组（纯结构计算，不依赖 THREE）。
+ * Build bicolor bond segments grouped by element (data-only, no THREE).
+ * 构建“双色键”分段并按元素分组（纯结构计算，不依赖 THREE）。
  *
- * 规则：
- * - 每条 bond (i,j) 拆成两段：i->mid（颜色=元素i），mid->j（颜色=元素j）
- * - mid 的位置采用与你当前 ViewerStage 一致的半径权重公式
+ * Rules / 规则：
+ * - Split each bond (i,j) into two segments: i->mid (color=i), mid->j (color=j)
+ * - The mid position uses the same radius-weighted formula as ViewerStage
  */
 export function buildBicolorBondGroups(
   atoms: Atom[],

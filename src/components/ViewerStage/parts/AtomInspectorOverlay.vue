@@ -144,7 +144,7 @@
 
               <!-- Fixed footer: measures -->
               <div class="atom-inspector__footer">
-                <a-divider v-if="measureMode && measure.distance12 != null" style="margin: 10px 0" />
+                <a-divider v-if="measureMode && measure.distance12 != null" class="atom-inspector__divider" />
 
                 <a-descriptions size="small" :column="1">
                   <a-descriptions-item
@@ -200,6 +200,8 @@ import {
   unblockPullToRefresh,
   type PullToRefreshBlockToken,
 } from '../../../lib/dom/pullToRefreshBlock';
+import { clampNumber } from '../../../lib/utils/number';
+import { loadNumber, saveNumber } from '../../../lib/utils/storage';
 
 const props = defineProps<{ ctx: InspectCtx }>();
 const { t } = useI18n();
@@ -266,20 +268,11 @@ watch(
 );
 
 /** --- Size persistence + resizing --- */
-function loadNum(key: string, fallback: number) {
-  const raw = localStorage.getItem(key);
-  const v = raw != null ? Number(raw) : NaN;
-  return Number.isFinite(v) ? v : fallback;
-}
-function saveNum(key: string, v: number) {
-  localStorage.setItem(key, String(v));
-}
-
-const desktopWidth = ref(loadNum('atomInspector.desktopWidth', 360)); // px
-const mobileHeight = ref(loadNum('atomInspector.mobileHeight', 280)); // px
+const desktopWidth = ref(loadNumber('atomInspector.desktopWidth', 360)); // px
+const mobileHeight = ref(loadNumber('atomInspector.mobileHeight', 280)); // px
 
 function clamp(n: number, min: number, max: number) {
-  return Math.max(min, Math.min(max, n));
+  return clampNumber(n, min, max);
 }
 
 let resizing = false;
@@ -353,14 +346,14 @@ function onResizing(e: PointerEvent) {
     const dx = e.clientX - startX;
     const maxW = Math.floor(window.innerWidth * 0.7);
     desktopWidth.value = clamp(startW + dx, 260, Math.max(260, maxW));
-    saveNum('atomInspector.desktopWidth', desktopWidth.value);
+    saveNumber('atomInspector.desktopWidth', desktopWidth.value);
   }
   else {
     // bottom panel: dragging up increases height
     const dy = startY - e.clientY;
     const maxH = Math.floor(window.innerHeight * 0.7);
     mobileHeight.value = clamp(startH + dy, 200, Math.max(200, maxH));
-    saveNum('atomInspector.mobileHeight', mobileHeight.value);
+    saveNumber('atomInspector.mobileHeight', mobileHeight.value);
   }
 }
 
@@ -615,6 +608,10 @@ function fmt(v: number | null | undefined): string {
 
 .atom-inspector__footer {
   flex: 0 0 auto;
+}
+
+.atom-inspector__divider {
+  margin: 10px 0;
 }
 
 /* Rows */

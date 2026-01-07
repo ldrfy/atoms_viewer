@@ -305,6 +305,8 @@ export function createModelRuntime(args: {
   const activeColorMapRows = ref<AtomTypeColorMapItem[]>([]);
   const activeDisplaySettings = ref<LayerDisplaySettings | null>(null);
 
+  // Internal layer registry keyed by id (source of truth).
+  // 内部图层注册表（以 id 为键的唯一真源数据）。
   const layerMap = new Map<string, LayerInternal>();
 
   const centerTmp = new THREE.Vector3();

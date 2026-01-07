@@ -3,7 +3,12 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import type { Atom } from '../structure/types';
 import { getElementSize } from './resize';
 
+/** Union camera type used across the viewer. / Viewer 内通用相机类型。 */
 export type AnyCamera = THREE.PerspectiveCamera | THREE.OrthographicCamera;
+/**
+ * Type guard for perspective camera.
+ * 透视相机类型守卫。
+ */
 export function isPerspective(
   cam: THREE.Camera,
 ): cam is THREE.PerspectiveCamera {
@@ -35,6 +40,10 @@ function createOrbitControls(params: {
   return c;
 }
 
+/**
+ * Update camera projection for a given viewport size.
+ * 根据视口尺寸更新相机投影矩阵。
+ */
 export function updateCameraForSize(
   camera: AnyCamera,
   w: number,
@@ -58,7 +67,8 @@ export function updateCameraForSize(
 }
 
 /**
- * 切换投影模式：保持 controls.target 与“屏幕尺度”连续（不跳变）。
+ * Switch projection mode while preserving visual scale.
+ * 切换投影模式并保持视觉尺度连续（避免跳变）。
  */
 export function switchProjectionMode(params: {
   orthographic: boolean;
@@ -175,12 +185,16 @@ export function switchProjectionMode(params: {
 }
 
 /**
+ * Fit camera to atom bounds (perspective + orthographic).
  * 将相机视野适配到 atoms 包围盒（透视/正交均支持）。
  *
- * 设计目标：
- * - 透视/正交“同一 margin 语义”：margin < 1 => 物体更大（更紧），margin > 1 => 物体更小（更松）
- * - 正交返回新的 orthoHalfHeight（作为状态保存），透视则原样返回传入的 orthoHalfHeight
- * - near/far 基于包围球，旋转不裁剪，同时保证深度精度
+ * Goals / 设计目标：
+ * - Consistent margin semantics for both modes
+ *   透视/正交“同一 margin 语义”：margin < 1 更紧，margin > 1 更松
+ * - Ortho returns new orthoHalfHeight; perspective keeps input
+ *   正交返回新的 orthoHalfHeight（作为状态保存），透视则原样返回传入值
+ * - near/far based on bounding sphere for stable clipping
+ *   near/far 基于包围球，旋转不裁剪，同时保证深度精度
  */
 export function fitCameraToAtoms(params: {
   atoms: Atom[];

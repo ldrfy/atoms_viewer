@@ -6,6 +6,10 @@ export interface Bond {
   j: number;
   length: number;
 }
+/**
+ * Compute bonds by covalent-radius cutoff (with spatial hashing).
+ * 基于共价半径阈值计算键（使用空间哈希加速）。
+ */
 export function computeBonds(atoms: Atom[], bondFactor = 1.05): Bond[] {
   const n = atoms.length;
   if (n <= 1) return [];

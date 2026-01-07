@@ -46,6 +46,7 @@ import { useViewerStage } from './useViewerStage';
 import type { ViewerSettings, OpenSettingsPayload } from '../../lib/viewer/settings';
 import { setThemeMode, isDarkColor } from '../../theme/mode';
 import { setViewerApi } from '../../lib/viewer/bridge';
+import { createSettingsShadow } from '../../lib/viewer/mergeSettings';
 
 import RecordSelectOverlay from './parts/RecordSelectOverlay.vue';
 import AtomInspectorOverlay from './parts/AtomInspectorOverlay.vue';
@@ -65,30 +66,18 @@ const emit = defineEmits<{
 // IMPORTANT: patchSettings can be called multiple times within the same tick (e.g. LAMMPS
 // mapping auto-fill + distance sync). If we always merge into props.settings, later patches
 // may overwrite earlier ones before parent updates propagate. Use a local shadow snapshot.
-let settingsShadow: ViewerSettings = {
-  ...props.settings,
-  rotationDeg: { ...props.settings.rotationDeg },
-};
+const settingsShadow = createSettingsShadow(props.settings);
 
 watch(
   () => props.settings,
   (v) => {
-    settingsShadow = { ...v, rotationDeg: { ...v.rotationDeg } };
+    settingsShadow.syncFrom(v);
   },
-  { immediate: true, deep: true },
+  { immediate: true, deep: true, flush: 'sync' },
 );
 
 function patchSettings(patch: Partial<ViewerSettings>): void {
-  const base = settingsShadow;
-  const merged: ViewerSettings = {
-    ...base,
-    ...patch,
-    rotationDeg: {
-      ...base.rotationDeg,
-      ...(patch.rotationDeg ?? {}),
-    },
-  };
-  settingsShadow = merged;
+  const merged = settingsShadow.patch(patch);
   emit('update:settings', merged);
 }
 

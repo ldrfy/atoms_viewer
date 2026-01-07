@@ -26,7 +26,6 @@ export function bindViewerStageSettings(params: {
   applyAtomScale: () => void;
   applyShowBonds: () => void;
   applyShowAxes: () => void;
-  applyModelRotation: () => void;
 
   setAutoRotateConfig: (cfg: {
     enabled: boolean;
@@ -52,7 +51,6 @@ export function bindViewerStageSettings(params: {
     applyAtomScale,
     applyShowBonds,
     applyShowAxes,
-    applyModelRotation,
 
     setAutoRotateConfig,
     setViewPresets,
@@ -166,19 +164,6 @@ export function bindViewerStageSettings(params: {
     watch(
       () => settingsRef.value.showAxes,
       () => applyShowAxes(),
-      { immediate: true },
-    ),
-  );
-
-  // 模型旋转 / model rotation
-  stops.push(
-    watch(
-      [
-        () => settingsRef.value.rotationDeg.x,
-        () => settingsRef.value.rotationDeg.y,
-        () => settingsRef.value.rotationDeg.z,
-      ],
-      () => applyModelRotation(),
       { immediate: true },
     ),
   );

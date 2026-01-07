@@ -126,6 +126,7 @@ function patchAutoRotate(patch: Partial<(typeof settings.value)['autoRotate']>):
     autoRotate: {
       ...settings.value.autoRotate,
       ...patch,
+      autoEnabledBySystem: false,
     },
   });
 }

@@ -105,11 +105,13 @@ import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import { viewerApiRef } from '../../../lib/viewer/bridge';
+import { useSettingsSiderContext } from '../useSettingsSiderContext';
 import { ATOMIC_SYMBOLS, normalizeElementSymbol } from '../../../lib/structure/chem';
 
 type LammpsTypeMapItem = { typeId: number; element: string };
 
 const { t } = useI18n();
+const { patchSettings } = useSettingsSiderContext();
 
 const viewerApi = computed(() => viewerApiRef.value);
 const layerList = computed(() => viewerApi.value?.layers.value ?? []);
@@ -166,6 +168,7 @@ function removeLammpsRow(idx: number): void {
 
 function clearLammpsRows(): void {
   lammpsTypeMapModel.value = [];
+  patchSettings({ lammpsTypeMap: [] });
 }
 
 function onLammpsTypeId(idx: number, v: unknown): void {

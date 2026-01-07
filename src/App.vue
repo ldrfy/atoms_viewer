@@ -36,19 +36,19 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watchEffect, defineAsyncComponent } from 'vue';
+import { ref, computed, watchEffect, defineAsyncComponent, watch } from 'vue';
 import SettingsSider from './components/SettingsSider';
 import TopHear from './components/TopHear';
 import EmptyPage from './pages/EmptyPage.vue';
-import {
-  DEFAULT_SETTINGS,
-  type ViewerSettings,
-  type OpenSettingsPayload,
-} from './lib/viewer/settings';
+import type { ViewerSettings, OpenSettingsPayload } from './lib/viewer/settings';
 import { theme as antdTheme } from 'ant-design-vue';
 import { isDark, applyThemeToDom } from './theme/mode';
 import type { LoadRequest } from './pages/types';
 import type { SampleManifestItem } from './lib/structure/types';
+import {
+  loadSettingsFromStorage,
+  saveSettingsToStorage,
+} from './lib/viewer/settingsStorage';
 
 const ViewerPage = defineAsyncComponent(() => import('./pages/ViewerPage.vue'));
 const antdAlgorithm = computed(() =>
@@ -63,10 +63,15 @@ const settingsOpen = ref(false);
  */
 const settingsActiveKey = ref<string[]>(['display']);
 
-const settings = ref<ViewerSettings>({
-  ...DEFAULT_SETTINGS,
-  rotationDeg: { ...DEFAULT_SETTINGS.rotationDeg },
-});
+const settings = ref<ViewerSettings>(loadSettingsFromStorage());
+
+watch(
+  settings,
+  (v) => {
+    saveSettingsToStorage(v);
+  },
+  { deep: true },
+);
 
 watchEffect(() => {
   applyThemeToDom(isDark.value);
@@ -117,8 +122,11 @@ function onOpenSettings(payload?: OpenSettingsPayload): void {
 
   // 只要给了 focusKey，就切换折叠面板
   // Switch collapse panel when focusKey is provided
+  if (payload?.focusKeys && payload.focusKeys.length > 0) {
+    settingsActiveKey.value = payload.focusKeys.map(k => String(k));
+    return;
+  }
   if (payload?.focusKey) {
-    // “聚焦某一项”时：只展开该项，其他全部收起
     settingsActiveKey.value = [payload.focusKey];
   }
 }

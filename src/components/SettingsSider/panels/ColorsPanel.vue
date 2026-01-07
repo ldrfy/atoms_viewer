@@ -81,7 +81,7 @@
             </a-col>
 
             <a-col :span="3">
-              <a-tooltip :title="t('settings.panel.colors.resetTooltip')">
+              <a-tooltip v-if="row.isCustom" :title="t('settings.panel.colors.resetTooltip')">
                 <a-button
                   class="btn-icon"
                   type="text"
@@ -123,12 +123,14 @@ import { message } from 'ant-design-vue';
 import { useI18n } from 'vue-i18n';
 
 import { viewerApiRef } from '../../../lib/viewer/bridge';
+import { useSettingsSiderContext } from '../useSettingsSiderContext';
 import type { AtomTypeColorMapItem } from '../../../lib/viewer/settings';
 import { getElementColorHex } from '../../../lib/structure/chem';
 
 import { getAtomTypeColorKey } from '../../ViewerStage/colorMap';
 
 const { t } = useI18n();
+const { patchSettings } = useSettingsSiderContext();
 
 const viewerApi = computed(() => viewerApiRef.value);
 const layerList = computed(() => viewerApi.value?.layers.value ?? []);
@@ -170,7 +172,7 @@ function colorPickerValue(color: unknown): string {
 function patchColorAt(idx: number, colorHex: string): void {
   const rows = colorMapModel.value;
   if (!rows || idx < 0 || idx >= rows.length) return;
-  colorMapModel.value = rows.map((r, i) =>
+  const nextRows = rows.map((r, i) =>
     i === idx
       ? {
         ...r,
@@ -180,6 +182,8 @@ function patchColorAt(idx: number, colorHex: string): void {
       }
       : r,
   );
+  colorMapModel.value = nextRows;
+  patchSettings({ colorMapTemplate: nextRows.map(r => ({ ...r })) });
 }
 
 function onResetColor(idx: number): void {
@@ -187,7 +191,7 @@ function onResetColor(idx: number): void {
   if (!rows || idx < 0 || idx >= rows.length) return;
   const row = rows[idx];
   const def = getElementColorHex(row?.element ?? 'E');
-  colorMapModel.value = rows.map((r, i) =>
+  const nextRows = rows.map((r, i) =>
     i === idx
       ? {
         ...r,
@@ -197,6 +201,8 @@ function onResetColor(idx: number): void {
       }
       : r,
   );
+  colorMapModel.value = nextRows;
+  patchSettings({ colorMapTemplate: nextRows.map(r => ({ ...r })) });
 }
 
 function onColorHexChange(idx: number, v: unknown): void {

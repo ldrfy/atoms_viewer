@@ -22,3 +22,11 @@ export interface SettingsSiderContext {
 export const settingsSiderContextKey: InjectionKey<SettingsSiderContext> = Symbol(
   'SettingsSiderContext',
 );
+
+export interface SettingsSiderControlContext {
+  replaceSettings: (next: ViewerSettings) => void;
+}
+
+export const settingsSiderControlContextKey: InjectionKey<SettingsSiderControlContext> = Symbol(
+  'SettingsSiderControlContext',
+);

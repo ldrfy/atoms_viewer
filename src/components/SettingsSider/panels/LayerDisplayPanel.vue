@@ -172,13 +172,19 @@
         {{ t('settings.panel.layerDisplay.sphereSegmentsHint') }}
       </a-typography-text>
     </a-form-item>
+
+    <a-form-item>
+      <a-button block :disabled="controlsDisabled" @click="onResetDisplay">
+        {{ t('settings.panel.layerDisplay.reset') }}
+      </a-button>
+    </a-form-item>
   </a-form>
 </template>
 
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
-import type { LayerDisplaySettings } from '../../../lib/viewer/settings';
+import { DEFAULT_LAYER_DISPLAY, type LayerDisplaySettings } from '../../../lib/viewer/settings';
 import { viewerApiRef } from '../../../lib/viewer/bridge';
 
 const { t } = useI18n();
@@ -248,4 +254,14 @@ const sphereSegmentsModel = computed({
     patchDisplay({ sphereSegments: clamped });
   },
 });
+
+function onResetDisplay(): void {
+  patchDisplay({
+    atomScale: DEFAULT_LAYER_DISPLAY.atomScale,
+    showBonds: DEFAULT_LAYER_DISPLAY.showBonds,
+    sphereSegments: DEFAULT_LAYER_DISPLAY.sphereSegments,
+    bondFactor: DEFAULT_LAYER_DISPLAY.bondFactor,
+    bondRadius: DEFAULT_LAYER_DISPLAY.bondRadius,
+  });
+}
 </script>

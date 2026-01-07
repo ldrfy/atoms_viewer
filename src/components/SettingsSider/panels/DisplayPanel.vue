@@ -5,6 +5,7 @@
         <a-checkbox-group
           :value="viewPresetsModel"
           :options="viewPresetOptions"
+          :disabled="!hasAnyLayer"
           @change="onViewPresetsChange"
         />
       </div>
@@ -25,6 +26,7 @@
             :min="10"
             :max="90"
             :step="1"
+            :disabled="!hasAnyLayer"
           />
         </a-col>
         <a-col :style="{ width: '96px' }">
@@ -35,6 +37,7 @@
             :min="10"
             :max="90"
             :step="1"
+            :disabled="!hasAnyLayer"
             style="width: 100%"
           />
         </a-col>
@@ -52,6 +55,7 @@
             v-model:checked="orthographicModel"
             :aria-label="t('settings.panel.display.perspective')"
             :title="t('settings.panel.display.perspective')"
+            :disabled="!hasAnyLayer"
           />
         </a-col>
       </a-row>
@@ -68,6 +72,7 @@
             :min="1"
             :max="dualViewDistanceMax"
             :step="0.5"
+            :disabled="!hasAnyLayer"
           />
         </a-col>
         <a-col :style="{ width: '96px' }">
@@ -78,6 +83,7 @@
             :min="1"
             :max="dualViewDistanceMax"
             :step="0.5"
+            :disabled="!hasAnyLayer"
             style="width: 100%"
           />
         </a-col>
@@ -92,6 +98,7 @@
             :min="-180"
             :max="180"
             :step="1"
+            :disabled="!hasAnyLayer"
           />
         </a-col>
         <a-col :style="{ width: '96px' }">
@@ -102,6 +109,7 @@
             :min="-180"
             :max="180"
             :step="1"
+            :disabled="!hasAnyLayer"
             style="width: 100%"
           />
         </a-col>
@@ -116,6 +124,7 @@
             :min="-180"
             :max="180"
             :step="1"
+            :disabled="!hasAnyLayer"
           />
         </a-col>
         <a-col :style="{ width: '96px' }">
@@ -126,6 +135,7 @@
             :min="-180"
             :max="180"
             :step="1"
+            :disabled="!hasAnyLayer"
             style="width: 100%"
           />
         </a-col>
@@ -140,6 +150,7 @@
             :min="-180"
             :max="180"
             :step="1"
+            :disabled="!hasAnyLayer"
           />
         </a-col>
         <a-col :style="{ width: '96px' }">
@@ -150,6 +161,7 @@
             :min="-180"
             :max="180"
             :step="1"
+            :disabled="!hasAnyLayer"
             style="width: 100%"
           />
         </a-col>
@@ -159,12 +171,12 @@
     <a-form-item>
       <a-row :gutter="8" align="middle">
         <a-col :flex="1">
-          <a-button block @click="resetPose">
+          <a-button block :disabled="!hasAnyLayer" @click="resetPose">
             {{ t('settings.panel.display.resetPose') }}
           </a-button>
         </a-col>
         <a-col :flex="1">
-          <a-button block @click="resetDistance">
+          <a-button block :disabled="!hasAnyLayer" @click="resetDistance">
             {{ t('settings.panel.display.resetView') }}
           </a-button>
         </a-col>
@@ -178,10 +190,13 @@ import { computed, ref, watch } from 'vue';
 import { message } from 'ant-design-vue';
 import { useI18n } from 'vue-i18n';
 import { normalizeViewPresets, type ViewPreset } from '../../../lib/viewer/viewPresets';
+import { viewerApiRef } from '../../../lib/viewer/bridge';
 import { useSettingsSiderContext } from '../useSettingsSiderContext';
 
 const { t } = useI18n();
 const { settings, patchSettings } = useSettingsSiderContext();
+const viewerApi = computed(() => viewerApiRef.value);
+const hasAnyLayer = computed(() => (viewerApi.value?.layers.value.length ?? 0) > 0);
 
 const viewPresetOptions = computed(() => [
   { label: t('settings.panel.display.viewPresetFront'), value: 'front' as const },
@@ -212,6 +227,7 @@ watch(
 );
 
 function onViewPresetsChange(nextRaw: any): void {
+  if (!hasAnyLayer.value) return;
   const arr = Array.isArray(nextRaw) ? nextRaw : [];
   const next = arr.filter(
     (x): x is ViewPreset => x === 'front' || x === 'side' || x === 'top',

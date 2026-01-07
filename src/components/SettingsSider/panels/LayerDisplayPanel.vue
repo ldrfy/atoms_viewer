@@ -36,7 +36,7 @@
       <a-col>
         <a-switch
           v-model:checked="applyToAllLayers"
-          :disabled="!viewerApi || layerList.length === 0"
+          :disabled="!hasAnyLayer"
           :aria-label="t('settings.panel.layerDisplay.applyAll')"
           :title="t('settings.panel.layerDisplay.applyAll')"
         />
@@ -190,6 +190,7 @@ import { viewerApiRef } from '../../../lib/viewer/bridge';
 const { t } = useI18n();
 
 const viewerApi = computed(() => viewerApiRef.value);
+const hasAnyLayer = computed(() => (viewerApi.value?.layers.value.length ?? 0) > 0);
 const layerList = computed(() => viewerApi.value?.layers.value ?? []);
 const activeLayerId = computed(() => viewerApi.value?.activeLayerId.value ?? null);
 const activeLayerInfo = computed(() => {
@@ -205,7 +206,7 @@ const displayModel = computed<LayerDisplaySettings | null>(() => {
 });
 
 const controlsDisabled = computed(
-  () => !viewerApi.value || !activeLayerInfo.value || !displayModel.value,
+  () => !hasAnyLayer.value || !activeLayerInfo.value || !displayModel.value,
 );
 
 function patchDisplay(patch: Partial<LayerDisplaySettings>): void {

@@ -86,7 +86,7 @@
         <a-button
           block
           type="primary"
-          :disabled="!viewerApi"
+          :disabled="!hasAnyLayer"
           @click="onRefreshTypeMap"
         >
           {{ t('settings.panel.lammps.refresh') }}
@@ -114,6 +114,7 @@ const { t } = useI18n();
 const { patchSettings } = useSettingsSiderContext();
 
 const viewerApi = computed(() => viewerApiRef.value);
+const hasAnyLayer = computed(() => (viewerApi.value?.layers.value.length ?? 0) > 0);
 const layerList = computed(() => viewerApi.value?.layers.value ?? []);
 const activeLayerId = computed(() => viewerApi.value?.activeLayerId.value ?? null);
 const activeLayerInfo = computed(() => {

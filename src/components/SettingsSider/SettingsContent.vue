@@ -45,7 +45,7 @@
           <span class="settings-panel-header">
             <component :is="p.icon" class="settings-panel-icon" />
             <a-typography-text strong>
-              <span>{{ t(p.headerKey) }}</span>
+              {{ t(p.headerKey) }}
             </a-typography-text>
             <span v-if="isPanelDirty(p.key)" class="settings-panel-dirty" aria-hidden="true" />
           </span>
@@ -283,6 +283,8 @@ function onClearStorage(): void {
   Modal.confirm({
     title: t('settings.clearStorageConfirmTitle'),
     content: t('settings.clearStorageConfirmBody'),
+    centered: true,
+    wrapClassName: 'settings-clear-confirm',
     okText: t('common.confirm'),
     cancelText: t('common.cancel'),
     onOk: () => {

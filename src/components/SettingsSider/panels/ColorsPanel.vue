@@ -36,7 +36,7 @@
       <a-col>
         <a-switch
           v-model:checked="applyToAllLayers"
-          :disabled="!viewerApi || layerList.length === 0"
+          :disabled="!hasAnyLayer"
           :aria-label="t('settings.panel.colors.applyAll')"
           :title="t('settings.panel.colors.applyAll')"
         />
@@ -122,6 +122,7 @@ const { t } = useI18n();
 const { patchSettings } = useSettingsSiderContext();
 
 const viewerApi = computed(() => viewerApiRef.value);
+const hasAnyLayer = computed(() => (viewerApi.value?.layers.value.length ?? 0) > 0);
 const layerList = computed(() => viewerApi.value?.layers.value ?? []);
 const activeLayerId = computed(() => viewerApi.value?.activeLayerId.value ?? null);
 const applyToAllLayers = ref(false);

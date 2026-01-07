@@ -246,6 +246,18 @@
     gap: 8px;
 }
 
+.settings-clear-confirm .ant-modal-body {
+    padding: 16px 20px;
+}
+
+.settings-clear-confirm .ant-modal-confirm-body {
+    align-items: center;
+}
+
+.settings-clear-confirm .ant-modal-confirm-content {
+    margin-top: 6px;
+}
+
 /* Settings panel scrollbars (soft, theme-aware) */
 .settings-body {
     scrollbar-width: thin;
@@ -294,7 +306,6 @@ body.resizing {
 .settings-panel-header > span:last-child {
     font-size: 15px;
     font-weight: 600;
-    color: var(--ant-colorTextHeading, #111);
 }
 
 .settings-panel-dirty {

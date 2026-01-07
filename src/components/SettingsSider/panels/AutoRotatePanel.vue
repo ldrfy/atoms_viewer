@@ -8,6 +8,7 @@
             v-model:checked="autoRotateEnabledModel"
             :aria-label="t('settings.panel.autoRotate.enable')"
             :title="t('settings.panel.autoRotate.enable')"
+            :disabled="!hasAnyLayer"
           />
         </a-col>
       </a-row>
@@ -15,7 +16,7 @@
 
     <a-form-item :label="t('settings.panel.autoRotate.mode')">
       <a-dropdown trigger="click">
-        <a-button block>
+        <a-button block :disabled="!hasAnyLayer">
           {{ currentAutoRotatePresetLabel }}
           <span style="margin-left: 6px; opacity: 0.75">▾</span>
         </a-button>
@@ -44,6 +45,7 @@
             :min="0"
             :max="120"
             :step="1"
+            :disabled="!hasAnyLayer"
           />
         </a-col>
         <a-col :style="{ width: '96px' }">
@@ -54,6 +56,7 @@
             :min="0"
             :max="120"
             :step="1"
+            :disabled="!hasAnyLayer"
             style="width: 100%"
           />
         </a-col>
@@ -71,6 +74,7 @@
             v-model:checked="autoRotatePauseOnInteractModel"
             :aria-label="t('settings.panel.autoRotate.pauseOnInteract')"
             :title="t('settings.panel.autoRotate.pauseOnInteract')"
+            :disabled="!hasAnyLayer"
           />
         </a-col>
       </a-row>
@@ -87,6 +91,7 @@
             :min="0"
             :max="2000"
             :step="50"
+            :disabled="!hasAnyLayer"
           />
         </a-col>
         <a-col :style="{ width: '96px' }">
@@ -97,6 +102,7 @@
             :min="0"
             :max="2000"
             :step="50"
+            :disabled="!hasAnyLayer"
             style="width: 100%"
           />
         </a-col>
@@ -116,10 +122,13 @@ import {
   type AutoRotatePresetId,
 } from '../../../lib/viewer/autoRotate';
 
+import { viewerApiRef } from '../../../lib/viewer/bridge';
 import { useSettingsSiderContext } from '../useSettingsSiderContext';
 
 const { t } = useI18n();
 const { settings, patchSettings } = useSettingsSiderContext();
+const viewerApi = computed(() => viewerApiRef.value);
+const hasAnyLayer = computed(() => (viewerApi.value?.layers.value.length ?? 0) > 0);
 
 function patchAutoRotate(patch: Partial<(typeof settings.value)['autoRotate']>): void {
   patchSettings({

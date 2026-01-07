@@ -251,6 +251,7 @@
                 "bonds": "显示键",
                 "bondFactor": "键长阈值系数（bondFactor）",
                 "bondFactorHint": "用于推断键合：cutoff = (r_i + r_j) × bondFactor，数值越大越容易生成键。",
+                "bondRadius": "键粗细",
                 "atomSize": "原子大小",
                 "sphereSegments": "球体细分",
                 "sphereSegmentsHint": "数值越大越圆滑，但渲染开销越高。"

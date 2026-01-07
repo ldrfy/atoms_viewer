@@ -13,7 +13,7 @@
         @keydown.space.prevent="collapsed = false"
       >
         <a-button class="mini-handle">
-          {{ expandIcon }}
+          <component :is="expandIcon" />
         </a-button>
       </div>
     </Transition>
@@ -81,7 +81,7 @@
                   title="Collapse"
                   @click="collapsed = true"
                 >
-                  {{ collapseIcon }}
+                  <component :is="collapseIcon" />
                 </a-button>
               </a-space>
             </div>
@@ -188,6 +188,12 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
 import { useI18n } from 'vue-i18n';
+import {
+  DownOutlined,
+  LeftOutlined,
+  RightOutlined,
+  UpOutlined,
+} from '@ant-design/icons-vue';
 import type { InspectCtx } from '../ctx/inspect';
 import {
   blockPullToRefresh,
@@ -221,8 +227,12 @@ onBeforeUnmount(() => {
 
 const placement = computed<'left' | 'bottom'>(() => (isMobile.value ? 'bottom' : 'left'));
 
-const expandIcon = computed(() => (placement.value === 'left' ? '⟩' : '⌃'));
-const collapseIcon = computed(() => (placement.value === 'left' ? '⟨' : '⌄'));
+const expandIcon = computed(() =>
+  placement.value === 'left' ? RightOutlined : UpOutlined,
+);
+const collapseIcon = computed(() =>
+  placement.value === 'left' ? LeftOutlined : DownOutlined,
+);
 const panelTransitionName = computed(() =>
   placement.value === 'left' ? 'atom-inspector-slide-left' : 'atom-inspector-slide-up',
 );
@@ -455,7 +465,7 @@ function fmt(v: number | null | undefined): string {
   font-size: 12px;
   -webkit-user-select: none;
   user-select: none;
-  padding: 0 12px;
+  padding: 0 8px;
   background: none;
 }
 

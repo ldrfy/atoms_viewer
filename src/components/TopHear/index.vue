@@ -79,7 +79,7 @@
             type="text"
             class="btn-icon"
             aria-label="settings"
-            :title="t('viewer.settings')"
+            :title="t('settings.title')"
             @click="emit('open-settings')"
           >
             <SettingOutlined />
@@ -163,7 +163,7 @@
         <a-typography-text class="plain-click" @click="openSettings">
           <SettingOutlined />
           <span style="margin-left: 8px">
-            {{ t("viewer.settings") }}
+            {{ t("settings.title") }}
           </span>
         </a-typography-text>
       </a-space>

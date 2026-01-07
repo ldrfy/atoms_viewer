@@ -230,6 +230,7 @@
     min-height: 0;
     /* 非常关键：否则 iOS/某些浏览器不滚 */
     overflow-y: auto;
+    scrollbar-gutter: stable;
     -webkit-overflow-scrolling: touch;
     overscroll-behavior: contain;
     /* 防止滚动穿透到页面 */
@@ -287,8 +288,21 @@ body.resizing {
 }
 
 .settings-panel-icon {
-    font-size: 14px;
-    opacity: 0.85;
+    font-size: 18px;
+}
+
+.settings-panel-header > span:last-child {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--ant-colorTextHeading, #111);
+}
+
+.settings-panel-dirty {
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    background: var(--ant-colorPrimary, #1677ff);
+    box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.15);
 }
 
 .settings-collapse :deep(.ant-collapse-content-box) {

@@ -51,6 +51,8 @@ export type ViewerPublicApi = {
 
   /** LAMMPS typeId→element mapping rows for the active layer (editable in Settings). */
   activeLayerTypeMap: Ref<LammpsTypeMapItem[]>;
+  /** Whether the active layer's type map has been applied via refresh. */
+  activeLayerTypeMapApplied: Ref<boolean>;
   /** Replace the entire active-layer type map. */
   setActiveLayerTypeMap: (rows: LammpsTypeMapItem[]) => void;
   /** Reset all layers' type map rows to defaults (based on current atoms). */

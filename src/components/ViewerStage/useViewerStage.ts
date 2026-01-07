@@ -70,6 +70,7 @@ type ViewerStageBridgeApi = {
   removeLayer: (id: string) => void;
 
   activeLayerTypeMap: Ref<LammpsTypeMapItem[]>;
+  activeLayerTypeMapApplied: Ref<boolean>;
   setActiveLayerTypeMap: (rows: LammpsTypeMapItem[]) => void;
   resetAllLayersTypeMapToDefaults: (opts?: {
     templateRows?: LammpsTypeMapItem[];
@@ -121,6 +122,7 @@ type ViewerStageBindings = {
   setLayerVisible: (id: string, visible: boolean) => void;
 
   activeLayerTypeMap: Ref<LammpsTypeMapItem[]>;
+  activeLayerTypeMapApplied: Ref<boolean>;
   setActiveLayerTypeMap: (rows: LammpsTypeMapItem[]) => void;
   resetAllLayersTypeMapToDefaults: (opts?: {
     templateRows?: LammpsTypeMapItem[];
@@ -285,6 +287,10 @@ export function useViewerStage(
 
   const activeLayerTypeMap = computed<LammpsTypeMapItem[]>(() => {
     return (runtimeTick.value, runtime?.activeTypeMapRows.value ?? []);
+  });
+
+  const activeLayerTypeMapApplied = computed<boolean>(() => {
+    return (runtimeTick.value, runtime?.activeTypeMapApplied.value ?? false);
   });
 
   const activeLayerColorMap = computed<AtomTypeColorMapItem[]>(() => {
@@ -736,6 +742,7 @@ export function useViewerStage(
     removeLayer,
 
     activeLayerTypeMap,
+    activeLayerTypeMapApplied,
     setActiveLayerTypeMap,
     resetAllLayersTypeMapToDefaults,
 
@@ -772,6 +779,7 @@ export function useViewerStage(
     setLayerVisible,
 
     activeLayerTypeMap,
+    activeLayerTypeMapApplied,
     setActiveLayerTypeMap,
     resetAllLayersTypeMapToDefaults,
 

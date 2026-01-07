@@ -41,7 +41,7 @@ import SettingsSider from './components/SettingsSider';
 import TopHear from './components/TopHear';
 import EmptyPage from './pages/EmptyPage.vue';
 import type { ViewerSettings, OpenSettingsPayload } from './lib/viewer/settings';
-import { theme as antdTheme } from 'ant-design-vue';
+import { theme as antdTheme, message } from 'ant-design-vue';
 import { isDark, applyThemeToDom } from './theme/mode';
 import type { LoadRequest } from './pages/types';
 import type { SampleManifestItem } from './lib/structure/types';
@@ -76,6 +76,8 @@ watch(
 watchEffect(() => {
   applyThemeToDom(isDark.value);
 });
+
+message.config({ duration: 4 });
 
 // 页面流程控制（空页 / viewer）
 const page = ref<'empty' | 'viewer'>('empty');

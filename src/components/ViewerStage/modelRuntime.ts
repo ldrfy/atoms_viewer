@@ -132,9 +132,12 @@ type LayerInternal = {
 
   /** Per-layer LAMMPS typeId->element mapping rows (NOT global). */
   typeMapRows: LammpsTypeMapItem[];
+  /** Whether type map has been explicitly applied via "Refresh display". */
+  typeMapApplied: boolean;
 
   /** Per-layer atom type color mapping rows (active layer editable in Settings). */
   colorMapRows: AtomTypeColorMapItem[];
+  /** Whether color map has been explicitly applied via "Refresh display". */
 
   /** Per-layer display settings (atom size, bonds, quality). */
   display: LayerDisplaySettings;
@@ -220,6 +223,7 @@ export type ModelRuntime = {
   layers: Ref<ModelLayerInfo[]>;
   activeLayerId: Ref<string | null>;
   activeTypeMapRows: Ref<LammpsTypeMapItem[]>;
+  activeTypeMapApplied: Ref<boolean>;
   activeColorMapRows: Ref<AtomTypeColorMapItem[]>;
   activeDisplaySettings: Ref<LayerDisplaySettings | null>;
 
@@ -297,6 +301,7 @@ export function createModelRuntime(args: {
   const layers = ref<ModelLayerInfo[]>([]);
   const activeLayerId = ref<string | null>(null);
   const activeTypeMapRows = ref<LammpsTypeMapItem[]>([]);
+  const activeTypeMapApplied = ref(false);
   const activeColorMapRows = ref<AtomTypeColorMapItem[]>([]);
   const activeDisplaySettings = ref<LayerDisplaySettings | null>(null);
 
@@ -545,6 +550,7 @@ export function createModelRuntime(args: {
   function syncActiveTypeMap(): void {
     const a = getActiveLayer();
     activeTypeMapRows.value = (a?.typeMapRows ?? []) as LammpsTypeMapItem[];
+    activeTypeMapApplied.value = !!a?.typeMapApplied;
   }
 
   function syncActiveColorMap(): void {
@@ -851,6 +857,7 @@ export function createModelRuntime(args: {
       mappedFrameIndex: -1,
       hasAnyTypeId: false,
       typeMapRows: [],
+      typeMapApplied: false,
       colorMapRows: [],
       display: getDisplayDefaults(),
       baseCenter: new THREE.Vector3(0, 0, 0),
@@ -869,6 +876,7 @@ export function createModelRuntime(args: {
     else {
       layer.typeMapRows = [];
     }
+    layer.typeMapApplied = false;
 
     // Apply current per-layer type mapping (if any)
     const mappedFirstAtoms = mapAtomsByTypeMap(layer, firstAtoms);
@@ -956,6 +964,7 @@ export function createModelRuntime(args: {
     else {
       active.typeMapRows = [];
     }
+    active.typeMapApplied = false;
 
     active.currentFrameAtoms = firstAtoms;
     active.currentMappedAtoms = null;
@@ -1286,7 +1295,9 @@ export function createModelRuntime(args: {
       mapped,
       active.hasAnyTypeId,
     );
+    active.typeMapApplied = true;
     activeColorMapRows.value = (active.colorMapRows ?? []) as any;
+    activeTypeMapApplied.value = true;
 
     // atom mesh colors depend on element => must rebuild
     rebuildVisualsForLayer(active, mapped);
@@ -1303,6 +1314,8 @@ export function createModelRuntime(args: {
     if (!active) return;
     active.typeMapRows = (rows ?? []) as any;
     activeTypeMapRows.value = (active.typeMapRows ?? []) as any;
+    active.typeMapApplied = false;
+    activeTypeMapApplied.value = false;
   }
 
   function resetAllLayersTypeMapToDefaults(
@@ -1482,7 +1495,6 @@ export function createModelRuntime(args: {
           return a ? [a] : [];
         })();
     if (targets.length === 0) return;
-
     for (const layer of targets) {
       const map = buildColorMapRecord(layer.colorMapRows);
 
@@ -1522,6 +1534,7 @@ export function createModelRuntime(args: {
     }
 
     invalidate();
+    syncActiveColorMap();
   }
 
   function removeLayer(id: string): void {
@@ -1573,6 +1586,7 @@ export function createModelRuntime(args: {
     layers,
     activeLayerId,
     activeTypeMapRows,
+    activeTypeMapApplied,
     activeColorMapRows,
     activeDisplaySettings,
 

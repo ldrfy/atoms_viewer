@@ -70,7 +70,7 @@
         },
         "empty": {
             "title": "Drag and drop a file here",
-            "subtitle": "Or simply select the file, the 'Test' button can load some built-in model tests",
+            "subtitle": "Or simply select the file, the \"{action}\" button can load built-in samples",
             "pickFile": "Choose file",
             "preloadDefault": "Load samples",
             "samples": {

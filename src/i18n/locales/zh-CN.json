@@ -71,7 +71,7 @@
         },
         "empty": {
             "title": "拖拽文件到这里",
-            "subtitle": "或直接选择文件，“测试”按钮可以加载一些内置模型测试",
+            "subtitle": "或直接选择文件，“{action}”按钮可以加载内置模型",
             "pickFile": "选择文件",
             "preloadDefault": "加载样例",
             "samples": {

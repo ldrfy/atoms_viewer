@@ -43,7 +43,12 @@ import {
 } from '../../lib/dom/pullToRefreshBlock';
 
 import SettingsContent from './SettingsContent.vue';
-import { settingsSiderContextKey, type PatchSettingsFn } from './context';
+import {
+  settingsSiderContextKey,
+  settingsSiderControlContextKey,
+  type PatchSettingsFn,
+} from './context';
+import { createSettingsShadow } from '../../lib/viewer/mergeSettings';
 
 const props = withDefaults(
   defineProps<{
@@ -65,21 +70,34 @@ const emit = defineEmits<{
 /**
  * Patch settings back to parent.
  * Panels call this via provide/inject.
+ * Use a shadow snapshot to avoid lost updates when multiple patches land in one tick.
  */
+const settingsShadow = createSettingsShadow(props.settings);
+
+watch(
+  () => props.settings,
+  (v) => {
+    settingsShadow.syncFrom(v);
+  },
+  { immediate: true, deep: true, flush: 'sync' },
+);
+
 const patchSettings: PatchSettingsFn = (patch) => {
-  emit('update:settings', {
-    ...props.settings,
-    ...patch,
-    rotationDeg: {
-      ...props.settings.rotationDeg,
-      ...(patch.rotationDeg ?? {}),
-    },
-  });
+  const merged = settingsShadow.patch(patch);
+  emit('update:settings', merged);
 };
+
+function replaceSettings(next: ViewerSettings): void {
+  emit('update:settings', settingsShadow.replace(next));
+}
 
 provide(settingsSiderContextKey, {
   settings: computed(() => props.settings),
   patchSettings,
+});
+
+provide(settingsSiderControlContextKey, {
+  replaceSettings,
 });
 
 /**

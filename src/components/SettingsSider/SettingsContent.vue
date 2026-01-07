@@ -50,12 +50,22 @@
         <component :is="p.comp" />
       </a-collapse-panel>
     </a-collapse>
+
+    <div class="settings-reset">
+      <a-button block @click="onClearStorage">
+        {{ t('settings.clearStorage') }}
+      </a-button>
+      <a-typography-text type="secondary" style="display: block; margin-top: 6px">
+        {{ t('settings.clearStorageHint') }}
+      </a-typography-text>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, nextTick } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { Modal } from 'ant-design-vue';
 import {
   AppstoreOutlined,
   BgColorsOutlined,
@@ -76,6 +86,18 @@ import LammpsPanel from './panels/LammpsPanel.vue';
 import ColorsPanel from './panels/ColorsPanel.vue';
 import LayerDisplayPanel from './panels/LayerDisplayPanel.vue';
 import OtherPanel from './panels/OtherPanel.vue';
+import {
+  DEFAULT_SETTINGS,
+  DEFAULT_LAYER_DISPLAY,
+} from '../../lib/viewer/settings';
+import { useSettingsSiderContext } from './useSettingsSiderContext';
+import { useSettingsSiderControlContext } from './useSettingsSiderControlContext';
+import { viewerApiRef } from '../../lib/viewer/bridge';
+import {
+  buildDefaultSettings,
+  clearSettingsStorage,
+  saveSettingsToStorage,
+} from '../../lib/viewer/settingsStorage';
 
 const props = withDefaults(
   defineProps<{
@@ -94,6 +116,8 @@ const emit = defineEmits<{
 }>();
 
 const { t } = useI18n();
+const { settings } = useSettingsSiderContext();
+const { replaceSettings } = useSettingsSiderControlContext();
 
 const panels = [
   { key: 'files', headerKey: 'settings.panel.files.header', comp: FilesPanel, icon: FolderOpenOutlined },
@@ -120,5 +144,70 @@ const activeKeyProxy = computed<string[]>({
 
 function onResizeStart(ev: PointerEvent): void {
   emit('resize-start', ev);
+}
+
+function applyDefaults() {
+  const defaults = buildDefaultSettings();
+  const initialDistance = settings.value.initialDualViewDistance;
+  const dist = typeof initialDistance === 'number' && Number.isFinite(initialDistance)
+    ? initialDistance
+    : defaults.initialDualViewDistance;
+
+  const nextSettings = {
+    ...defaults,
+    dualViewDistance: dist,
+    initialDualViewDistance: dist,
+    rotationDeg: { x: 0, y: 0, z: 0 },
+    resetViewSeq: settings.value.resetViewSeq,
+  };
+
+  const api = viewerApiRef.value;
+  if (api) {
+    api.suspendSettingsSync(300);
+  }
+
+  replaceSettings(nextSettings);
+  if (api) {
+    void nextTick(() => {
+      api.applyViewFromSettings(nextSettings);
+    });
+  }
+
+  if (!api) return nextSettings;
+
+  api.setActiveLayerDisplay(
+    {
+      atomScale: DEFAULT_LAYER_DISPLAY.atomScale,
+      showBonds: DEFAULT_LAYER_DISPLAY.showBonds,
+      sphereSegments: DEFAULT_LAYER_DISPLAY.sphereSegments,
+      bondFactor: DEFAULT_LAYER_DISPLAY.bondFactor,
+      bondRadius: DEFAULT_LAYER_DISPLAY.bondRadius,
+    },
+    { applyToAll: true },
+  );
+
+  api.resetAllLayersTypeMapToDefaults({
+    templateRows: [...(DEFAULT_SETTINGS.lammpsTypeMap ?? [])],
+    useAtomDefaults: false,
+  });
+  api.resetAllLayersColorMapToDefaults();
+
+  return nextSettings;
+}
+
+function onClearStorage(): void {
+  Modal.confirm({
+    title: t('settings.clearStorageConfirmTitle'),
+    content: t('settings.clearStorageConfirmBody'),
+    okText: t('common.confirm'),
+    cancelText: t('common.cancel'),
+    onOk: () => {
+      clearSettingsStorage();
+      const nextSettings = applyDefaults();
+      if (nextSettings) {
+        saveSettingsToStorage(nextSettings);
+      }
+    },
+  });
 }
 </script>

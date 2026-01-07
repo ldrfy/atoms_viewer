@@ -4,6 +4,7 @@
     },
     "common": {
         "delete": "Delete",
+        "confirm": "Confirm",
         "cancel": "Cancel"
     },
     "net": {
@@ -103,10 +104,21 @@
             "distance": "Distance",
             "angle": "Angle",
             "orderHint": "Computed in selection order: ∠(1–2–3) with point 2 as the vertex."
+        },
+        "settings": {
+            "modifiedHint": "Detected modified settings for the current model. Relevant panels are now open."
+        },
+        "autoRotate": {
+            "enabledHint": "Auto-rotate is enabled. You can turn it off in Settings → Auto-rotate → Enable.",
+            "disabledHint": "Related panels are open; auto-rotate has been stopped."
         }
     },
     "settings": {
         "title": "Settings",
+        "clearStorage": "Clear local settings",
+        "clearStorageConfirmTitle": "Clear local settings?",
+        "clearStorageConfirmBody": "This removes saved local settings and restores defaults.",
+        "clearStorageHint": "If the display looks wrong or settings get out of sync, try clearing local settings.",
         "other": {
             "header": "Other",
             "axes": "Axes",
@@ -261,6 +273,7 @@
                 "bondRadius": "Bond thickness",
                 "atomSize": "Atom size",
                 "sphereSegments": "Sphere segments",
+                "reset": "Reset layer appearance",
                 "sphereSegmentsHint": "Higher values look smoother but are slower to render."
             }
         }

@@ -4,6 +4,7 @@ import type {
   LammpsTypeMapItem,
   AtomTypeColorMapItem,
   LayerDisplaySettings,
+  ViewerSettings,
 } from './settings';
 
 import type { ParseMode, ParseInfo } from '../structure/parse';
@@ -52,6 +53,11 @@ export type ViewerPublicApi = {
   activeLayerTypeMap: Ref<LammpsTypeMapItem[]>;
   /** Replace the entire active-layer type map. */
   setActiveLayerTypeMap: (rows: LammpsTypeMapItem[]) => void;
+  /** Reset all layers' type map rows to defaults (based on current atoms). */
+  resetAllLayersTypeMapToDefaults: (opts?: {
+    templateRows?: LammpsTypeMapItem[];
+    useAtomDefaults?: boolean;
+  }) => void;
 
   /**
    * Per-layer atom colors for the active layer.
@@ -64,6 +70,8 @@ export type ViewerPublicApi = {
   setActiveLayerColorMap: (rows: AtomTypeColorMapItem[]) => void;
   /** Replace all layers' color maps at once (duplicate rows per layer). */
   setAllLayersColorMap: (rows: AtomTypeColorMapItem[]) => void;
+  /** Reset all layers' color maps to default element colors. */
+  resetAllLayersColorMapToDefaults: () => void;
 
   /** Per-layer display settings (atom size / bond visibility / quality) for the active layer. */
   activeLayerDisplay: Ref<LayerDisplaySettings | null>;
@@ -72,6 +80,10 @@ export type ViewerPublicApi = {
     patch: Partial<LayerDisplaySettings>,
     opts?: { applyToAll?: boolean },
   ) => void;
+  /** Apply view-related settings (distance/rotation) to the stage immediately. */
+  applyViewFromSettings: (overrides?: Partial<ViewerSettings>) => void;
+  /** Temporarily suspend settings sync from controls/auto-rotation. */
+  suspendSettingsSync: (ms?: number) => void;
 };
 
 /**

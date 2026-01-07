@@ -79,16 +79,27 @@ export function syncColorMapRowsFromAtoms(
     const prevEl = prev ? (normalizeElementSymbol(prev.element) || 'E') : null;
     const elementChanged = prev != null && prevEl !== el;
 
-    // Rule:
-    // - If user customized the color, always preserve it.
-    // - Otherwise, follow the built-in element color.
-    //   This matters when LAMMPS type→element mapping changes (e.g. C1 → O1).
-    const isCustom = Boolean(prev?.isCustom);
-    const nextColor = isCustom
-      ? (prev?.color ?? getElementColorHex(el))
-      : elementChanged
-        ? getElementColorHex(el)
-        : (prev?.color ?? getElementColorHex(el));
+    // Reuse any existing custom color for the same element, regardless of typeId.
+    const elementCustom = old.find(
+      r => (normalizeElementSymbol(r.element) || 'E') === el && r.isCustom,
+    );
+
+    let isCustom = false;
+    let nextColor = getElementColorHex(el);
+
+    if (!prev || elementChanged) {
+      if (elementCustom?.color) {
+        isCustom = true;
+        nextColor = elementCustom.color;
+      }
+    }
+    else if (prev?.isCustom) {
+      isCustom = true;
+      nextColor = prev.color ?? getElementColorHex(el);
+    }
+    else {
+      nextColor = prev?.color ?? getElementColorHex(el);
+    }
 
     out.push({
       element: el,

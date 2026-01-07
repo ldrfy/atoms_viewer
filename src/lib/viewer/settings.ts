@@ -36,6 +36,8 @@ export type RotationDeg = {
 export type AutoRotateSettings = {
   /** Enable auto rotation in the render loop. */
   enabled: boolean;
+  /** Set when auto-rotation was enabled automatically (do not persist). */
+  autoEnabledBySystem?: boolean;
   /** Built-in preset id (UI maps it to an axis direction). */
   presetId: AutoRotatePresetId;
   /** Angular speed in degrees per second (independent from preset). */
@@ -69,6 +71,8 @@ export type ViewerSettings = {
   resetViewSeq: number;
 
   lammpsTypeMap: LammpsTypeMapItem[];
+  /** Optional user-defined color map template (applied on new layer load). */
+  colorMapTemplate?: AtomTypeColorMapItem[];
   backgroundColor: string;
   backgroundTransparent?: boolean;
 
@@ -114,6 +118,7 @@ export const DEFAULT_SETTINGS: ViewerSettings = {
   showBonds: true,
   bondFactor: 1.05,
   bondRadius: 0.09,
+  colorMapTemplate: [],
   // Refreshing bonds each frame during playback can be extremely expensive for
   // large models. Default to OFF; users can enable explicitly when needed.
   refreshBondsOnPlay: true,
@@ -188,6 +193,8 @@ export function hasUnknownElementMappingForTypeIds(
 export type OpenSettingsPayload = {
   /** 需要聚焦（展开）的折叠面板 key / Collapse panel key to focus */
   focusKey?: string;
+  /** 需要聚焦（展开）的折叠面板 key 列表 / Multiple collapse panel keys to focus */
+  focusKeys?: string[];
   /** 是否打开抽屉；false 表示只切换 activeKey，不改变 open 状态 */
   open?: boolean;
 };

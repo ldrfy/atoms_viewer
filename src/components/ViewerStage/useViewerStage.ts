@@ -1,6 +1,7 @@
 // src/components/ViewerStage/useViewerStage.ts
-import { onBeforeUnmount, onMounted, ref, computed } from 'vue';
+import { onBeforeUnmount, onMounted, ref, computed, watch } from 'vue';
 import type { Ref, ComponentPublicInstance } from 'vue';
+import * as THREE from 'three';
 
 import type {
   ViewerSettings,
@@ -14,6 +15,7 @@ import { useI18n } from 'vue-i18n';
 
 import { createThreeStage, type ThreeStage } from '../../lib/three/stage';
 import { getAutoRotatePreset } from '../../lib/viewer/autoRotate';
+import { normalizeViewPresets } from '../../lib/viewer/viewPresets';
 import { bindViewerStageSettings } from './bindSettings';
 import {
   createModelRuntime,
@@ -40,6 +42,7 @@ import { createViewerPickingController } from './logic/viewerPicking';
 import { createPngExporter } from './logic/viewerExportPng';
 import { createViewerLoader } from './logic/viewerLoader';
 import { createViewerAnimationController } from './logic/viewerAnimation';
+import { createSettingsSync } from './settingsSync';
 
 /**
  * Template ref callback param type (works for DOM + component instance).
@@ -68,16 +71,23 @@ type ViewerStageBridgeApi = {
 
   activeLayerTypeMap: Ref<LammpsTypeMapItem[]>;
   setActiveLayerTypeMap: (rows: LammpsTypeMapItem[]) => void;
+  resetAllLayersTypeMapToDefaults: (opts?: {
+    templateRows?: LammpsTypeMapItem[];
+    useAtomDefaults?: boolean;
+  }) => void;
 
   activeLayerColorMap: Ref<AtomTypeColorMapItem[]>;
   setActiveLayerColorMap: (rows: AtomTypeColorMapItem[]) => void;
   setAllLayersColorMap: (rows: AtomTypeColorMapItem[]) => void;
+  resetAllLayersColorMapToDefaults: () => void;
 
   activeLayerDisplay: Ref<LayerDisplaySettings | null>;
   setActiveLayerDisplay: (
     patch: Partial<LayerDisplaySettings>,
     opts?: { applyToAll?: boolean },
   ) => void;
+  applyViewFromSettings: (overrides?: Partial<ViewerSettings>) => void;
+  suspendSettingsSync: (ms?: number) => void;
 };
 
 type ViewerStageExposedApi = {
@@ -112,16 +122,22 @@ type ViewerStageBindings = {
 
   activeLayerTypeMap: Ref<LammpsTypeMapItem[]>;
   setActiveLayerTypeMap: (rows: LammpsTypeMapItem[]) => void;
+  resetAllLayersTypeMapToDefaults: (opts?: {
+    templateRows?: LammpsTypeMapItem[];
+    useAtomDefaults?: boolean;
+  }) => void;
 
   activeLayerColorMap: Ref<AtomTypeColorMapItem[]>;
   setActiveLayerColorMap: (rows: AtomTypeColorMapItem[]) => void;
   setAllLayersColorMap: (rows: AtomTypeColorMapItem[]) => void;
+  resetAllLayersColorMapToDefaults: () => void;
 
   activeLayerDisplay: Ref<LayerDisplaySettings | null>;
   setActiveLayerDisplay: (
     patch: Partial<LayerDisplaySettings>,
     opts?: { applyToAll?: boolean },
   ) => void;
+  applyViewFromSettings: (overrides?: Partial<ViewerSettings>) => void;
 
   removeLayer: (id: string) => void;
 
@@ -190,6 +206,8 @@ export function useViewerStage(
   let runtime: ModelRuntime | null = null;
   let stopBind: (() => void) | null = null;
 
+  const settingsSync = createSettingsSync(patchSettings);
+
   // Keep Display panel rotation degrees in sync while auto-rotation is running.
   let pendingRotationSyncRaf = 0;
   let lastRotationSyncMs = 0;
@@ -212,6 +230,7 @@ export function useViewerStage(
 
   function scheduleAutoRotateRotationSync(): void {
     if (!patchSettings) return;
+    if (settingsSync.isSuppressed()) return;
     if (!stage) return;
     if (pendingRotationSyncRaf) return;
 
@@ -249,7 +268,7 @@ export function useViewerStage(
         return;
       }
 
-      patchSettings({ rotationDeg: next });
+      settingsSync.patch({ rotationDeg: next });
     });
   }
 
@@ -289,7 +308,7 @@ export function useViewerStage(
   // recording
   const recording = createRecordingController({
     getStage: () => stage,
-    patchSettings,
+    patchSettings: settingsSync.patch,
     t,
     getRecordFps: () => settingsRef.value.frame_rate ?? 60,
     getModelFileName: () => modelFileNameProvider(),
@@ -300,7 +319,7 @@ export function useViewerStage(
     settingsRef,
     getStage: () => stage,
     getRuntime: () => runtime,
-    patchSettings,
+    patchSettings: settingsSync.patch,
     inspectCtx,
     isSelectingRecordArea: recording.isSelectingRecordArea,
     getActiveLayerId: () => activeLayerId.value,
@@ -321,7 +340,7 @@ export function useViewerStage(
     settingsRef,
     getStage: () => stage,
     getRuntime: () => runtime,
-    patchSettings,
+    patchSettings: settingsSync.patch,
     requestOpenSettings,
     t,
     inspectCtx,
@@ -393,6 +412,18 @@ export function useViewerStage(
     runtime.setActiveLayerTypeMapRows(rows);
   }
 
+  function resetAllLayersTypeMapToDefaults(
+    opts?: {
+      templateRows?: LammpsTypeMapItem[];
+      useAtomDefaults?: boolean;
+    },
+  ): void {
+    if (!runtime) return;
+    runtime.resetAllLayersTypeMapToDefaults(opts);
+    syncUiFromRuntime();
+    inspectCtx.clear();
+  }
+
   function setActiveLayerColorMap(rows: AtomTypeColorMapItem[]): void {
     if (!runtime) return;
     runtime.setActiveLayerColorMapRows(rows);
@@ -403,6 +434,12 @@ export function useViewerStage(
     runtime.setAllLayersColorMapRows(rows);
   }
 
+  function resetAllLayersColorMapToDefaults(): void {
+    if (!runtime) return;
+    runtime.resetAllLayersColorMapToDefaults();
+    syncUiFromRuntime();
+  }
+
   function setActiveLayerDisplay(
     patch: Partial<LayerDisplaySettings>,
     opts?: { applyToAll?: boolean },
@@ -411,6 +448,14 @@ export function useViewerStage(
     runtime.setActiveLayerDisplaySettings(patch, opts);
     syncUiFromRuntime();
     picking.updateSelectionVisuals();
+
+    const next: Partial<ViewerSettings> = {};
+    if (patch.atomScale != null) next.atomScale = patch.atomScale;
+    if (patch.showBonds != null) next.showBonds = patch.showBonds;
+    if (patch.sphereSegments != null) next.sphereSegments = patch.sphereSegments;
+    if (patch.bondFactor != null) next.bondFactor = patch.bondFactor;
+    if (patch.bondRadius != null) next.bondRadius = patch.bondRadius;
+    if (Object.keys(next).length > 0) settingsSync.patch(next);
   }
 
   function removeLayer(id: string): void {
@@ -436,10 +481,61 @@ export function useViewerStage(
     controls.saveState();
   }
 
+  function applyViewFromSettings(overrides?: Partial<ViewerSettings>): void {
+    if (!stage) return;
+    // Avoid immediately re-writing old settings during a reset/update.
+    settingsSync.suspend(200);
+    const base = settingsRef.value;
+    const next: ViewerSettings = {
+      ...base,
+      ...(overrides ?? {}),
+      rotationDeg: {
+        ...base.rotationDeg,
+        ...(overrides?.rotationDeg ?? {}),
+      },
+      autoRotate: {
+        ...base.autoRotate,
+        ...(overrides?.autoRotate ?? {}),
+      },
+    };
+
+    const presets = normalizeViewPresets(next.viewPresets);
+    if (presets.length > 0) {
+      stage.setViewPresets(presets);
+    }
+    else if (next.dualViewEnabled) {
+      stage.setViewPresets(['front', 'side']);
+    }
+
+    const split = next.dualViewSplit;
+    if (typeof split === 'number' && Number.isFinite(split)) {
+      stage.setDualViewSplit(split);
+    }
+
+    stage.setProjectionMode(!!next.orthographic);
+
+    const r = next.rotationDeg;
+    stage.pivotGroup.rotation.set(
+      THREE.MathUtils.degToRad(r.x),
+      THREE.MathUtils.degToRad(r.y),
+      THREE.MathUtils.degToRad(r.z),
+    );
+
+    const dist = next.dualViewDistance;
+    if (typeof dist === 'number' && Number.isFinite(dist)) {
+      stage.setDualViewDistance(dist);
+      lastSyncedDist = dist;
+    }
+
+    stage.getControls().update();
+    stage.invalidate();
+  }
+
   // Sync dual-view distance back to settings on zoom.
   // Event-driven (OrbitControls "change") instead of a polling RAF loop.
   let lastSyncedDist = NaN;
   let removeControlsSync: (() => void) | null = null;
+  let stopRotationWatch: (() => void) | null = null;
 
   function preventWindowDropDefault(e: DragEvent): void {
     e.preventDefault();
@@ -482,7 +578,6 @@ export function useViewerStage(
       applyAtomScale: () => runtime?.applyAtomScale(),
       applyShowBonds: () => runtime?.applyShowBonds(),
       applyShowAxes: () => runtime?.applyShowAxes(),
-      applyModelRotation: () => runtime?.applyModelRotation(),
 
       setAutoRotateConfig: cfg => stage?.setAutoRotateConfig(cfg),
 
@@ -500,6 +595,25 @@ export function useViewerStage(
 
     picking.attach();
 
+    stopRotationWatch = watch(
+      () => [
+        settingsRef.value.rotationDeg.x,
+        settingsRef.value.rotationDeg.y,
+        settingsRef.value.rotationDeg.z,
+      ],
+      () => {
+        if (!stage) return;
+        const r = settingsRef.value.rotationDeg;
+        stage.pivotGroup.rotation.set(
+          THREE.MathUtils.degToRad(r.x),
+          THREE.MathUtils.degToRad(r.y),
+          THREE.MathUtils.degToRad(r.z),
+        );
+        stage.invalidate();
+      },
+      { immediate: true },
+    );
+
     if (patchSettings) {
       const controls = stage.getControls();
       let pendingRaf = 0;
@@ -508,6 +622,7 @@ export function useViewerStage(
       const sync = (t: number) => {
         pendingRaf = 0;
         if (!stage) return;
+        if (settingsSync.isSuppressed()) return;
 
         // Throttle sync to reduce UI churn while keeping wheel/gesture zoom responsive.
         if (t - lastT < 50) return;
@@ -524,11 +639,12 @@ export function useViewerStage(
         lastSyncedDist = dist;
 
         if (Math.abs(dist - (settingsRef.value.dualViewDistance ?? dist)) > 1e-3) {
-          patchSettings({ dualViewDistance: dist });
+          settingsSync.patch({ dualViewDistance: dist });
         }
       };
 
       const onControlsChange = (): void => {
+        if (settingsSync.isSuppressed()) return;
         // Coalesce multiple change events into one write per frame.
         if (pendingRaf) return;
         pendingRaf = requestAnimationFrame(sync);
@@ -551,6 +667,9 @@ export function useViewerStage(
     window.removeEventListener('drop', preventWindowDropDefault);
 
     picking.detach();
+
+    stopRotationWatch?.();
+    stopRotationWatch = null;
 
     removeControlsSync?.();
     removeControlsSync = null;
@@ -596,7 +715,7 @@ export function useViewerStage(
     togglePlay: anim.togglePlay,
     recording,
     settingsRef,
-    patchSettings,
+    patchSettings: settingsSync.patch,
   });
 
   const bridgeApi: ViewerStageBridgeApi = {
@@ -618,20 +737,24 @@ export function useViewerStage(
 
     activeLayerTypeMap,
     setActiveLayerTypeMap,
+    resetAllLayersTypeMapToDefaults,
 
     activeLayerColorMap,
     setActiveLayerColorMap,
     setAllLayersColorMap,
+    resetAllLayersColorMapToDefaults,
 
     activeLayerDisplay,
     setActiveLayerDisplay,
+    applyViewFromSettings,
+    suspendSettingsSync: (ms = 200) => settingsSync.suspend(ms),
   };
 
   const exposedApi: ViewerStageExposedApi = {
     exportPng: exporter.onExportPng,
     openFilePicker,
     loadFile: loader.loadFile,
-    loadFiles: (files: File[]) => loader.loadFiles(files, 'api'),
+    loadFiles: (files: File[]) => loader.loadFiles(files),
     loadUrl: loader.loadUrl,
   };
 
@@ -650,13 +773,16 @@ export function useViewerStage(
 
     activeLayerTypeMap,
     setActiveLayerTypeMap,
+    resetAllLayersTypeMapToDefaults,
 
     activeLayerColorMap,
     setActiveLayerColorMap,
     setAllLayersColorMap,
+    resetAllLayersColorMapToDefaults,
 
     activeLayerDisplay,
     setActiveLayerDisplay,
+    applyViewFromSettings,
     removeLayer,
 
     inspectCtx,

@@ -6,9 +6,13 @@ import { message } from 'ant-design-vue';
 import type {
   ViewerSettings,
   LammpsTypeMapItem,
+  AtomTypeColorMapItem,
   OpenSettingsPayload,
 } from '../../../lib/viewer/settings';
-import { hasUnknownElementMappingForTypeIds } from '../../../lib/viewer/settings';
+import {
+  hasUnknownElementMappingForTypeIds,
+  DEFAULT_LAYER_DISPLAY,
+} from '../../../lib/viewer/settings';
 import { normalizeViewPresets } from '../../../lib/viewer/viewPresets';
 
 import { parseStructure, toForcedFilename } from '../../../lib/structure/parse';
@@ -70,6 +74,7 @@ export function createViewerLoader(deps: {
   let lastRawFileName: string | null = null;
 
   let lastLoadNeedsLammpsFocus = false;
+  let lastLoadIsLammps = false;
 
   function getSettings(): ViewerSettings {
     return deps.settingsRef.value;
@@ -92,11 +97,6 @@ export function createViewerLoader(deps: {
       = model.frames && model.frames.length > 0 ? model.frames.length : 1;
   }
 
-  function focusSettingsToDisplaySilently(): void {
-    lastLoadNeedsLammpsFocus = false;
-    deps.requestOpenSettings?.({ focusKey: 'display', open: false });
-  }
-
   function focusSettingsToFilesAndOpen(): void {
     // When parsing fails and user needs to manually choose a parse mode,
     // automatically open Settings and focus the Files panel.
@@ -110,11 +110,15 @@ export function createViewerLoader(deps: {
   ): void {
     const runtime = deps.getRuntime();
 
-    const baseRows = (
-      (reason === 'reparse'
-        ? runtime?.activeTypeMapRows.value ?? []
-        : getSettings().lammpsTypeMap ?? []) as LammpsTypeMapItem[]
-    ).map(r => ({ typeId: r.typeId, element: r.element }));
+    const runtimeRows = ((runtime?.activeTypeMapRows.value ?? []) as LammpsTypeMapItem[])
+      .map(r => ({ typeId: r.typeId, element: r.element }));
+    const settingsRows = ((getSettings().lammpsTypeMap ?? []) as LammpsTypeMapItem[])
+      .map(r => ({ typeId: r.typeId, element: r.element }));
+    const baseRows = (reason === 'reparse'
+      ? runtimeRows
+      : runtimeRows.length > 0
+        ? runtimeRows
+        : settingsRows);
 
     const atoms0
       = model.frames && model.frames[0] ? model.frames[0] : model.atoms;
@@ -143,17 +147,11 @@ export function createViewerLoader(deps: {
       detectedTypeIds,
     );
 
-    lastLoadNeedsLammpsFocus = typeMapAdded || hasUnknownForThisDump;
+    const usedCachedMapping = reason === 'load' && settingsRows.length > 0;
+    lastLoadNeedsLammpsFocus = typeMapAdded || hasUnknownForThisDump || usedCachedMapping;
 
     if (runtime && mergedRows) {
       runtime.setActiveLayerTypeMapRows(mergedRows);
-    }
-
-    if (typeMapAdded || hasUnknownForThisDump) {
-      deps.requestOpenSettings?.({ focusKey: 'lammps', open: true });
-    }
-    else {
-      deps.requestOpenSettings?.({ focusKey: 'display', open: false });
     }
 
     if (hasUnknownForThisDump) {
@@ -177,7 +175,7 @@ export function createViewerLoader(deps: {
 
     const model = parseStructure(text, forcedName, {
       lammpsTypeToElement: buildLammpsTypeToElementMap(
-        (getSettings().lammpsTypeMap ?? []) as LammpsTypeMapItem[],
+        (reason === 'load' ? [] : (getSettings().lammpsTypeMap ?? [])) as LammpsTypeMapItem[],
       ),
       lammpsSortById: true,
     });
@@ -212,8 +210,9 @@ export function createViewerLoader(deps: {
       handleLammpsTypeMapAndSettings(model, reason);
     }
     else {
-      focusSettingsToDisplaySilently();
+      lastLoadNeedsLammpsFocus = false;
     }
+    lastLoadIsLammps = isLmp;
 
     if (reason === 'reparse') {
       message.success(
@@ -230,15 +229,23 @@ export function createViewerLoader(deps: {
 
     const cam = stage.getCamera();
     const controls = stage.getControls();
-    const dist = cam.position.distanceTo(controls.target);
+    const settings = getSettings();
+    const distFromSettings = settings.dualViewDistance;
+    const distFromCamera = cam.position.distanceTo(controls.target);
+    const dist = (typeof distFromSettings === 'number' && Number.isFinite(distFromSettings))
+      ? distFromSettings
+      : distFromCamera;
 
     stage.setDualViewDistance(dist);
 
     if (canPatch) {
-      deps.patchSettings!({
-        dualViewDistance: dist,
-        initialDualViewDistance: dist,
-      });
+      const patch: Partial<ViewerSettings> = {
+        initialDualViewDistance: distFromCamera,
+      };
+      if (!Number.isFinite(distFromSettings)) {
+        patch.dualViewDistance = dist;
+      }
+      deps.patchSettings!(patch);
     }
 
     let presets = normalizeViewPresets(getSettings().viewPresets);
@@ -275,6 +282,16 @@ export function createViewerLoader(deps: {
     }
   }
 
+  function cloneTypeMapRows(rows: LammpsTypeMapItem[] | undefined): LammpsTypeMapItem[] {
+    return (rows ?? []).map(r => ({ ...r }));
+  }
+
+  function cloneColorMapRows(
+    rows: AtomTypeColorMapItem[] | undefined,
+  ): AtomTypeColorMapItem[] {
+    return (rows ?? []).map(r => ({ ...r }));
+  }
+
   async function refreshTypeMap(): Promise<void> {
     const stage = deps.getStage();
     const runtime = deps.getRuntime();
@@ -304,6 +321,12 @@ export function createViewerLoader(deps: {
       }
       deps.isLoading.value = false;
     }
+
+    if (deps.patchSettings) {
+      deps.patchSettings({
+        lammpsTypeMap: cloneTypeMapRows(runtime.activeTypeMapRows.value),
+      });
+    }
   }
 
   async function refreshColorMap(opts?: { applyToAll?: boolean }): Promise<void> {
@@ -331,43 +354,84 @@ export function createViewerLoader(deps: {
       }
       deps.isLoading.value = false;
     }
+
+    if (deps.patchSettings) {
+      deps.patchSettings({
+        colorMapTemplate: cloneColorMapRows(runtime.activeColorMapRows.value),
+      });
+    }
+  }
+
+  function isLayerDisplayModified(): boolean {
+    const runtime = deps.getRuntime();
+    const cur = runtime?.activeDisplaySettings.value ?? null;
+    if (!cur) return false;
+    return (
+      cur.atomScale !== DEFAULT_LAYER_DISPLAY.atomScale
+      || cur.showBonds !== DEFAULT_LAYER_DISPLAY.showBonds
+      || cur.sphereSegments !== DEFAULT_LAYER_DISPLAY.sphereSegments
+      || cur.bondFactor !== DEFAULT_LAYER_DISPLAY.bondFactor
+      || cur.bondRadius !== DEFAULT_LAYER_DISPLAY.bondRadius
+    );
   }
 
   function focusSettingsToLayersOrLammps(): void {
     const runtime = deps.getRuntime();
     if (!deps.requestOpenSettings) return;
+    const layerCount = runtime?.layers.value.length ?? 0;
+    const wantsColors = (runtime?.activeColorMapRows.value ?? []).some(r => r.isCustom);
+    const wantsLayers = layerCount > 1;
+    const wantsLammps = lastLoadIsLammps || lastLoadNeedsLammpsFocus;
+    const wantsLayerDisplay = isLayerDisplayModified();
 
-    if (lastLoadNeedsLammpsFocus) {
-      deps.requestOpenSettings({ focusKey: 'lammps', open: true });
+    const focusKeys: string[] = [];
+    if (wantsLammps) focusKeys.push('lammps');
+    if (wantsLayers) focusKeys.push('layers');
+    if (wantsColors) focusKeys.push('colors');
+    if (wantsLayerDisplay) focusKeys.push('layerDisplay');
+
+    if (focusKeys.length > 0) {
+      deps.requestOpenSettings?.({
+        focusKeys: Array.from(new Set(focusKeys)),
+        open: true,
+      });
+      message.info(
+        deps.t?.('viewer.settings.modifiedHint')
+        ?? '已检测到修改的设置，已打开相关面板。',
+      );
+      if (deps.patchSettings && deps.settingsRef.value.autoRotate.autoEnabledBySystem) {
+        deps.patchSettings({
+          autoRotate: {
+            ...deps.settingsRef.value.autoRotate,
+            enabled: false,
+            autoEnabledBySystem: false,
+          },
+        });
+        message.info(
+          deps.t?.('viewer.autoRotate.disabledHint')
+          ?? '检测到相关设置已展开，已停止自动旋转。',
+        );
+      }
       return;
     }
 
-    if (runtime?.hasAnyTypeId()) {
-      const rows = normalizeTypeMapRows(
-        ((runtime.activeTypeMapRows.value ?? []) as any) ?? [],
-      );
-      const activeAtoms = runtime.getActiveAtoms?.() ?? null;
-
-      if (activeAtoms) {
-        const { typeIds }
-          = collectTypeIdsAndElementDefaultsFromAtoms(activeAtoms);
-        if (hasUnknownElementMappingForTypeIds(rows as any, typeIds)) {
-          deps.requestOpenSettings({ focusKey: 'lammps', open: true });
-          return;
-        }
-      }
-
-      const hasPlaceholder = rows.some((r) => {
-        const el = (r.element ?? '').toString().trim();
-        return !el || el.toUpperCase() === 'E';
+    deps.requestOpenSettings?.({
+      focusKeys: ['display', 'autoRotate'],
+      open: true,
+    });
+    if (deps.patchSettings) {
+      deps.patchSettings({
+        autoRotate: {
+          ...deps.settingsRef.value.autoRotate,
+          enabled: true,
+          autoEnabledBySystem: true,
+        },
       });
-      if (hasPlaceholder) {
-        deps.requestOpenSettings({ focusKey: 'lammps', open: true });
-        return;
-      }
+      message.info(
+        deps.t?.('viewer.autoRotate.enabledHint')
+        ?? '已开启自动旋转，可在设置-自动旋转-启用中关闭。',
+      );
     }
-
-    deps.requestOpenSettings({ focusKey: 'layers', open: true });
   }
 
   async function loadInit(): Promise<void> {
@@ -382,7 +446,7 @@ export function createViewerLoader(deps: {
     t0: number,
     text: string,
     fileName: string,
-    opts?: { hidePreviousLayers?: boolean; openSettingsAfter?: boolean },
+    opts?: { hidePreviousLayers?: boolean },
   ): Promise<void> {
     try {
       deps.stopPlay();
@@ -396,7 +460,7 @@ export function createViewerLoader(deps: {
 
       syncViewPresetAndDistanceOnModelLoad();
 
-      if (opts?.openSettingsAfter) focusSettingsToLayersOrLammps();
+      focusSettingsToLayersOrLammps();
 
       message.success(`${((performance.now() - t0) / 1000).toFixed(2)} s`);
       parseInfo.success = true;
@@ -429,13 +493,11 @@ export function createViewerLoader(deps: {
 
     await loadText(t0, text, fileName, {
       hidePreviousLayers: true,
-      openSettingsAfter: false,
     });
   }
 
   async function loadFilesInternal(
     files: File[],
-    opts: { openSettingsAfter: boolean; source: 'drop' | 'picker' | 'api' },
   ): Promise<void> {
     if (!deps.getStage() || !deps.getRuntime()) return;
     if (deps.isLoading.value) return;
@@ -484,7 +546,7 @@ export function createViewerLoader(deps: {
         parseMode.value = 'auto';
         parseInfo.fileName = lastOkName || lastRawFileName!;
 
-        if (opts.openSettingsAfter) focusSettingsToLayersOrLammps();
+        focusSettingsToLayersOrLammps();
       }
       else {
         parseInfo.success = false;
@@ -513,16 +575,12 @@ export function createViewerLoader(deps: {
 
   async function loadFiles(
     files: File[],
-    source: 'drop' | 'picker' | 'api',
   ): Promise<void> {
-    await loadFilesInternal(files, { openSettingsAfter: true, source });
+    await loadFilesInternal(files);
   }
 
   async function loadFile(file: File): Promise<void> {
-    await loadFilesInternal([file], {
-      openSettingsAfter: false,
-      source: 'api',
-    });
+    await loadFilesInternal([file]);
   }
 
   return {

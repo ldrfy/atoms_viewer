@@ -237,6 +237,14 @@
     /* 明确允许纵向滚动手势 */
 }
 
+.settings-reset {
+    margin-top: 12px;
+    padding: 0 8px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
 /* Settings panel scrollbars (soft, theme-aware) */
 .settings-body {
     scrollbar-width: thin;

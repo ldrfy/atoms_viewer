@@ -5,6 +5,7 @@
     },
     "common": {
         "delete": "删除",
+        "confirm": "确认",
         "cancel": "取消"
     },
     "net": {
@@ -104,10 +105,21 @@
             "distance": "距离",
             "angle": "夹角",
             "orderHint": "按选择顺序计算：∠(1–2–3)，顶点为第 2 个点。"
+        },
+        "settings": {
+            "modifiedHint": "检测到当前模型存在修改过的设置，已打开相关面板。"
+        },
+        "autoRotate": {
+            "enabledHint": "已开启自动旋转，可在设置-自动旋转-启用中关闭。",
+            "disabledHint": "检测到相关设置已展开，已停止自动旋转。"
         }
     },
     "settings": {
         "title": "配置",
+        "clearStorage": "清理本地设置",
+        "clearStorageConfirmTitle": "确认清理本地设置？",
+        "clearStorageConfirmBody": "将清空本地保存的设置并恢复默认值。",
+        "clearStorageHint": "如遇显示异常或参数不同步，可尝试清空本地设置。",
         "panel": {
             "other": {
                 "header": "其他",
@@ -254,6 +266,7 @@
                 "bondRadius": "键粗细",
                 "atomSize": "原子大小",
                 "sphereSegments": "球体细分",
+                "reset": "恢复图层外观默认值",
                 "sphereSegmentsHint": "数值越大越圆滑，但渲染开销越高。"
             }
         }

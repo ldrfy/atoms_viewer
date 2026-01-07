@@ -2,6 +2,10 @@ import * as THREE from 'three';
 import type { Atom } from '../structure/types';
 import { getCovalentRadiusAng, getElementColorHex } from '../structure/chem';
 
+/**
+ * Base sphere radius from covalent radius (no global atomScale).
+ * 基于共价半径的基础球半径（不含全局 atomScale）。
+ */
 export function getSphereBaseRadiusByElement(
   el: string,
   atomSizeFactor: number,
@@ -9,6 +13,10 @@ export function getSphereBaseRadiusByElement(
   return atomSizeFactor * getCovalentRadiusAng(el);
 }
 
+/**
+ * Build instanced atom meshes grouped by element (or custom key).
+ * 构建按元素/自定义 key 分组的实例化原子网格。
+ */
 export function buildAtomMeshesByElement(params: {
   atoms: Atom[];
   atomSizeFactor: number;
@@ -116,6 +124,10 @@ export function buildAtomMeshesByElement(params: {
   return meshes;
 }
 
+/**
+ * Apply new atomScale to existing meshes (rebuild geometry).
+ * 将新的 atomScale 应用到现有网格（重建几何体）。
+ */
 export function applyAtomScaleToMeshes(
   meshes: THREE.InstancedMesh[],
   atomScale: number,

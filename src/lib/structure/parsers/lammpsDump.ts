@@ -34,6 +34,10 @@ export type ParseLammpsDumpOptions = {
  * - triclinic 盒（BOX BOUNDS 中含 xy xz yz）
  * - 其它更复杂的列名组合（后续可以再扩展）
  */
+/**
+ * Parse LAMMPS dump/lammpstrj (multi-frame).
+ * 解析 LAMMPS dump/lammpstrj（多帧）。
+ */
 export function parseLammpsDump(
   text: string,
   opts?: ParseLammpsDumpOptions,
@@ -305,6 +309,10 @@ function scaledToCartesian(
  * 判断文件格式是否属于 LAMMPS dump
  *
  * Check whether a format string indicates LAMMPS dump-like data.
+ */
+/**
+ * Check if a format string indicates LAMMPS dump.
+ * 判断格式字符串是否为 LAMMPS dump。
  */
 export function isLammpsDumpFormat(fmt: string): boolean {
   return ['dump', 'lammpstrj', 'traj', 'lammpsdump'].includes(fmt);

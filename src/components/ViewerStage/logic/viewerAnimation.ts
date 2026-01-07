@@ -17,6 +17,8 @@ export function createViewerAnimationController(deps: {
   const isPlaying = ref(false);
   const fps = ref(6);
 
+  // Accumulator for frame stepping; keeps playback stable under variable frame times.
+  // 帧步进累计时间，用于在帧率波动时保持播放稳定。
   let animLastMs = 0;
   let animAccMs = 0;
 

@@ -70,9 +70,13 @@ export function createViewerLoader(deps: {
     errorSeq: 0,
   });
 
+  // Last successfully read raw file payload (for reparse).
+  // 最近一次读取的原始文件内容（用于重新解析）。
   let lastRawText: string | null = null;
   let lastRawFileName: string | null = null;
 
+  // Remember whether the last load should prompt LAMMPS mapping UI.
+  // 记录上一次加载是否需要提示 LAMMPS 映射面板。
   let lastLoadNeedsLammpsFocus = false;
   let lastLoadIsLammps = false;
 
@@ -470,7 +474,7 @@ export function createViewerLoader(deps: {
       parseInfo.success = false;
       parseInfo.errorMsg = (err as Error).message;
       parseInfo.errorSeq += 1;
-      console.log(err);
+      console.error(err);
       message.error(`${deps.t('viewer.parse.notice')}: ${parseInfo.errorMsg}`);
       focusSettingsToFilesAndOpen();
     }
@@ -564,7 +568,7 @@ export function createViewerLoader(deps: {
       parseInfo.success = false;
       parseInfo.errorMsg = (err as Error).message ?? String(err);
       parseInfo.errorSeq += 1;
-      console.log(err);
+      console.error(err);
       message.error(`${deps.t('viewer.parse.notice')}: ${parseInfo.errorMsg}`);
       focusSettingsToFilesAndOpen();
     }

@@ -277,7 +277,8 @@ export function useViewerStage(
   const runtimeTick = ref(0);
 
   const layers = computed<ModelLayerInfo[]>(() => {
-    // 将 runtimeTick 纳入依赖：通过序列表达式避免触发 no-unused-expressions。
+    // Include runtimeTick as a reactive dependency without extra allocations.
+    // 将 runtimeTick 纳入依赖，避免额外分配并保持响应更新。
     return (runtimeTick.value, runtime?.layers.value ?? []);
   });
 

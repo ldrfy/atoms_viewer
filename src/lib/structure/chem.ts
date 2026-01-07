@@ -254,21 +254,37 @@ function canonicalizeSymbol(raw: string): string {
   return first + rest;
 }
 
+/**
+ * Resolve atomic number (Z) from element symbol; unknown => 0.
+ * 根据元素符号获取原子序数；未知返回 0。
+ */
 export function getAtomicNumber(raw: string): number {
   const sym = canonicalizeSymbol(raw);
   return SYMBOL_TO_Z.get(sym.toLowerCase()) ?? 0; // 0 => E
 }
 
+/**
+ * Get default element color hex (fallback to gray).
+ * 获取元素默认颜色（失败回退为灰色）。
+ */
 export function getElementColorHex(raw: string): string {
   const z = getAtomicNumber(raw);
   return ATOMIC_COLORS_HEX[z] ?? '#CCCCCC';
 }
 
+/**
+ * Get covalent radius in Å (fallback to 1.6 Å).
+ * 获取共价半径（Å），失败回退 1.6 Å。
+ */
 export function getCovalentRadiusAng(raw: string): number {
   const z = getAtomicNumber(raw);
   return COVALENT_RADII_ANG[z] ?? 1.6;
 }
 
+/**
+ * Normalize element symbol (case + digit trimming).
+ * 规范化元素符号（大小写与数字尾部处理）。
+ */
 export function normalizeElementSymbol(raw: string): string {
   return canonicalizeSymbol(raw);
 }

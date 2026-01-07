@@ -95,9 +95,18 @@ export type ViewerPublicApi = {
  * - SettingsSider is a sibling of ViewerStage (not a direct parent),
  *   so passing refs through multiple components becomes brittle.
  * - This bridge keeps the integration explicit and type-safe.
+ *
+ * 轻量级全局桥接，用于访问当前 ViewerStage。
+ * 说明：
+ * - SettingsSider 与 ViewerStage 为同级组件，传参链易碎；
+ * - 通过桥接保持调用显式且类型安全。
  */
 export const viewerApiRef = shallowRef<ViewerPublicApi | null>(null);
 
+/**
+ * Update the global ViewerStage bridge reference.
+ * 更新全局 ViewerStage 桥接引用。
+ */
 export function setViewerApi(api: ViewerPublicApi | null): void {
   viewerApiRef.value = api;
 }

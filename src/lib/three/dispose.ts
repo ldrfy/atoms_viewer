@@ -9,13 +9,19 @@ function disposeMaterial(mat: THREE.Material | THREE.Material[]): void {
   }
 }
 
-/** 释放 InstancedMesh 的 geometry/material。 */
+/**
+ * Dispose InstancedMesh geometry/material.
+ * 释放 InstancedMesh 的 geometry/material。
+ */
 export function disposeInstancedMesh(mesh: THREE.InstancedMesh): void {
   mesh.geometry.dispose();
   disposeMaterial(mesh.material);
 }
 
-/** 从 group 中移除并释放一组 InstancedMesh。 */
+/**
+ * Remove meshes from group and dispose them.
+ * 从 group 中移除并释放一组 InstancedMesh。
+ */
 export function removeAndDisposeInstancedMeshes(
   group: THREE.Group | null,
   meshes: THREE.InstancedMesh[],

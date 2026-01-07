@@ -11,7 +11,7 @@
         <span class="anim-frame-text">{{ frameIndexModel }} / {{ ctx.frameCount }}</span>
       </a-col>
 
-      <a-col flex="auto" style="min-width: 0">
+      <a-col flex="auto" class="anim-col-min">
         <a-slider
           v-model:value="frameIndexModel"
           class="anim-slider"
@@ -21,7 +21,7 @@
         />
       </a-col>
 
-      <a-col flex="none" style="width: 96px">
+      <a-col flex="none" class="anim-col-compact">
         <a-input-number
           v-model:value="frameIndexModel"
           size="small"
@@ -30,7 +30,7 @@
           :min="1"
           :max="frameCountMax"
           :step="1"
-          style="width: 100%"
+          class="anim-input-full"
         />
       </a-col>
     </a-row>
@@ -43,7 +43,7 @@
       justify="space-between"
       :wrap="false"
     >
-      <a-col flex="auto" style="min-width: 0">
+      <a-col flex="auto" class="anim-col-min">
         <div class="anim-field">
           <span class="anim-field-label">{{ t("viewer.play.fps") }}</span>
           <a-input-number
@@ -72,7 +72,7 @@
       justify="space-between"
       :wrap="false"
     >
-      <a-col flex="auto" style="min-width: 0">
+      <a-col flex="auto" class="anim-col-min">
         <div class="anim-field anim-field-tight">
           <span class="anim-field-label">{{ t("viewer.record.bg") }}</span>
 
@@ -95,7 +95,7 @@
       </a-col>
 
       <a-col flex="none">
-        <a-space :size="6" :wrap="false" style="justify-content: flex-end">
+        <a-space :size="6" :wrap="false" class="anim-right">
           <a-tag v-if="isRecording" color="red" class="anim-rec-tag">
             ● REC {{ recordTimeText }}
           </a-tag>
@@ -117,6 +117,8 @@
 import { computed, unref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import type { AnimCtx } from '../ctx';
+import { clampNumber } from '../../../lib/utils/number';
+import { RECORD_FPS_MIN, RECORD_FPS_MAX } from '../../../lib/viewer/ranges';
 
 const props = defineProps<{ ctx: AnimCtx }>();
 const { t } = useI18n();
@@ -146,7 +148,9 @@ const fpsModel = computed<number>({
     const n = Number(v);
     // ctx 是父组件注入的控制上下文对象，按设计需要在子组件里写入。
     // eslint-disable-next-line vue/no-mutating-props
-    props.ctx.fps.value = isFinite(n) ? Math.min(Math.max(1, n), 120) : 6;
+    props.ctx.fps.value = Number.isFinite(n)
+      ? clampNumber(n, RECORD_FPS_MIN, RECORD_FPS_MAX)
+      : 6;
   },
 });
 
@@ -201,6 +205,18 @@ const bgColorModel = computed<string>({
     min-width: 0;
     display: flex;
     align-items: center;
+}
+
+.anim-col-min {
+    min-width: 0;
+}
+
+.anim-col-compact {
+    width: 96px;
+}
+
+.anim-input-full {
+    width: 100%;
 }
 
 /* 右侧区域（当你用 a-space 包按钮时，这里主要负责不被撑爆） */

@@ -3,7 +3,10 @@ import {
   CSS2DObject,
 } from 'three/addons/renderers/CSS2DRenderer.js';
 
-/** 把 CSS2DRenderer 挂到 host 上，并返回 renderer。 */
+/**
+ * Attach CSS2DRenderer to host and return it.
+ * 把 CSS2DRenderer 挂到 host 上，并返回 renderer。
+ */
 export function attachCss2dRenderer(
   host: HTMLElement,
   zIndex = '2',
@@ -22,7 +25,7 @@ export function attachCss2dRenderer(
   return r;
 }
 
-// Overloads:
+// Overloads / 重载：
 // 1) makeTextLabel(text, className?)
 // 2) makeTextLabel(text, color, fontSizePx)
 export function makeTextLabel(text: string, className?: string): CSS2DObject;

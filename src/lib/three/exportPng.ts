@@ -4,6 +4,10 @@ import { updateCameraForSize } from './camera';
 import { getElementSize } from './resize';
 import { cropCanvasToPngBlob, downloadBlob } from '../image/cropPng';
 
+/**
+ * Export a transparent PNG with optional cropping.
+ * 导出透明 PNG，可选自动裁切。
+ */
 export async function exportTransparentCroppedPng(params: {
   renderer: THREE.WebGLRenderer;
   scene: THREE.Scene;

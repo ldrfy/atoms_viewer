@@ -23,8 +23,8 @@
         <a-col :flex="1">
           <a-slider
             v-model:value="dualViewSplitPctModel"
-            :min="10"
-            :max="90"
+            :min="DUAL_VIEW_SPLIT_MIN_PCT"
+            :max="DUAL_VIEW_SPLIT_MAX_PCT"
             :step="1"
             :disabled="!hasAnyLayer"
           />
@@ -34,8 +34,8 @@
             v-model:value="dualViewSplitPctModel"
             :aria-label="t('settings.panel.display.dualViewSplit')"
             :title="t('settings.panel.display.dualViewSplit')"
-            :min="10"
-            :max="90"
+            :min="DUAL_VIEW_SPLIT_MIN_PCT"
+            :max="DUAL_VIEW_SPLIT_MAX_PCT"
             :step="1"
             :disabled="!hasAnyLayer"
             class="settings-full-width"
@@ -69,7 +69,7 @@
         <a-col :flex="1">
           <a-slider
             v-model:value="dualViewDistanceModel"
-            :min="1"
+            :min="DUAL_VIEW_DISTANCE_MIN"
             :max="dualViewDistanceMax"
             :step="0.5"
             :disabled="!hasAnyLayer"
@@ -80,7 +80,7 @@
             v-model:value="dualViewDistanceModel"
             :aria-label="t('settings.panel.display.dualViewDistance')"
             :title="t('settings.panel.display.dualViewDistance')"
-            :min="1"
+            :min="DUAL_VIEW_DISTANCE_MIN"
             :max="dualViewDistanceMax"
             :step="0.5"
             :disabled="!hasAnyLayer"
@@ -190,6 +190,12 @@ import { computed, ref, watch } from 'vue';
 import { message } from 'ant-design-vue';
 import { useI18n } from 'vue-i18n';
 import { normalizeViewPresets, type ViewPreset } from '../../../lib/viewer/viewPresets';
+import {
+  clampDualViewSplit,
+  DUAL_VIEW_SPLIT_MIN_PCT,
+  DUAL_VIEW_SPLIT_MAX_PCT,
+} from '../../../lib/viewer/viewLayout';
+import { DUAL_VIEW_DISTANCE_MIN } from '../../../lib/viewer/ranges';
 import { useSettingsSiderContext } from '../useSettingsSiderContext';
 
 const { t } = useI18n();
@@ -259,11 +265,10 @@ const dualViewDistanceMax = computed(() => {
 const dualViewSplitPctModel = computed({
   get: () => {
     const r = typeof settings.value.dualViewSplit === 'number' ? settings.value.dualViewSplit : 0.5;
-    return Math.round(Math.max(0.1, Math.min(0.9, r)) * 100);
+    return Math.round(clampDualViewSplit(r) * 100);
   },
   set: (pct: number) => {
-    const r = Math.max(0.1, Math.min(0.9, pct / 100));
-    patchSettings({ dualViewSplit: r });
+    patchSettings({ dualViewSplit: clampDualViewSplit(pct / 100) });
   },
 });
 

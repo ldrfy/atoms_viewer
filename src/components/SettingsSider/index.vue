@@ -41,6 +41,8 @@ import {
   unblockPullToRefresh,
   type PullToRefreshBlockToken,
 } from '../../lib/dom/pullToRefreshBlock';
+import { clampNumber } from '../../lib/utils/number';
+import { loadNumber, saveNumber } from '../../lib/utils/storage';
 
 import SettingsContent from './SettingsContent.vue';
 import {
@@ -95,6 +97,8 @@ function replaceSettings(next: ViewerSettings): void {
 provide(settingsSiderContextKey, {
   settings: computed(() => props.settings),
   patchSettings,
+  // Shared layer existence flag for all panels (avoid repeated watchers).
+  // 全局共享“是否有图层”状态，避免面板内重复计算。
   hasAnyLayer: computed(() => (viewerApiRef.value?.layers.value.length ?? 0) > 0),
 });
 
@@ -169,17 +173,8 @@ const drawerPlacement = computed<'right' | 'bottom'>(
 
 const drawerWidth = 'min(360px, calc(100vw - 24px))';
 
-function loadNum(key: string, fallback: number): number {
-  const raw = localStorage.getItem(key);
-  const v = raw != null ? Number(raw) : NaN;
-  return Number.isFinite(v) ? v : fallback;
-}
-function saveNum(key: string, v: number): void {
-  localStorage.setItem(key, String(v));
-}
-
 const mobileHeight = ref<number>(
-  loadNum(
+  loadNumber(
     'settingsDrawer.mobileHeight',
     Math.min(560, Math.floor(window.innerHeight * 0.75)),
   ),
@@ -262,10 +257,6 @@ let activePointerId: number | null = null;
 let mobileHeightDirty = false;
 let ptrBlockToken: PullToRefreshBlockToken | null = null;
 
-function clamp(n: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, n));
-}
-
 function startBlockPullToRefresh(): void {
   // Ref-counted global blocker shared by all panels.
   if (!ptrBlockToken) ptrBlockToken = blockPullToRefresh();
@@ -318,7 +309,7 @@ function onResizing(e: PointerEvent): void {
 
   const dy = startY - e.clientY;
   const maxH = Math.floor(window.innerHeight * 0.92);
-  mobileHeight.value = clamp(startH + dy, 260, maxH);
+  mobileHeight.value = clampNumber(startH + dy, 260, maxH);
   mobileHeightDirty = true;
   e.preventDefault();
 }
@@ -329,7 +320,7 @@ function onResizeEnd(): void {
 
   // Persist once on release to avoid synchronous storage writes on every move.
   if (mobileHeightDirty) {
-    saveNum('settingsDrawer.mobileHeight', mobileHeight.value);
+    saveNumber('settingsDrawer.mobileHeight', mobileHeight.value);
     mobileHeightDirty = false;
   }
   stopBlockPullToRefresh();

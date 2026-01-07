@@ -154,15 +154,15 @@
         </a-collapse-panel>
       </a-collapse>
 
-      <a-space direction="vertical" style="width: 100%">
+      <a-space direction="vertical" class="drawer-links">
         <a-typography-text class="plain-click" @click="openGithub">
           <GithubOutlined />
-          <span style="margin-left: 8px">GitHub</span>
+          <span class="drawer-link-text">GitHub</span>
         </a-typography-text>
 
         <a-typography-text class="plain-click" @click="openSettings">
           <SettingOutlined />
-          <span style="margin-left: 8px">
+          <span class="drawer-link-text">
             {{ t("settings.title") }}
           </span>
         </a-typography-text>
@@ -374,5 +374,13 @@ function onClickBrand(): void {
 .plain-click:hover,
 .plain-click:active {
     color: inherit;
+}
+
+.drawer-links {
+    width: 100%;
+}
+
+.drawer-link-text {
+    margin-left: 8px;
 }
 </style>

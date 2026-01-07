@@ -4,6 +4,7 @@ import type { Ref } from 'vue';
 
 import type { ViewerSettings } from '../../../lib/viewer/settings';
 import { normalizeViewPresets } from '../../../lib/viewer/viewPresets';
+import { clampDualViewSplit } from '../../../lib/viewer/viewLayout';
 import { ATOMIC_SYMBOLS } from '../../../lib/structure/chem';
 import type { Atom } from '../../../lib/structure/types';
 import type { AnyCamera } from '../../../lib/three/camera';
@@ -49,7 +50,8 @@ export function createViewerPickingController(deps: RenderDeps) {
   let rotSyncTimer = 0;
   let lastRotSyncMs = 0;
 
-  // selection visuals
+  // selection visuals (reused meshes for highlight/measure lines).
+  // 选中高亮与测量线共用几何体，避免频繁创建对象。
   let selectionGroup: THREE.Group | null = null;
   let markerMeshes: THREE.Mesh[] = [];
   let line12: THREE.Mesh | null = null;
@@ -349,7 +351,7 @@ export function createViewerPickingController(deps: RenderDeps) {
     if (isDual) {
       const rRaw = deps.settingsRef.value.dualViewSplit;
       const r = typeof rRaw === 'number' && Number.isFinite(rRaw) ? rRaw : 0.5;
-      const leftW = Math.max(1, rect.width * Math.max(0.1, Math.min(0.9, r)));
+      const leftW = Math.max(1, rect.width * clampDualViewSplit(r));
       const rightW = Math.max(1, rect.width - leftW);
 
       if (xPx <= leftW) {

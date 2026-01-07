@@ -9,6 +9,10 @@ import { t } from '../../../i18n/index';
  * Returns:
  *   StructureModel: 至少包含 atoms
  */
+/**
+ * Parse PDB format (single-frame).
+ * 解析 PDB 格式（单帧）。
+ */
 export function parsePdb(text: string): StructureModel {
   const atoms = [];
   const lines = text.split(/\r?\n/);

@@ -3,6 +3,10 @@ import type { Atom, StructureModel } from '../types';
 import { makeAtom } from './common';
 import { t } from '../../../i18n/index';
 
+/**
+ * Parse XYZ format (supports multi-frame).
+ * 解析 XYZ 格式（支持多帧）。
+ */
 export function parseXyz(text: string): StructureModel {
   const lines = text.split(/\r?\n/);
   let i = 0;

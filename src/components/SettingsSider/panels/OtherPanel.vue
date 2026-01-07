@@ -27,8 +27,8 @@
         <a-col :flex="1">
           <a-slider
             v-model:value="recordFpsModel"
-            :min="1"
-            :max="120"
+            :min="RECORD_FPS_MIN"
+            :max="RECORD_FPS_MAX"
             :step="1"
           />
         </a-col>
@@ -37,8 +37,8 @@
             v-model:value="recordFpsModel"
             :aria-label="t('settings.panel.other.recordFps')"
             :title="t('settings.panel.other.recordFps')"
-            :min="1"
-            :max="120"
+            :min="RECORD_FPS_MIN"
+            :max="RECORD_FPS_MAX"
             :step="1"
             class="settings-full-width"
           />
@@ -57,6 +57,8 @@ import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import { useSettingsSiderContext } from '../useSettingsSiderContext';
+import { clampInt } from '../../../lib/utils/number';
+import { RECORD_FPS_MIN, RECORD_FPS_MAX } from '../../../lib/viewer/ranges';
 
 const { t } = useI18n();
 const { settings, patchSettings } = useSettingsSiderContext();
@@ -73,6 +75,10 @@ const refreshBondsOnPlayModel = computed({
 
 const recordFpsModel = computed({
   get: () => settings.value.frame_rate ?? 60,
-  set: (v: number) => patchSettings({ frame_rate: Math.max(1, Math.min(120, Math.floor(v))) }),
+  set: (v: number) => {
+    const n = Number(v);
+    const clamped = Number.isFinite(n) ? clampInt(n, RECORD_FPS_MIN, RECORD_FPS_MAX) : 60;
+    patchSettings({ frame_rate: clamped });
+  },
 });
 </script>

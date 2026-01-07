@@ -66,7 +66,7 @@
             <a-tag>{{ viewerApi?.parseInfo.format || '-' }}</a-tag>
           </a-descriptions-item>
           <a-descriptions-item :label="t('viewer.parse.file')">
-            <span style="word-break: break-all">{{
+            <span class="settings-word-break">{{
               viewerApi?.parseInfo.fileName || '-'
             }}</span>
           </a-descriptions-item>
@@ -92,6 +92,7 @@ import { useI18n } from 'vue-i18n';
 import { viewerApiRef } from '../../../lib/viewer/bridge';
 import { useSettingsSiderContext } from '../useSettingsSiderContext';
 import type { ParseMode } from '../../../lib/structure/parse';
+import { buildParseModeOptions } from '../../../lib/structure/parseOptions';
 
 const { t } = useI18n();
 const { hasAnyLayer } = useSettingsSiderContext();
@@ -114,13 +115,7 @@ const parseModeModel = computed<ParseMode>({
   set: v => viewerApi.value?.setParseMode(v),
 });
 
-const parseModeOptions = computed(() => [
-  { value: 'auto' as const, label: t('viewer.parse.modeOptions.auto') },
-  { value: 'xyz' as const, label: t('viewer.parse.modeOptions.xyz') },
-  { value: 'pdb' as const, label: t('viewer.parse.modeOptions.pdb') },
-  { value: 'lammpsdump' as const, label: t('viewer.parse.modeOptions.lammpsdump') },
-  { value: 'lammpsdata' as const, label: t('viewer.parse.modeOptions.lammpsdata') },
-]);
+const parseModeOptions = computed(() => buildParseModeOptions(t));
 
 function onExport(): void {
   if (!viewerApi.value) return;

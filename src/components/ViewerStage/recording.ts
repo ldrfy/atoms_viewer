@@ -3,6 +3,7 @@ import { computed, ref, type ComputedRef, type Ref } from 'vue';
 import { message } from 'ant-design-vue';
 import type { ThreeStage } from '../../lib/three/stage';
 import { buildExportFilename } from '../../lib/file/filename';
+import { clampNumber } from '../../lib/utils/number';
 
 export type CropBox = { x: number; y: number; w: number; h: number };
 
@@ -85,7 +86,7 @@ export function createRecordingController(
   let cropCanvas: HTMLCanvasElement | null = null;
   let cropCtx: CanvasRenderingContext2D | null = null;
   let cropRafId: number | null = null;
-  /** Whether the capture pump is running. */
+  /** Whether the capture pump is running. / 录制捕获循环是否运行中。 */
   let pumpActive = false;
   /** Cached crop parameters (in device pixels). */
   let pumpSx = 0;
@@ -157,10 +158,6 @@ export function createRecordingController(
   // ----------------------------
   // helpers
   // ----------------------------
-  function clamp(v: number, lo: number, hi: number): number {
-    return Math.min(Math.max(v, lo), hi);
-  }
-
   function getCanvasClientRect(): DOMRect | null {
     const stage = getStage();
     if (!stage) return null;
@@ -171,8 +168,8 @@ export function createRecordingController(
     const r = getCanvasClientRect();
     if (!r) return null;
     return {
-      x: clamp(e.clientX - r.left, 0, r.width),
-      y: clamp(e.clientY - r.top, 0, r.height),
+      x: clampNumber(e.clientX - r.left, 0, r.width),
+      y: clampNumber(e.clientY - r.top, 0, r.height),
     };
   }
 
@@ -189,10 +186,10 @@ export function createRecordingController(
   function clampBoxToCanvas(b: CropBox): CropBox {
     const r = getCanvasClientRect();
     if (!r) return b;
-    const x = clamp(b.x, 0, r.width);
-    const y = clamp(b.y, 0, r.height);
-    const w = clamp(b.w, 0, r.width - x);
-    const h = clamp(b.h, 0, r.height - y);
+    const x = clampNumber(b.x, 0, r.width);
+    const y = clampNumber(b.y, 0, r.height);
+    const w = clampNumber(b.w, 0, r.width - x);
+    const h = clampNumber(b.h, 0, r.height - y);
     return { x, y, w, h };
   }
 

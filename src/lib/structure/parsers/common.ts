@@ -2,15 +2,16 @@
 import type { Atom, Vec3 } from '../types';
 
 /**
- * 创建 Atom，统一输出字段结构，避免不同解析器字段不一致导致渲染期报错。
+ * Create a normalized Atom shape used across parsers.
+ * 创建统一结构的 Atom，避免解析器输出不一致。
  *
- * Args:
+ * Args / 参数：
  *   element: 元素符号（如 "C","O","Fe"）
  *   x: x 坐标
  *   y: y 坐标
  *   z: z 坐标
  *
- * Returns:
+ * Returns / 返回：
  *   Atom: { element, position: [x,y,z] }
  */
 export function makeAtom(

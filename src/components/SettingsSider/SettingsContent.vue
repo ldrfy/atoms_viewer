@@ -44,7 +44,10 @@
         <template #header>
           <span class="settings-panel-header">
             <component :is="p.icon" class="settings-panel-icon" />
-            <span>{{ t(p.headerKey) }}</span>
+            <a-typography-text strong>
+              <span>{{ t(p.headerKey) }}</span>
+            </a-typography-text>
+            <span v-if="isPanelDirty(p.key)" class="settings-panel-dirty" aria-hidden="true" />
           </span>
         </template>
         <component :is="p.comp" />
@@ -118,6 +121,87 @@ const emit = defineEmits<{
 const { t } = useI18n();
 const { settings } = useSettingsSiderContext();
 const { replaceSettings } = useSettingsSiderControlContext();
+
+const viewerApi = computed(() => viewerApiRef.value);
+
+function arraysEqual(a: unknown, b: unknown): boolean {
+  const arrA = Array.isArray(a) ? a : [];
+  const arrB = Array.isArray(b) ? b : [];
+  if (arrA.length !== arrB.length) return false;
+  return arrA.every((v, i) => v === arrB[i]);
+}
+
+function hasCustomColors(): boolean {
+  const template = settings.value.colorMapTemplate ?? [];
+  if (template.some(r => r.isCustom)) return true;
+  const rows = viewerApi.value?.activeLayerColorMap?.value ?? [];
+  return rows.some(r => r.isCustom);
+}
+
+function hasCustomTypeMap(): boolean {
+  const template = settings.value.lammpsTypeMap ?? [];
+  const rows = viewerApi.value?.activeLayerTypeMap?.value ?? [];
+  const all = [...template, ...rows];
+  return all.some(r => (r.element ?? '').toString().trim().toUpperCase() !== 'E');
+}
+
+function isTypeMapApplied(): boolean {
+  return !!viewerApi.value?.activeLayerTypeMapApplied?.value;
+}
+
+function isLayerDisplayDirty(): boolean {
+  const active = viewerApi.value?.activeLayerDisplay?.value;
+  const cur = active ?? settings.value;
+  return (
+    cur.atomScale !== DEFAULT_LAYER_DISPLAY.atomScale
+    || cur.showBonds !== DEFAULT_LAYER_DISPLAY.showBonds
+    || cur.sphereSegments !== DEFAULT_LAYER_DISPLAY.sphereSegments
+    || cur.bondFactor !== DEFAULT_LAYER_DISPLAY.bondFactor
+    || cur.bondRadius !== DEFAULT_LAYER_DISPLAY.bondRadius
+  );
+}
+
+function isPanelDirty(key: string): boolean {
+  if (key === 'files' || key === 'layers') return false;
+  if (key === 'colors') return hasCustomColors();
+  if (key === 'lammps') return isTypeMapApplied() && hasCustomTypeMap();
+  if (key === 'layerDisplay') return isLayerDisplayDirty();
+  if (key === 'display') {
+    const defaultDistance = Number.isFinite(settings.value.initialDualViewDistance)
+      ? (settings.value.initialDualViewDistance as number)
+      : DEFAULT_SETTINGS.dualViewDistance;
+    return (
+      settings.value.orthographic !== DEFAULT_SETTINGS.orthographic
+      || settings.value.dualViewEnabled !== DEFAULT_SETTINGS.dualViewEnabled
+      || !arraysEqual(settings.value.viewPresets, DEFAULT_SETTINGS.viewPresets)
+      || settings.value.dualViewSplit !== DEFAULT_SETTINGS.dualViewSplit
+      || (settings.value.dualViewDistance ?? defaultDistance) !== defaultDistance
+      || settings.value.rotationDeg.x !== 0
+      || settings.value.rotationDeg.y !== 0
+      || settings.value.rotationDeg.z !== 0
+    );
+  }
+  if (key === 'autoRotate') {
+    const cur = settings.value.autoRotate;
+    const def = DEFAULT_SETTINGS.autoRotate;
+    return (
+      !!cur.enabled !== !!def.enabled
+      || cur.presetId !== def.presetId
+      || cur.speedDegPerSec !== def.speedDegPerSec
+      || !!cur.pauseOnInteract !== !!def.pauseOnInteract
+      || cur.resumeDelayMs !== def.resumeDelayMs
+      || !!cur.autoEnabledBySystem
+    );
+  }
+  if (key === 'other') {
+    return (
+      settings.value.showAxes !== DEFAULT_SETTINGS.showAxes
+      || settings.value.refreshBondsOnPlay !== DEFAULT_SETTINGS.refreshBondsOnPlay
+      || settings.value.frame_rate !== DEFAULT_SETTINGS.frame_rate
+    );
+  }
+  return false;
+}
 
 const panels = [
   { key: 'files', headerKey: 'settings.panel.files.header', comp: FilesPanel, icon: FolderOpenOutlined },

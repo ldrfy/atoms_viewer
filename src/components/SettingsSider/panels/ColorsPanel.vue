@@ -98,17 +98,6 @@
         </div>
       </template>
 
-      <div style="margin-top: 8px">
-        <a-button
-          block
-          type="primary"
-          :disabled="!viewerApi || colorMapModel.length === 0"
-          @click="onRefreshColorMap"
-        >
-          {{ t('settings.panel.colors.refresh') }}
-        </a-button>
-      </div>
-
       <a-typography-text type="secondary" style="display: block; margin-top: 8px">
         {{ t('settings.panel.colors.hint') }}
       </a-typography-text>
@@ -118,7 +107,7 @@
 
 <script setup lang="ts">
 import { ReloadOutlined } from '@ant-design/icons-vue';
-import { computed, ref } from 'vue';
+import { computed, onBeforeUnmount, ref } from 'vue';
 import { message } from 'ant-design-vue';
 import { useI18n } from 'vue-i18n';
 
@@ -184,6 +173,7 @@ function patchColorAt(idx: number, colorHex: string): void {
   );
   colorMapModel.value = nextRows;
   patchSettings({ colorMapTemplate: nextRows.map(r => ({ ...r })) });
+  scheduleRefreshColorMap();
 }
 
 function onResetColor(idx: number): void {
@@ -203,6 +193,7 @@ function onResetColor(idx: number): void {
   );
   colorMapModel.value = nextRows;
   patchSettings({ colorMapTemplate: nextRows.map(r => ({ ...r })) });
+  scheduleRefreshColorMap();
 }
 
 function onColorHexChange(idx: number, v: unknown): void {
@@ -220,7 +211,21 @@ function onColorPickerChange(idx: number, v: unknown): void {
   patchColorAt(idx, hex);
 }
 
-function onRefreshColorMap(): void {
-  viewerApi.value?.refreshColorMap({ applyToAll: applyToAllLayers.value });
+let refreshTimer: number | null = null;
+
+function scheduleRefreshColorMap(): void {
+  if (!viewerApi.value) return;
+  if (refreshTimer) window.clearTimeout(refreshTimer);
+  refreshTimer = window.setTimeout(() => {
+    refreshTimer = null;
+    viewerApi.value?.refreshColorMap({ applyToAll: applyToAllLayers.value });
+  }, 120);
 }
+
+onBeforeUnmount(() => {
+  if (refreshTimer) {
+    window.clearTimeout(refreshTimer);
+    refreshTimer = null;
+  }
+});
 </script>

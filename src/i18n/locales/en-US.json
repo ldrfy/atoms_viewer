@@ -5,20 +5,21 @@
     "common": {
         "delete": "Delete",
         "confirm": "Confirm",
-        "cancel": "Cancel"
+        "cancel": "Cancel",
+        "close": "Close",
+        "menu": "Menu",
+        "resize": "Resize",
+        "collapse": "Collapse"
     },
     "net": {
         "timeout": "request timeout"
     },
     "viewer": {
-        "settings": "Settings",
-        "about": {
-            "openGithub": "Open GitHub"
-        },
         "play": {
             "pause": "Pause",
             "start": "Play",
-            "fps": "FPS"
+            "fps": "FPS",
+            "frameIndex": "Frame index"
         },
         "record": {
             "bg": "Background",
@@ -28,8 +29,7 @@
             "pause": "Pause",
             "selectHint": "Drag to draw a box. After drawing, you can move/resize it. Click Confirm to start recording.",
             "selectCancel": "Cancel",
-            "selectConfirm": "Confirm recording",
-            "tooSmall": "Selected area is too small"
+            "selectConfirm": "Confirm recording"
         },
         "parse": {
             "notice": "Please manually select the parsing method",
@@ -50,7 +50,6 @@
         },
         "theme": {
             "title": "Theme",
-            "current": "Current",
             "mode": {
                 "system": "System",
                 "light": "Light",
@@ -59,14 +58,10 @@
         },
         "locale": {
             "system": "System",
-            "title": "Language",
-            "current": "Current"
+            "title": "Language"
         },
         "links": {
             "github": "GitHub"
-        },
-        "load": {
-            "success": "Loaded: {fileName} ({atomCount} atoms, bondSegments={bondSegCount})"
         },
         "empty": {
             "title": "Drag and drop a file here",
@@ -76,8 +71,7 @@
             "samples": {
                 "loading": "Loading…",
                 "loadFailed": "Failed to load: {error} (switched to built-in sample)",
-                "empty": "No samples available",
-                "builtinSuffix": "(Built-in)"
+                "empty": "No samples available"
             },
             "footer": {
                 "localOnly": "All data is computed and rendered locally. No uploads or data collection.",
@@ -85,10 +79,6 @@
             }
         },
         "export": {
-            "transparent": "Transparent Background",
-            "button": "Export PNG",
-            "scaleTip": "Additional export scaling based on the current view. To avoid excessive scaling errors, zoom in on the model with the mouse wheel first.",
-            "scalePlaceholder": "Higher = clearer",
             "pngSuccess": "Exported PNG (transparent background)",
             "scaleCapped": "Export scale was capped from {requested} to {used} (GPU limit: {limit}px).",
             "fail": "Export failed: {reason}"
@@ -119,14 +109,6 @@
         "clearStorageConfirmTitle": "Clear local settings?",
         "clearStorageConfirmBody": "This removes saved local settings and restores defaults.",
         "clearStorageHint": "If the display looks wrong or settings get out of sync, try clearing local settings.",
-        "other": {
-            "header": "Other",
-            "axes": "Axes",
-            "bonds": "Bonds",
-            "atomSize": "Atom size",
-            "recordFps": "Recording FPS",
-            "recordFpsHint": "Target recording frame rate; commonly 30 / 60."
-        },
         "panel": {
             "display": {
                 "header": "Display",
@@ -136,8 +118,6 @@
                 "viewPresetFront": "Front",
                 "viewPresetSide": "Side",
                 "viewPresetTop": "Top",
-                "dualView": "Dual view (front + side)",
-                "dualViewHint": "Render front and side views side-by-side.",
                 "dualViewDistance": "View distance",
                 "dualViewSplit": "Split ratio",
                 "dualViewSplitHint": "Adjust the width ratio between front (left) and side (right) view.",
@@ -156,6 +136,7 @@
                 "speedHint": "Speed is adjusted independently; the preset only defines the axis (direction).",
                 "pauseOnInteract": "Pause while interacting",
                 "resumeDelay": "Resume delay (ms)",
+                "reset": "Reset auto-rotate",
                 "presets": {
                     "off": {
                         "name": "Off",
@@ -217,6 +198,7 @@
                 "openFileHint": "You can also drag & drop a file onto the canvas. New loads are added as layers and previous layers are hidden by default.",
                 "export": {
                     "header": "Export image",
+                    "scaleLabel": "Export scale",
                     "button": "Export as PNG",
                     "transparent": "Transparent background",
                     "hint": "Scale multiplies the render resolution."
@@ -238,14 +220,9 @@
                 "refreshBondsOnPlay": "Refresh bonds each frame while playing",
                 "header": "Other",
                 "axes": "Axes",
-                "bonds": "Bonds",
-                "bondFactor": "Bond cutoff factor (bondFactor)",
-                "bondFactorHint": "Used to infer bonds: cutoff = (r_i + r_j) × bondFactor. Larger values create bonds more easily.",
-                "atomSize": "Atom size",
-                "sphereSegments": "Sphere segments",
-                "sphereSegmentsHint": "Higher values look smoother but are slower to render.",
                 "recordFps": "Recording FPS",
-                "recordFpsHint": "Target recording frame rate; commonly 30 / 60."
+                "recordFpsHint": "Target recording frame rate; commonly 30 / 60.",
+                "reset": "Reset other settings"
             },
             "colors": {
                 "header": "Atom Colors",
@@ -254,10 +231,10 @@
                 "applyAll": "Edit all layers",
                 "mapLabel": "Color map (hex)",
                 "hexPlaceholder": "e.g. #FF8800",
+                "colorPickerLabel": "{key} color",
                 "invalidHex": "Invalid color format. Please use #RRGGBB or #RGB.",
                 "reset": "Reset",
                 "resetTooltip": "Reset to the built-in default color of this element.",
-                "refresh": "Refresh",
                 "hint": "Tip: If the active layer has typeId (e.g. LAMMPS), colors are keyed as element+typeId (C1, C2, ...); otherwise they are keyed by element.",
                 "empty": "No editable atom types in the active layer."
             },
@@ -283,7 +260,6 @@
         "lammpsDump": {
             "unexpectedHeader": "LAMMPS dump parse failed: expected \"{expected}\", got \"{actual}\"",
             "badBoxBoundsLine": "Failed to parse BOX BOUNDS line: {line}",
-            "triclinicNotSupported": "LAMMPS dump: triclinic BOX (xy/xz/yz) is not supported yet. Please use an orthogonal box or export x y z (not xs/ys/zs).",
             "missingAtomsSection": "LAMMPS dump parse failed: missing ITEM: ATOMS section.",
             "missingTypeColumn": "LAMMPS dump: missing \"type\" in ATOMS columns. columns={columns}",
             "missingCoordsColumns": "LAMMPS dump: missing coordinate columns (x y z or xs ys zs). columns={columns}",

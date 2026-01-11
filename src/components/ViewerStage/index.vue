@@ -26,8 +26,8 @@
       class="file-input"
       type="file"
       multiple
-      aria-label="Pick files"
-      title="Pick files"
+      :aria-label="t('viewer.empty.pickFile')"
+      :title="t('viewer.empty.pickFile')"
       accept=".xyz,.pdb,.dump,.lammpstrj,.traj,.data,.lmp"
       @change="stage.onFilePicked"
     >
@@ -42,6 +42,7 @@
 
 <script setup lang="ts">
 import { toRef, watch, onBeforeUnmount } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { useViewerStage } from './useViewerStage';
 import type { ViewerSettings, OpenSettingsPayload } from '../../lib/viewer/settings';
 import { setThemeMode, isDarkColor } from '../../theme/mode';
@@ -55,6 +56,7 @@ import RecordCropDash from './parts/RecordCropDash.vue';
 
 const props = defineProps<{ settings: ViewerSettings }>();
 const settingsRef = toRef(props, 'settings');
+const { t } = useI18n();
 
 const emit = defineEmits<{
   (e: 'model-state', hasModel: boolean): void;

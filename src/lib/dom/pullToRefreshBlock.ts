@@ -18,6 +18,18 @@
 
 export type PullToRefreshBlockToken = symbol;
 
+export type PointerDragController = {
+  start: (e: PointerEvent) => void;
+  stop: () => void;
+};
+
+export type PointerDragConfig = {
+  onStart?: (e: PointerEvent) => void;
+  onMove: (e: PointerEvent) => void;
+  onEnd?: () => void;
+  shouldBlockPullToRefresh?: () => boolean;
+};
+
 type SavedBodyStyle = {
   position: string;
   top: string;
@@ -163,6 +175,71 @@ function removeBlock(state: GlobalPtrBlockState): void {
   // Restore scroll position.
   const y = state.scrollY;
   window.scrollTo(0, y);
+}
+
+/**
+ * Pointer drag helper with optional global pull-to-refresh blocking.
+ * Keeps listener wiring and pointer-id gating consistent across panels.
+ */
+export function createPointerDragWithPullToRefreshBlock(
+  config: PointerDragConfig,
+): PointerDragController {
+  let dragging = false;
+  let activePointerId: number | null = null;
+  let ptrBlockToken: PullToRefreshBlockToken | null = null;
+
+  const handleMove = (e: PointerEvent) => {
+    if (!dragging) return;
+    if (activePointerId != null && e.pointerId !== activePointerId) return;
+    config.onMove(e);
+  };
+
+  const stop = () => {
+    if (!dragging) return;
+    dragging = false;
+    activePointerId = null;
+
+    if (ptrBlockToken) {
+      unblockPullToRefresh(ptrBlockToken);
+      ptrBlockToken = null;
+    }
+
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('pointermove', handleMove);
+      window.removeEventListener('pointerup', stop);
+      window.removeEventListener('pointercancel', stop);
+      window.removeEventListener('lostpointercapture', stop as any);
+    }
+
+    config.onEnd?.();
+  };
+
+  const start = (e: PointerEvent) => {
+    if (dragging) return;
+    config.onStart?.(e);
+    dragging = true;
+    activePointerId = e.pointerId;
+
+    try {
+      (e.currentTarget as HTMLElement | null)?.setPointerCapture?.(e.pointerId);
+    }
+    catch {
+      // ignore
+    }
+
+    if (config.shouldBlockPullToRefresh?.()) {
+      ptrBlockToken = blockPullToRefresh();
+    }
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('pointermove', handleMove, { passive: false });
+      window.addEventListener('pointerup', stop, { passive: true });
+      window.addEventListener('pointercancel', stop, { passive: true });
+      window.addEventListener('lostpointercapture', stop as any, { passive: true });
+    }
+  };
+
+  return { start, stop };
 }
 
 /**

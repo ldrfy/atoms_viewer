@@ -6,8 +6,8 @@
         <a-col>
           <a-input-number
             v-model:value="exportScale"
-            aria-label="Export scale"
-            title="Export scale"
+            :aria-label="t('settings.panel.files.export.scaleLabel')"
+            :title="t('settings.panel.files.export.scaleLabel')"
             :min="1"
             :max="5"
             :step="0.1"
@@ -86,10 +86,11 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, inject, onBeforeUnmount, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import { viewerApiRef } from '../../../lib/viewer/bridge';
+import { settingsSiderDirtyContextKey } from '../context';
 import { useSettingsSiderContext } from '../useSettingsSiderContext';
 import type { ParseMode } from '../../../lib/structure/parse';
 import { buildParseModeOptions } from '../../../lib/structure/parseOptions';
@@ -107,8 +108,12 @@ const canChangeParseMode = computed(() => {
   return typeof fn === 'string' && fn.trim().length > 0;
 });
 
-const exportScale = ref<number>(2);
-const exportTransparent = ref<boolean>(true);
+const DEFAULT_EXPORT_SCALE = 2;
+const DEFAULT_EXPORT_TRANSPARENT = true;
+const DEFAULT_PARSE_MODE: ParseMode = 'auto';
+
+const exportScale = ref<number>(DEFAULT_EXPORT_SCALE);
+const exportTransparent = ref<boolean>(DEFAULT_EXPORT_TRANSPARENT);
 
 const parseModeModel = computed<ParseMode>({
   get: () => viewerApi.value?.parseMode.value ?? 'auto',
@@ -116,6 +121,28 @@ const parseModeModel = computed<ParseMode>({
 });
 
 const parseModeOptions = computed(() => buildParseModeOptions(t));
+
+const dirtyContext = inject(settingsSiderDirtyContextKey, null);
+
+const isDirty = computed(() => {
+  return (
+    exportScale.value !== DEFAULT_EXPORT_SCALE
+    || exportTransparent.value !== DEFAULT_EXPORT_TRANSPARENT
+    || parseModeModel.value !== DEFAULT_PARSE_MODE
+  );
+});
+
+watch(
+  isDirty,
+  (v) => {
+    dirtyContext?.setPanelDirty('files', v);
+  },
+  { immediate: true },
+);
+
+onBeforeUnmount(() => {
+  dirtyContext?.setPanelDirty('files', false);
+});
 
 function onExport(): void {
   if (!viewerApi.value) return;

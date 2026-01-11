@@ -49,18 +49,27 @@
         {{ t('settings.panel.other.recordFpsHint') }}
       </a-typography-text>
     </a-form-item>
+
+    <a-form-item v-if="isOtherDirty">
+      <a-button block @click="resetOtherSettings">
+        {{ t('settings.panel.other.reset') }}
+      </a-button>
+    </a-form-item>
   </a-form>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, inject } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import { useSettingsSiderContext } from '../useSettingsSiderContext';
-import { RECORD_FPS_MIN, RECORD_FPS_MAX } from '../../../lib/viewer/ranges';
+import { RECORD_FPS_MIN, RECORD_FPS_MAX } from '../../../lib/viewer/constants';
+import { DEFAULT_SETTINGS } from '../../../lib/viewer/settings';
+import { settingsSiderDerivedContextKey } from '../context';
 
 const { t } = useI18n();
 const { settings, patchSettings } = useSettingsSiderContext();
+const derivedContext = inject(settingsSiderDerivedContextKey, null);
 
 const showAxesModel = computed({
   get: () => settings.value.showAxes,
@@ -76,4 +85,21 @@ const recordFpsModel = computed({
   get: () => settings.value.frame_rate ?? 60,
   set: (v: number) => { patchSettings({ frame_rate: v }); },
 });
+
+const isOtherDirty = computed(() => {
+  if (derivedContext) return derivedContext.otherDirty.value;
+  return (
+    settings.value.showAxes !== DEFAULT_SETTINGS.showAxes
+    || settings.value.refreshBondsOnPlay !== DEFAULT_SETTINGS.refreshBondsOnPlay
+    || settings.value.frame_rate !== DEFAULT_SETTINGS.frame_rate
+  );
+});
+
+function resetOtherSettings(): void {
+  patchSettings({
+    showAxes: DEFAULT_SETTINGS.showAxes,
+    refreshBondsOnPlay: DEFAULT_SETTINGS.refreshBondsOnPlay,
+    frame_rate: DEFAULT_SETTINGS.frame_rate,
+  });
+}
 </script>

@@ -42,7 +42,7 @@
               v-if="placement === 'bottom'"
               class="atom-inspector__grab"
               aria-label="resize"
-              title="Resize"
+              :title="t('common.resize')"
               role="button"
               tabindex="0"
               @pointerdown.prevent="onResizeStart"
@@ -78,7 +78,7 @@
                   type="text"
                   size="small"
                   aria-label="collapse"
-                  title="Collapse"
+                  :title="t('common.collapse')"
                   @click="collapsed = true"
                 >
                   <component :is="collapseIcon" />
@@ -196,9 +196,7 @@ import {
 } from '@ant-design/icons-vue';
 import type { InspectCtx } from '../ctx/inspect';
 import {
-  blockPullToRefresh,
-  unblockPullToRefresh,
-  type PullToRefreshBlockToken,
+  createPointerDragWithPullToRefreshBlock,
 } from '../../../lib/dom/pullToRefreshBlock';
 import { clampNumber } from '../../../lib/utils/number';
 import { loadNumber, saveNumber } from '../../../lib/utils/storage';
@@ -271,97 +269,60 @@ watch(
 const desktopWidth = ref(loadNumber('atomInspector.desktopWidth', 360)); // px
 const mobileHeight = ref(loadNumber('atomInspector.mobileHeight', 280)); // px
 
-let resizing = false;
 let startX = 0;
 let startY = 0;
 let startW = 0;
 let startH = 0;
-let activePointerId: number | null = null;
-let ptrBlockToken: PullToRefreshBlockToken | null = null;
+const resizeDrag = createPointerDragWithPullToRefreshBlock({
+  shouldBlockPullToRefresh: () => placement.value === 'bottom',
+  onStart: (e) => {
+    // Prevent browser default panning / pull-to-refresh gesture from starting.
+    try {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    catch {
+      // ignore
+    }
 
-function startBlockPullToRefresh(): void {
-  // Ref-counted global blocker shared by all panels.
-  if (!ptrBlockToken) ptrBlockToken = blockPullToRefresh();
-}
+    startX = e.clientX;
+    startY = e.clientY;
+    startW = desktopWidth.value;
+    startH = mobileHeight.value;
+  },
+  onMove: (e) => {
+    // Cancel default panning while dragging (important on mobile Firefox).
+    try {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    catch {
+      // ignore
+    }
 
-function stopBlockPullToRefresh(): void {
-  if (ptrBlockToken) {
-    unblockPullToRefresh(ptrBlockToken);
-    ptrBlockToken = null;
-  }
-}
+    if (placement.value === 'left') {
+      // drag handle on right edge: dragging right increases width
+      const dx = e.clientX - startX;
+      const maxW = Math.floor(window.innerWidth * 0.7);
+      desktopWidth.value = clampNumber(startW + dx, 260, Math.max(260, maxW));
+      saveNumber('atomInspector.desktopWidth', desktopWidth.value);
+    }
+    else {
+      // bottom panel: dragging up increases height
+      const dy = startY - e.clientY;
+      const maxH = Math.floor(window.innerHeight * 0.7);
+      mobileHeight.value = clampNumber(startH + dy, 200, Math.max(200, maxH));
+      saveNumber('atomInspector.mobileHeight', mobileHeight.value);
+    }
+  },
+});
 
 function onResizeStart(e: PointerEvent) {
-  // Prevent browser default panning / pull-to-refresh gesture from starting.
-  try {
-    e.preventDefault();
-    e.stopPropagation();
-  }
-  catch {
-    // ignore
-  }
-
-  resizing = true;
-  activePointerId = e.pointerId;
-  startX = e.clientX;
-  startY = e.clientY;
-  startW = desktopWidth.value;
-  startH = mobileHeight.value;
-
-  try {
-    (e.currentTarget as HTMLElement | null)?.setPointerCapture?.(e.pointerId);
-  }
-  catch {
-    // ignore
-  }
-
-  // Only needed for mobile (bottom sheet): suppress pull-to-refresh overscroll while resizing.
-  if (placement.value === 'bottom') startBlockPullToRefresh();
-
-  window.addEventListener('pointermove', onResizing, { passive: false });
-  window.addEventListener('pointerup', onResizeEnd, { passive: true });
-  window.addEventListener('pointercancel', onResizeEnd, { passive: true });
-  window.addEventListener('lostpointercapture', onResizeEnd as any, { passive: true });
-}
-
-function onResizing(e: PointerEvent) {
-  if (!resizing) return;
-  if (activePointerId != null && e.pointerId !== activePointerId) return;
-
-  // Cancel default panning while dragging (important on mobile Firefox).
-  try {
-    e.preventDefault();
-    e.stopPropagation();
-  }
-  catch {
-    // ignore
-  }
-
-  if (placement.value === 'left') {
-    // drag handle on right edge: dragging right increases width
-    const dx = e.clientX - startX;
-    const maxW = Math.floor(window.innerWidth * 0.7);
-    desktopWidth.value = clampNumber(startW + dx, 260, Math.max(260, maxW));
-    saveNumber('atomInspector.desktopWidth', desktopWidth.value);
-  }
-  else {
-    // bottom panel: dragging up increases height
-    const dy = startY - e.clientY;
-    const maxH = Math.floor(window.innerHeight * 0.7);
-    mobileHeight.value = clampNumber(startH + dy, 200, Math.max(200, maxH));
-    saveNumber('atomInspector.mobileHeight', mobileHeight.value);
-  }
+  resizeDrag.start(e);
 }
 
 function onResizeEnd() {
-  if (!resizing) return;
-  resizing = false;
-  activePointerId = null;
-  stopBlockPullToRefresh();
-  window.removeEventListener('pointermove', onResizing);
-  window.removeEventListener('pointerup', onResizeEnd);
-  window.removeEventListener('pointercancel', onResizeEnd);
-  window.removeEventListener('lostpointercapture', onResizeEnd as any);
+  resizeDrag.stop();
 }
 onBeforeUnmount(() => onResizeEnd());
 

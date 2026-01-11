@@ -15,6 +15,7 @@ import { useI18n } from 'vue-i18n';
 
 import { createThreeStage, type ThreeStage } from '../../lib/three/stage';
 import { getAutoRotatePreset } from '../../lib/viewer/autoRotate';
+import { AUTO_ROTATE_ROTATION_SYNC_INTERVAL_MS } from '../../lib/viewer/constants';
 import { normalizeViewPresets } from '../../lib/viewer/viewPresets';
 import { bindViewerStageSettings } from './bindSettings';
 import {
@@ -213,6 +214,10 @@ export function useViewerStage(
   // Keep Display panel rotation degrees in sync while auto-rotation is running.
   let pendingRotationSyncRaf = 0;
   let lastRotationSyncMs = 0;
+  let lastAutoRotateMode: 'active' | 'paused' | 'off' = 'off';
+  let autoRotateInteracting = false;
+  let autoRotateResumeAtMs = 0;
+  let removeControlsAutoRotateHooks: (() => void) | null = null;
 
   function radToDeg(rad: number): number {
     return (rad * 180) / Math.PI;
@@ -230,6 +235,34 @@ export function useViewerStage(
     return Math.round(v * 100) / 100;
   }
 
+  function syncRotationToSettings(force: boolean): void {
+    if (!patchSettings) return;
+    if (!stage) return;
+
+    const now = performance.now();
+    // Avoid spamming Vue updates while still keeping the UI responsive.
+    if (!force && now - lastRotationSyncMs < AUTO_ROTATE_ROTATION_SYNC_INTERVAL_MS) return;
+    lastRotationSyncMs = now;
+
+    const e = stage.pivotGroup.rotation;
+    const next = {
+      x: round2(wrapDeg(radToDeg(e.x))),
+      y: round2(wrapDeg(radToDeg(e.y))),
+      z: round2(wrapDeg(radToDeg(e.z))),
+    };
+
+    const cur = settingsRef.value.rotationDeg;
+    if (
+      Math.abs(cur.x - next.x) < 1e-2
+      && Math.abs(cur.y - next.y) < 1e-2
+      && Math.abs(cur.z - next.z) < 1e-2
+    ) {
+      return;
+    }
+
+    settingsSync.patch({ rotationDeg: next });
+  }
+
   function scheduleAutoRotateRotationSync(): void {
     if (!patchSettings) return;
     if (settingsSync.isSuppressed()) return;
@@ -241,36 +274,24 @@ export function useViewerStage(
       if (!patchSettings) return;
       if (!stage) return;
 
-      const now = performance.now();
-      // Avoid spamming Vue updates while still keeping the UI responsive.
-      if (now - lastRotationSyncMs < 80) return;
-      lastRotationSyncMs = now;
-
       const a = settingsRef.value.autoRotate;
       const preset = getAutoRotatePreset(a.presetId);
       const sp = a.speedDegPerSec;
       const speedDegPerSec = Number.isFinite(sp) ? sp : preset.speedDegPerSec;
-
       const enabled = !!a.enabled && preset.id !== 'off' && Math.abs(speedDegPerSec) > 1e-8;
-      if (!enabled) return;
+      const now = performance.now();
+      const canRotate = enabled
+        && (!a.pauseOnInteract || (!autoRotateInteracting && now >= autoRotateResumeAtMs));
+      const mode: 'active' | 'paused' | 'off' = enabled ? (canRotate ? 'active' : 'paused') : 'off';
 
-      const e = stage.pivotGroup.rotation;
-      const next = {
-        x: round2(wrapDeg(radToDeg(e.x))),
-        y: round2(wrapDeg(radToDeg(e.y))),
-        z: round2(wrapDeg(radToDeg(e.z))),
-      };
-
-      const cur = settingsRef.value.rotationDeg;
-      if (
-        Math.abs(cur.x - next.x) < 1e-2
-        && Math.abs(cur.y - next.y) < 1e-2
-        && Math.abs(cur.z - next.z) < 1e-2
-      ) {
+      if (mode !== lastAutoRotateMode) {
+        lastAutoRotateMode = mode;
+        syncRotationToSettings(true);
         return;
       }
 
-      settingsSync.patch({ rotationDeg: next });
+      if (mode !== 'active') return;
+      syncRotationToSettings(false);
     });
   }
 
@@ -564,6 +585,26 @@ export function useViewerStage(
       },
     });
 
+    const controls = stage.getControls();
+    const onControlsStart = () => {
+      if (!settingsRef.value.autoRotate.pauseOnInteract) return;
+      autoRotateInteracting = true;
+      scheduleAutoRotateRotationSync();
+    };
+    const onControlsEnd = () => {
+      if (!settingsRef.value.autoRotate.pauseOnInteract) return;
+      autoRotateInteracting = false;
+      const delay = settingsRef.value.autoRotate.resumeDelayMs;
+      autoRotateResumeAtMs = performance.now() + Math.max(0, Number(delay) || 0);
+      scheduleAutoRotateRotationSync();
+    };
+    controls.addEventListener('start', onControlsStart);
+    controls.addEventListener('end', onControlsEnd);
+    removeControlsAutoRotateHooks = () => {
+      controls.removeEventListener('start', onControlsStart);
+      controls.removeEventListener('end', onControlsEnd);
+    };
+
     runtime = createModelRuntime({
       stage,
       settingsRef,
@@ -680,6 +721,9 @@ export function useViewerStage(
 
     removeControlsSync?.();
     removeControlsSync = null;
+
+    removeControlsAutoRotateHooks?.();
+    removeControlsAutoRotateHooks = null;
 
     stopBind?.();
     stopBind = null;

@@ -22,11 +22,19 @@
         :class="panelClassName"
         :style="panelStyle"
       >
+        <div
+          v-if="drawerPlacement === 'right'"
+          class="settings-resizer"
+          role="separator"
+          aria-label="resize"
+          @pointerdown.prevent="onDesktopResizeStart"
+        />
         <SettingsContent
           v-model:active-key="activeKeyModel"
           :show-grab="drawerPlacement === 'bottom'"
           @close="onCloseClick"
           @resize-start="onResizeStart"
+          @clear-storage="onClearStorage"
         />
       </div>
     </Transition>
@@ -37,9 +45,7 @@
 import { computed, onBeforeUnmount, onMounted, provide, ref, watch } from 'vue';
 import type { ViewerSettings } from '../../lib/viewer/settings';
 import {
-  blockPullToRefresh,
-  unblockPullToRefresh,
-  type PullToRefreshBlockToken,
+  createPointerDragWithPullToRefreshBlock,
 } from '../../lib/dom/pullToRefreshBlock';
 import { clampNumber } from '../../lib/utils/number';
 import { loadNumber, saveNumber } from '../../lib/utils/storage';
@@ -154,6 +160,9 @@ function getViewportHeight(): number {
 
 function updateIsMobile(): void {
   isMobile.value = window.matchMedia('(max-width: 768px)').matches;
+  if (!isMobile.value) {
+    desktopWidth.value = clampDesktopWidth(desktopWidth.value);
+  }
 }
 
 onMounted(() => {
@@ -164,6 +173,7 @@ onMounted(() => {
 onBeforeUnmount(() => {
   window.removeEventListener('resize', updateIsMobile);
   onResizeEnd();
+  onDesktopResizeEnd();
   clearCloseGuards();
 });
 
@@ -171,12 +181,28 @@ const drawerPlacement = computed<'right' | 'bottom'>(
   () => placementLock.value ?? (isMobile.value ? 'bottom' : 'right'),
 );
 
-const drawerWidth = 'min(360px, calc(100vw - 24px))';
+function clampDesktopWidth(next: number): number {
+  const minW = 300;
+  const maxW = Math.floor(window.innerWidth * 0.7);
+  return clampNumber(next, minW, Math.max(minW, maxW));
+}
+
+function getDefaultDesktopWidth(): number {
+  return 360;
+}
+
+function getDefaultMobileHeight(): number {
+  return Math.min(560, Math.floor(window.innerHeight * 0.75));
+}
+
+const desktopWidth = ref(loadNumber('settingsDrawer.desktopWidth', getDefaultDesktopWidth()));
+
+const drawerWidth = computed(() => `${desktopWidth.value}px`);
 
 const mobileHeight = ref<number>(
   loadNumber(
     'settingsDrawer.mobileHeight',
-    Math.min(560, Math.floor(window.innerHeight * 0.75)),
+    getDefaultMobileHeight(),
   ),
 );
 
@@ -250,85 +276,106 @@ function onPanelAfterLeave(): void {
   onAfterOpenChange(false);
 }
 
-let resizing = false;
 let startY = 0;
 let startH = 0;
-let activePointerId: number | null = null;
 let mobileHeightDirty = false;
-let ptrBlockToken: PullToRefreshBlockToken | null = null;
+let desktopStartX = 0;
+let desktopStartW = 0;
+const mobileResizeDrag = createPointerDragWithPullToRefreshBlock({
+  shouldBlockPullToRefresh: () => drawerPlacement.value === 'bottom',
+  onStart: (e) => {
+    // Prevent browser default panning / pull-to-refresh gesture from starting.
+    try {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    catch {
+      // ignore
+    }
 
-function startBlockPullToRefresh(): void {
-  // Ref-counted global blocker shared by all panels.
-  if (!ptrBlockToken) ptrBlockToken = blockPullToRefresh();
-}
+    startY = e.clientY;
+    startH = mobileHeight.value;
+  },
+  onMove: (e) => {
+    try {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    catch {
+      // ignore
+    }
 
-function stopBlockPullToRefresh(): void {
-  if (ptrBlockToken) {
-    unblockPullToRefresh(ptrBlockToken);
-    ptrBlockToken = null;
-  }
-}
+    const dy = startY - e.clientY;
+    const maxH = Math.floor(window.innerHeight * 0.8);
+    mobileHeight.value = clampNumber(startH + dy, 260, maxH);
+    mobileHeightDirty = true;
+  },
+  onEnd: () => {
+    // Persist once on release to avoid synchronous storage writes on every move.
+    if (mobileHeightDirty) {
+      saveNumber('settingsDrawer.mobileHeight', mobileHeight.value);
+      mobileHeightDirty = false;
+    }
+  },
+});
+
+const desktopResizeDrag = createPointerDragWithPullToRefreshBlock({
+  onStart: (e) => {
+    try {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    catch {
+      // ignore
+    }
+
+    desktopStartX = e.clientX;
+    desktopStartW = desktopWidth.value;
+  },
+  onMove: (e) => {
+    try {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    catch {
+      // ignore
+    }
+
+    const dx = desktopStartX - e.clientX;
+    desktopWidth.value = clampDesktopWidth(desktopStartW + dx);
+    saveNumber('settingsDrawer.desktopWidth', desktopWidth.value);
+  },
+});
 
 function onResizeStart(e: PointerEvent): void {
   if (drawerPlacement.value !== 'bottom') return;
+  mobileResizeDrag.start(e);
+}
 
-  // Prevent browser default panning / pull-to-refresh gesture from starting.
+function onResizeEnd(): void {
+  mobileResizeDrag.stop();
+}
+
+function onClearStorage(): void {
   try {
-    e.preventDefault();
-    e.stopPropagation();
+    localStorage.removeItem('settingsDrawer.desktopWidth');
+    localStorage.removeItem('settingsDrawer.mobileHeight');
   }
   catch {
     // ignore
   }
 
-  resizing = true;
-  activePointerId = e.pointerId;
-  startY = e.clientY;
-  startH = mobileHeight.value;
-
-  try {
-    (e.currentTarget as HTMLElement | null)?.setPointerCapture?.(e.pointerId);
-  }
-  catch {
-    // Ignore
-  }
-
-  startBlockPullToRefresh();
-
-  window.addEventListener('pointermove', onResizing, { passive: false });
-  window.addEventListener('pointerup', onResizeEnd, { passive: true });
-  window.addEventListener('pointercancel', onResizeEnd, { passive: true });
-  window.addEventListener('lostpointercapture', onResizeEnd as any, {
-    passive: true,
-  });
+  desktopWidth.value = getDefaultDesktopWidth();
+  mobileHeight.value = getDefaultMobileHeight();
 }
 
-function onResizing(e: PointerEvent): void {
-  if (!resizing) return;
-  if (activePointerId != null && e.pointerId !== activePointerId) return;
-
-  const dy = startY - e.clientY;
-  const maxH = Math.floor(window.innerHeight * 0.92);
-  mobileHeight.value = clampNumber(startH + dy, 260, maxH);
-  mobileHeightDirty = true;
-  e.preventDefault();
+function onDesktopResizeStart(e: PointerEvent): void {
+  if (drawerPlacement.value !== 'right') return;
+  desktopResizeDrag.start(e);
 }
 
-function onResizeEnd(): void {
-  if (!resizing) return;
-  resizing = false;
-
-  // Persist once on release to avoid synchronous storage writes on every move.
-  if (mobileHeightDirty) {
-    saveNumber('settingsDrawer.mobileHeight', mobileHeight.value);
-    mobileHeightDirty = false;
-  }
-  stopBlockPullToRefresh();
-  window.removeEventListener('pointermove', onResizing);
-  window.removeEventListener('pointerup', onResizeEnd);
-  window.removeEventListener('pointercancel', onResizeEnd);
-  window.removeEventListener('lostpointercapture', onResizeEnd as any);
-  activePointerId = null;
+function onDesktopResizeEnd(): void {
+  desktopResizeDrag.stop();
 }
 
 const contentWrapperStyle = computed(() => {
@@ -368,7 +415,7 @@ const desktopPanelStyle = computed(() => {
   return {
     position: 'fixed',
     zIndex: 1000,
-    width: drawerWidth,
+    width: drawerWidth.value,
     ...contentWrapperStyle.value,
   } as Record<string, any>;
 });

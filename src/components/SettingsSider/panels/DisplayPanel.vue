@@ -193,8 +193,8 @@ import { normalizeViewPresets, type ViewPreset } from '../../../lib/viewer/viewP
 import {
   DUAL_VIEW_SPLIT_MIN_PCT,
   DUAL_VIEW_SPLIT_MAX_PCT,
-} from '../../../lib/viewer/ranges';
-import { DUAL_VIEW_DISTANCE_MIN } from '../../../lib/viewer/ranges';
+} from '../../../lib/viewer/constants';
+import { DUAL_VIEW_DISTANCE_MIN } from '../../../lib/viewer/constants';
 import { useSettingsSiderContext } from '../useSettingsSiderContext';
 
 const { t } = useI18n();

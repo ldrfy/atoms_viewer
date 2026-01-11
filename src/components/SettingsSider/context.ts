@@ -24,6 +24,27 @@ export const settingsSiderContextKey: InjectionKey<SettingsSiderContext> = Symbo
   'SettingsSiderContext',
 );
 
+export interface SettingsSiderDirtyContext {
+  setPanelDirty: (key: string, dirty: boolean) => void;
+}
+
+export const settingsSiderDirtyContextKey: InjectionKey<SettingsSiderDirtyContext> = Symbol(
+  'SettingsSiderDirtyContext',
+);
+
+export interface SettingsSiderDerivedContext {
+  filesDirty: ComputedRef<boolean>;
+  layersDirty: ComputedRef<boolean>;
+  displayDirty: ComputedRef<boolean>;
+  autoRotateDirty: ComputedRef<boolean>;
+  otherDirty: ComputedRef<boolean>;
+  layerDisplayDirty: ComputedRef<boolean>;
+}
+
+export const settingsSiderDerivedContextKey: InjectionKey<SettingsSiderDerivedContext> = Symbol(
+  'SettingsSiderDerivedContext',
+);
+
 export interface SettingsSiderControlContext {
   replaceSettings: (next: ViewerSettings) => void;
 }

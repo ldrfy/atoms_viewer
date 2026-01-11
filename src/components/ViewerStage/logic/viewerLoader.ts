@@ -432,8 +432,7 @@ export function createViewerLoader(deps: {
         },
       });
       message.info(
-        deps.t?.('viewer.autoRotate.enabledHint')
-        ?? '已开启自动旋转，可在设置-自动旋转-启用中关闭。',
+        deps.t('viewer.autoRotate.enabledHint'),
       );
     }
   }

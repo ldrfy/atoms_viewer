@@ -71,8 +71,8 @@
                 type="text"
                 size="small"
                 danger
-                aria-label="delete layer"
-                title="Delete layer"
+                :aria-label="t('common.delete')"
+                :title="t('common.delete')"
               >
                 <DeleteOutlined />
               </a-button>

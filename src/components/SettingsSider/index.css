@@ -212,6 +212,17 @@
     touch-action: none;
 }
 
+/* Desktop resize handle (left edge) */
+.settings-resizer {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 10px;
+    cursor: ew-resize;
+    touch-action: none;
+}
+
 .settings-grab-bar {
     width: 44px;
     height: 4px;

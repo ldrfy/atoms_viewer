@@ -6,20 +6,21 @@
     "common": {
         "delete": "删除",
         "confirm": "确认",
-        "cancel": "取消"
+        "cancel": "取消",
+        "close": "关闭",
+        "menu": "菜单",
+        "resize": "调整大小",
+        "collapse": "收起"
     },
     "net": {
         "timeout": "请求超时"
     },
     "viewer": {
-        "settings": "设置",
-        "about": {
-            "openGithub": "打开GitHub"
-        },
         "play": {
             "pause": "暂停",
             "start": "播放",
-            "fps": "帧率"
+            "fps": "帧率",
+            "frameIndex": "帧序号"
         },
         "record": {
             "bg": "背景",
@@ -29,8 +30,7 @@
             "pause": "暂停",
             "selectHint": "拖拽画框；画完后可拖动/拉伸微调；点击确认开始录制",
             "selectCancel": "取消",
-            "selectConfirm": "确认录制",
-            "tooSmall": "框选区域太小"
+            "selectConfirm": "确认录制"
         },
         "parse": {
             "notice": "请手动选择解析方式",
@@ -51,7 +51,6 @@
         },
         "theme": {
             "title": "主题",
-            "current": "当前",
             "mode": {
                 "system": "系统",
                 "light": "浅色",
@@ -60,14 +59,10 @@
         },
         "locale": {
             "system": "跟随系统",
-            "title": "语言",
-            "current": "当前"
+            "title": "语言"
         },
         "links": {
             "github": "GitHub"
-        },
-        "load": {
-            "success": "已加载：{fileName}（{atomCount} atoms，bondSegments={bondSegCount}）"
         },
         "empty": {
             "title": "拖拽文件到这里",
@@ -77,8 +72,7 @@
             "samples": {
                 "loading": "加载中…",
                 "loadFailed": "加载失败：{error}（已切换到内置样例）",
-                "empty": "无可用样例",
-                "builtinSuffix": "（内置）"
+                "empty": "无可用样例"
             },
             "footer": {
                 "localOnly": "所有数据均在本地计算与渲染，不会上传或收集任何信息。",
@@ -86,10 +80,6 @@
             }
         },
         "export": {
-            "transparent": "透明背景",
-            "button": "导出 PNG",
-            "scaleTip": "下方模型基础上，再次放大的倍率。为避免放大过多导致错误，请先滑动鼠标放大下面的模型",
-            "scalePlaceholder": "越大越清晰",
             "pngSuccess": "已导出 PNG（透明背景）",
             "scaleCapped": "导出缩放已自动从 {requested} 降到 {used}（受限于 GPU 最大尺寸 {limit}px）。",
             "fail": "导出失败：{reason}"
@@ -122,28 +112,21 @@
         "clearStorageHint": "如遇显示异常或参数不同步，可尝试清空本地设置。",
         "panel": {
             "other": {
-                "header": "其他",
+                "header": "其他配置",
                 "axes": "坐标轴",
-                "bonds": "键",
-                "bondFactor": "键长阈值系数 (bondFactor)",
-                "bondFactorHint": "用于判断两原子是否成键：阈值 = (r_i + r_j) × bondFactor；数值越大越容易生成键。",
-                "atomSize": "原子大小",
-                "sphereSegments": "球体细分 (Sphere Segments)",
-                "sphereSegmentsHint": "影响球体光滑度与性能；数值越大越圆滑，但渲染更耗时。",
                 "recordFps": "录制帧率 (fps)",
                 "recordFpsHint": "录制输出的目标帧率；常用 30 / 60。",
-                "refreshBondsOnPlay": "播放时原子连接每帧刷新"
+                "refreshBondsOnPlay": "播放时原子连接每帧刷新",
+                "reset": "恢复其他默认值"
             },
             "display": {
-                "header": "显示",
+                "header": "显示控制",
                 "viewPresets": "视角选择",
                 "viewPresetsHint": "可勾选 1 个视角显示单视图，或勾选 2 个视角显示双视图（左右并排）。",
                 "viewPresetsNeedOne": "至少选择一个视角（无法取消最后一个）。",
                 "viewPresetFront": "正视图",
                 "viewPresetSide": "侧视图",
                 "viewPresetTop": "俯视图",
-                "dualView": "双视图（正视 + 侧视）",
-                "dualViewHint": "左右同时显示正视与侧视，便于对照结构。",
                 "dualViewDistance": "视距",
                 "dualViewSplit": "左右比例",
                 "dualViewSplitHint": "调整左侧（正视）与右侧（侧视）的宽度比例。",
@@ -162,6 +145,7 @@
                 "speedHint": "速度可单独调节：旋转类型只决定旋转轴（方向）。",
                 "pauseOnInteract": "交互时暂停",
                 "resumeDelay": "恢复延迟 (ms)",
+                "reset": "恢复自动旋转默认值",
                 "presets": {
                     "off": {
                         "name": "关闭",
@@ -223,6 +207,7 @@
                 "openFileHint": "你也可以将文件拖拽到画面中加载。新加载的模型会作为新图层加入，并默认隐藏旧图层。",
                 "export": {
                     "header": "导出图片",
+                    "scaleLabel": "导出倍率",
                     "button": "导出为 PNG",
                     "transparent": "透明背景",
                     "hint": "scale 会按倍率放大渲染分辨率。"
@@ -247,10 +232,10 @@
                 "applyAll": "同时修改所有图层",
                 "mapLabel": "颜色映射（十六进制）",
                 "hexPlaceholder": "例如 #FF8800",
+                "colorPickerLabel": "{key} 颜色",
                 "invalidHex": "颜色格式无效，请输入 #RRGGBB 或 #RGB。",
                 "reset": "恢复默认",
                 "resetTooltip": "恢复为该元素的内置默认颜色。",
-                "refresh": "刷新显示",
                 "hint": "提示：若该图层存在 typeId（如 LAMMPS），将按元素+typeId 显示为 C1、C2…；否则按元素显示。",
                 "empty": "当前图层暂无可编辑的原子类型。"
             },
@@ -276,7 +261,6 @@
         "lammpsDump": {
             "unexpectedHeader": "LAMMPS dump 解析失败：期望 \"{expected}\"，实际为 \"{actual}\"",
             "badBoxBoundsLine": "无法解析 BOX BOUNDS 行：{line}",
-            "triclinicNotSupported": "LAMMPS dump：暂不支持 triclinic BOX（含 xy/xz/yz）。请使用正交盒，或导出 x y z（非 xs/ys/zs）。",
             "missingAtomsSection": "LAMMPS dump 解析失败：缺少 ITEM: ATOMS 段。",
             "missingTypeColumn": "LAMMPS dump：ATOMS 列缺少 \"type\"。columns={columns}",
             "missingCoordsColumns": "LAMMPS dump：找不到坐标列（x y z 或 xs ys zs）。columns={columns}",

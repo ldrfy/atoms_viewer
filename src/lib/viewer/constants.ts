@@ -1,6 +1,6 @@
 /**
- * Common numeric ranges for viewer UI controls.
- * 常用数值范围（界面控制项）统一管理，便于维护与一致性。
+ * Fixed numeric values for viewer UI/logic.
+ * 统一管理常量数值，便于维护与一致性。
  */
 // Auto-rotate speed range (deg/s). / 自动旋转速度范围（度/秒）。
 export const AUTO_ROTATE_SPEED_MIN = 0;
@@ -30,3 +30,7 @@ export const SPHERE_SEGMENTS_MAX = 64;
 /** 双视图分割比例（百分比）用于 UI 控件。 */
 export const DUAL_VIEW_SPLIT_MIN_PCT = 10;
 export const DUAL_VIEW_SPLIT_MAX_PCT = 90;
+
+// Auto-rotate → settings rotation sync interval (ms).
+// 自动旋转同步到设置面板的时间间隔（毫秒）。
+export const AUTO_ROTATE_ROTATION_SYNC_INTERVAL_MS = 200;

@@ -5,10 +5,10 @@
       v-if="showGrab"
       class="settings-grab"
       aria-label="resize"
-      title="Resize"
+      :title="t('common.resize')"
       role="button"
       tabindex="0"
-      @pointerdown.prevent="onResizeStart"
+      @pointerdown.stop.prevent="onResizeStart"
     >
       <div class="settings-grab-bar" />
     </div>
@@ -22,7 +22,7 @@
         type="text"
         size="small"
         aria-label="close"
-        title="Close"
+        :title="t('common.close')"
         @click="emit('close')"
       >
         <CloseOutlined />
@@ -66,7 +66,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick } from 'vue';
+import { computed, nextTick, provide, reactive } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { Modal } from 'ant-design-vue';
 import {
@@ -95,6 +95,7 @@ import {
 } from '../../lib/viewer/settings';
 import { useSettingsSiderContext } from './useSettingsSiderContext';
 import { useSettingsSiderControlContext } from './useSettingsSiderControlContext';
+import { settingsSiderDirtyContextKey, settingsSiderDerivedContextKey } from './context';
 import { viewerApiRef } from '../../lib/viewer/bridge';
 import {
   buildDefaultSettings,
@@ -115,6 +116,7 @@ const props = withDefaults(
 const emit = defineEmits<{
   (e: 'close'): void;
   (e: 'resize-start', ev: PointerEvent): void;
+  (e: 'clear-storage'): void;
   (e: 'update:activeKey', v: string[]): void;
 }>();
 
@@ -123,6 +125,74 @@ const { settings } = useSettingsSiderContext();
 const { replaceSettings } = useSettingsSiderControlContext();
 
 const viewerApi = computed(() => viewerApiRef.value);
+
+const panelDirtyFlags = reactive<Record<string, boolean>>({});
+provide(settingsSiderDirtyContextKey, {
+  setPanelDirty: (key: string, dirty: boolean) => {
+    panelDirtyFlags[key] = dirty;
+  },
+});
+
+const filesDirty = computed(() => !!panelDirtyFlags.files);
+const layersDirty = computed(() => (viewerApi.value?.layers.value.length ?? 0) > 1);
+
+const layerDisplayDirty = computed(() => {
+  const active = viewerApi.value?.activeLayerDisplay?.value;
+  const cur = active ?? settings.value;
+  return (
+    cur.atomScale !== DEFAULT_LAYER_DISPLAY.atomScale
+    || cur.showBonds !== DEFAULT_LAYER_DISPLAY.showBonds
+    || cur.sphereSegments !== DEFAULT_LAYER_DISPLAY.sphereSegments
+    || cur.bondFactor !== DEFAULT_LAYER_DISPLAY.bondFactor
+    || cur.bondRadius !== DEFAULT_LAYER_DISPLAY.bondRadius
+  );
+});
+
+const displayDirty = computed(() => {
+  const defaultDistance = Number.isFinite(settings.value.initialDualViewDistance)
+    ? (settings.value.initialDualViewDistance as number)
+    : DEFAULT_SETTINGS.dualViewDistance;
+  return (
+    settings.value.orthographic !== DEFAULT_SETTINGS.orthographic
+    || settings.value.dualViewEnabled !== DEFAULT_SETTINGS.dualViewEnabled
+    || !arraysEqual(settings.value.viewPresets, DEFAULT_SETTINGS.viewPresets)
+    || settings.value.dualViewSplit !== DEFAULT_SETTINGS.dualViewSplit
+    || (settings.value.dualViewDistance ?? defaultDistance) !== defaultDistance
+    || settings.value.rotationDeg.x !== 0
+    || settings.value.rotationDeg.y !== 0
+    || settings.value.rotationDeg.z !== 0
+  );
+});
+
+const autoRotateDirty = computed(() => {
+  const cur = settings.value.autoRotate;
+  const def = DEFAULT_SETTINGS.autoRotate;
+  return (
+    !!cur.enabled !== !!def.enabled
+    || cur.presetId !== def.presetId
+    || cur.speedDegPerSec !== def.speedDegPerSec
+    || !!cur.pauseOnInteract !== !!def.pauseOnInteract
+    || cur.resumeDelayMs !== def.resumeDelayMs
+    || !!cur.autoEnabledBySystem
+  );
+});
+
+const otherDirty = computed(() => {
+  return (
+    settings.value.showAxes !== DEFAULT_SETTINGS.showAxes
+    || settings.value.refreshBondsOnPlay !== DEFAULT_SETTINGS.refreshBondsOnPlay
+    || settings.value.frame_rate !== DEFAULT_SETTINGS.frame_rate
+  );
+});
+
+provide(settingsSiderDerivedContextKey, {
+  filesDirty,
+  layersDirty,
+  displayDirty,
+  autoRotateDirty,
+  otherDirty,
+  layerDisplayDirty,
+});
 
 function arraysEqual(a: unknown, b: unknown): boolean {
   const arrA = Array.isArray(a) ? a : [];
@@ -149,64 +219,22 @@ function isTypeMapApplied(): boolean {
   return !!viewerApi.value?.activeLayerTypeMapApplied?.value;
 }
 
-function isLayerDisplayDirty(): boolean {
-  const active = viewerApi.value?.activeLayerDisplay?.value;
-  const cur = active ?? settings.value;
-  return (
-    cur.atomScale !== DEFAULT_LAYER_DISPLAY.atomScale
-    || cur.showBonds !== DEFAULT_LAYER_DISPLAY.showBonds
-    || cur.sphereSegments !== DEFAULT_LAYER_DISPLAY.sphereSegments
-    || cur.bondFactor !== DEFAULT_LAYER_DISPLAY.bondFactor
-    || cur.bondRadius !== DEFAULT_LAYER_DISPLAY.bondRadius
-  );
-}
-
 function isPanelDirty(key: string): boolean {
-  if (key === 'files' || key === 'layers') return false;
+  if (key === 'files') return filesDirty.value;
+  if (key === 'layers') return layersDirty.value;
   if (key === 'colors') return hasCustomColors();
   if (key === 'lammps') return isTypeMapApplied() && hasCustomTypeMap();
-  if (key === 'layerDisplay') return isLayerDisplayDirty();
-  if (key === 'display') {
-    const defaultDistance = Number.isFinite(settings.value.initialDualViewDistance)
-      ? (settings.value.initialDualViewDistance as number)
-      : DEFAULT_SETTINGS.dualViewDistance;
-    return (
-      settings.value.orthographic !== DEFAULT_SETTINGS.orthographic
-      || settings.value.dualViewEnabled !== DEFAULT_SETTINGS.dualViewEnabled
-      || !arraysEqual(settings.value.viewPresets, DEFAULT_SETTINGS.viewPresets)
-      || settings.value.dualViewSplit !== DEFAULT_SETTINGS.dualViewSplit
-      || (settings.value.dualViewDistance ?? defaultDistance) !== defaultDistance
-      || settings.value.rotationDeg.x !== 0
-      || settings.value.rotationDeg.y !== 0
-      || settings.value.rotationDeg.z !== 0
-    );
-  }
-  if (key === 'autoRotate') {
-    const cur = settings.value.autoRotate;
-    const def = DEFAULT_SETTINGS.autoRotate;
-    return (
-      !!cur.enabled !== !!def.enabled
-      || cur.presetId !== def.presetId
-      || cur.speedDegPerSec !== def.speedDegPerSec
-      || !!cur.pauseOnInteract !== !!def.pauseOnInteract
-      || cur.resumeDelayMs !== def.resumeDelayMs
-      || !!cur.autoEnabledBySystem
-    );
-  }
-  if (key === 'other') {
-    return (
-      settings.value.showAxes !== DEFAULT_SETTINGS.showAxes
-      || settings.value.refreshBondsOnPlay !== DEFAULT_SETTINGS.refreshBondsOnPlay
-      || settings.value.frame_rate !== DEFAULT_SETTINGS.frame_rate
-    );
-  }
+  if (key === 'layerDisplay') return layerDisplayDirty.value;
+  if (key === 'display') return displayDirty.value;
+  if (key === 'autoRotate') return autoRotateDirty.value;
+  if (key === 'other') return otherDirty.value;
   return false;
 }
 
 const panels = [
   { key: 'files', headerKey: 'settings.panel.files.header', comp: FilesPanel, icon: FolderOpenOutlined },
-  { key: 'display', headerKey: 'settings.panel.display.header', comp: DisplayPanel, icon: EyeOutlined },
   { key: 'autoRotate', headerKey: 'settings.panel.autoRotate.header', comp: AutoRotatePanel, icon: SyncOutlined },
+  { key: 'display', headerKey: 'settings.panel.display.header', comp: DisplayPanel, icon: EyeOutlined },
   { key: 'layers', headerKey: 'settings.panel.layers.header', comp: LayersPanel, icon: AppstoreOutlined },
   { key: 'lammps', headerKey: 'settings.panel.lammps.header', comp: LammpsPanel, icon: SwapOutlined },
   { key: 'colors', headerKey: 'settings.panel.colors.header', comp: ColorsPanel, icon: BgColorsOutlined },
@@ -289,6 +317,7 @@ function onClearStorage(): void {
     cancelText: t('common.cancel'),
     onOk: () => {
       clearSettingsStorage();
+      emit('clear-storage');
       const nextSettings = applyDefaults();
       if (nextSettings) {
         saveSettingsToStorage(nextSettings);

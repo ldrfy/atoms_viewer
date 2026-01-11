@@ -67,8 +67,8 @@
                 class="color-picker"
                 type="color"
                 :value="colorPickerValue(row.color)"
-                :aria-label="formatColorKey(row) + ' color'"
-                :title="formatColorKey(row) + ' color'"
+                :aria-label="t('settings.panel.colors.colorPickerLabel', { key: formatColorKey(row) })"
+                :title="t('settings.panel.colors.colorPickerLabel', { key: formatColorKey(row) })"
                 @input="onColorPickerChange(idx, ($event as any).target?.value)"
               >
             </a-col>

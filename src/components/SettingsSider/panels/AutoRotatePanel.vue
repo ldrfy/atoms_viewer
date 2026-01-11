@@ -108,11 +108,17 @@
         </a-col>
       </a-row>
     </a-form-item>
+
+    <a-form-item v-if="isAutoRotateDirty">
+      <a-button block :disabled="!hasAnyLayer" @click="resetAutoRotateSettings">
+        {{ t('settings.panel.autoRotate.reset') }}
+      </a-button>
+    </a-form-item>
   </a-form>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, inject } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { DownOutlined } from '@ant-design/icons-vue';
 
@@ -127,12 +133,15 @@ import {
   AUTO_ROTATE_SPEED_MAX,
   AUTO_ROTATE_RESUME_MIN,
   AUTO_ROTATE_RESUME_MAX,
-} from '../../../lib/viewer/ranges';
+} from '../../../lib/viewer/constants';
+import { DEFAULT_SETTINGS } from '../../../lib/viewer/settings';
 
 import { useSettingsSiderContext } from '../useSettingsSiderContext';
+import { settingsSiderDerivedContextKey } from '../context';
 
 const { t } = useI18n();
 const { settings, patchSettings, hasAnyLayer } = useSettingsSiderContext();
+const derivedContext = inject(settingsSiderDerivedContextKey, null);
 
 function patchAutoRotate(patch: Partial<(typeof settings.value)['autoRotate']>): void {
   patchSettings({
@@ -230,5 +239,23 @@ const currentAutoRotatePresetHint = computed(() => {
 
 function onAutoRotatePresetClick(info: any): void {
   autoRotatePresetIdModel.value = String(info?.key ?? DEFAULT_AUTO_ROTATE_PRESET_ID);
+}
+
+const isAutoRotateDirty = computed(() => {
+  if (derivedContext) return derivedContext.autoRotateDirty.value;
+  const cur = settings.value.autoRotate;
+  const def = DEFAULT_SETTINGS.autoRotate;
+  return (
+    !!cur.enabled !== !!def.enabled
+    || cur.presetId !== def.presetId
+    || cur.speedDegPerSec !== def.speedDegPerSec
+    || !!cur.pauseOnInteract !== !!def.pauseOnInteract
+    || cur.resumeDelayMs !== def.resumeDelayMs
+    || !!cur.autoEnabledBySystem
+  );
+});
+
+function resetAutoRotateSettings(): void {
+  patchAutoRotate({ ...DEFAULT_SETTINGS.autoRotate });
 }
 </script>

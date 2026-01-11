@@ -25,8 +25,8 @@
         <a-input-number
           v-model:value="frameIndexModel"
           size="small"
-          aria-label="Frame index"
-          title="Frame index"
+          :aria-label="t('viewer.play.frameIndex')"
+          :title="t('viewer.play.frameIndex')"
           :min="1"
           :max="frameCountMax"
           :step="1"
@@ -117,7 +117,7 @@
 import { computed, unref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import type { AnimCtx } from '../ctx';
-import { RECORD_FPS_MIN, RECORD_FPS_MAX } from '../../../lib/viewer/ranges';
+import { RECORD_FPS_MIN, RECORD_FPS_MAX } from '../../../lib/viewer/constants';
 
 const props = defineProps<{ ctx: AnimCtx }>();
 const { t } = useI18n();

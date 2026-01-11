@@ -92,7 +92,7 @@
             type="text"
             class="btn-icon"
             aria-label="menu"
-            title="Menu"
+            :title="t('common.menu')"
             @click="mobileOpen = true"
           >
             <MenuOutlined />

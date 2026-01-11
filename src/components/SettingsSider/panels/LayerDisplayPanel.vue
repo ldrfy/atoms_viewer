@@ -164,7 +164,7 @@
       </a-typography-text>
     </a-form-item>
 
-    <a-form-item>
+    <a-form-item v-if="layerDisplayDirty">
       <a-button block :disabled="controlsDisabled" @click="onResetDisplay">
         {{ t('settings.panel.layerDisplay.reset') }}
       </a-button>
@@ -173,11 +173,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, inject, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { DEFAULT_LAYER_DISPLAY, type LayerDisplaySettings } from '../../../lib/viewer/settings';
 import { viewerApiRef } from '../../../lib/viewer/bridge';
 import { useSettingsSiderContext } from '../useSettingsSiderContext';
+import { settingsSiderDerivedContextKey } from '../context';
 import {
   ATOM_SCALE_MIN,
   ATOM_SCALE_MAX,
@@ -187,7 +188,7 @@ import {
   BOND_RADIUS_MAX,
   SPHERE_SEGMENTS_MIN,
   SPHERE_SEGMENTS_MAX,
-} from '../../../lib/viewer/ranges';
+} from '../../../lib/viewer/constants';
 
 const { t } = useI18n();
 const { hasAnyLayer } = useSettingsSiderContext();
@@ -240,6 +241,19 @@ const atomScaleModel = computed({
 const sphereSegmentsModel = computed({
   get: () => displayModel.value?.sphereSegments ?? 24,
   set: (v: number) => patchDisplay({ sphereSegments: v }),
+});
+
+const derivedContext = inject(settingsSiderDerivedContextKey, null);
+const layerDisplayDirty = computed(() => {
+  if (derivedContext) return derivedContext.layerDisplayDirty.value;
+  const cur = displayModel.value ?? DEFAULT_LAYER_DISPLAY;
+  return (
+    cur.atomScale !== DEFAULT_LAYER_DISPLAY.atomScale
+    || cur.showBonds !== DEFAULT_LAYER_DISPLAY.showBonds
+    || cur.sphereSegments !== DEFAULT_LAYER_DISPLAY.sphereSegments
+    || cur.bondFactor !== DEFAULT_LAYER_DISPLAY.bondFactor
+    || cur.bondRadius !== DEFAULT_LAYER_DISPLAY.bondRadius
+  );
 });
 
 function onResetDisplay(): void {

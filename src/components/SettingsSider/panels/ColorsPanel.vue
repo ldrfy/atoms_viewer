@@ -52,6 +52,20 @@
               <a-tag>{{ formatColorKey(row) }}</a-tag>
             </a-col>
 
+            <a-col :span="3">
+              <a-tooltip v-if="row.isCustom" :title="t('settings.panel.colors.resetTooltip')">
+                <a-button
+                  type="text"
+                  size="small"
+                  :aria-label="t('settings.panel.colors.reset')"
+                  :title="t('settings.panel.colors.resetTooltip')"
+                  @click="onResetColor(idx)"
+                >
+                  <ReloadOutlined />
+                </a-button>
+              </a-tooltip>
+            </a-col>
+
             <a-col :span="9">
               <a-input
                 :value="row.color"
@@ -71,21 +85,6 @@
                 :title="t('settings.panel.colors.colorPickerLabel', { key: formatColorKey(row) })"
                 @input="onColorPickerChange(idx, ($event as any).target?.value)"
               >
-            </a-col>
-
-            <a-col :span="3">
-              <a-tooltip v-if="row.isCustom" :title="t('settings.panel.colors.resetTooltip')">
-                <a-button
-                  class="btn-icon"
-                  type="text"
-                  size="small"
-                  :aria-label="t('settings.panel.colors.reset')"
-                  :title="t('settings.panel.colors.resetTooltip')"
-                  @click="onResetColor(idx)"
-                >
-                  <ReloadOutlined />
-                </a-button>
-              </a-tooltip>
             </a-col>
           </a-row>
         </div>

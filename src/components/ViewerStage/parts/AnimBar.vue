@@ -52,8 +52,8 @@
             size="small"
             :aria-label="t('viewer.play.fps')"
             :title="t('viewer.play.fps')"
-            :min="1"
-            :max="120"
+            :min="RECORD_FPS_MIN"
+            :max="RECORD_FPS_MAX"
           />
         </div>
       </a-col>
@@ -117,7 +117,6 @@
 import { computed, unref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import type { AnimCtx } from '../ctx';
-import { clampNumber } from '../../../lib/utils/number';
 import { RECORD_FPS_MIN, RECORD_FPS_MAX } from '../../../lib/viewer/ranges';
 
 const props = defineProps<{ ctx: AnimCtx }>();
@@ -145,12 +144,8 @@ const frameIndexModel = computed<number>({
 const fpsModel = computed<number>({
   get: () => props.ctx.fps.value,
   set: (v: number) => {
-    const n = Number(v);
-    // ctx 是父组件注入的控制上下文对象，按设计需要在子组件里写入。
     // eslint-disable-next-line vue/no-mutating-props
-    props.ctx.fps.value = Number.isFinite(n)
-      ? clampNumber(n, RECORD_FPS_MIN, RECORD_FPS_MAX)
-      : 6;
+    props.ctx.fps.value = v;
   },
 });
 

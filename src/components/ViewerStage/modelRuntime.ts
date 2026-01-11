@@ -38,41 +38,17 @@ import {
   syncColorMapRowsFromAtoms,
 } from './colorMap';
 
-const DEFAULT_SPHERE_SEGMENTS = 24;
-
-function clampInt(n: number, min: number, max: number): number {
-  const v = Math.floor(Number.isFinite(n) ? n : DEFAULT_SPHERE_SEGMENTS);
-  return Math.max(min, Math.min(max, v));
-}
-
 function normalizeLayerDisplay(
   patch: Partial<LayerDisplaySettings>,
   base: LayerDisplaySettings,
 ): LayerDisplaySettings {
-  const atomScaleRaw = patch.atomScale;
-  const atomScale
-    = Number.isFinite(atomScaleRaw)
-      ? Math.max(0.2, Math.min(2, Number(atomScaleRaw)))
-      : base.atomScale;
+  const atomScale = patch.atomScale ?? base.atomScale;
 
-  const sphereSegmentsRaw = patch.sphereSegments;
-  const sphereSegments = clampInt(
-    Number.isFinite(sphereSegmentsRaw) ? Number(sphereSegmentsRaw) : base.sphereSegments,
-    8,
-    64,
-  );
+  const sphereSegments = patch.sphereSegments ?? base.sphereSegments;
 
-  const bondFactorRaw = patch.bondFactor;
-  const bondFactor
-    = Number.isFinite(bondFactorRaw)
-      ? Math.max(0.8, Math.min(1.3, Number(bondFactorRaw)))
-      : base.bondFactor;
+  const bondFactor = patch.bondFactor ?? base.bondFactor;
 
-  const bondRadiusRaw = patch.bondRadius;
-  const bondRadius
-    = Number.isFinite(bondRadiusRaw)
-      ? Math.max(0.03, Math.min(0.2, Number(bondRadiusRaw)))
-      : base.bondRadius;
+  const bondRadius = patch.bondRadius ?? base.bondRadius;
 
   const showBonds
     = typeof patch.showBonds === 'boolean' ? patch.showBonds : base.showBonds;

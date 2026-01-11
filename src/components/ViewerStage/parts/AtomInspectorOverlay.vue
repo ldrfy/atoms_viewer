@@ -271,10 +271,6 @@ watch(
 const desktopWidth = ref(loadNumber('atomInspector.desktopWidth', 360)); // px
 const mobileHeight = ref(loadNumber('atomInspector.mobileHeight', 280)); // px
 
-function clamp(n: number, min: number, max: number) {
-  return clampNumber(n, min, max);
-}
-
 let resizing = false;
 let startX = 0;
 let startY = 0;
@@ -345,14 +341,14 @@ function onResizing(e: PointerEvent) {
     // drag handle on right edge: dragging right increases width
     const dx = e.clientX - startX;
     const maxW = Math.floor(window.innerWidth * 0.7);
-    desktopWidth.value = clamp(startW + dx, 260, Math.max(260, maxW));
+    desktopWidth.value = clampNumber(startW + dx, 260, Math.max(260, maxW));
     saveNumber('atomInspector.desktopWidth', desktopWidth.value);
   }
   else {
     // bottom panel: dragging up increases height
     const dy = startY - e.clientY;
     const maxH = Math.floor(window.innerHeight * 0.7);
-    mobileHeight.value = clamp(startH + dy, 200, Math.max(200, maxH));
+    mobileHeight.value = clampNumber(startH + dy, 200, Math.max(200, maxH));
     saveNumber('atomInspector.mobileHeight', mobileHeight.value);
   }
 }

@@ -20,8 +20,13 @@ export const DUAL_VIEW_DISTANCE_MIN = 1;
 export const BOND_FACTOR_MIN = 0.8;
 export const BOND_FACTOR_MAX = 1.3;
 export const BOND_RADIUS_MIN = 0.03;
-export const BOND_RADIUS_MAX = 0.2;
+export const BOND_RADIUS_MAX = 0.3;
 export const ATOM_SCALE_MIN = 0.2;
 export const ATOM_SCALE_MAX = 2;
 export const SPHERE_SEGMENTS_MIN = 8;
 export const SPHERE_SEGMENTS_MAX = 64;
+
+/** Dual-view split ratio bounds in percent (UI). */
+/** 双视图分割比例（百分比）用于 UI 控件。 */
+export const DUAL_VIEW_SPLIT_MIN_PCT = 10;
+export const DUAL_VIEW_SPLIT_MAX_PCT = 90;

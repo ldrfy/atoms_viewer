@@ -57,7 +57,6 @@ import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import { useSettingsSiderContext } from '../useSettingsSiderContext';
-import { clampInt } from '../../../lib/utils/number';
 import { RECORD_FPS_MIN, RECORD_FPS_MAX } from '../../../lib/viewer/ranges';
 
 const { t } = useI18n();
@@ -75,10 +74,6 @@ const refreshBondsOnPlayModel = computed({
 
 const recordFpsModel = computed({
   get: () => settings.value.frame_rate ?? 60,
-  set: (v: number) => {
-    const n = Number(v);
-    const clamped = Number.isFinite(n) ? clampInt(n, RECORD_FPS_MIN, RECORD_FPS_MAX) : 60;
-    patchSettings({ frame_rate: clamped });
-  },
+  set: (v: number) => { patchSettings({ frame_rate: v }); },
 });
 </script>

@@ -178,7 +178,6 @@ import { useI18n } from 'vue-i18n';
 import { DEFAULT_LAYER_DISPLAY, type LayerDisplaySettings } from '../../../lib/viewer/settings';
 import { viewerApiRef } from '../../../lib/viewer/bridge';
 import { useSettingsSiderContext } from '../useSettingsSiderContext';
-import { clampNumber, clampInt } from '../../../lib/utils/number';
 import {
   ATOM_SCALE_MIN,
   ATOM_SCALE_MAX,
@@ -225,35 +224,22 @@ const showBondsModel = computed({
 
 const bondFactorModel = computed({
   get: () => displayModel.value?.bondFactor ?? 1.05,
-  set: (v: number) => {
-    const clamped = clampNumber(Number(v), BOND_FACTOR_MIN, BOND_FACTOR_MAX);
-    patchDisplay({ bondFactor: Math.round(clamped * 100) / 100 });
-  },
+  set: (v: number) => patchDisplay({ bondFactor: v }),
 });
 
 const bondRadiusModel = computed({
   get: () => displayModel.value?.bondRadius ?? 0.09,
-  set: (v: number) => {
-    const clamped = clampNumber(Number(v), BOND_RADIUS_MIN, BOND_RADIUS_MAX);
-    patchDisplay({ bondRadius: Math.round(clamped * 100) / 100 });
-  },
+  set: (v: number) => patchDisplay({ bondRadius: v }),
 });
 
 const atomScaleModel = computed({
   get: () => displayModel.value?.atomScale ?? 1,
-  set: (v: number) => {
-    const clamped = clampNumber(Number(v), ATOM_SCALE_MIN, ATOM_SCALE_MAX);
-    patchDisplay({ atomScale: Math.round(clamped * 100) / 100 });
-  },
+  set: (v: number) => patchDisplay({ atomScale: v }),
 });
 
 const sphereSegmentsModel = computed({
   get: () => displayModel.value?.sphereSegments ?? 24,
-  set: (v: number) => {
-    const n = Number(v);
-    const clamped = Number.isFinite(n) ? clampInt(n, SPHERE_SEGMENTS_MIN, SPHERE_SEGMENTS_MAX) : 24;
-    patchDisplay({ sphereSegments: clamped });
-  },
+  set: (v: number) => patchDisplay({ sphereSegments: v }),
 });
 
 function onResetDisplay(): void {

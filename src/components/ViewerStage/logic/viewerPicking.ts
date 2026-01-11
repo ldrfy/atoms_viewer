@@ -4,7 +4,6 @@ import type { Ref } from 'vue';
 
 import type { ViewerSettings } from '../../../lib/viewer/settings';
 import { normalizeViewPresets } from '../../../lib/viewer/viewPresets';
-import { clampDualViewSplit } from '../../../lib/viewer/viewLayout';
 import { ATOMIC_SYMBOLS } from '../../../lib/structure/chem';
 import type { Atom } from '../../../lib/structure/types';
 import type { AnyCamera } from '../../../lib/three/camera';
@@ -351,7 +350,7 @@ export function createViewerPickingController(deps: RenderDeps) {
     if (isDual) {
       const rRaw = deps.settingsRef.value.dualViewSplit;
       const r = typeof rRaw === 'number' && Number.isFinite(rRaw) ? rRaw : 0.5;
-      const leftW = Math.max(1, rect.width * clampDualViewSplit(r));
+      const leftW = Math.max(1, rect.width * r);
       const rightW = Math.max(1, rect.width - leftW);
 
       if (xPx <= leftW) {

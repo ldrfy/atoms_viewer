@@ -191,10 +191,9 @@ import { message } from 'ant-design-vue';
 import { useI18n } from 'vue-i18n';
 import { normalizeViewPresets, type ViewPreset } from '../../../lib/viewer/viewPresets';
 import {
-  clampDualViewSplit,
   DUAL_VIEW_SPLIT_MIN_PCT,
   DUAL_VIEW_SPLIT_MAX_PCT,
-} from '../../../lib/viewer/viewLayout';
+} from '../../../lib/viewer/ranges';
 import { DUAL_VIEW_DISTANCE_MIN } from '../../../lib/viewer/ranges';
 import { useSettingsSiderContext } from '../useSettingsSiderContext';
 
@@ -265,10 +264,10 @@ const dualViewDistanceMax = computed(() => {
 const dualViewSplitPctModel = computed({
   get: () => {
     const r = typeof settings.value.dualViewSplit === 'number' ? settings.value.dualViewSplit : 0.5;
-    return Math.round(clampDualViewSplit(r) * 100);
+    return Math.round(r * 100);
   },
   set: (pct: number) => {
-    patchSettings({ dualViewSplit: clampDualViewSplit(pct / 100) });
+    patchSettings({ dualViewSplit: pct / 100 });
   },
 });
 

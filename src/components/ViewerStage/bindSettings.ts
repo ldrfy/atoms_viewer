@@ -8,7 +8,6 @@ import {
   DEFAULT_AUTO_ROTATE_PRESET_ID,
   getAutoRotatePreset,
 } from '../../lib/viewer/autoRotate';
-import { clampDualViewSplit } from '../../lib/viewer/viewLayout';
 
 /**
  * 绑定 ViewerStage 与 settings 的 watch 逻辑，并返回统一的 stop 函数。
@@ -108,13 +107,8 @@ export function bindViewerStageSettings(params: {
   );
 
   stops.push(
-    watch(
-      () => settingsRef.value.dualViewSplit,
-      (v) => {
-        const r = typeof v === 'number' && Number.isFinite(v) ? v : 0.5;
-        // clamp to reasonable range to avoid extremely narrow viewports
-        setDualViewSplit(clampDualViewSplit(r));
-      },
+    watch(() => settingsRef.value.dualViewSplit,
+      v => setDualViewSplit(v ?? 0.5),
       { immediate: true },
     ),
   );

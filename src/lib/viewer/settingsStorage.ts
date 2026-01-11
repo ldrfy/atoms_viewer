@@ -39,9 +39,18 @@ export function normalizeSettings(input: Partial<ViewerSettings> | null): Viewer
   if (!input || typeof input !== 'object') return base;
 
   const v = input as Partial<ViewerSettings>;
+  const inferredBgMode = (() => {
+    if (typeof v.backgroundColorMode === 'string') return v.backgroundColorMode;
+    if (typeof v.backgroundColor === 'string') {
+      const c = v.backgroundColor.trim().toLowerCase();
+      if (c && c !== '#000000' && c !== '#ffffff') return 'custom';
+    }
+    return base.backgroundColorMode;
+  })();
   return {
     ...base,
     ...v,
+    backgroundColorMode: inferredBgMode,
     rotationDeg: { ...base.rotationDeg, ...(v.rotationDeg ?? {}) },
     autoRotate: {
       ...base.autoRotate,

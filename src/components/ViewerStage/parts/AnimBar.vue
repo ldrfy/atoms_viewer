@@ -154,6 +154,7 @@ const bgColorModel = computed<string>({
   set: (v: string) =>
     props.ctx.patchSettings({
       backgroundColor: v,
+      backgroundColorMode: 'custom',
       backgroundTransparent: false,
     }),
 });

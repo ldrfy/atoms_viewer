@@ -54,7 +54,12 @@
                 "system": "System",
                 "light": "Light",
                 "dark": "Dark"
-            }
+            },
+            "bgMismatchTitle": "Background contrast",
+            "bgMismatchLight": "Your current theme has low contrast against this light background, so text may be hard to read. Restoring the previous theme will improve readability.",
+            "bgMismatchDark": "Your current theme has low contrast against this dark background, so text may be hard to read. Restoring the previous theme will improve readability.",
+            "bgMismatchKeep": "Keep current theme",
+            "bgMismatchRestore": "Restore previous theme"
         },
         "locale": {
             "system": "System",
@@ -222,6 +227,7 @@
                 "axes": "Axes",
                 "recordFps": "Recording FPS",
                 "recordFpsHint": "Target recording frame rate; commonly 30 / 60.",
+                "themeReadabilityCheckOnOpen": "Check theme readability when opening viewer",
                 "reset": "Reset other settings"
             },
             "colors": {

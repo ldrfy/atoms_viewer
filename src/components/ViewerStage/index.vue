@@ -41,11 +41,18 @@
 </template>
 
 <script setup lang="ts">
-import { toRef, watch, onBeforeUnmount } from 'vue';
+import { toRef, watch, onBeforeUnmount, computed, ref, onMounted } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useViewerStage } from './useViewerStage';
 import type { ViewerSettings, OpenSettingsPayload } from '../../lib/viewer/settings';
-import { setThemeMode, isDarkColor } from '../../theme/mode';
+import { Modal } from 'ant-design-vue';
+import {
+  setThemeMode,
+  isDark,
+  getThemeMode,
+  getPreferredThemeForBg,
+  getColorLuminance,
+} from '../../theme/mode';
 import { setViewerApi } from '../../lib/viewer/bridge';
 import { createSettingsShadow } from '../../lib/viewer/mergeSettings';
 
@@ -87,6 +94,22 @@ const stage = useViewerStage(settingsRef, patchSettings, payload =>
   emit('open-settings', payload),
 );
 
+const AUTO_BG_LIGHT = '#ffffff';
+const AUTO_BG_DARK = '#000000';
+const SEVERE_DARK_THRESHOLD = 0.2;
+const SEVERE_LIGHT_THRESHOLD = 0.8;
+const themeMode = computed(() => getThemeMode());
+const activeThemeMode = computed<'light' | 'dark'>(() =>
+  themeMode.value === 'system' ? (isDark.value ? 'dark' : 'light') : themeMode.value,
+);
+const skipNextThemePrompt = ref(false);
+const allowThemePrompt = ref(false);
+
+onMounted(() => {
+  allowThemePrompt.value = true;
+  maybePromptSevereMismatch();
+});
+
 // NOTE: Vue template ref auto-unwrapping is guaranteed for top-level refs.
 // Accessing nested refs (stage.isLoading) can be inconsistent depending on build/tooling.
 // Keep a top-level alias so v-if tracks the actual boolean value.
@@ -111,9 +134,82 @@ watch(
   () => props.settings.backgroundColor,
   (color) => {
     if (!color) return;
-    setThemeMode(isDarkColor(color) ? 'dark' : 'light');
+    if (props.settings.backgroundColorMode !== 'custom') return;
+    const preferred = getPreferredThemeForBg(color);
+    if (!preferred || preferred === activeThemeMode.value) return;
+    skipNextThemePrompt.value = true;
+    setThemeMode(preferred);
   },
 );
+
+watch(
+  [() => isDark.value, () => props.settings.backgroundColorMode],
+  ([dark, mode]) => {
+    if (mode !== 'auto') return;
+    const nextColor = dark ? AUTO_BG_DARK : AUTO_BG_LIGHT;
+    if (
+      props.settings.backgroundColor !== nextColor
+      || props.settings.backgroundTransparent
+    ) {
+      patchSettings({
+        backgroundColor: nextColor,
+        backgroundTransparent: false,
+      });
+    }
+  },
+  { immediate: true },
+);
+
+watch(
+  () => themeMode.value,
+  (mode) => {
+    maybePromptThemeMismatch(mode);
+  },
+);
+
+function maybePromptThemeMismatch(mode: string): void {
+  if (!allowThemePrompt.value) return;
+  if (skipNextThemePrompt.value) {
+    skipNextThemePrompt.value = false;
+    return;
+  }
+  const currentMode = mode === 'system' ? activeThemeMode.value : mode;
+  const color = props.settings.backgroundColor;
+  if (!color) return;
+  const preferred = getPreferredThemeForBg(color);
+  if (!preferred || preferred === currentMode) return;
+  showThemeMismatchConfirm(preferred);
+}
+
+function maybePromptSevereMismatch(): void {
+  if (!props.settings.themeReadabilityCheckOnOpen) return;
+  const mode = activeThemeMode.value;
+  const color = props.settings.backgroundColor;
+  if (!color) return;
+  const L = getColorLuminance(color);
+  if (L === null) return;
+  const severe
+    = (mode === 'light' && L < SEVERE_DARK_THRESHOLD)
+      || (mode === 'dark' && L > SEVERE_LIGHT_THRESHOLD);
+  if (!severe) return;
+  const preferred = getPreferredThemeForBg(color);
+  if (!preferred || preferred === mode) return;
+  showThemeMismatchConfirm(preferred);
+}
+
+function showThemeMismatchConfirm(preferred: 'light' | 'dark'): void {
+  const contentKey = preferred === 'light'
+    ? 'viewer.theme.bgMismatchLight'
+    : 'viewer.theme.bgMismatchDark';
+  Modal.confirm({
+    title: t('viewer.theme.bgMismatchTitle'),
+    content: t(contentKey),
+    centered: true,
+    okText: t('viewer.theme.bgMismatchRestore'),
+    cancelText: t('viewer.theme.bgMismatchKeep'),
+    onOk: () => setThemeMode(preferred),
+  });
+}
 </script>
 
 <!-- 关键修改：去掉 scoped，让 index.css 能作用到子组件内部 DOM -->

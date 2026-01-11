@@ -182,6 +182,8 @@ const otherDirty = computed(() => {
     settings.value.showAxes !== DEFAULT_SETTINGS.showAxes
     || settings.value.refreshBondsOnPlay !== DEFAULT_SETTINGS.refreshBondsOnPlay
     || settings.value.frame_rate !== DEFAULT_SETTINGS.frame_rate
+    || (settings.value.themeReadabilityCheckOnOpen ?? true)
+      !== (DEFAULT_SETTINGS.themeReadabilityCheckOnOpen ?? true)
   );
 });
 

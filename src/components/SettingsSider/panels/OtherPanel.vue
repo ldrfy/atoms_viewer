@@ -22,6 +22,19 @@
       </a-row>
     </a-form-item>
 
+    <a-form-item>
+      <a-row justify="space-between" align="middle">
+        <a-col>{{ t('settings.panel.other.themeReadabilityCheckOnOpen') }}</a-col>
+        <a-col>
+          <a-switch
+            v-model:checked="themeReadabilityCheckOnOpenModel"
+            :aria-label="t('settings.panel.other.themeReadabilityCheckOnOpen')"
+            :title="t('settings.panel.other.themeReadabilityCheckOnOpen')"
+          />
+        </a-col>
+      </a-row>
+    </a-form-item>
+
     <a-form-item :label="t('settings.panel.other.recordFps')">
       <a-row :gutter="8" align="middle">
         <a-col :flex="1">
@@ -86,12 +99,19 @@ const recordFpsModel = computed({
   set: (v: number) => { patchSettings({ frame_rate: v }); },
 });
 
+const themeReadabilityCheckOnOpenModel = computed({
+  get: () => settings.value.themeReadabilityCheckOnOpen ?? true,
+  set: (v: boolean) => patchSettings({ themeReadabilityCheckOnOpen: v }),
+});
+
 const isOtherDirty = computed(() => {
   if (derivedContext) return derivedContext.otherDirty.value;
   return (
     settings.value.showAxes !== DEFAULT_SETTINGS.showAxes
     || settings.value.refreshBondsOnPlay !== DEFAULT_SETTINGS.refreshBondsOnPlay
     || settings.value.frame_rate !== DEFAULT_SETTINGS.frame_rate
+    || (settings.value.themeReadabilityCheckOnOpen ?? true)
+      !== (DEFAULT_SETTINGS.themeReadabilityCheckOnOpen ?? true)
   );
 });
 
@@ -100,6 +120,7 @@ function resetOtherSettings(): void {
     showAxes: DEFAULT_SETTINGS.showAxes,
     refreshBondsOnPlay: DEFAULT_SETTINGS.refreshBondsOnPlay,
     frame_rate: DEFAULT_SETTINGS.frame_rate,
+    themeReadabilityCheckOnOpen: DEFAULT_SETTINGS.themeReadabilityCheckOnOpen,
   });
 }
 </script>

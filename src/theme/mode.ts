@@ -48,16 +48,26 @@ export function applyThemeToDom(dark: boolean): void {
 }
 
 // 设置背景时，主题要跟着改
-export function isDarkColor(hex: string): boolean {
-  const h = hex.replace('#', '');
-  const v
-    = h.length === 3
-      ? h
+const THEME_LUMINANCE_THRESHOLD = 0.5;
+
+function normalizeHexColor(hex: string): string | null {
+  const raw = String(hex || '').trim();
+  const stripped = raw.startsWith('#') ? raw.slice(1) : raw;
+  if (!/^[\da-fA-F]{3}$|^[\da-fA-F]{6}$/.test(stripped)) return null;
+  const expanded
+    = stripped.length === 3
+      ? stripped
           .split('')
           .map(c => c + c)
           .join('')
-      : h;
+      : stripped;
+  return `#${expanded.toLowerCase()}`;
+}
 
+export function getColorLuminance(hex: string): number | null {
+  const normalized = normalizeHexColor(hex);
+  if (!normalized) return null;
+  const v = normalized.slice(1);
   const n = parseInt(v, 16);
   const r = ((n >> 16) & 255) / 255;
   const g = ((n >> 8) & 255) / 255;
@@ -66,7 +76,15 @@ export function isDarkColor(hex: string): boolean {
   const toLinear = (c: number) =>
     c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
 
-  const L = 0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b);
+  return 0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b);
+}
 
-  return L < 0.5;
+export function getPreferredThemeForBg(hex: string): 'dark' | 'light' | null {
+  const L = getColorLuminance(hex);
+  if (L === null) return null;
+  return L < THEME_LUMINANCE_THRESHOLD ? 'dark' : 'light';
+}
+
+export function isDarkColor(hex: string): boolean {
+  return getPreferredThemeForBg(hex) === 'dark';
 }

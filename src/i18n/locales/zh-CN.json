@@ -55,7 +55,12 @@
                 "system": "系统",
                 "light": "浅色",
                 "dark": "深色"
-            }
+            },
+            "bgMismatchTitle": "背景对比度",
+            "bgMismatchLight": "当前主题与浅色背景对比度过低，文字可能不可读。恢复之前的主题可提升可读性。",
+            "bgMismatchDark": "当前主题与深色背景对比度过低，文字可能不可读。恢复之前的主题可提升可读性。",
+            "bgMismatchKeep": "保持当前选择的主题",
+            "bgMismatchRestore": "恢复之前的主题"
         },
         "locale": {
             "system": "跟随系统",
@@ -117,6 +122,7 @@
                 "recordFps": "录制帧率 (fps)",
                 "recordFpsHint": "录制输出的目标帧率；常用 30 / 60。",
                 "refreshBondsOnPlay": "播放时原子连接每帧刷新",
+                "themeReadabilityCheckOnOpen": "打开模型时检查主题可读性",
                 "reset": "恢复其他默认值"
             },
             "display": {

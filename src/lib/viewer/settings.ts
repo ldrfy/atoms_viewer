@@ -74,7 +74,11 @@ export type ViewerSettings = {
   /** Optional user-defined color map template (applied on new layer load). */
   colorMapTemplate?: AtomTypeColorMapItem[];
   backgroundColor: string;
+  /** Auto background follows theme; custom background sticks to user color. */
+  backgroundColorMode?: 'auto' | 'custom';
   backgroundTransparent?: boolean;
+  /** Check theme/background readability when entering viewer. */
+  themeReadabilityCheckOnOpen?: boolean;
 
   /** Multi-view presets (choose 1 => single view, choose 2 => dual view). */
   viewPresets?: ViewPreset[];
@@ -144,7 +148,9 @@ export const DEFAULT_SETTINGS: ViewerSettings = {
 
   lammpsTypeMap: [],
   backgroundColor: isDark.value ? '#000000' : '#ffffff',
-  backgroundTransparent: true,
+  backgroundColorMode: 'auto',
+  backgroundTransparent: false,
+  themeReadabilityCheckOnOpen: true,
 
   // Enforce "at least one view" at the settings level. This avoids the UI being in an
   // undefined state for first-time users and ensures distance syncing works consistently.

@@ -87,7 +87,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, provide, reactive, ref } from 'vue';
+import { computed, nextTick, provide, reactive, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { Modal, message } from 'ant-design-vue';
 import {
@@ -128,6 +128,8 @@ import {
 import { APP_VERSION } from '../../lib/appMeta';
 import { getThemeMode, setThemeMode, type ThemeMode } from '../../theme/mode';
 import { getLocale, setLocale, SUPPORT_LOCALES, type SupportLocale } from '../../i18n';
+import { isLammpsDumpFormat } from '../../lib/structure/parsers/lammpsDump';
+import { isLammpsDataFormat } from '../../lib/structure/parsers/lammpsData';
 
 const props = withDefaults(
   defineProps<{
@@ -152,6 +154,17 @@ const { replaceSettings } = useSettingsSiderControlContext();
 
 const viewerApi = computed(() => viewerApiRef.value);
 const importInputRef = ref<HTMLInputElement | null>(null);
+const layerList = computed(() => viewerApi.value?.layers.value ?? []);
+const activeLayerId = computed(() => viewerApi.value?.activeLayerId.value ?? null);
+const activeLayerInfo = computed(() => {
+  const id = activeLayerId.value;
+  if (!id) return null;
+  return layerList.value.find(l => l.id === id) ?? null;
+});
+const activeLayerIsLammps = computed(() => {
+  const format = activeLayerInfo.value?.sourceFormat ?? '';
+  return isLammpsDumpFormat(format) || isLammpsDataFormat(format);
+});
 
 type SettingsExportPayload = {
   version: string;
@@ -188,7 +201,11 @@ type SettingsExportPayload = {
     lammps: Pick<ViewerSettings, 'lammpsTypeMap'>;
     other: Pick<
       ViewerSettings,
-      'showAxes' | 'refreshBondsOnPlay' | 'frame_rate' | 'themeReadabilityCheckOnOpen'
+      'showAxes'
+        | 'refreshBondsOnPlay'
+        | 'frame_rate'
+        | 'autoRotateOnLoad'
+        | 'themeReadabilityCheckOnOpen'
     >;
     files: Pick<ViewerSettings, 'exportPngScale' | 'exportPngTransparent'>;
   };
@@ -404,7 +421,7 @@ function isPanelDirty(key: string): boolean {
   return false;
 }
 
-const panels = [
+const basePanels = [
   { key: 'files', headerKey: 'settings.panel.files.header', comp: FilesPanel, icon: FolderOpenOutlined },
   { key: 'autoRotate', headerKey: 'settings.panel.autoRotate.header', comp: AutoRotatePanel, icon: SyncOutlined },
   { key: 'display', headerKey: 'settings.panel.display.header', comp: DisplayPanel, icon: EyeOutlined },
@@ -414,6 +431,11 @@ const panels = [
   { key: 'layerDisplay', headerKey: 'settings.panel.layerDisplay.header', comp: LayerDisplayPanel, icon: SlidersOutlined },
   { key: 'other', headerKey: 'settings.panel.other.header', comp: OtherPanel, icon: SettingOutlined },
 ] as const;
+const panels = computed(() =>
+  activeLayerIsLammps.value
+    ? basePanels
+    : basePanels.filter(p => p.key !== 'lammps'),
+);
 
 const activeKeyProxy = computed<string[]>({
   get: () => props.activeKey,
@@ -426,6 +448,16 @@ const activeKeyProxy = computed<string[]>({
     emit('update:activeKey', next);
   },
 });
+
+watch(
+  () => activeLayerIsLammps.value,
+  (isLammps) => {
+    if (isLammps) return;
+    if (props.activeKey.includes('lammps')) {
+      emit('update:activeKey', props.activeKey.filter(k => k !== 'lammps'));
+    }
+  },
+);
 
 function onResizeStart(ev: PointerEvent): void {
   emit('resize-start', ev);

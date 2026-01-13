@@ -24,6 +24,8 @@
         },
         "record": {
             "bg": "背景",
+            "bgTransparent": "透明",
+            "bgReset": "恢复透明",
             "start": "录制",
             "stop": "结束",
             "resume": "恢复",

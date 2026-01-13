@@ -86,6 +86,7 @@
     background: var(--settings-panel-bg) !important;
     backdrop-filter: blur(var(--settings-panel-blur)) !important;
     -webkit-backdrop-filter: blur(var(--settings-panel-blur)) !important;
+    border-radius: 14px 0 0 14px !important;
 }
 
 /* Ensure Ant internal wrappers don't paint opaque layers over our blur */
@@ -151,7 +152,7 @@
     flex-direction: column;
     /* match Ant Drawer look/feel */
     -webkit-overflow-scrolling: touch;
-    border-radius: 14px !important;
+    border-radius: 14px 0 0 14px !important;
 }
 
 /* Desktop slide motion (no mask, no body scroll lock, no layout shift) */

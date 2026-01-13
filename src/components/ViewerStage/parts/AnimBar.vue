@@ -69,29 +69,52 @@
     <a-row
       :gutter="8"
       align="middle"
-      justify="space-between"
+      :justify="isRecording ? 'end' : 'space-between'"
       :wrap="false"
     >
-      <a-col flex="auto" class="anim-col-min">
+      <a-col v-if="!isRecording" flex="auto" class="anim-col-min">
         <div class="anim-field anim-field-tight">
           <span class="anim-field-label">{{ t("viewer.record.bg") }}</span>
 
-          <input
-            v-model="bgColorModel"
-            class="color-picker"
-            type="color"
-            :disabled="isRecording"
-            :aria-label="t('viewer.record.bg')"
-            :title="t('viewer.record.bg')"
+          <div
+            class="color-picker-wrap"
+            :class="{ 'is-transparent': isBgTransparent }"
+            @click="onBgPickerClick"
           >
+            <input
+              ref="bgColorInputRef"
+              v-model="bgColorModel"
+              class="color-picker"
+              type="color"
+              :aria-label="t('viewer.record.bg')"
+              :title="t('viewer.record.bg')"
+            >
+            <div
+              v-if="isBgTransparent"
+              class="color-picker-transparent"
+              aria-hidden="true"
+            />
+          </div>
 
           <a-typography-text
-            v-if="!isRecording"
             class="color-hex"
-            :content="bgColorModel"
+            :content="bgDisplayText"
             ellipsis
           />
         </div>
+
+        <a-button
+          v-if="showBgReset"
+          type="text"
+          size="small"
+          class="anim-inline-btn"
+          :disabled="isRecording"
+          :aria-label="t('viewer.record.bgReset')"
+          :title="t('viewer.record.bgReset')"
+          @click="resetBgToTransparent"
+        >
+          <ReloadOutlined />
+        </a-button>
       </a-col>
 
       <a-col flex="none">
@@ -114,7 +137,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, unref } from 'vue';
+import { ReloadOutlined } from '@ant-design/icons-vue';
+import { computed, ref, unref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import type { AnimCtx } from '../ctx';
 import { RECORD_FPS_MIN, RECORD_FPS_MAX } from '../../../lib/viewer/constants';
@@ -149,6 +173,8 @@ const fpsModel = computed<number>({
   },
 });
 
+const bgColorInputRef = ref<HTMLInputElement | null>(null);
+
 const bgColorModel = computed<string>({
   get: () => unref(props.ctx.settings).backgroundColor,
   set: (v: string) =>
@@ -158,6 +184,28 @@ const bgColorModel = computed<string>({
       backgroundTransparent: false,
     }),
 });
+
+const isBgTransparent = computed(() => unref(props.ctx.settings).backgroundTransparent);
+
+const showBgReset = computed(() => !unref(props.ctx.settings).backgroundTransparent);
+
+const bgDisplayText = computed(() =>
+  isBgTransparent.value
+    ? t('viewer.record.bgTransparent')
+    : bgColorModel.value,
+);
+
+function onBgPickerClick(): void {
+  if (isRecording.value) return;
+  bgColorInputRef.value?.click();
+}
+
+function resetBgToTransparent(): void {
+  props.ctx.patchSettings({
+    backgroundTransparent: true,
+    backgroundColorMode: 'custom',
+  });
+}
 </script>
 
 <style>
@@ -279,8 +327,53 @@ const bgColorModel = computed<string>({
     flex: 0 0 auto;
 }
 
+.color-picker-wrap {
+    position: relative;
+    display: inline-flex;
+    width: 48px;
+    height: 32px;
+    flex: 0 0 auto;
+}
+
+.color-picker-wrap.is-transparent .color-picker {
+    opacity: 0;
+}
+
+.color-picker-transparent {
+    position: absolute;
+    inset: 0;
+    margin: 4px;
+    border-radius: 4px;
+    background-color: #ffffff;
+    background-image:
+        linear-gradient(45deg, rgba(0, 0, 0, 0.12) 25%, transparent 25%),
+        linear-gradient(-45deg, rgba(0, 0, 0, 0.12) 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, rgba(0, 0, 0, 0.12) 75%),
+        linear-gradient(-45deg, transparent 75%, rgba(0, 0, 0, 0.12) 75%);
+    background-size: 10px 10px;
+    background-position: 0 0, 0 5px, 5px -5px, -5px 0;
+    pointer-events: none;
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.15);
+}
+
+:root[data-theme="dark"] .color-picker-transparent {
+    background-color: #1f1f1f;
+    background-image:
+        linear-gradient(45deg, rgba(255, 255, 255, 0.14) 25%, transparent 25%),
+        linear-gradient(-45deg, rgba(255, 255, 255, 0.14) 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, rgba(255, 255, 255, 0.14) 75%),
+        linear-gradient(-45deg, transparent 75%, rgba(255, 255, 255, 0.14) 75%);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+}
+
 /* 颜色 hex：必须能省略，否则手机会横向溢出 */
 .color-hex {
+    display: inline-flex;
+    align-items: center;
+    align-self: center;
+    height: 32px;
+    line-height: 32px;
+    vertical-align: middle;
     min-width: 0;
     max-width: 80px;
     /* 手机关键：控制住 */
@@ -299,6 +392,13 @@ const bgColorModel = computed<string>({
 /* 按钮文字不折行（不然会把高度撑得很怪） */
 .anim-action-btn {
     white-space: nowrap;
+}
+
+.anim-inline-btn {
+    display: inline-flex;
+    align-items: center;
+    height: 32px;
+    padding: 0 6px;
 }
 
 /* REC tag */

@@ -332,11 +332,11 @@ const panelStyle = computed(() => {
     return {
       position: 'fixed',
       zIndex: z,
-      left: '12px',
+      left: 0,
       top: '18%',
       height: '64%',
       width: `${desktopWidth.value}px`,
-      borderRadius: '10px',
+      borderRadius: '0 10px 10px 0',
     } as Record<string, any>;
   }
   return {
@@ -561,6 +561,23 @@ function fmt(v: number | null | undefined): string {
   padding-right: 4px;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(120, 120, 120, 0.35) transparent;
+}
+
+.atom-inspector__list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.atom-inspector__list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.atom-inspector__list::-webkit-scrollbar-thumb {
+  background-color: rgba(120, 120, 120, 0.35);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
 }
 
 .atom-inspector__footer {

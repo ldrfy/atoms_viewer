@@ -4,6 +4,8 @@ import { message } from 'ant-design-vue';
 import type { ThreeStage } from '../../lib/three/stage';
 import { buildExportFilename } from '../../lib/file/filename';
 import { clampNumber } from '../../lib/utils/number';
+import { getThemeMode, isDark } from '../../theme/mode';
+import type { ViewerSettings } from '../../lib/viewer/settings';
 
 export type CropBox = { x: number; y: number; w: number; h: number };
 
@@ -39,6 +41,9 @@ type CreateRecordingControllerArgs = {
   /** 如需录制时强制背景不透明，用它 */
   patchSettings?: (patch: Record<string, unknown>) => void;
 
+  /** 读取当前设置（用于录制时临时调整背景） */
+  getSettings?: () => ViewerSettings;
+
   /** i18n 文案（可选） */
   t?: (key: string, params?: Record<string, unknown>) => string;
 
@@ -67,6 +72,10 @@ export function createRecordingController(
 
   const recordCropBox = ref<CropBox | null>(null);
   let recordCropRect: CropBox | null = null;
+  let recordBgRestore: Pick<
+    ViewerSettings,
+    'backgroundTransparent' | 'backgroundColor' | 'backgroundColorMode'
+  > | null = null;
 
   // ----------------------------
   // internal: pointer edit
@@ -145,6 +154,40 @@ export function createRecordingController(
     };
 
     cropRafId = window.requestAnimationFrame(pump);
+  };
+
+  const getRecordBgColor = (): string => {
+    const mode = getThemeMode();
+    if (mode === 'dark') return '#000000';
+    if (mode === 'light') return '#ffffff';
+    return isDark.value ? '#000000' : '#ffffff';
+  };
+
+  const applyRecordBackground = (): void => {
+    if (!patchSettings || !args.getSettings) return;
+    if (recordBgRestore) return;
+    const settings = args.getSettings();
+    if (!settings.backgroundTransparent) return;
+    recordBgRestore = {
+      backgroundTransparent: settings.backgroundTransparent,
+      backgroundColor: settings.backgroundColor,
+      backgroundColorMode: settings.backgroundColorMode,
+    };
+    patchSettings({
+      backgroundTransparent: false,
+      backgroundColor: getRecordBgColor(),
+      backgroundColorMode: 'custom',
+    });
+  };
+
+  const restoreRecordBackground = (): void => {
+    if (!recordBgRestore || !patchSettings) return;
+    patchSettings({
+      backgroundTransparent: recordBgRestore.backgroundTransparent,
+      backgroundColor: recordBgRestore.backgroundColor,
+      backgroundColorMode: recordBgRestore.backgroundColorMode,
+    });
+    recordBgRestore = null;
   };
 
   let mediaRecorder: MediaRecorder | null = null;
@@ -247,10 +290,15 @@ export function createRecordingController(
     if (!stage || isRecording.value) return;
     if (!recordCropRect) return;
 
+    applyRecordBackground();
+
     // 建 crop canvas
     if (!cropCanvas) cropCanvas = document.createElement('canvas');
     cropCtx = cropCanvas.getContext('2d', { alpha: true });
-    if (!cropCtx) return;
+    if (!cropCtx) {
+      restoreRecordBackground();
+      return;
+    }
 
     // IMPORTANT: use renderer pixel ratio (may be clamped, e.g. to 2) instead of
     // window.devicePixelRatio; otherwise crop coordinates can be wrong on high-DPR devices.
@@ -322,6 +370,7 @@ export function createRecordingController(
       mediaRecorder = null;
       isRecording.value = false;
       isRecordPaused.value = false;
+      restoreRecordBackground();
     };
 
     // 让 recorder 尽量把最后缓存吐出来（有的浏览器有效）
@@ -512,9 +561,6 @@ export function createRecordingController(
     }
 
     isSelectingRecordArea.value = false;
-
-    // 录制时建议强制不透明背景（你原来全画布录制 startRecord 才做，这里裁剪录制也建议做）
-    patchSettings?.({ backgroundTransparent: false });
 
     recordCropRect = box;
     recordCropBox.value = box;

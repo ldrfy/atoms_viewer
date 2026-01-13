@@ -94,8 +94,6 @@ const stage = useViewerStage(settingsRef, patchSettings, payload =>
   emit('open-settings', payload),
 );
 
-const AUTO_BG_LIGHT = '#ffffff';
-const AUTO_BG_DARK = '#000000';
 const SEVERE_DARK_THRESHOLD = 0.2;
 const SEVERE_LIGHT_THRESHOLD = 0.8;
 const themeMode = computed(() => getThemeMode());
@@ -133,6 +131,7 @@ watch(
 watch(
   () => props.settings.backgroundColor,
   (color) => {
+    if (props.settings.backgroundTransparent) return;
     if (!color) return;
     if (props.settings.backgroundColorMode !== 'custom') return;
     const preferred = getPreferredThemeForBg(color);
@@ -140,24 +139,6 @@ watch(
     skipNextThemePrompt.value = true;
     setThemeMode(preferred);
   },
-);
-
-watch(
-  [() => isDark.value, () => props.settings.backgroundColorMode],
-  ([dark, mode]) => {
-    if (mode !== 'auto') return;
-    const nextColor = dark ? AUTO_BG_DARK : AUTO_BG_LIGHT;
-    if (
-      props.settings.backgroundColor !== nextColor
-      || props.settings.backgroundTransparent
-    ) {
-      patchSettings({
-        backgroundColor: nextColor,
-        backgroundTransparent: false,
-      });
-    }
-  },
-  { immediate: true },
 );
 
 watch(
@@ -173,6 +154,7 @@ function maybePromptThemeMismatch(mode: string): void {
     skipNextThemePrompt.value = false;
     return;
   }
+  if (props.settings.backgroundTransparent) return;
   const currentMode = mode === 'system' ? activeThemeMode.value : mode;
   const color = props.settings.backgroundColor;
   if (!color) return;
@@ -185,6 +167,7 @@ function maybePromptSevereMismatch(): void {
   if (!props.settings.themeReadabilityCheckOnOpen) return;
   const mode = activeThemeMode.value;
   const color = props.settings.backgroundColor;
+  if (props.settings.backgroundTransparent) return;
   if (!color) return;
   const L = getColorLuminance(color);
   if (L === null) return;

@@ -1,4 +1,3 @@
-import { isDark } from '../../theme/mode';
 import type { ViewPreset } from './viewPresets';
 import type { AutoRotatePresetId } from './autoRotate';
 export type LammpsTypeMapItem = {
@@ -152,9 +151,9 @@ export const DEFAULT_SETTINGS: ViewerSettings = {
   resetViewSeq: 0,
 
   lammpsTypeMap: [],
-  backgroundColor: isDark.value ? '#000000' : '#ffffff',
-  backgroundColorMode: 'auto',
-  backgroundTransparent: false,
+  backgroundColor: '#ffffff',
+  backgroundColorMode: 'custom',
+  backgroundTransparent: true,
   themeReadabilityCheckOnOpen: true,
 
   // Enforce "at least one view" at the settings level. This avoids the UI being in an

@@ -420,6 +420,7 @@ export function useViewerStage(
   const recording = createRecordingController({
     getStage: () => stage,
     patchSettings: settingsSync.patch,
+    getSettings: () => settingsRef.value,
     t,
     getRecordFps: () => settingsRef.value.frame_rate ?? 60,
     getModelFileName: () => modelFileNameProvider(),

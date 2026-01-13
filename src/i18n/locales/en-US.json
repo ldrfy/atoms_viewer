@@ -1,4 +1,5 @@
 {
+    "LDR Atoms Viewer": "LDR Atoms Viewer",
     "locale": {
         "selfName": "English"
     },
@@ -23,6 +24,8 @@
         },
         "record": {
             "bg": "Background",
+            "bgTransparent": "Transparent",
+            "bgReset": "Reset to transparent",
             "start": "Record",
             "stop": "Stop",
             "resume": "Resume",

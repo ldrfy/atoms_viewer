@@ -403,19 +403,6 @@ export function createViewerLoader(deps: {
         deps.t?.('viewer.settings.modifiedHint')
         ?? '已检测到修改的设置，已打开相关面板。',
       );
-      if (deps.patchSettings && deps.settingsRef.value.autoRotate.autoEnabledBySystem) {
-        deps.patchSettings({
-          autoRotate: {
-            ...deps.settingsRef.value.autoRotate,
-            enabled: false,
-            autoEnabledBySystem: false,
-          },
-        });
-        message.info(
-          deps.t?.('viewer.autoRotate.disabledHint')
-          ?? '检测到相关设置已展开，已停止自动旋转。',
-        );
-      }
       return;
     }
 
@@ -423,18 +410,6 @@ export function createViewerLoader(deps: {
       focusKeys: ['display', 'autoRotate'],
       open: true,
     });
-    if (deps.patchSettings) {
-      deps.patchSettings({
-        autoRotate: {
-          ...deps.settingsRef.value.autoRotate,
-          enabled: true,
-          autoEnabledBySystem: true,
-        },
-      });
-      message.info(
-        deps.t('viewer.autoRotate.enabledHint'),
-      );
-    }
   }
 
   async function loadInit(): Promise<void> {
@@ -462,6 +437,23 @@ export function createViewerLoader(deps: {
       });
 
       syncViewPresetAndDistanceOnModelLoad();
+
+      if (deps.patchSettings) {
+        const enabled = !!deps.settingsRef.value.autoRotateOnLoad;
+        deps.patchSettings({
+          autoRotate: {
+            ...deps.settingsRef.value.autoRotate,
+            enabled,
+            autoEnabledBySystem: enabled,
+          },
+        });
+        if (enabled) {
+          message.info(
+            deps.t?.('viewer.autoRotate.enabledHint')
+            ?? '已开启自动旋转，可在设置-自动旋转-启用中关闭。',
+          );
+        }
+      }
 
       focusSettingsToLayersOrLammps();
 

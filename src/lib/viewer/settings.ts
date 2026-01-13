@@ -63,6 +63,8 @@ export type ViewerSettings = {
 
   /** Auto rotation (around an arbitrary axis with a constant speed). */
   autoRotate: AutoRotateSettings;
+  /** Auto-enable rotation on model load (system hint). */
+  autoRotateOnLoad: boolean;
   // 新增：是否正交（关闭透视）
   orthographic: boolean;
 
@@ -145,6 +147,7 @@ export const DEFAULT_SETTINGS: ViewerSettings = {
     pauseOnInteract: true,
     resumeDelayMs: 600,
   },
+  autoRotateOnLoad: true,
 
   // false = perspective (UI switch is inverted). / false 表示透视（UI 开关反向）。
   orthographic: false,

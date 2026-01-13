@@ -111,7 +111,7 @@
             "modifiedHint": "检测到当前模型存在修改过的设置，已打开相关面板。"
         },
         "autoRotate": {
-            "enabledHint": "已开启自动旋转，可在设置-自动旋转-启用中关闭。",
+            "enabledHint": "自动旋转已开启。临时关闭：设置-自动旋转-启用；永久关闭：设置-其他设置-载入模型后自动旋转。",
             "disabledHint": "检测到相关设置已展开，已停止自动旋转。"
         }
     },
@@ -133,6 +133,7 @@
                 "recordFps": "录制帧率 (fps)",
                 "recordFpsHint": "录制输出的目标帧率；常用 30 / 60。",
                 "refreshBondsOnPlay": "播放时原子连接每帧刷新",
+                "autoRotateOnLoad": "载入模型后自动旋转",
                 "themeReadabilityCheckOnOpen": "打开模型时检查主题可读性",
                 "reset": "恢复其他默认值"
             },

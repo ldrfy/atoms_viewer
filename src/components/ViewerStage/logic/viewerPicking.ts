@@ -139,7 +139,7 @@ export function createViewerPickingController(deps: RenderDeps) {
     lineMaterial = new THREE.MeshBasicMaterial({
       color: 0xffd400,
       transparent: true,
-      opacity: 0.95,
+      opacity: 0.5,
       depthTest: true,
       depthWrite: false,
     });
@@ -214,10 +214,7 @@ export function createViewerPickingController(deps: RenderDeps) {
       : (Number.isFinite(deps.settingsRef.value.bondRadius)
           ? deps.settingsRef.value.bondRadius
           : 0.09);
-    const lineRadius = Math.min(
-      Math.max(0.008, baseBondRadius * 0.7),
-      baseBondRadius * 0.9,
-    );
+    const lineRadius = Math.max(0.008, baseBondRadius * 1.1);
 
     const updateLine = (mesh: THREE.Mesh, a: THREE.Vector3, b: THREE.Vector3) => {
       lineP1.copy(a);

@@ -235,6 +235,7 @@ function buildExportPayload(v: ViewerSettings): SettingsExportPayload {
         showAxes: v.showAxes,
         refreshBondsOnPlay: v.refreshBondsOnPlay,
         frame_rate: v.frame_rate,
+        autoRotateOnLoad: v.autoRotateOnLoad,
         themeReadabilityCheckOnOpen: v.themeReadabilityCheckOnOpen,
       },
       files: {
@@ -354,6 +355,7 @@ const otherDirty = computed(() => {
     settings.value.showAxes !== DEFAULT_SETTINGS.showAxes
     || settings.value.refreshBondsOnPlay !== DEFAULT_SETTINGS.refreshBondsOnPlay
     || settings.value.frame_rate !== DEFAULT_SETTINGS.frame_rate
+    || settings.value.autoRotateOnLoad !== DEFAULT_SETTINGS.autoRotateOnLoad
     || (settings.value.themeReadabilityCheckOnOpen ?? true)
       !== (DEFAULT_SETTINGS.themeReadabilityCheckOnOpen ?? true)
   );

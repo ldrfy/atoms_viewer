@@ -24,6 +24,19 @@
 
     <a-form-item>
       <a-row justify="space-between" align="middle">
+        <a-col>{{ t('settings.panel.other.autoRotateOnLoad') }}</a-col>
+        <a-col>
+          <a-switch
+            v-model:checked="autoRotateOnLoadModel"
+            :aria-label="t('settings.panel.other.autoRotateOnLoad')"
+            :title="t('settings.panel.other.autoRotateOnLoad')"
+          />
+        </a-col>
+      </a-row>
+    </a-form-item>
+
+    <a-form-item>
+      <a-row justify="space-between" align="middle">
         <a-col>{{ t('settings.panel.other.themeReadabilityCheckOnOpen') }}</a-col>
         <a-col>
           <a-switch
@@ -94,6 +107,24 @@ const refreshBondsOnPlayModel = computed({
   set: (v: boolean) => patchSettings({ refreshBondsOnPlay: v }),
 });
 
+const autoRotateOnLoadModel = computed({
+  get: () => settings.value.autoRotateOnLoad ?? true,
+  set: (v: boolean) => {
+    if (!v) {
+      patchSettings({
+        autoRotateOnLoad: false,
+        autoRotate: {
+          ...settings.value.autoRotate,
+          enabled: false,
+          autoEnabledBySystem: false,
+        },
+      });
+      return;
+    }
+    patchSettings({ autoRotateOnLoad: true });
+  },
+});
+
 const recordFpsModel = computed({
   get: () => settings.value.frame_rate ?? 60,
   set: (v: number) => { patchSettings({ frame_rate: v }); },
@@ -109,6 +140,7 @@ const isOtherDirty = computed(() => {
   return (
     settings.value.showAxes !== DEFAULT_SETTINGS.showAxes
     || settings.value.refreshBondsOnPlay !== DEFAULT_SETTINGS.refreshBondsOnPlay
+    || settings.value.autoRotateOnLoad !== DEFAULT_SETTINGS.autoRotateOnLoad
     || settings.value.frame_rate !== DEFAULT_SETTINGS.frame_rate
     || (settings.value.themeReadabilityCheckOnOpen ?? true)
       !== (DEFAULT_SETTINGS.themeReadabilityCheckOnOpen ?? true)
@@ -119,6 +151,7 @@ function resetOtherSettings(): void {
   patchSettings({
     showAxes: DEFAULT_SETTINGS.showAxes,
     refreshBondsOnPlay: DEFAULT_SETTINGS.refreshBondsOnPlay,
+    autoRotateOnLoad: DEFAULT_SETTINGS.autoRotateOnLoad,
     frame_rate: DEFAULT_SETTINGS.frame_rate,
     themeReadabilityCheckOnOpen: DEFAULT_SETTINGS.themeReadabilityCheckOnOpen,
   });

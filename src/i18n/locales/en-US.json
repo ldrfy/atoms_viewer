@@ -111,7 +111,7 @@
             "modifiedHint": "Detected modified settings for the current model. Relevant panels are now open."
         },
         "autoRotate": {
-            "enabledHint": "Auto-rotate is enabled. You can turn it off in Settings → Auto-rotate → Enable.",
+            "enabledHint": "Auto-rotation enabled. Temporary off: Settings → Auto-rotate → Enable; permanent off: Settings → Other → Auto rotate after loading models.",
             "disabledHint": "Related panels are open; auto-rotate has been stopped."
         }
     },
@@ -240,6 +240,7 @@
                 "recordFps": "Recording FPS",
                 "recordFpsHint": "Target recording frame rate; commonly 30 / 60.",
                 "themeReadabilityCheckOnOpen": "Check theme readability when opening viewer",
+                "autoRotateOnLoad": "Auto rotate after loading models",
                 "reset": "Reset other settings"
             },
             "colors": {

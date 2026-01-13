@@ -65,6 +65,7 @@
               :title="t('settings.panel.layers.deleteConfirm')"
               :ok-text="t('common.delete')"
               :cancel-text="t('common.cancel')"
+              placement="left"
               @confirm="onDeleteLayer(l.id)"
             >
               <a-button

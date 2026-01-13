@@ -19,6 +19,9 @@ export type AnimCtx = {
   isRecording: MaybeRef<boolean>;
   isRecordPaused: MaybeRef<boolean>;
   recordTimeText: MaybeRef<string>;
+  recordDelayRemainingSec: MaybeRef<number>;
+  isRecordDelayActive: MaybeRef<boolean>;
+  cancelRecordDelay: () => void;
   toggleRecord: () => void;
   togglePause: () => void;
 
@@ -62,6 +65,9 @@ export function createAnimCtx(args: {
     isRecording: args.recording.isRecording,
     isRecordPaused: args.recording.isRecordPaused,
     recordTimeText: args.recording.recordTimeText,
+    recordDelayRemainingSec: args.recording.recordDelayRemainingSec,
+    isRecordDelayActive: args.recording.isRecordDelayActive,
+    cancelRecordDelay: args.recording.cancelRecordDelay,
     toggleRecord: args.recording.toggleRecord,
     togglePause: args.recording.togglePause,
 

@@ -7,6 +7,7 @@ import type { MaybeRef } from './common';
 export type RecordSelectCtx = {
   isSelectingRecordArea: MaybeRef<boolean>;
   recordDraftBox: MaybeRef<CropBox | null>;
+  recordDelaySec: MaybeRef<number>;
 
   onRecordOverlayDown: (e: PointerEvent) => void;
   onRecordOverlayMove: (e: PointerEvent) => void;
@@ -23,6 +24,7 @@ export function createRecordSelectCtx(
   return {
     isSelectingRecordArea: recording.isSelectingRecordArea,
     recordDraftBox: recording.recordDraftBox,
+    recordDelaySec: recording.recordDelaySec,
 
     onRecordOverlayDown: recording.onRecordOverlayDown,
     onRecordOverlayMove: recording.onRecordOverlayMove,
@@ -39,6 +41,7 @@ export function createRecordSelectCtx(
  */
 export type CropDashCtx = {
   isRecording: MaybeRef<boolean>;
+  isRecordDelayActive: MaybeRef<boolean>;
   recordCropBox: MaybeRef<CropBox | null>;
 };
 
@@ -47,6 +50,7 @@ export function createCropDashCtx(
 ): CropDashCtx {
   return {
     isRecording: recording.isRecording,
+    isRecordDelayActive: recording.isRecordDelayActive,
     recordCropBox: recording.recordCropBox,
   };
 }

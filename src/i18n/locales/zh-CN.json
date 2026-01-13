@@ -26,6 +26,8 @@
             "bg": "背景",
             "bgTransparent": "透明",
             "bgReset": "恢复透明",
+            "delay": "延迟录制",
+            "countdown": "倒计时",
             "start": "录制",
             "stop": "结束",
             "resume": "恢复",

@@ -15,6 +15,10 @@ export type RecordingBindings = {
   isRecordPaused: Ref<boolean>;
   recordElapsedMs: Ref<number>;
   recordTimeText: ComputedRef<string>;
+  recordDelaySec: Ref<number>;
+  recordDelayRemainingSec: Ref<number>;
+  isRecordDelayActive: Ref<boolean>;
+  cancelRecordDelay: () => void;
   toggleRecord: () => void;
   togglePause: () => void;
 
@@ -69,6 +73,9 @@ export function createRecordingController(
   const isRecordPaused = ref(false);
 
   const recordElapsedMs = ref(0);
+  const recordDelaySec = ref(0);
+  const recordDelayRemainingSec = ref(0);
+  const isRecordDelayActive = ref(false);
 
   const recordCropBox = ref<CropBox | null>(null);
   let recordCropRect: CropBox | null = null;
@@ -197,6 +204,10 @@ export function createRecordingController(
   let recordTimerId: number | null = null;
   let recordStartTs = 0;
   let recordAccumulated = 0;
+  let recordDelayTimerId: number | null = null;
+  let recordDelayTickId: number | null = null;
+  let recordDelayStartTs = 0;
+  let recordDelayMs = 0;
 
   // ----------------------------
   // helpers
@@ -275,6 +286,19 @@ export function createRecordingController(
     recordAccumulated = 0;
   }
 
+  function clearRecordDelayTimer(): void {
+    if (recordDelayTimerId) {
+      clearTimeout(recordDelayTimerId);
+      recordDelayTimerId = null;
+    }
+    if (recordDelayTickId) {
+      clearInterval(recordDelayTickId);
+      recordDelayTickId = null;
+    }
+    recordDelayRemainingSec.value = 0;
+    isRecordDelayActive.value = false;
+  }
+
   const recordTimeText = computed(() => {
     const s = Math.floor(recordElapsedMs.value / 1000);
     const mm = String(Math.floor(s / 60)).padStart(2, '0');
@@ -290,6 +314,7 @@ export function createRecordingController(
     if (!stage || isRecording.value) return;
     if (!recordCropRect) return;
 
+    clearRecordDelayTimer();
     applyRecordBackground();
 
     // 建 crop canvas
@@ -409,6 +434,7 @@ export function createRecordingController(
   }
 
   function toggleRecord(): void {
+    clearRecordDelayTimer();
     if (isRecording.value) {
       stopRecord();
       return;
@@ -537,6 +563,7 @@ export function createRecordingController(
   }
 
   function cancelRecordSelect(): void {
+    clearRecordDelayTimer();
     isSelectingRecordArea.value = false;
     recordDraftBox.value = null;
 
@@ -564,9 +591,41 @@ export function createRecordingController(
 
     recordCropRect = box;
     recordCropBox.value = box;
+    recordDraftBox.value = null;
 
     const fps = Math.max(1, Math.floor(args.getRecordFps?.() ?? 60));
-    startRecordCropped(fps);
+    const delaySec = Math.max(0, Number(recordDelaySec.value) || 0);
+    if (delaySec <= 0) {
+      startRecordCropped(fps);
+      return;
+    }
+
+    clearRecordDelayTimer();
+    recordDelayStartTs = performance.now();
+    recordDelayMs = delaySec * 1000;
+    recordDelayRemainingSec.value = delaySec;
+    isRecordDelayActive.value = true;
+    recordDelayTickId = window.setInterval(() => {
+      const elapsed = performance.now() - recordDelayStartTs;
+      const remainMs = Math.max(0, recordDelayMs - elapsed);
+      recordDelayRemainingSec.value = remainMs / 1000;
+      if (remainMs <= 0 && recordDelayTickId) {
+        clearInterval(recordDelayTickId);
+        recordDelayTickId = null;
+      }
+    }, 100);
+    recordDelayTimerId = window.setTimeout(() => {
+      recordDelayTimerId = null;
+      startRecordCropped(fps);
+    }, Math.round(delaySec * 1000));
+  }
+
+  function cancelRecordDelay(): void {
+    clearRecordDelayTimer();
+    isSelectingRecordArea.value = false;
+    recordDraftBox.value = null;
+    recordCropBox.value = null;
+    recordCropRect = null;
   }
 
   return {
@@ -574,6 +633,10 @@ export function createRecordingController(
     isRecordPaused,
     recordElapsedMs,
     recordTimeText,
+    recordDelaySec,
+    recordDelayRemainingSec,
+    isRecordDelayActive,
+    cancelRecordDelay,
     toggleRecord,
     togglePause,
 

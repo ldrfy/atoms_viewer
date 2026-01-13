@@ -10,7 +10,9 @@ import type { CropDashCtx } from '../ctx';
 const props = defineProps<{ ctx: CropDashCtx }>();
 
 const box = computed(() => unref(props.ctx.recordCropBox));
-const visible = computed(() => !!unref(props.ctx.isRecording) && !!box.value);
+const visible = computed(() =>
+  (!!unref(props.ctx.isRecording) || !!unref(props.ctx.isRecordDelayActive)) && !!box.value,
+);
 
 const style = computed<CSSProperties>(() => {
   const b = box.value;

@@ -26,6 +26,8 @@
             "bg": "Background",
             "bgTransparent": "Transparent",
             "bgReset": "Reset to transparent",
+            "delay": "Delay",
+            "countdown": "Countdown",
             "start": "Record",
             "stop": "Stop",
             "resume": "Resume",

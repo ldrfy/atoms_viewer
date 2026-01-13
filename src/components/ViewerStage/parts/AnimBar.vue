@@ -69,10 +69,10 @@
     <a-row
       :gutter="8"
       align="middle"
-      :justify="isRecording ? 'end' : 'space-between'"
+      :justify="isRecording || isRecordDelayActive ? 'end' : 'space-between'"
       :wrap="false"
     >
-      <a-col v-if="!isRecording" flex="auto" class="anim-col-min">
+      <a-col v-if="!isRecording && !isRecordDelayActive" flex="auto" class="anim-col-min">
         <div class="anim-field anim-field-tight">
           <span class="anim-field-label">{{ t("viewer.record.bg") }}</span>
 
@@ -119,7 +119,11 @@
 
       <a-col flex="none">
         <a-space :size="6" :wrap="false" class="anim-right">
-          <a-tag v-if="isRecording" color="red" class="anim-rec-tag">
+          <a-tag v-if="isRecordDelayActive" color="orange" class="anim-rec-tag">
+            {{ t("viewer.record.countdown") }} {{ recordDelayText }}
+          </a-tag>
+
+          <a-tag v-else-if="isRecording" color="red" class="anim-rec-tag">
             ● REC {{ recordTimeText }}
           </a-tag>
 
@@ -127,7 +131,20 @@
             {{ isRecordPaused ? t("viewer.record.resume") : t("viewer.record.pause") }}
           </a-button>
 
-          <a-button type="primary" class="anim-action-btn" @click="ctx.toggleRecord">
+          <a-button
+            v-if="isRecordDelayActive"
+            type="primary"
+            class="anim-action-btn"
+            @click="ctx.cancelRecordDelay"
+          >
+            {{ t("viewer.record.stop") }}
+          </a-button>
+          <a-button
+            v-else
+            type="primary"
+            class="anim-action-btn"
+            @click="ctx.toggleRecord"
+          >
             {{ isRecording ? t("viewer.record.stop") : t("viewer.record.start") }}
           </a-button>
         </a-space>
@@ -151,7 +168,12 @@ const hasAnimation = computed(() => !!unref(props.ctx.hasAnimation));
 const isPlaying = computed(() => !!unref(props.ctx.isPlaying));
 const isRecording = computed(() => !!unref(props.ctx.isRecording));
 const isRecordPaused = computed(() => !!unref(props.ctx.isRecordPaused));
+const isRecordDelayActive = computed(() => !!unref(props.ctx.isRecordDelayActive));
 const recordTimeText = computed(() => unref(props.ctx.recordTimeText));
+const recordDelayRemainingSec = computed(() =>
+  Number(unref(props.ctx.recordDelayRemainingSec) ?? 0),
+);
+const recordDelayText = computed(() => `${recordDelayRemainingSec.value.toFixed(1)}s`);
 const frameCountMax = computed(() => Math.max(1, props.ctx.frameCount.value));
 
 /** UI 1-based <-> 内部 0-based */
@@ -342,8 +364,8 @@ function resetBgToTransparent(): void {
 .color-picker-transparent {
     position: absolute;
     inset: 0;
-    margin: 4px;
-    border-radius: 4px;
+    margin: 5px;
+    border-radius: 5px;
     background-color: #ffffff;
     background-image:
         linear-gradient(45deg, rgba(0, 0, 0, 0.12) 25%, transparent 25%),

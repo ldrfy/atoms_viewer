@@ -13,13 +13,29 @@
       </div>
 
       <div class="record-select-actions" @pointerdown.stop @pointerup.stop>
-        <a-space :size="8">
+        <a-space :size="8" align="center">
           <a-button @click="ctx.cancelRecordSelect">
             {{ t("viewer.record.selectCancel") }}
           </a-button>
           <a-button type="primary" :disabled="!draftBox" @click="ctx.confirmRecordSelect">
             {{ t("viewer.record.selectConfirm") }}
           </a-button>
+          <div class="record-delay">
+            <a-typography-text type="secondary">
+              {{ t("viewer.record.delay") }}
+            </a-typography-text>
+            <a-input-number
+              v-model:value="recordDelayModel"
+              size="small"
+              :min="0"
+              :step="0.1"
+              :precision="2"
+              class="record-delay-input"
+            />
+            <a-typography-text type="secondary">
+              s
+            </a-typography-text>
+          </div>
         </a-space>
       </div>
     </div>
@@ -40,7 +56,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, unref, type CSSProperties } from 'vue';
+import { computed, unref, type CSSProperties, type Ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import type { RecordSelectCtx } from '../ctx';
@@ -50,6 +66,15 @@ const { t } = useI18n();
 
 const isSelecting = computed(() => !!unref(props.ctx.isSelectingRecordArea));
 const draftBox = computed(() => unref(props.ctx.recordDraftBox));
+const recordDelayModel = computed<number>({
+  get: () => Number(unref(props.ctx.recordDelaySec) ?? 0),
+  set: (v: number) => {
+    const next = Number(v);
+    if (!Number.isFinite(next)) return;
+    const target = props.ctx.recordDelaySec as Ref<number>;
+    if (target && 'value' in target) target.value = Math.max(0, next);
+  },
+});
 
 const draftStyle = computed<CSSProperties>(() => {
   const b = draftBox.value;
@@ -101,6 +126,16 @@ const draftStyle = computed<CSSProperties>(() => {
 .record-select-actions {
     z-index: 55;
     pointer-events: auto;
+}
+
+.record-delay {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.record-delay-input {
+    width: 88px;
 }
 
 .record-select-box {

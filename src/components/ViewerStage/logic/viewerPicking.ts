@@ -140,7 +140,8 @@ export function createViewerPickingController(deps: RenderDeps) {
       color: 0xffd400,
       transparent: true,
       opacity: 0.95,
-      depthTest: false,
+      depthTest: true,
+      depthWrite: false,
     });
 
     const makeLine = (): THREE.Mesh => {

@@ -86,6 +86,9 @@ export type ViewerPublicApi = {
   applyViewFromSettings: (overrides?: Partial<ViewerSettings>) => void;
   /** Temporarily suspend settings sync from controls/auto-rotation. */
   suspendSettingsSync: (ms?: number) => void;
+
+  /** Whether any visible layer uses custom atom colors. */
+  visibleCustomColors: Ref<boolean>;
 };
 
 /**

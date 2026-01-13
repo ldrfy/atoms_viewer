@@ -204,10 +204,7 @@ function arraysEqual(a: unknown, b: unknown): boolean {
 }
 
 function hasCustomColors(): boolean {
-  const template = settings.value.colorMapTemplate ?? [];
-  if (template.some(r => r.isCustom)) return true;
-  const rows = viewerApi.value?.activeLayerColorMap?.value ?? [];
-  return rows.some(r => r.isCustom);
+  return viewerApi.value?.visibleCustomColors?.value ?? false;
 }
 
 function hasCustomTypeMap(): boolean {

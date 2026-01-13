@@ -252,6 +252,8 @@ export type ModelRuntime = {
     opts?: { applyToAll?: boolean },
   ) => void;
 
+  visibleCustomColors: Ref<boolean>;
+
   getActiveAtomMeshes: () => THREE.InstancedMesh[];
   getVisibleAtomMeshes: () => THREE.InstancedMesh[];
 };
@@ -280,6 +282,7 @@ export function createModelRuntime(args: {
   const activeTypeMapApplied = ref(false);
   const activeColorMapRows = ref<AtomTypeColorMapItem[]>([]);
   const activeDisplaySettings = ref<LayerDisplaySettings | null>(null);
+  const visibleCustomColors = ref(false);
 
   // Internal layer registry keyed by id (source of truth).
   // 内部图层注册表（以 id 为键的唯一真源数据）。
@@ -364,6 +367,17 @@ export function createModelRuntime(args: {
     // Force a re-apply on next tick.
     lastClipDist = -1;
     lastClipRadius = -1;
+  }
+
+  function recomputeVisibleCustomColors(): void {
+    for (const l of layerMap.values()) {
+      if (!l.info.visible) continue;
+      if (l.colorMapRows?.some(r => r.isCustom)) {
+        visibleCustomColors.value = true;
+        return;
+      }
+    }
+    visibleCustomColors.value = false;
   }
 
   function tickCameraClipping(force = false): void {
@@ -730,6 +744,7 @@ export function createModelRuntime(args: {
     syncActiveTypeMap();
     syncActiveColorMap();
     syncActiveDisplay();
+    recomputeVisibleCustomColors();
 
     // keep axes in sync
     applyShowAxes();
@@ -772,6 +787,7 @@ export function createModelRuntime(args: {
 
     layers.value = [...layers.value];
     syncHasModelFlag();
+    recomputeVisibleCustomColors();
 
     invalidate();
   }
@@ -969,6 +985,7 @@ export function createModelRuntime(args: {
     syncActiveTypeMap();
     syncActiveColorMap();
     syncActiveDisplay();
+    recomputeVisibleCustomColors();
 
     fitCameraToAtomsCentered(active, mappedFirstAtoms);
     applyShowAxes();
@@ -995,6 +1012,7 @@ export function createModelRuntime(args: {
     activeTypeMapRows.value = [];
     activeColorMapRows.value = [];
     activeDisplaySettings.value = null;
+    visibleCustomColors.value = false;
 
     // axes cleanup
     axesHelper.visible = false;
@@ -1276,6 +1294,7 @@ export function createModelRuntime(args: {
     active.typeMapApplied = true;
     activeColorMapRows.value = (active.colorMapRows ?? []) as any;
     activeTypeMapApplied.value = true;
+    recomputeVisibleCustomColors();
 
     // atom mesh colors depend on element => must rebuild
     rebuildVisualsForLayer(active, mapped);
@@ -1344,6 +1363,7 @@ export function createModelRuntime(args: {
     syncActiveTypeMap();
     syncActiveColorMap();
     syncActiveDisplay();
+    recomputeVisibleCustomColors();
     applyShowAxes();
     recomputeVisibleClipRadius();
     tickCameraClipping(true);
@@ -1359,6 +1379,7 @@ export function createModelRuntime(args: {
     if (!active) return;
     active.colorMapRows = cloneColorRows(rows ?? []);
     activeColorMapRows.value = (active.colorMapRows ?? []) as any;
+    recomputeVisibleCustomColors();
   }
 
   function setAllLayersColorMapRows(rows: AtomTypeColorMapItem[]): void {
@@ -1370,6 +1391,7 @@ export function createModelRuntime(args: {
     if (active) {
       activeColorMapRows.value = (active.colorMapRows ?? []) as any;
     }
+    recomputeVisibleCustomColors();
   }
 
   function resetAllLayersColorMapToDefaults(): void {
@@ -1378,6 +1400,7 @@ export function createModelRuntime(args: {
       l.colorMapRows = syncColorMapRowsFromAtoms([], mapped, l.hasAnyTypeId);
     }
     syncActiveColorMap();
+    recomputeVisibleCustomColors();
     onColorMapChanged({ applyToAll: true });
   }
 
@@ -1598,6 +1621,8 @@ export function createModelRuntime(args: {
 
     setActiveLayer,
     setLayerVisible,
+
+    visibleCustomColors,
 
     getActiveAtomMeshes,
     getVisibleAtomMeshes,

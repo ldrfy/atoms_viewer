@@ -90,6 +90,8 @@ type ViewerStageBridgeApi = {
   ) => void;
   applyViewFromSettings: (overrides?: Partial<ViewerSettings>) => void;
   suspendSettingsSync: (ms?: number) => void;
+
+  visibleCustomColors: Ref<boolean>;
 };
 
 type ViewerStageExposedApi = {
@@ -321,6 +323,10 @@ export function useViewerStage(
 
   const activeLayerDisplay = computed<LayerDisplaySettings | null>(() => {
     return (runtimeTick.value, runtime?.activeDisplaySettings.value ?? null);
+  });
+
+  const visibleCustomColors = computed<boolean>(() => {
+    return (runtimeTick.value, runtime?.visibleCustomColors.value ?? false);
   });
 
   // state
@@ -800,6 +806,7 @@ export function useViewerStage(
     setActiveLayerDisplay,
     applyViewFromSettings,
     suspendSettingsSync: (ms = 200) => settingsSync.suspend(ms),
+    visibleCustomColors,
   };
 
   const exposedApi: ViewerStageExposedApi = {

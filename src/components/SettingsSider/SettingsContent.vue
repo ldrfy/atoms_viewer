@@ -55,7 +55,7 @@
     </a-collapse>
 
     <div class="settings-reset">
-      <a-button block @click="onClearStorage">
+      <a-button block danger @click="onClearStorage">
         {{ t('settings.clearStorage') }}
       </a-button>
       <a-typography-text type="secondary" class="settings-text-secondary">
@@ -314,7 +314,6 @@ function onClearStorage(): void {
     title: t('settings.clearStorageConfirmTitle'),
     content: t('settings.clearStorageConfirmBody'),
     centered: true,
-    wrapClassName: 'settings-clear-confirm',
     okText: t('common.confirm'),
     cancelText: t('common.cancel'),
     onOk: () => {

@@ -45,7 +45,7 @@ import { toRef, watch, onBeforeUnmount, computed, ref, onMounted } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useViewerStage } from './useViewerStage';
 import type { ViewerSettings, OpenSettingsPayload } from '../../lib/viewer/settings';
-import { Modal } from 'ant-design-vue';
+import { Modal, message } from 'ant-design-vue';
 import {
   setThemeMode,
   isDark,
@@ -198,16 +198,23 @@ function maybePromptSevereMismatch(): void {
 }
 
 function showThemeMismatchConfirm(preferred: 'light' | 'dark'): void {
-  const contentKey = preferred === 'light'
-    ? 'viewer.theme.bgMismatchLight'
-    : 'viewer.theme.bgMismatchDark';
+  const contentKey = 'viewer.theme.bgMismatch';
+  const currentMode = preferred === 'light' ? 'dark' : 'light';
+  const themeLabelKey = currentMode === 'light'
+    ? 'viewer.theme.bgMismatchThemeLight'
+    : 'viewer.theme.bgMismatchThemeDark';
   Modal.confirm({
     title: t('viewer.theme.bgMismatchTitle'),
-    content: t(contentKey),
+    content: t(contentKey, { theme: t(themeLabelKey) }),
     centered: true,
     okText: t('viewer.theme.bgMismatchRestore'),
     cancelText: t('viewer.theme.bgMismatchKeep'),
-    onOk: () => setThemeMode(preferred),
+    onOk: () => {
+      setThemeMode(preferred);
+    },
+    onCancel: () => {
+      message.info(t('viewer.theme.bgMismatchKeepTip'));
+    },
   });
 }
 </script>

@@ -56,10 +56,12 @@
                 "dark": "Dark"
             },
             "bgMismatchTitle": "Background contrast",
-            "bgMismatchLight": "Your current theme has low contrast against this light background, so text may be hard to read. Restoring the previous theme will improve readability.",
-            "bgMismatchDark": "Your current theme has low contrast against this dark background, so text may be hard to read. Restoring the previous theme will improve readability.",
+            "bgMismatch": "The current {theme} theme has low contrast with the background color, so text may be hard to read.\nCheck the top-right icons and the text in the top-left/bottom-left.\nYou can turn off this prompt in Settings > Other.",
+            "bgMismatchThemeLight": "light",
+            "bgMismatchThemeDark": "dark",
             "bgMismatchKeep": "Keep current theme",
-            "bgMismatchRestore": "Restore previous theme"
+            "bgMismatchRestore": "Restore previous theme",
+            "bgMismatchKeepTip": "Kept the current theme. You can clear settings to restore defaults."
         },
         "locale": {
             "system": "System",

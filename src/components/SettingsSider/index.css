@@ -339,18 +339,6 @@
     margin-bottom: 2px;
 }
 
-.settings-clear-confirm .ant-modal-body {
-    padding: 16px 20px;
-}
-
-.settings-clear-confirm .ant-modal-confirm-body {
-    align-items: center;
-}
-
-.settings-clear-confirm .ant-modal-confirm-content {
-    margin-top: 6px;
-}
-
 /* Settings panel scrollbars (soft, theme-aware) */
 .settings-body {
     scrollbar-width: thin;

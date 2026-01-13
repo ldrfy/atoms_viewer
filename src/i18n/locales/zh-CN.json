@@ -57,10 +57,12 @@
                 "dark": "深色"
             },
             "bgMismatchTitle": "背景对比度",
-            "bgMismatchLight": "当前主题与浅色背景对比度过低，文字可能不可读。恢复之前的主题可提升可读性。",
-            "bgMismatchDark": "当前主题与深色背景对比度过低，文字可能不可读。恢复之前的主题可提升可读性。",
+            "bgMismatch": "当前使用的{theme}主题与背景颜色对比度过低，文字可能不可读。\n请留意右上角图标及左上角/左下角文字是否可见。\n可在“设置-其他设置”里关闭此提示。",
+            "bgMismatchThemeLight": "浅色",
+            "bgMismatchThemeDark": "深色",
             "bgMismatchKeep": "保持当前选择的主题",
-            "bgMismatchRestore": "恢复之前的主题"
+            "bgMismatchRestore": "恢复之前的主题",
+            "bgMismatchKeepTip": "已保持当前主题。可在“设置-清理本地设置”以恢复默认。"
         },
         "locale": {
             "system": "跟随系统",
@@ -110,14 +112,14 @@
         }
     },
     "settings": {
-        "title": "配置",
+        "title": "设置",
         "clearStorage": "清理本地设置",
         "clearStorageConfirmTitle": "确认清理本地设置？",
         "clearStorageConfirmBody": "将清空本地保存的设置并恢复默认值。",
         "clearStorageHint": "如遇显示异常或参数不同步，可尝试清空本地设置。",
         "panel": {
             "other": {
-                "header": "其他配置",
+                "header": "其他设置",
                 "axes": "坐标轴",
                 "recordFps": "录制帧率 (fps)",
                 "recordFpsHint": "录制输出的目标帧率；常用 30 / 60。",

@@ -47,8 +47,8 @@
           :key="`${row.element}-${row.typeId ?? 0}-${idx}`"
           class="settings-gap-bottom-sm"
         >
-          <a-row :gutter="8" align="middle">
-            <a-col :span="8">
+          <a-row :gutter="8" align="middle" class="settings-color-map-row">
+            <a-col :span="7">
               <a-tag>{{ formatColorKey(row) }}</a-tag>
             </a-col>
 
@@ -66,16 +66,6 @@
               </a-tooltip>
             </a-col>
 
-            <a-col :span="9">
-              <a-input
-                :value="row.color"
-                :placeholder="t('settings.panel.colors.hexPlaceholder')"
-                :aria-label="t('settings.panel.colors.hexPlaceholder')"
-                :title="t('settings.panel.colors.hexPlaceholder')"
-                @change="onColorHexChange(idx, ($event as any).target?.value)"
-              />
-            </a-col>
-
             <a-col :span="4">
               <input
                 class="color-picker"
@@ -85,6 +75,16 @@
                 :title="t('settings.panel.colors.colorPickerLabel', { key: formatColorKey(row) })"
                 @input="onColorPickerChange(idx, ($event as any).target?.value)"
               >
+            </a-col>
+
+            <a-col :span="10">
+              <a-input
+                :value="row.color"
+                :placeholder="t('settings.panel.colors.hexPlaceholder')"
+                :aria-label="t('settings.panel.colors.hexPlaceholder')"
+                :title="t('settings.panel.colors.hexPlaceholder')"
+                @change="onColorHexChange(idx, ($event as any).target?.value)"
+              />
             </a-col>
           </a-row>
         </div>

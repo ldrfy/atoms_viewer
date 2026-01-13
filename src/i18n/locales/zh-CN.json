@@ -113,10 +113,15 @@
     },
     "settings": {
         "title": "设置",
-        "clearStorage": "清理本地设置",
-        "clearStorageConfirmTitle": "确认清理本地设置？",
+        "clearStorage": "清空本地设置",
+        "clearStorageConfirmTitle": "确认清空本地设置？",
         "clearStorageConfirmBody": "将清空本地保存的设置并恢复默认值。",
         "clearStorageHint": "如遇显示异常或参数不同步，可尝试清空本地设置。",
+        "exportSettings": "导出设置",
+        "importSettings": "导入设置",
+        "exportSuccess": "设置已导出",
+        "importSuccess": "设置已导入",
+        "importFailed": "导入失败，文件格式不正确。",
         "panel": {
             "other": {
                 "header": "其他设置",

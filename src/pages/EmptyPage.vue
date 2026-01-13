@@ -83,8 +83,7 @@
           :href="APP_YUHLDR_URL"
           target="_blank"
           rel="noopener noreferrer"
-        >
-          v{{ APP_VERSION }}
+        >v{{ APP_VERSION }}
           <span class="sep">·</span>
           {{ t('viewer.empty.footer.copyright', { years: copyrightYearsText, author: APP_AUTHOR }) }}
         </a>
@@ -360,7 +359,7 @@ const logoSrc = props.logoSrc;
 }
 
 .sep {
-    margin: 0 8px;
+    margin: 0 2px;
 }
 
 .file-input {

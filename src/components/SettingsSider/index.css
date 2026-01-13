@@ -258,6 +258,14 @@
     gap: 8px;
 }
 
+.settings-import-export {
+    margin-top: 4px;
+}
+
+.settings-import-input {
+    display: none;
+}
+
 .settings-gap-top-sm {
     margin-top: 8px;
 }

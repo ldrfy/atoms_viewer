@@ -116,6 +116,11 @@
         "clearStorageConfirmTitle": "Clear local settings?",
         "clearStorageConfirmBody": "This removes saved local settings and restores defaults.",
         "clearStorageHint": "If the display looks wrong or settings get out of sync, try clearing local settings.",
+        "exportSettings": "Export settings",
+        "importSettings": "Import settings",
+        "exportSuccess": "Settings exported",
+        "importSuccess": "Settings imported",
+        "importFailed": "Import failed. Invalid file format.",
         "panel": {
             "display": {
                 "header": "Display",

@@ -95,6 +95,11 @@ export type ViewerSettings = {
   /** Dual view split ratio for left viewport width (0..1). */
   dualViewSplit?: number;
 
+  /** PNG 导出倍率 */
+  exportPngScale: number;
+  /** PNG 导出是否透明背景 */
+  exportPngTransparent: boolean;
+
   //   录制帧率
   frame_rate: number;
 };
@@ -162,6 +167,9 @@ export const DEFAULT_SETTINGS: ViewerSettings = {
   dualViewDistance: 10,
   initialDualViewDistance: 10,
   dualViewSplit: 0.5,
+
+  exportPngScale: 2,
+  exportPngTransparent: true,
 
   frame_rate: 60,
 };

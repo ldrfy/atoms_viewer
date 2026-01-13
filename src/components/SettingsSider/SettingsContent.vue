@@ -61,14 +61,35 @@
       <a-typography-text type="secondary" class="settings-text-secondary">
         {{ t('settings.clearStorageHint') }}
       </a-typography-text>
+      <div class="settings-import-export">
+        <a-row :gutter="8">
+          <a-col :span="12">
+            <a-button block @click="onExportSettings">
+              {{ t('settings.exportSettings') }}
+            </a-button>
+          </a-col>
+          <a-col :span="12">
+            <a-button block @click="onImportSettings">
+              {{ t('settings.importSettings') }}
+            </a-button>
+          </a-col>
+        </a-row>
+        <input
+          ref="importInputRef"
+          class="settings-import-input"
+          type="file"
+          accept="application/json,.json"
+          @change="onImportFile"
+        >
+      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, provide, reactive } from 'vue';
+import { computed, nextTick, provide, reactive, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { Modal } from 'ant-design-vue';
+import { Modal, message } from 'ant-design-vue';
 import {
   AppstoreOutlined,
   BgColorsOutlined,
@@ -93,6 +114,7 @@ import {
   DEFAULT_SETTINGS,
   DEFAULT_LAYER_DISPLAY,
 } from '../../lib/viewer/settings';
+import type { ViewerSettings } from '../../lib/viewer/settings';
 import { useSettingsSiderContext } from './useSettingsSiderContext';
 import { useSettingsSiderControlContext } from './useSettingsSiderControlContext';
 import { settingsSiderDirtyContextKey, settingsSiderDerivedContextKey } from './context';
@@ -100,8 +122,12 @@ import { viewerApiRef } from '../../lib/viewer/bridge';
 import {
   buildDefaultSettings,
   clearSettingsStorage,
+  normalizeSettings,
   saveSettingsToStorage,
 } from '../../lib/viewer/settingsStorage';
+import { APP_VERSION } from '../../lib/appMeta';
+import { getThemeMode, setThemeMode, type ThemeMode } from '../../theme/mode';
+import { getLocale, setLocale, SUPPORT_LOCALES, type SupportLocale } from '../../i18n';
 
 const props = withDefaults(
   defineProps<{
@@ -125,6 +151,143 @@ const { settings } = useSettingsSiderContext();
 const { replaceSettings } = useSettingsSiderControlContext();
 
 const viewerApi = computed(() => viewerApiRef.value);
+const importInputRef = ref<HTMLInputElement | null>(null);
+
+type SettingsExportPayload = {
+  version: string;
+  app: {
+    themeMode: ThemeMode;
+    locale: SupportLocale;
+  };
+  settings: {
+    display: Pick<
+      ViewerSettings,
+      | 'viewPresets'
+        | 'dualViewEnabled'
+        | 'dualViewDistance'
+        | 'initialDualViewDistance'
+        | 'dualViewSplit'
+        | 'orthographic'
+        | 'rotationDeg'
+        | 'resetViewSeq'
+    >;
+    layerDisplay: Pick<
+      ViewerSettings,
+      | 'atomScale'
+        | 'sphereSegments'
+        | 'showBonds'
+        | 'bondFactor'
+        | 'bondRadius'
+    >;
+    autoRotate: ViewerSettings['autoRotate'];
+    background: Pick<
+      ViewerSettings,
+      'backgroundColor' | 'backgroundColorMode' | 'backgroundTransparent'
+    >;
+    colors: Pick<ViewerSettings, 'colorMapTemplate'>;
+    lammps: Pick<ViewerSettings, 'lammpsTypeMap'>;
+    other: Pick<
+      ViewerSettings,
+      'showAxes' | 'refreshBondsOnPlay' | 'frame_rate' | 'themeReadabilityCheckOnOpen'
+    >;
+    files: Pick<ViewerSettings, 'exportPngScale' | 'exportPngTransparent'>;
+  };
+};
+
+function buildExportPayload(v: ViewerSettings): SettingsExportPayload {
+  return {
+    version: APP_VERSION,
+    app: {
+      themeMode: getThemeMode(),
+      locale: getLocale(),
+    },
+    settings: {
+      display: {
+        viewPresets: v.viewPresets,
+        dualViewEnabled: v.dualViewEnabled,
+        dualViewDistance: v.dualViewDistance,
+        initialDualViewDistance: v.initialDualViewDistance,
+        dualViewSplit: v.dualViewSplit,
+        orthographic: v.orthographic,
+        rotationDeg: v.rotationDeg,
+        resetViewSeq: v.resetViewSeq,
+      },
+      layerDisplay: {
+        atomScale: v.atomScale,
+        sphereSegments: v.sphereSegments,
+        showBonds: v.showBonds,
+        bondFactor: v.bondFactor,
+        bondRadius: v.bondRadius,
+      },
+      autoRotate: v.autoRotate,
+      background: {
+        backgroundColor: v.backgroundColor,
+        backgroundColorMode: v.backgroundColorMode,
+        backgroundTransparent: v.backgroundTransparent,
+      },
+      colors: {
+        colorMapTemplate: v.colorMapTemplate,
+      },
+      lammps: {
+        lammpsTypeMap: v.lammpsTypeMap,
+      },
+      other: {
+        showAxes: v.showAxes,
+        refreshBondsOnPlay: v.refreshBondsOnPlay,
+        frame_rate: v.frame_rate,
+        themeReadabilityCheckOnOpen: v.themeReadabilityCheckOnOpen,
+      },
+      files: {
+        exportPngScale: v.exportPngScale,
+        exportPngTransparent: v.exportPngTransparent,
+      },
+    },
+  };
+}
+
+function extractSettingsPayload(input: unknown): {
+  settings: Partial<ViewerSettings>;
+  themeMode?: ThemeMode;
+  locale?: SupportLocale;
+} {
+  if (!input || typeof input !== 'object') {
+    return { settings: {} };
+  }
+  const anyInput = input as Record<string, unknown>;
+  const topSettings = anyInput.settings as Record<string, any> | undefined;
+  const app = anyInput.app as Record<string, unknown> | undefined;
+  const themeMode = app?.themeMode as ThemeMode | undefined;
+  const locale = app?.locale as SupportLocale | undefined;
+  if (topSettings && typeof topSettings === 'object') {
+    return {
+      themeMode,
+      locale,
+      settings: {
+        ...(topSettings.display ?? {}),
+        ...(topSettings.layerDisplay ?? {}),
+        autoRotate: topSettings.autoRotate,
+        ...(topSettings.background ?? {}),
+        ...(topSettings.colors ?? {}),
+        ...(topSettings.lammps ?? {}),
+        ...(topSettings.other ?? {}),
+        ...(topSettings.files ?? {}),
+      } as Partial<ViewerSettings>,
+    };
+  }
+  const data = anyInput.data;
+  if (data && typeof data === 'object') {
+    return {
+      themeMode,
+      locale,
+      settings: data as Partial<ViewerSettings>,
+    };
+  }
+  return {
+    themeMode,
+    locale,
+    settings: anyInput as Partial<ViewerSettings>,
+  };
+}
 
 const panelDirtyFlags = reactive<Record<string, boolean>>({});
 provide(settingsSiderDirtyContextKey, {
@@ -133,7 +296,16 @@ provide(settingsSiderDirtyContextKey, {
   },
 });
 
-const filesDirty = computed(() => !!panelDirtyFlags.files);
+const filesDirty = computed(() => {
+  const exportScale = settings.value.exportPngScale ?? DEFAULT_SETTINGS.exportPngScale;
+  const exportTransparent = settings.value.exportPngTransparent ?? DEFAULT_SETTINGS.exportPngTransparent;
+  const parseMode = viewerApi.value?.parseMode.value ?? 'auto';
+  return (
+    exportScale !== DEFAULT_SETTINGS.exportPngScale
+    || exportTransparent !== DEFAULT_SETTINGS.exportPngTransparent
+    || parseMode !== 'auto'
+  );
+});
 const layersDirty = computed(() => (viewerApi.value?.layers.value.length ?? 0) > 1);
 
 const layerDisplayDirty = computed(() => {
@@ -322,5 +494,85 @@ function onClearStorage(): void {
       }
     },
   });
+}
+
+function onExportSettings(): void {
+  const data = normalizeSettings(settings.value);
+  const payload = buildExportPayload(data);
+  const json = JSON.stringify(payload, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'atoms-viewer-settings.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  message.success(t('settings.exportSuccess'));
+}
+
+function onImportSettings(): void {
+  importInputRef.value?.click();
+}
+
+function onImportFile(e: Event): void {
+  const input = e.target as HTMLInputElement | null;
+  const file = input?.files?.[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const raw = String(reader.result ?? '');
+      const parsed = JSON.parse(raw) as any;
+      const extracted = extractSettingsPayload(parsed);
+      const nextSettings = normalizeSettings(extracted.settings);
+
+      const api = viewerApiRef.value;
+      if (api) {
+        api.suspendSettingsSync(300);
+      }
+
+      if (extracted.themeMode === 'system'
+        || extracted.themeMode === 'light'
+        || extracted.themeMode === 'dark') {
+        setThemeMode(extracted.themeMode);
+      }
+      if (extracted.locale && SUPPORT_LOCALES.includes(extracted.locale)) {
+        setLocale(extracted.locale);
+      }
+
+      replaceSettings(nextSettings);
+      saveSettingsToStorage(nextSettings);
+
+      if (api) {
+        void nextTick(() => {
+          api.applyViewFromSettings(nextSettings);
+          api.setActiveLayerDisplay(
+            {
+              atomScale: nextSettings.atomScale,
+              sphereSegments: nextSettings.sphereSegments,
+              showBonds: nextSettings.showBonds,
+              bondFactor: nextSettings.bondFactor,
+              bondRadius: nextSettings.bondRadius,
+            },
+            { applyToAll: true },
+          );
+        });
+        api.setAllLayersColorMap(nextSettings.colorMapTemplate ?? []);
+        api.refreshColorMap({ applyToAll: true });
+        api.resetAllLayersTypeMapToDefaults({
+          templateRows: [...(nextSettings.lammpsTypeMap ?? [])],
+          useAtomDefaults: false,
+        });
+      }
+      message.success(t('settings.importSuccess'));
+    }
+    catch {
+      message.error(t('settings.importFailed'));
+    }
+    finally {
+      if (input) input.value = '';
+    }
+  };
+  reader.readAsText(file);
 }
 </script>

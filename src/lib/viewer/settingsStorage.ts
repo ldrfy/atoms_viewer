@@ -67,6 +67,12 @@ export function normalizeSettings(input: Partial<ViewerSettings> | null): Viewer
     viewPresets: Array.isArray(v.viewPresets)
       ? (v.viewPresets as any)
       : base.viewPresets,
+    exportPngScale: Number.isFinite(v.exportPngScale)
+      ? (v.exportPngScale as number)
+      : base.exportPngScale,
+    exportPngTransparent: typeof v.exportPngTransparent === 'boolean'
+      ? v.exportPngTransparent
+      : base.exportPngTransparent,
   };
 }
 
@@ -133,7 +139,7 @@ export function saveSettingsToStorage(settings: ViewerSettings): void {
 
 /**
  * Clear persisted settings from localStorage.
- * 清理本地持久化设置。
+ * 清空本地持久化设置。
  */
 export function clearSettingsStorage(): void {
   try {

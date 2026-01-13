@@ -86,7 +86,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, inject, onBeforeUnmount, ref, watch } from 'vue';
+import { computed, inject, onBeforeUnmount, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import { viewerApiRef } from '../../../lib/viewer/bridge';
@@ -94,9 +94,10 @@ import { settingsSiderDirtyContextKey } from '../context';
 import { useSettingsSiderContext } from '../useSettingsSiderContext';
 import type { ParseMode } from '../../../lib/structure/parse';
 import { buildParseModeOptions } from '../../../lib/structure/parseOptions';
+import { DEFAULT_SETTINGS } from '../../../lib/viewer/settings';
 
 const { t } = useI18n();
-const { hasAnyLayer } = useSettingsSiderContext();
+const { hasAnyLayer, settings, patchSettings } = useSettingsSiderContext();
 
 const viewerApi = computed(() => viewerApiRef.value);
 // Allow switching parse mode even if no layer was created, as long as a file was attempted.
@@ -108,12 +109,23 @@ const canChangeParseMode = computed(() => {
   return typeof fn === 'string' && fn.trim().length > 0;
 });
 
-const DEFAULT_EXPORT_SCALE = 2;
-const DEFAULT_EXPORT_TRANSPARENT = true;
+const DEFAULT_EXPORT_SCALE = DEFAULT_SETTINGS.exportPngScale;
+const DEFAULT_EXPORT_TRANSPARENT = DEFAULT_SETTINGS.exportPngTransparent;
 const DEFAULT_PARSE_MODE: ParseMode = 'auto';
 
-const exportScale = ref<number>(DEFAULT_EXPORT_SCALE);
-const exportTransparent = ref<boolean>(DEFAULT_EXPORT_TRANSPARENT);
+const exportScale = computed<number>({
+  get: () => settings.value.exportPngScale ?? DEFAULT_EXPORT_SCALE,
+  set: (v) => {
+    patchSettings({ exportPngScale: v });
+  },
+});
+
+const exportTransparent = computed<boolean>({
+  get: () => settings.value.exportPngTransparent ?? DEFAULT_EXPORT_TRANSPARENT,
+  set: (v) => {
+    patchSettings({ exportPngTransparent: v });
+  },
+});
 
 const parseModeModel = computed<ParseMode>({
   get: () => viewerApi.value?.parseMode.value ?? 'auto',

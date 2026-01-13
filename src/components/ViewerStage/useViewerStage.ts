@@ -51,46 +51,71 @@ import { createSettingsSync } from './settingsSync';
 type TemplateRefEl = Element | ComponentPublicInstance | null;
 
 type ViewerStageBridgeApi = {
+  /** 打开系统文件选择器 */
   openFilePicker: () => void;
+  /** 导出当前视口 PNG */
   exportPng: (payload: {
     scale: number;
     transparent: boolean;
   }) => Promise<void>;
 
+  /** 重新应用 LAMMPS 类型映射 */
   refreshTypeMap: () => void;
+  /** 重新应用颜色映射 */
   refreshColorMap: (opts?: { applyToAll?: boolean }) => void;
 
+  /** 当前解析信息 */
   parseInfo: any;
+  /** 当前解析模式 */
   parseMode: Ref<any>;
+  /** 设置解析模式 */
   setParseMode: (mode: any) => void;
 
+  /** 所有图层信息 */
   layers: Ref<ModelLayerInfo[]>;
+  /** 当前激活图层 ID */
   activeLayerId: Ref<string | null>;
+  /** 切换激活图层 */
   setActiveLayer: (id: string) => void;
+  /** 设置图层可见性 */
   setLayerVisible: (id: string, visible: boolean) => void;
+  /** 移除图层 */
   removeLayer: (id: string) => void;
 
+  /** 当前激活图层的类型映射 */
   activeLayerTypeMap: Ref<LammpsTypeMapItem[]>;
+  /** 当前激活图层类型映射是否已应用 */
   activeLayerTypeMapApplied: Ref<boolean>;
+  /** 设置激活图层类型映射 */
   setActiveLayerTypeMap: (rows: LammpsTypeMapItem[]) => void;
+  /** 重置所有图层类型映射为默认 */
   resetAllLayersTypeMapToDefaults: (opts?: {
     templateRows?: LammpsTypeMapItem[];
     useAtomDefaults?: boolean;
   }) => void;
 
+  /** 当前激活图层的颜色映射 */
   activeLayerColorMap: Ref<AtomTypeColorMapItem[]>;
+  /** 设置激活图层颜色映射 */
   setActiveLayerColorMap: (rows: AtomTypeColorMapItem[]) => void;
+  /** 设置所有图层颜色映射 */
   setAllLayersColorMap: (rows: AtomTypeColorMapItem[]) => void;
+  /** 重置所有图层颜色映射为默认 */
   resetAllLayersColorMapToDefaults: () => void;
 
+  /** 当前激活图层的显示设置 */
   activeLayerDisplay: Ref<LayerDisplaySettings | null>;
+  /** 设置激活图层显示参数 */
   setActiveLayerDisplay: (
     patch: Partial<LayerDisplaySettings>,
     opts?: { applyToAll?: boolean },
   ) => void;
+  /** 立即应用视角/视距相关设置 */
   applyViewFromSettings: (overrides?: Partial<ViewerSettings>) => void;
+  /** 暂停设置同步（避免短时间内相互覆盖） */
   suspendSettingsSync: (ms?: number) => void;
 
+  /** 可见图层是否存在自定义颜色 */
   visibleCustomColors: Ref<boolean>;
 };
 
@@ -106,86 +131,138 @@ type ViewerStageExposedApi = {
 };
 
 type ViewerStageBindings = {
+  /** Canvas 宿主 DOM 引用 */
   canvasHostRef: ReturnType<typeof ref<HTMLDivElement | null>>;
+  /** 文件输入 DOM 引用 */
   fileInputRef: ReturnType<typeof ref<HTMLInputElement | null>>;
 
+  /** 绑定 Canvas 宿主 */
   bindCanvasHost: (el: TemplateRefEl) => void;
+  /** 绑定文件输入 */
   bindFileInput: (el: TemplateRefEl) => void;
 
+  /** 对外桥接 API */
   bridgeApi: ViewerStageBridgeApi;
+  /** 组件对外暴露的 API */
   exposedApi: ViewerStageExposedApi;
 
+  /** 是否正在拖拽文件 */
   isDragging: ReturnType<typeof ref<boolean>>;
+  /** 是否已有模型 */
   hasModel: ReturnType<typeof ref<boolean>>;
+  /** 是否处于加载中 */
   isLoading: ReturnType<typeof ref<boolean>>;
 
+  /** 所有图层信息 */
   layers: Ref<ModelLayerInfo[]>;
+  /** 当前激活图层 ID */
   activeLayerId: Ref<string | null>;
+  /** 切换激活图层 */
   setActiveLayer: (id: string) => void;
+  /** 设置图层可见性 */
   setLayerVisible: (id: string, visible: boolean) => void;
 
+  /** 当前激活图层的类型映射 */
   activeLayerTypeMap: Ref<LammpsTypeMapItem[]>;
+  /** 当前激活图层类型映射是否已应用 */
   activeLayerTypeMapApplied: Ref<boolean>;
+  /** 设置激活图层类型映射 */
   setActiveLayerTypeMap: (rows: LammpsTypeMapItem[]) => void;
+  /** 重置所有图层类型映射为默认 */
   resetAllLayersTypeMapToDefaults: (opts?: {
     templateRows?: LammpsTypeMapItem[];
     useAtomDefaults?: boolean;
   }) => void;
 
+  /** 当前激活图层的颜色映射 */
   activeLayerColorMap: Ref<AtomTypeColorMapItem[]>;
+  /** 设置激活图层颜色映射 */
   setActiveLayerColorMap: (rows: AtomTypeColorMapItem[]) => void;
+  /** 设置所有图层颜色映射 */
   setAllLayersColorMap: (rows: AtomTypeColorMapItem[]) => void;
+  /** 重置所有图层颜色映射为默认 */
   resetAllLayersColorMapToDefaults: () => void;
 
+  /** 当前激活图层显示设置 */
   activeLayerDisplay: Ref<LayerDisplaySettings | null>;
+  /** 设置激活图层显示参数 */
   setActiveLayerDisplay: (
     patch: Partial<LayerDisplaySettings>,
     opts?: { applyToAll?: boolean },
   ) => void;
+  /** 立即应用视角/视距相关设置 */
   applyViewFromSettings: (overrides?: Partial<ViewerSettings>) => void;
 
+  /** 移除图层 */
   removeLayer: (id: string) => void;
 
+  /** 原子信息/测量面板上下文 */
   inspectCtx: InspectCtx;
 
+  /** 打开系统文件选择器 */
   openFilePicker: () => void;
 
+  /** 拖拽进入回调 */
   onDragEnter: () => void;
+  /** 拖拽移动回调 */
   onDragOver: (e: DragEvent) => void;
+  /** 拖拽离开回调 */
   onDragLeave: () => void;
+  /** 拖拽放下回调 */
   onDrop: (e: DragEvent) => Promise<void>;
+  /** 文件选择器变更回调 */
   onFilePicked: (e: Event) => Promise<void>;
 
+  /** 加载单个本地文件 */
   loadFile: (file: File) => Promise<void>;
+  /** 加载多个本地文件 */
   loadFiles: (
     files: File[],
     source: 'drop' | 'picker' | 'api',
   ) => Promise<void>;
+  /** 加载远程文件 */
   loadUrl: (url: string, fileName: string) => Promise<void>;
 
+  /** 导出 PNG */
   onExportPng: (payload: {
     scale: number;
     transparent: boolean;
   }) => Promise<void>;
 
+  /** 重新应用 LAMMPS 类型映射 */
   refreshTypeMap: () => void;
+  /** 重新应用颜色映射 */
   refreshColorMap: (opts?: { applyToAll?: boolean }) => void;
 
+  /** 是否存在动画 */
   hasAnimation: Ref<boolean>;
+  /** 当前帧索引 */
   frameIndex: Ref<number>;
+  /** 总帧数 */
   frameCount: Ref<number>;
+  /** 是否播放中 */
   isPlaying: Ref<boolean>;
+  /** 当前播放 FPS */
   fps: Ref<number>;
+  /** 设置当前帧 */
   setFrame: (idx: number) => void;
+  /** 播放/暂停切换 */
   togglePlay: () => void;
 
+  /** 解析信息 */
   parseInfo: any;
+  /** 解析模式 */
   parseMode: Ref<any>;
+  /** 设置解析模式 */
   setParseMode: (mode: any) => void;
 
+  /** 录制框选上下文 */
   recordSelectCtx: RecordSelectCtx;
+  /** 解析信息上下文 */
   parseCtx: ParseCtx;
+  /** 动画控制上下文 */
   animCtx: AnimCtx;
+  /** 录制裁剪虚线框上下文 */
   cropDashCtx: CropDashCtx;
 } & RecordingBindings;
 

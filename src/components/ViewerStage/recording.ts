@@ -79,6 +79,7 @@ export function createRecordingController(
 
   const recordCropBox = ref<CropBox | null>(null);
   let recordCropRect: CropBox | null = null;
+  let lastRecordBox: CropBox | null = null;
   let recordBgRestore: Pick<
     ViewerSettings,
     'backgroundTransparent' | 'backgroundColor' | 'backgroundColorMode'
@@ -245,6 +246,13 @@ export function createRecordingController(
     const w = clampNumber(b.w, 0, r.width - x);
     const h = clampNumber(b.h, 0, r.height - y);
     return { x, y, w, h };
+  }
+
+  function getInitDraftBox(): CropBox | null {
+    if (!lastRecordBox) return null;
+    const b = clampBoxToCanvas(normBox(lastRecordBox));
+    if (b.w < 8 || b.h < 8) return null;
+    return b;
   }
 
   // ----------------------------
@@ -442,7 +450,7 @@ export function createRecordingController(
 
     // 进入框选模式
     isSelectingRecordArea.value = true;
-    recordDraftBox.value = null;
+    recordDraftBox.value = getInitDraftBox();
 
     editMode = 'idle';
     activeHandle = null;
@@ -592,6 +600,7 @@ export function createRecordingController(
     recordCropRect = box;
     recordCropBox.value = box;
     recordDraftBox.value = null;
+    lastRecordBox = box;
 
     const fps = Math.max(1, Math.floor(args.getRecordFps?.() ?? 60));
     const delaySec = Math.max(0, Number(recordDelaySec.value) || 0);

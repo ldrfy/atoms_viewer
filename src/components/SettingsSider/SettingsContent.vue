@@ -395,7 +395,8 @@ function arraysEqual(a: unknown, b: unknown): boolean {
 }
 
 function hasCustomColors(): boolean {
-  return viewerApi.value?.visibleCustomColors?.value ?? false;
+  const rows = viewerApi.value?.activeLayerColorMap?.value ?? [];
+  return rows.some(r => r.isCustom);
 }
 
 function hasCustomTypeMap(): boolean {

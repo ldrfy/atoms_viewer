@@ -406,8 +406,12 @@ export function createViewerLoader(deps: {
       return;
     }
 
+    const openKeys = ['display'];
+    if (deps.settingsRef.value.autoRotateOnLoad) {
+      openKeys.push('autoRotate');
+    }
     deps.requestOpenSettings?.({
-      focusKeys: ['display', 'autoRotate'],
+      focusKeys: openKeys,
       open: true,
     });
   }

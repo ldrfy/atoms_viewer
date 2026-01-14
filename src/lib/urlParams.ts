@@ -35,3 +35,10 @@ export function writeUrlListParam(name: string, urls: string[]): void {
   const nextUrl = `${url.origin}${url.pathname}${query ? `?${query}` : ''}${url.hash}`;
   window.history.replaceState({}, '', nextUrl);
 }
+
+export function clearQueryParams(): void {
+  if (typeof window === 'undefined') return;
+  const url = new URL(window.location.href);
+  const nextUrl = `${url.origin}${url.pathname}${url.hash}`;
+  window.history.replaceState({}, '', nextUrl);
+}

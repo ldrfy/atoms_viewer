@@ -49,7 +49,9 @@ import {
   loadSettingsFromStorage,
   saveSettingsToStorage,
 } from './lib/viewer/settingsStorage';
-import { readUrlListParam, writeUrlListParam } from './lib/urlParams';
+import { readUrlListParam, writeUrlListParam, clearQueryParams } from './lib/urlParams';
+import { mergeSettings } from './lib/viewer/mergeSettings';
+import { readSettingsOverridesFromUrl } from './lib/settingsUrl';
 
 const ViewerPage = defineAsyncComponent(() => import('./pages/ViewerPage.vue'));
 const antdAlgorithm = computed(() =>
@@ -65,6 +67,10 @@ const settingsOpen = ref(false);
 const settingsActiveKey = ref<string[]>(['display']);
 
 const settings = ref<ViewerSettings>(loadSettingsFromStorage());
+const settingsOverrides = readSettingsOverridesFromUrl(settings.value);
+if (Object.keys(settingsOverrides).length > 0) {
+  settings.value = mergeSettings(settings.value, settingsOverrides);
+}
 
 watch(
   settings,
@@ -105,7 +111,8 @@ function parseUrlLoadRequest(): LoadRequest | null {
   }));
 
   if (items.length === 1) {
-    return { kind: 'url', ...items[0] };
+    const first = items[0]!;
+    return { kind: 'url', url: first.url, fileName: first.fileName };
   }
 
   return { kind: 'urls', items };
@@ -143,7 +150,7 @@ async function preloadSample(sample: SampleManifestItem): Promise<void> {
 function goHome(): void {
   page.value = 'empty';
   loadRequest.value = null;
-  writeUrlListParam('url', []);
+  clearQueryParams();
 }
 
 /**

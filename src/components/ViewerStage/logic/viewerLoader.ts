@@ -443,15 +443,20 @@ export function createViewerLoader(deps: {
       syncViewPresetAndDistanceOnModelLoad();
 
       if (deps.patchSettings) {
-        const enabled = !!deps.settingsRef.value.autoRotateOnLoad;
+        const shouldAutoEnable = !!deps.settingsRef.value.autoRotateOnLoad;
+        const current = deps.settingsRef.value.autoRotate;
+        const enabled = !!current.enabled || shouldAutoEnable;
+        const enabledBySystem = shouldAutoEnable && !current.enabled;
         deps.patchSettings({
           autoRotate: {
-            ...deps.settingsRef.value.autoRotate,
+            ...current,
             enabled,
-            autoEnabledBySystem: enabled,
+            autoEnabledBySystem: enabledBySystem
+              ? true
+              : !!current.autoEnabledBySystem,
           },
         });
-        if (enabled) {
+        if (enabledBySystem) {
           message.info(
             deps.t?.('viewer.autoRotate.enabledHint')
             ?? '已开启自动旋转，可在设置-自动旋转-启用中关闭。',

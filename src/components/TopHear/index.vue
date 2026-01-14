@@ -74,6 +74,17 @@
             <GithubOutlined />
           </a-button>
 
+          <!-- 文档 -->
+          <a-button
+            type="text"
+            class="btn-icon"
+            aria-label="docs"
+            :title="t('viewer.links.docs')"
+            @click="openDocs"
+          >
+            <QuestionCircleOutlined />
+          </a-button>
+
           <!-- 设置 -->
           <a-button
             type="text"
@@ -160,6 +171,11 @@
           <span class="drawer-link-text">GitHub</span>
         </a-typography-text>
 
+        <a-typography-text class="plain-click" @click="openDocs">
+          <QuestionCircleOutlined />
+          <span class="drawer-link-text">{{ t('viewer.links.docs') }}</span>
+        </a-typography-text>
+
         <a-typography-text class="plain-click" @click="openSettings">
           <SettingOutlined />
           <span class="drawer-link-text">
@@ -183,6 +199,7 @@ import {
   SettingOutlined,
   MenuOutlined,
   GithubOutlined,
+  QuestionCircleOutlined,
 } from '@ant-design/icons-vue';
 import { Grid } from 'ant-design-vue';
 
@@ -193,7 +210,7 @@ import {
   type SupportLocale,
 } from '../../i18n';
 import { getThemeMode, setThemeMode, type ThemeMode } from '../../theme/mode';
-import { APP_DISPLAY_NAME, APP_GITHUB_URL } from '../../lib/appMeta';
+import { APP_DISPLAY_NAME, APP_GITHUB_URL, APP_DOCS_URL } from '../../lib/appMeta';
 
 const props = withDefaults(
   defineProps<{
@@ -262,6 +279,11 @@ function openSettings() {
 
 function openGithub() {
   window.open(APP_GITHUB_URL, '_blank', 'noopener');
+  closeDrawer();
+}
+
+function openDocs() {
+  window.open(APP_DOCS_URL, '_blank', 'noopener');
   closeDrawer();
 }
 

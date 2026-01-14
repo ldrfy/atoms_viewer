@@ -74,7 +74,8 @@
             "title": "语言"
         },
         "links": {
-            "github": "GitHub"
+            "github": "GitHub",
+            "docs": "文档"
         },
         "empty": {
             "title": "拖拽文件到这里",

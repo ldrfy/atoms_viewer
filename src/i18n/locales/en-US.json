@@ -74,7 +74,8 @@
             "title": "Language"
         },
         "links": {
-            "github": "GitHub"
+            "github": "GitHub",
+            "docs": "Docs"
         },
         "empty": {
             "title": "Drag and drop a file here",

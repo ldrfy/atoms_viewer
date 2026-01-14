@@ -10,6 +10,7 @@ export const APP_VERSION: string = String(p.version ?? '0.0.0');
 export const APP_YUHLDR_URL: string = String(p.urls?.yuhldr ?? '');
 export const APP_GITHUB_URL: string = String(p.urls?.github ?? '');
 export const APP_SAMPLES_URL: string = String(p.urls?.samples ?? '');
+export const APP_DOCS_URL: string = String(p.urls?.docs ?? '');
 
 // author 可能是 string 或 { name, email }
 export const APP_AUTHOR: string = (() => {

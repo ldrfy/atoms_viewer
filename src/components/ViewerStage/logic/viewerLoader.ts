@@ -495,6 +495,88 @@ export function createViewerLoader(deps: {
     });
   }
 
+  async function loadUrls(
+    items: { url: string; fileName: string }[],
+  ): Promise<void> {
+    if (!deps.getStage() || !deps.getRuntime()) return;
+    if (deps.isLoading.value) return;
+    if (!items || items.length === 0) return;
+
+    await loadInit();
+    const t0 = performance.now();
+
+    try {
+      deps.stopPlay();
+      deps.inspectCtx.clear();
+
+      let okCount = 0;
+      let lastOkName = '';
+
+      for (const item of items) {
+        const displayName = item.fileName || item.url;
+        try {
+          const res = await fetch(item.url);
+          if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
+          const text = await res.text();
+
+          lastRawText = text;
+          lastRawFileName = displayName;
+
+          renderFromText(text, displayName, 'load', {
+            hidePreviousLayers: okCount === 0,
+          });
+
+          okCount += 1;
+          lastOkName = displayName;
+        }
+        catch (err) {
+          const msg = (err as Error).message ?? String(err);
+          message.error(`${displayName}: ${msg}`);
+        }
+      }
+
+      if (okCount > 0) {
+        syncViewPresetAndDistanceOnModelLoad();
+
+        message.success(
+          `${okCount} file(s), ${((performance.now() - t0) / 1000).toFixed(
+            2,
+          )} s`,
+        );
+
+        parseInfo.success = true;
+        parseInfo.errorMsg = '';
+        deps.hasModel.value = true;
+        parseMode.value = 'auto';
+        parseInfo.fileName = lastOkName || lastRawFileName!;
+
+        focusSettingsToLayersOrLammps();
+      }
+      else {
+        parseInfo.success = false;
+        parseInfo.errorMsg = deps.t('viewer.parse.notice');
+        parseInfo.errorSeq += 1;
+        parseInfo.fileName = lastRawFileName ?? '';
+        parseInfo.format = '';
+        parseInfo.atomCount = 0;
+        parseInfo.frameCount = 1;
+        message.error(deps.t('viewer.parse.notice'));
+        focusSettingsToFilesAndOpen();
+      }
+    }
+    catch (err) {
+      parseInfo.success = false;
+      parseInfo.errorMsg = (err as Error).message ?? String(err);
+      parseInfo.errorSeq += 1;
+      console.error(err);
+      message.error(`${deps.t('viewer.parse.notice')}: ${parseInfo.errorMsg}`);
+      focusSettingsToFilesAndOpen();
+    }
+    finally {
+      deps.isLoading.value = false;
+    }
+  }
+
   async function loadFilesInternal(
     files: File[],
   ): Promise<void> {
@@ -591,6 +673,7 @@ export function createViewerLoader(deps: {
     loadFiles,
     loadFile,
     loadUrl,
+    loadUrls,
   };
 }
 

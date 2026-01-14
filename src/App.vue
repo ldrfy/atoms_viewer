@@ -49,6 +49,7 @@ import {
   loadSettingsFromStorage,
   saveSettingsToStorage,
 } from './lib/viewer/settingsStorage';
+import { readUrlListParam, writeUrlListParam } from './lib/urlParams';
 
 const ViewerPage = defineAsyncComponent(() => import('./pages/ViewerPage.vue'));
 const antdAlgorithm = computed(() =>
@@ -83,6 +84,39 @@ message.config({ duration: 4 });
 const page = ref<'empty' | 'viewer'>('empty');
 const loadRequest = ref<LoadRequest | null>(null);
 
+function inferFileNameFromUrl(url: string, index: number): string {
+  try {
+    const parsed = new URL(url, window.location.href);
+    const parts = parsed.pathname.split('/').filter(Boolean);
+    const base = parts[parts.length - 1];
+    if (base) return decodeURIComponent(base);
+  }
+  catch {}
+  return `remote-${index + 1}`;
+}
+
+function parseUrlLoadRequest(): LoadRequest | null {
+  const urls = readUrlListParam('url');
+  if (urls.length === 0) return null;
+
+  const items = urls.map((url, idx) => ({
+    url,
+    fileName: inferFileNameFromUrl(url, idx),
+  }));
+
+  if (items.length === 1) {
+    return { kind: 'url', ...items[0] };
+  }
+
+  return { kind: 'urls', items };
+}
+
+const initialLoad = parseUrlLoadRequest();
+if (initialLoad) {
+  loadRequest.value = initialLoad;
+  page.value = 'viewer';
+}
+
 function openWithFile(file: File): void {
   loadRequest.value = { kind: 'file', file };
   page.value = 'viewer';
@@ -101,6 +135,7 @@ function openWithFiles(files: File[]): void {
 
 async function preloadSample(sample: SampleManifestItem): Promise<void> {
   const { url, fileName } = sample;
+  writeUrlListParam('url', [url]);
   loadRequest.value = { kind: 'url', url, fileName };
   page.value = 'viewer';
 }
@@ -108,6 +143,7 @@ async function preloadSample(sample: SampleManifestItem): Promise<void> {
 function goHome(): void {
   page.value = 'empty';
   loadRequest.value = null;
+  writeUrlListParam('url', []);
 }
 
 /**

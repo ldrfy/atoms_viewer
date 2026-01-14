@@ -129,6 +129,7 @@ type ViewerStageExposedApi = {
   loadFile: (file: File) => Promise<void>;
   loadFiles: (files: File[]) => Promise<void>;
   loadUrl: (url: string, fileName: string) => Promise<void>;
+  loadUrls: (items: { url: string; fileName: string }[]) => Promise<void>;
 };
 
 type ViewerStageBindings = {
@@ -223,6 +224,8 @@ type ViewerStageBindings = {
   ) => Promise<void>;
   /** 加载远程文件 */
   loadUrl: (url: string, fileName: string) => Promise<void>;
+  /** 加载多个远程文件 */
+  loadUrls: (items: { url: string; fileName: string }[]) => Promise<void>;
 
   /** 导出 PNG */
   onExportPng: (payload: {
@@ -901,6 +904,7 @@ export function useViewerStage(
     loadFile: loader.loadFile,
     loadFiles: (files: File[]) => loader.loadFiles(files),
     loadUrl: loader.loadUrl,
+    loadUrls: loader.loadUrls,
   };
 
   return {
@@ -970,6 +974,7 @@ export function useViewerStage(
     loadFile: loader.loadFile,
     loadFiles: loader.loadFiles,
     loadUrl: loader.loadUrl,
+    loadUrls: loader.loadUrls,
 
     onExportPng: exporter.onExportPng,
   };

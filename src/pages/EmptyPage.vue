@@ -111,6 +111,7 @@
 import { ref, onMounted } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { APP_SAMPLES_URL } from '../lib/appMeta';
+import { readUrlListParam } from '../lib/urlParams';
 import type { SampleManifestItem } from '../lib/structure/types';
 import { DownOutlined } from '@ant-design/icons-vue';
 import { APP_AUTHOR, APP_DISPLAY_NAME, APP_VERSION, APP_YUHLDR_URL } from '../lib/appMeta';
@@ -169,7 +170,11 @@ async function loadSampleManifest(): Promise<void> {
   sampleLoadError.value = null;
 
   try {
-    const res = await fetchWithTimeout(APP_SAMPLES_URL, { cache: 'no-store' }, 5000);
+    const overrideUrl = readUrlListParam('samples')[0] ?? '';
+    const targetUrl = overrideUrl || APP_SAMPLES_URL;
+    if (!targetUrl) throw new Error('samples url is empty');
+
+    const res = await fetchWithTimeout(targetUrl, { cache: 'no-store' }, 5000);
     if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
 
     const data = (await res.json()) as unknown;

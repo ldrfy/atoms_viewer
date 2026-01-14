@@ -37,6 +37,7 @@ type ViewerStageExpose = {
   loadFile: (file: File) => Promise<void>;
   loadFiles: (files: File[]) => Promise<void>;
   loadUrl: (url: string, fileName: string) => Promise<void>;
+  loadUrls: (items: { url: string; fileName: string }[]) => Promise<void>;
 };
 
 const viewerRef = ref<ViewerStageExpose | null>(null);
@@ -59,6 +60,9 @@ watch(
     }
     else if (req.kind === 'url') {
       await api.loadUrl(req.url, req.fileName);
+    }
+    else if (req.kind === 'urls') {
+      await api.loadUrls(req.items);
     }
     else {
       throw new Error('unknown loadRequest');

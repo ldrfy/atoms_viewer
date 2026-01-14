@@ -60,6 +60,9 @@ export function parseXyz(text: string): StructureModel {
     atoms: atoms0,
     frames,
     comment: comments[0] || undefined,
+    frameMeta: comments.map(comment => ({
+      comment: comment || undefined,
+    })),
   };
 }
 

@@ -1,5 +1,23 @@
 <template>
   <div v-if="hasModel" class="anim-bar">
+    <a-row
+      v-if="frameNoteText"
+      :gutter="[8, 6]"
+      align="middle"
+      :wrap="false"
+    >
+      <a-col flex="auto" class="anim-note">
+        <a-tooltip :title="frameNoteText" overlay-class-name="anim-note-tooltip">
+          <a-typography-text
+            type="secondary"
+            ellipsis
+            :content="frameNoteText"
+            style="font-size: 12px;"
+          />
+        </a-tooltip>
+      </a-col>
+    </a-row>
+
     <!-- 第一行：帧序号 + slider -->
     <a-row
       v-if="hasAnimation"
@@ -175,6 +193,17 @@ const recordDelayRemainingSec = computed(() =>
 );
 const recordDelayText = computed(() => `${recordDelayRemainingSec.value.toFixed(1)}s`);
 const frameCountMax = computed(() => Math.max(1, props.ctx.frameCount.value));
+const frameMeta = computed(() => unref(props.ctx.frameMeta));
+const frameNoteText = computed(() => {
+  const meta = frameMeta.value;
+  if (!meta) return '';
+  const parts: string[] = [];
+  if (Number.isFinite(meta.timestep)) {
+    parts.push(t('viewer.play.timestep', { value: meta.timestep }));
+  }
+  if (meta.comment) parts.push(meta.comment);
+  return parts.join(' · ');
+});
 
 /** UI 1-based <-> 内部 0-based */
 const frameIndexModel = computed<number>({
@@ -299,6 +328,19 @@ function resetBgToTransparent(): void {
     min-width: 72px;
     text-align: right;
     font-variant-numeric: tabular-nums;
+}
+
+.anim-note {
+    min-width: 0;
+}
+
+.anim-note-tooltip .ant-tooltip-inner {
+    font-size: 12px;
+    line-height: 1.4;
+    padding: 6px 10px;
+    border-radius: 6px;
+    max-width: min(360px, 80vw);
+    white-space: normal;
 }
 
 /* slider：自适应宽度（不要固定像素宽） */

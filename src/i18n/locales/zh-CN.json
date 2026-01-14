@@ -20,7 +20,8 @@
             "pause": "暂停",
             "start": "播放",
             "fps": "帧率",
-            "frameIndex": "帧序号"
+            "frameIndex": "帧序号",
+            "timestep": "时间步 {value}"
         },
         "record": {
             "bg": "背景",

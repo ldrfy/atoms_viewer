@@ -9,12 +9,18 @@ export interface Atom {
   id?: number; // LAMMPS 的 id（用于排序、动画稳定）
 }
 
+export type FrameMeta = {
+  comment?: string;
+  timestep?: number;
+};
+
 export interface StructureModel {
   atoms: Atom[];
   comment?: string;
 
   // 预留：多帧轨迹/动画（xyz 多帧、md 等）
   frames?: Atom[][];
+  frameMeta?: FrameMeta[];
 
   // 元信息：便于 UI 展示、日志记录
   source?: {

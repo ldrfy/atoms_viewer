@@ -1,5 +1,5 @@
 // src/lib/structure/parsers/lammpsDump.ts
-import type { Atom, StructureModel } from '../types';
+import type { Atom, FrameMeta, StructureModel } from '../types';
 import { t } from '../../../i18n/index';
 
 /**
@@ -44,6 +44,7 @@ export function parseLammpsDump(
 ): StructureModel {
   const lines = text.split(/\r?\n/);
   const frames: Atom[][] = [];
+  const frameMeta: FrameMeta[] = [];
   const sortById = opts?.sortById ?? true;
 
   let i = 0;
@@ -58,7 +59,9 @@ export function parseLammpsDump(
     // TIMESTEP
     // -------------------------
     i += 1; // move to timestep value
-    i += 1; // skip timestep value (unused currently)
+    const timestep = parseIntStrict(lines[i]);
+    frameMeta.push({ timestep });
+    i += 1; // move past timestep value
 
     // -------------------------
     // NUMBER OF ATOMS
@@ -208,7 +211,12 @@ export function parseLammpsDump(
     throw new Error(t('errors.lammpsDump.noFrames'));
   }
 
-  return { atoms: atoms0, frames, comment: 'LAMMPS dump' };
+  return {
+    atoms: atoms0,
+    frames,
+    frameMeta,
+    comment: 'LAMMPS dump',
+  };
 }
 
 /* -----------------------------

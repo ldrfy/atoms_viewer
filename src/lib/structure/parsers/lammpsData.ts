@@ -178,6 +178,18 @@ function safeTypeId(s: string | undefined): number {
   return v > 0 ? v : 1;
 }
 
+function extractHeaderComment(lines: string[]): string | undefined {
+  for (const raw of lines) {
+    const line = (raw ?? '').trim();
+    if (!line) continue;
+    if (/^\d/.test(line)) return undefined;
+    if (/^(Atoms|Masses|Velocities|Bonds|Angles|Dihedrals|Impropers)\b/i.test(line))
+      return undefined;
+    return line;
+  }
+  return undefined;
+}
+
 /**
  * Heuristic check for image flags (ix iy iz).
  *
@@ -385,6 +397,7 @@ export function parseLammpsData(
 ): StructureModel {
   const lines = text.split(/\r?\n/);
   const atoms: Atom[] = [];
+  const headerComment = extractHeaderComment(lines);
 
   // 1) Parse Atom Type Labels
   // 解析 Atom Type Labels（如果存在），用于 typeId -> element 的默认映射
@@ -511,6 +524,8 @@ export function parseLammpsData(
   const model: StructureModel = {
     atoms,
     frames: [atoms],
+    comment: headerComment,
+    frameMeta: headerComment ? [{ comment: headerComment }] : undefined,
     source: { filename: fileName, format: 'lammpsdata' },
   };
 

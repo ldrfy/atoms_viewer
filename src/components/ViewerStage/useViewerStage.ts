@@ -10,6 +10,7 @@ import type {
   OpenSettingsPayload,
   LayerDisplaySettings,
 } from '../../lib/viewer/settings';
+import type { FrameMeta } from '../../lib/structure/types';
 
 import { useI18n } from 'vue-i18n';
 
@@ -464,6 +465,12 @@ export function useViewerStage(
     stopPlay: anim.stopPlay,
   });
 
+  const frameMeta = computed<FrameMeta | null>(() => {
+    const layerId = activeLayerId.value;
+    const idx = anim.frameIndex.value;
+    return runtime?.getFrameMetaForLayer(layerId, idx) ?? null;
+  });
+
   // now that loader exists, wire model file name provider
   modelFileNameProvider = () => loader.parseInfo.fileName;
 
@@ -844,6 +851,7 @@ export function useViewerStage(
     hasAnimation: anim.hasAnimation,
     frameIndex: anim.frameIndex,
     frameCount: anim.frameCount,
+    frameMeta,
     isPlaying: anim.isPlaying,
     fps: anim.fps,
     setFrame: anim.setFrame,

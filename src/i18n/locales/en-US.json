@@ -20,7 +20,8 @@
             "pause": "Pause",
             "start": "Play",
             "fps": "FPS",
-            "frameIndex": "Frame index"
+            "frameIndex": "Frame index",
+            "timestep": "Timestep {value}"
         },
         "record": {
             "bg": "Background",

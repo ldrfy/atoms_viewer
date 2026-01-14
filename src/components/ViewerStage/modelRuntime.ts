@@ -8,7 +8,7 @@ import type {
   AtomTypeColorMapItem,
   LayerDisplaySettings,
 } from '../../lib/viewer/settings';
-import type { Atom, StructureModel } from '../../lib/structure/types';
+import type { Atom, FrameMeta, StructureModel } from '../../lib/structure/types';
 import { getElementColorHex } from '../../lib/structure/chem';
 
 import type { ThreeStage } from '../../lib/three/stage';
@@ -218,6 +218,7 @@ export type ModelRuntime = {
   getFrameIndex: () => number;
   applyFrameByIndex: (idx: number, opts?: { refreshBonds?: boolean }) => void;
   getActiveAtoms: () => Atom[] | null;
+  getFrameMetaForLayer: (id: string | null, frameIndex?: number) => FrameMeta | null;
 
   applyAtomScale: () => void;
   applyShowBonds: () => void;
@@ -1038,6 +1039,28 @@ export function createModelRuntime(args: {
     return active ? active.frameIndex : 0;
   }
 
+  function getFrameMetaForLayer(
+    id: string | null,
+    frameIndex?: number,
+  ): FrameMeta | null {
+    if (!id) return null;
+    const layer = layerMap.get(id);
+    if (!layer) return null;
+
+    const frames = layer.model.frames;
+    const max0 = frames?.length ? Math.max(1, frames.length) : 1;
+    const idx
+      = typeof frameIndex === 'number' && Number.isFinite(frameIndex)
+        ? Math.min(Math.max(0, frameIndex), max0 - 1)
+        : Math.min(Math.max(0, layer.frameIndex), max0 - 1);
+
+    const meta = layer.model.frameMeta?.[idx] ?? null;
+    if (meta && (meta.comment || Number.isFinite(meta.timestep))) return meta;
+
+    if (layer.model.comment) return { comment: layer.model.comment };
+    return null;
+  }
+
   function getActiveAtoms(): Atom[] | null {
     const active = getActiveLayer();
     if (!active) return null;
@@ -1600,6 +1623,7 @@ export function createModelRuntime(args: {
     getFrameIndex,
     applyFrameByIndex,
     getActiveAtoms,
+    getFrameMetaForLayer,
 
     applyAtomScale,
     applyShowBonds,

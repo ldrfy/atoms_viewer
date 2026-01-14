@@ -1,5 +1,6 @@
 import type { Ref } from 'vue';
 import type { ViewerSettings } from '../../../lib/viewer/settings';
+import type { FrameMeta } from '../../../lib/structure/types';
 import type { RecordingBindings } from '../recording';
 import type { MaybeRef } from './common';
 
@@ -10,6 +11,7 @@ export type AnimCtx = {
   hasAnimation: MaybeRef<boolean>;
   frameIndex: Ref<number>;
   frameCount: Ref<number>;
+  frameMeta: Ref<FrameMeta | null>;
   isPlaying: MaybeRef<boolean>;
   fps: Ref<number>;
   setFrame: (idx0: number) => void;
@@ -37,6 +39,7 @@ export function createAnimCtx(args: {
   hasAnimation: Ref<boolean>;
   frameIndex: Ref<number>;
   frameCount: Ref<number>;
+  frameMeta: Ref<FrameMeta | null>;
   isPlaying: Ref<boolean>;
   fps: Ref<number>;
   setFrame: (idx0: number) => void;
@@ -57,6 +60,7 @@ export function createAnimCtx(args: {
     hasAnimation: args.hasAnimation,
     frameIndex: args.frameIndex,
     frameCount: args.frameCount,
+    frameMeta: args.frameMeta,
     isPlaying: args.isPlaying,
     fps: args.fps,
     setFrame: args.setFrame,

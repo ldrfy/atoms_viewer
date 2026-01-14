@@ -12,6 +12,14 @@
     <!-- three canvas 宿主：函数 ref，避免本地变量重复 -->
     <div :ref="stage.bindCanvasHost" class="canvas-host" />
 
+    <!-- Dual view divider (UI only; not captured in export/record) -->
+    <div
+      v-if="showDualViewDivider"
+      class="dual-view-divider"
+      :style="dualViewDividerStyle"
+      aria-hidden="true"
+    />
+
     <!-- 原子信息/测量面板（点击原子后显示） -->
     <AtomInspectorOverlay :ctx="stage.inspectCtx" />
 
@@ -55,6 +63,7 @@ import {
 } from '../../theme/mode';
 import { setViewerApi } from '../../lib/viewer/bridge';
 import { createSettingsShadow } from '../../lib/viewer/mergeSettings';
+import { normalizeViewPresets } from '../../lib/viewer/viewPresets';
 
 import RecordSelectOverlay from './parts/RecordSelectOverlay.vue';
 import AtomInspectorOverlay from './parts/AtomInspectorOverlay.vue';
@@ -112,6 +121,20 @@ onMounted(() => {
 // Accessing nested refs (stage.isLoading) can be inconsistent depending on build/tooling.
 // Keep a top-level alias so v-if tracks the actual boolean value.
 const isLoading = stage.isLoading;
+
+const showDualViewDivider = computed(() => {
+  const presets = normalizeViewPresets(settingsRef.value.viewPresets);
+  if (presets.length === 2) return true;
+  return !!settingsRef.value.dualViewEnabled;
+});
+
+const dualViewDividerStyle = computed(() => {
+  const raw = typeof settingsRef.value.dualViewSplit === 'number'
+    ? settingsRef.value.dualViewSplit
+    : 0.5;
+  const ratio = Math.min(0.9, Math.max(0.1, raw));
+  return { left: `${ratio * 100}%` };
+});
 
 // ✅ 映射集中在 useViewerStage.ts：index.vue 不再重复写
 setViewerApi(stage.bridgeApi);
@@ -218,6 +241,18 @@ function showThemeMismatchConfirm(preferred: 'light' | 'dark'): void {
     touch-action: none;
     height: 100%;
     width: 100%;
+}
+
+.dual-view-divider {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 0;
+    border-left: 1px dashed rgba(255, 255, 255, 0.75);
+    opacity: 0.8;
+    pointer-events: none;
+    z-index: 12;
+    mix-blend-mode: difference;
 }
 
 .loading-overlay {

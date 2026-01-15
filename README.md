@@ -9,66 +9,59 @@
 
   <h1>LDR Atoms Viewer</h1>
 
-[![CHI](https://img.shields.io/badge/CHI-中文-red?style=for-the-badge)](readme/README_ZH.md) [![ENG](https://img.shields.io/badge/ENG-English-blue?style=for-the-badge)](README.md)
+[![CHI](https://img.shields.io/badge/CHI-%E4%B8%AD%E6%96%87-red?style=for-the-badge)](readme/README_ZH.md) [![ENG](https://img.shields.io/badge/ENG-English-blue?style=for-the-badge)](README.md)
 
 </div>
 
 ![start](readme/images/start.jpg)
 
-## 🚀 Start
+## 🚀 Get Started
 
-- Go [Web: Ldr-Atoms-Viewer](https://ldrfy.github.io/atoms_viewer/)
-- Upload your file (`lammps-data`, `lammps-dump`, `pdb`, `xyz`)
-
-| Camera       | CNT                               | MoS2_NT                             |
-| ------------ | --------------------------------- | ----------------------------------- |
-| Perspective  | ![](readme/images/cnt1.png)       | ![](readme/images/mos2_nt1.png)     |
-| Orthographic | ![](readme/images/cnt0.png)       | ![](readme/images/mos2_nt0.png)     |
-| \*.xyz       | [cnt.xyz](readme/samples/cnt.xyz) | [mos2.xyz](readme/samples/mos2.xyz) |
+- Visit [Web: Ldr-Atoms-Viewer](https://ldrfy.github.io/atoms_viewer/)
+- Upload your own file (`lammps-data`, `lammps-dump`, `pdb`, `xyz`)
 
 ## Overview
 
-This project is a modern web-based atomic structure viewer and PNG exporter. It allows users to load an `.xyz` file in the browser, visualize the atomic structure with smooth interaction, precisely tune rendering parameters (e.g., rotation angles and atom size), and export transparent PNG images with configurable resolution and automatic cropping.
+This project is a web-based atomic structure visualization tool. Upload an atomic coordinate file to automatically build a 3D structure, then finely tune the display (rotation angles, atom size, atom color, bond thickness, etc.). It supports one-click export of transparent, auto-cropped high-resolution PNG images and can record videos.
 
-The implementation prioritizes performance and responsiveness, leveraging a contemporary front-end stack.
+Built with a modern front-end stack, the experience is smooth and performance-focused.
 
 ## Features
 
-- Video Recording
+### Multi-Layer
 
-> Allows recording of rotation processes or trajectories, with customizable recording regions and different background colors.
+Drag in multiple coordinate files to display multiple structures at once, and show or hide layers as needed.
 
-- PNG Export
+### Video Recording
 
-> Supports transparent or colored backgrounds, adjustable output resolution, and automatic cropping to the compact content bounding box.
+Models can auto-rotate around different symmetry axes. Record the rotation process or motion trajectory, with customizable recording regions and background colors.
 
-- Smooth Performance & Multi-Device Support
+### PNG Export
 
-> Capable of loading hundreds of thousands of atoms, and usable on various platforms including mobile and desktop.
+Choose transparent or colored backgrounds, adjust output resolution, and auto-crop to a tight content bounding box.
 
-- Multi-Format Support
+### Smooth Performance & Multi-Device Support
 
-> `lammps-data`, `lammps-dump`, `pdb`, `xyz`; `xyz` and `lammps-dump` support trajectory playback.
+Supports loading hundreds of thousands of atoms, and works on mobile and desktop.
 
-- Customization
+### Multi-Format Support
 
-> Multiple languages, dark/light themes, precise rotation control, atom size scaling, and toggle display for axes and bonds.
+Supports `lammps-data`, `lammps-dump`, `pdb`, `xyz`. Both `xyz` and `lammps-dump` support trajectory playback.
 
-## 📦 Tech Stack
+### Model Sharing
 
-- Vue3
-- Vite
-- TypeScript
-- Ant Design Vue
-- three.js
-- pnpm
+Load models directly via URL parameters and set some parameters. See [URL parameters](https://ldrfy.github.io/atoms_viewer_docs/api.html).
+
+### Rich Customization
+
+Multi-language, dark/light themes, precise rotation control, atom size, atom color, bond thickness, visibility toggles, axes display, and more.
 
 ## 🏗️ Development Testing
 
 ### Prerequisites
 
-- Node.js (recommended: a recent LTS version)
-- pnpm
+- node24
+- pnpm10
 
 ### Install & Run
 
@@ -84,20 +77,8 @@ pnpm build
 pnpm preview
 ```
 
-## Usage
-
-1. Open the web app and upload an `.xyz` file.
-2. Use the settings panel to tune the visualization (rotation angles, atom size, toggles, etc.).
-3. Export a transparent PNG at the desired resolution; the image will be automatically cropped to a suitable bounding box.
-
 ## Reference & Credits
 
-This project is inspired by the following online viewer in terms of goals and UX, while adopting a newer tech stack and aiming for smoother performance:
+This project is inspired by the following online viewer in interaction design and goals, but is more modern in implementation, with better performance and smoother interaction:
 
 [openmx-viewer](https://www.openmx-square.org/viewer/index.html)
-
-## Roadmap
-
-- [ ] Support more structure file formats (e.g., CIF, POSCAR/CONTCAR, PDB)
-- [ ] Improved bond detection/visualization
-- [ ] More rendering and annotation options (measurements, labels, slicing, etc.)

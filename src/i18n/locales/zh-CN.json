@@ -134,16 +134,6 @@
         "importSuccess": "设置已导入",
         "importFailed": "导入失败，文件格式不正确。",
         "panel": {
-            "other": {
-                "header": "其他设置",
-                "axes": "坐标轴",
-                "recordFps": "录制帧率 (fps)",
-                "recordFpsHint": "录制输出的目标帧率；常用 30 / 60。",
-                "refreshBondsOnPlay": "播放时原子连接每帧刷新",
-                "autoRotateOnLoad": "载入模型后自动旋转",
-                "themeReadabilityCheckOnOpen": "打开模型时检查主题可读性",
-                "reset": "恢复其他默认值"
-            },
             "display": {
                 "header": "显示控制",
                 "viewPresets": "视角选择",
@@ -250,6 +240,16 @@
                 "visible": "显示图层",
                 "hint": "点击一行可设为当前图层；右侧开关控制显示/隐藏。拖入新模型会加入图层列表并默认隐藏旧图层。",
                 "deleteConfirm": "确定删除此图层吗？"
+            },
+            "other": {
+                "header": "其他设置",
+                "axes": "坐标轴",
+                "recordFps": "录制帧率 (fps)",
+                "recordFpsHint": "录制输出的目标帧率；常用 30 / 60。",
+                "refreshBondsOnPlay": "播放时原子连接每帧刷新",
+                "autoRotateOnLoad": "载入模型后自动旋转",
+                "themeReadabilityCheckOnOpen": "打开模型时检查主题可读性",
+                "reset": "恢复其他默认值"
             },
             "colors": {
                 "header": "原子颜色",

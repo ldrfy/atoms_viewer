@@ -225,6 +225,7 @@
                     "scaleLabel": "Export scale",
                     "button": "Export as PNG",
                     "transparent": "Transparent background",
+                    "selectButton": "Select Range Export",
                     "hint": "Scale multiplies the render resolution."
                 },
                 "parse": {
@@ -246,8 +247,8 @@
                 "axes": "Axes",
                 "recordFps": "Recording FPS",
                 "recordFpsHint": "Target recording frame rate; commonly 30 / 60.",
-                "themeReadabilityCheckOnOpen": "Check theme readability when opening viewer",
                 "autoRotateOnLoad": "Auto rotate after loading models",
+                "themeReadabilityCheckOnOpen": "Check theme readability when opening viewer",
                 "reset": "Reset other settings"
             },
             "colors": {

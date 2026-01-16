@@ -93,9 +93,14 @@
             }
         },
         "export": {
-            "pngSuccess": "已导出 PNG（透明背景）",
+            "pngSuccess": "已导出 PNG",
+            "pngSuccessTransparent": "已导出 PNG（透明背景）",
+            "pngSuccessSolid": "已导出 PNG（非透明背景）",
             "scaleCapped": "导出缩放已自动从 {requested} 降到 {used}（受限于 GPU 最大尺寸 {limit}px）。",
-            "fail": "导出失败：{reason}"
+            "fail": "导出失败：{reason}",
+            "selectHint": "拖拽画框；画完后可拖动/拉伸微调；点击确认导出图片",
+            "selectCancel": "取消",
+            "selectConfirm": "确认导出"
         },
         "lammps": {
             "mappingMissing": "存在未配置的 LAMMPS type→元素映射（E 占位），请在设置中补全以获得正确颜色/半径/键推断。"
@@ -229,6 +234,7 @@
                     "header": "导出图片",
                     "scaleLabel": "导出倍率",
                     "button": "导出为 PNG",
+                    "selectButton": "选择范围导出",
                     "transparent": "透明背景",
                     "hint": "scale 会按倍率放大渲染分辨率。"
                 },

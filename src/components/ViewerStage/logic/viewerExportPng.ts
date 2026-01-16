@@ -2,8 +2,9 @@
 import * as THREE from 'three';
 import { message } from 'ant-design-vue';
 import { normalizeViewPresets } from '../../../lib/viewer/viewPresets';
-import { cropCanvasToPngBlob, downloadBlob } from '../../../lib/image/cropPng';
+import { canvasToPngBlob, cropCanvasToPngBlob, downloadBlob } from '../../../lib/image/cropPng';
 import { buildExportFilename } from '../../../lib/file/filename';
+import type { CropBox } from '../recording';
 import {
   isPerspective,
   updateCameraForSize,
@@ -21,11 +22,12 @@ export function createPngExporter(deps: {
   async function onExportPng(payload: {
     scale: number;
     transparent: boolean;
+    cropBox?: CropBox;
   }): Promise<void> {
     const stage = deps.getStage();
     if (!stage) return;
 
-    const { scale, transparent } = payload;
+    const { scale, transparent, cropBox } = payload;
 
     const prevColor = new THREE.Color();
     stage.renderer.getClearColor(prevColor);
@@ -156,17 +158,47 @@ export function createPngExporter(deps: {
         stage.renderer.render(stage.scene, camera);
       }
 
-      const { blob } = await cropCanvasToPngBlob(stage.renderer.domElement, {
-        alphaThreshold: 8,
-        padding: 3,
-      });
+      let blob: Blob;
+      if (cropBox) {
+        const fullW = Math.floor(w * s);
+        const fullH = Math.floor(h * s);
+        const sx = Math.round(cropBox.x * s);
+        const sy = Math.round(cropBox.y * s);
+        const sw = Math.round(cropBox.w * s);
+        const sh = Math.round(cropBox.h * s);
+        const x = Math.max(0, Math.min(sx, fullW - 1));
+        const y = Math.max(0, Math.min(sy, fullH - 1));
+        const w0 = Math.max(1, Math.min(sw, fullW - x));
+        const h0 = Math.max(1, Math.min(sh, fullH - y));
+
+        const out = document.createElement('canvas');
+        out.width = w0;
+        out.height = h0;
+        const outCtx = out.getContext('2d');
+        if (!outCtx) throw new Error('无法创建输出 2D 上下文（exportPng）');
+        outCtx.drawImage(stage.renderer.domElement, x, y, w0, h0, 0, 0, w0, h0);
+        blob = await canvasToPngBlob(out);
+      }
+      else {
+        const res = await cropCanvasToPngBlob(stage.renderer.domElement, {
+          alphaThreshold: 8,
+          padding: 3,
+        });
+        blob = res.blob;
+      }
       const filename = buildExportFilename({
         modelFileName: deps.getModelFileName?.(),
         ext: '.png',
       });
       downloadBlob(blob, filename);
 
-      message.success(deps.t('viewer.export.pngSuccess'));
+      message.success(
+        deps.t(
+          transparent
+            ? 'viewer.export.pngSuccessTransparent'
+            : 'viewer.export.pngSuccessSolid',
+        ),
+      );
     }
     catch (e) {
       console.error('export png failed:', e);

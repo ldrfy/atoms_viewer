@@ -26,7 +26,7 @@ import {
 } from './modelRuntime';
 
 import { createInspectCtx, type InspectCtx } from './ctx/inspect';
-import { createRecordingController, type RecordingBindings } from './recording';
+import { createRecordingController, type RecordingBindings, type CropBox } from './recording';
 import { useFileDrop } from './useFileDrop';
 
 import {
@@ -58,7 +58,13 @@ type ViewerStageBridgeApi = {
   exportPng: (payload: {
     scale: number;
     transparent: boolean;
+    cropBox?: CropBox;
   }) => Promise<void>;
+  /** 选择区域后导出 PNG */
+  exportPngWithSelection: (payload: {
+    scale: number;
+    transparent: boolean;
+  }) => void;
 
   /** 重新应用 LAMMPS 类型映射 */
   refreshTypeMap: () => void;
@@ -124,7 +130,12 @@ type ViewerStageExposedApi = {
   exportPng: (payload: {
     scale: number;
     transparent: boolean;
+    cropBox?: CropBox;
   }) => Promise<void>;
+  exportPngWithSelection: (payload: {
+    scale: number;
+    transparent: boolean;
+  }) => void;
   openFilePicker: () => void;
   loadFile: (file: File) => Promise<void>;
   loadFiles: (files: File[]) => Promise<void>;
@@ -484,6 +495,24 @@ export function useViewerStage(
     getModelFileName: () => loader.parseInfo.fileName,
     t,
   });
+
+  function exportPngWithSelection(payload: {
+    scale: number;
+    transparent: boolean;
+  }): void {
+    recording.selectExportArea({
+      hint: t('viewer.export.selectHint'),
+      confirmLabel: t('viewer.export.selectConfirm'),
+      cancelLabel: t('viewer.export.selectCancel'),
+      onConfirm: (box) => {
+        void exporter.onExportPng({
+          scale: payload.scale,
+          transparent: payload.transparent,
+          cropBox: box,
+        });
+      },
+    });
+  }
 
   // file drop depends on loadFiles
   const fileDrop = useFileDrop({ loadFiles: loader.loadFiles });
@@ -867,6 +896,7 @@ export function useViewerStage(
   const bridgeApi: ViewerStageBridgeApi = {
     openFilePicker,
     exportPng: exporter.onExportPng,
+    exportPngWithSelection,
 
     refreshTypeMap: () => void loader.refreshTypeMap(),
     refreshColorMap: opts => void loader.refreshColorMap(opts),
@@ -900,6 +930,7 @@ export function useViewerStage(
 
   const exposedApi: ViewerStageExposedApi = {
     exportPng: exporter.onExportPng,
+    exportPngWithSelection,
     openFilePicker,
     loadFile: loader.loadFile,
     loadFiles: (files: File[]) => loader.loadFiles(files),

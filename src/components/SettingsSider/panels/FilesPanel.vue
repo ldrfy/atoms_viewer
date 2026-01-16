@@ -32,6 +32,15 @@
           {{ t('settings.panel.files.export.button') }}
         </a-button>
       </div>
+      <div class="settings-gap-top-sm">
+        <a-button
+          block
+          :disabled="!hasAnyLayer"
+          @click="onExportSelect"
+        >
+          {{ t('settings.panel.files.export.selectButton') }}
+        </a-button>
+      </div>
 
       <a-typography-text
         type="secondary"
@@ -159,6 +168,14 @@ onBeforeUnmount(() => {
 function onExport(): void {
   if (!viewerApi.value) return;
   void viewerApi.value.exportPng({
+    scale: exportScale.value,
+    transparent: exportTransparent.value,
+  });
+}
+
+function onExportSelect(): void {
+  if (!viewerApi.value) return;
+  viewerApi.value.exportPngWithSelection({
     scale: exportScale.value,
     transparent: exportTransparent.value,
   });

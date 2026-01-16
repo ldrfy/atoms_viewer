@@ -36,6 +36,21 @@ export type RecordingBindings = {
 
   // show dash box while recording
   recordCropBox: Ref<CropBox | null>;
+
+  // selection overlay labels (optional overrides)
+  selectHint: Ref<string | null>;
+  selectConfirmLabel: Ref<string | null>;
+  selectCancelLabel: Ref<string | null>;
+  showDelayInput: Ref<boolean>;
+
+  // select an area for non-recording actions (e.g., export)
+  selectExportArea: (opts: {
+    onConfirm: (box: CropBox) => void;
+    onCancel?: () => void;
+    hint?: string;
+    confirmLabel?: string;
+    cancelLabel?: string;
+  }) => void;
 };
 
 type CreateRecordingControllerArgs = {
@@ -78,8 +93,15 @@ export function createRecordingController(
   const isRecordDelayActive = ref(false);
 
   const recordCropBox = ref<CropBox | null>(null);
+  const selectHint = ref<string | null>(null);
+  const selectConfirmLabel = ref<string | null>(null);
+  const selectCancelLabel = ref<string | null>(null);
+  const showDelayInput = ref(true);
   let recordCropRect: CropBox | null = null;
   let lastRecordBox: CropBox | null = null;
+  let selectMode: 'record' | 'custom' = 'record';
+  let selectConfirmCb: ((box: CropBox) => void) | null = null;
+  let selectCancelCb: (() => void) | null = null;
   let recordBgRestore: Pick<
     ViewerSettings,
     'backgroundTransparent' | 'backgroundColor' | 'backgroundColorMode'
@@ -253,6 +275,24 @@ export function createRecordingController(
     const b = clampBoxToCanvas(normBox(lastRecordBox));
     if (b.w < 8 || b.h < 8) return null;
     return b;
+  }
+
+  function resetSelectOverrides(): void {
+    selectHint.value = null;
+    selectConfirmLabel.value = null;
+    selectCancelLabel.value = null;
+    showDelayInput.value = true;
+    selectMode = 'record';
+    selectConfirmCb = null;
+    selectCancelCb = null;
+  }
+
+  function resetSelectState(): void {
+    editMode = 'idle';
+    activeHandle = null;
+    selectPointerId = null;
+    startPt = null;
+    startBox = null;
   }
 
   // ----------------------------
@@ -448,15 +488,15 @@ export function createRecordingController(
       return;
     }
 
+    resetSelectOverrides();
+    showDelayInput.value = true;
+    selectMode = 'record';
+
     // 进入框选模式
     isSelectingRecordArea.value = true;
     recordDraftBox.value = getInitDraftBox();
 
-    editMode = 'idle';
-    activeHandle = null;
-    selectPointerId = null;
-    startPt = null;
-    startBox = null;
+    resetSelectState();
   }
 
   // ----------------------------
@@ -575,11 +615,11 @@ export function createRecordingController(
     isSelectingRecordArea.value = false;
     recordDraftBox.value = null;
 
-    selectPointerId = null;
-    startPt = null;
-    startBox = null;
-    editMode = 'idle';
-    activeHandle = null;
+    resetSelectState();
+
+    const onCancel = selectCancelCb;
+    resetSelectOverrides();
+    onCancel?.();
   }
 
   function onRecordOverlayCancel(): void {
@@ -596,11 +636,18 @@ export function createRecordingController(
     }
 
     isSelectingRecordArea.value = false;
+    recordDraftBox.value = null;
+    lastRecordBox = box;
+
+    if (selectMode !== 'record') {
+      const onConfirm = selectConfirmCb;
+      resetSelectOverrides();
+      onConfirm?.(box);
+      return;
+    }
 
     recordCropRect = box;
     recordCropBox.value = box;
-    recordDraftBox.value = null;
-    lastRecordBox = box;
 
     const fps = Math.max(1, Math.floor(args.getRecordFps?.() ?? 60));
     const delaySec = Math.max(0, Number(recordDelaySec.value) || 0);
@@ -627,6 +674,30 @@ export function createRecordingController(
       recordDelayTimerId = null;
       startRecordCropped(fps);
     }, Math.round(delaySec * 1000));
+  }
+
+  function selectExportArea(opts: {
+    onConfirm: (box: CropBox) => void;
+    onCancel?: () => void;
+    hint?: string;
+    confirmLabel?: string;
+    cancelLabel?: string;
+  }): void {
+    if (isRecording.value) return;
+
+    clearRecordDelayTimer();
+    selectMode = 'custom';
+    selectConfirmCb = opts.onConfirm;
+    selectCancelCb = opts.onCancel ?? null;
+
+    selectHint.value = opts.hint ?? null;
+    selectConfirmLabel.value = opts.confirmLabel ?? null;
+    selectCancelLabel.value = opts.cancelLabel ?? null;
+    showDelayInput.value = false;
+
+    isSelectingRecordArea.value = true;
+    recordDraftBox.value = getInitDraftBox();
+    resetSelectState();
   }
 
   function cancelRecordDelay(): void {
@@ -659,5 +730,11 @@ export function createRecordingController(
     confirmRecordSelect,
 
     recordCropBox,
+
+    selectHint,
+    selectConfirmLabel,
+    selectCancelLabel,
+    showDelayInput,
+    selectExportArea,
   };
 }

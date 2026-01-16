@@ -9,18 +9,18 @@
   >
     <div class="record-select">
       <div class="record-select-hint" @pointerdown.stop>
-        {{ t("viewer.record.selectHint") }}
+        {{ selectHint }}
       </div>
 
       <div class="record-select-actions" @pointerdown.stop @pointerup.stop>
         <a-space :size="8" align="center">
           <a-button @click="ctx.cancelRecordSelect">
-            {{ t("viewer.record.selectCancel") }}
+            {{ selectCancelLabel }}
           </a-button>
           <a-button type="primary" :disabled="!draftBox" @click="ctx.confirmRecordSelect">
-            {{ t("viewer.record.selectConfirm") }}
+            {{ selectConfirmLabel }}
           </a-button>
-          <div class="record-delay">
+          <div v-if="showDelayInput" class="record-delay">
             <a-typography-text type="secondary">
               {{ t("viewer.record.delay") }}
             </a-typography-text>
@@ -66,6 +66,14 @@ const { t } = useI18n();
 
 const isSelecting = computed(() => !!unref(props.ctx.isSelectingRecordArea));
 const draftBox = computed(() => unref(props.ctx.recordDraftBox));
+const selectHint = computed(() => unref(props.ctx.selectHint) ?? t('viewer.record.selectHint'));
+const selectConfirmLabel = computed(() => unref(props.ctx.selectConfirmLabel) ?? t('viewer.record.selectConfirm'));
+const selectCancelLabel = computed(() => unref(props.ctx.selectCancelLabel) ?? t('viewer.record.selectCancel'));
+const showDelayInput = computed(() => {
+  const v = unref(props.ctx.showDelayInput);
+  if (typeof v === 'boolean') return v;
+  return true;
+});
 const recordDelayModel = computed<number>({
   get: () => Number(unref(props.ctx.recordDelaySec) ?? 0),
   set: (v: number) => {

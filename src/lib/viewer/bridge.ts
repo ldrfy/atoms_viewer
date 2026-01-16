@@ -17,7 +17,13 @@ export type ViewerPublicApi = {
   exportPng: (payload: {
     scale: number;
     transparent: boolean;
+    cropBox?: { x: number; y: number; w: number; h: number };
   }) => void | Promise<void>;
+  /** Select an area and export to PNG. */
+  exportPngWithSelection: (payload: {
+    scale: number;
+    transparent: boolean;
+  }) => void;
 
   /**
    * Apply the current active-layer LAMMPS typeId→element mapping.

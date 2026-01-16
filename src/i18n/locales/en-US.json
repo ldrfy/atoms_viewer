@@ -93,9 +93,14 @@
             }
         },
         "export": {
-            "pngSuccess": "Exported PNG (transparent background)",
+            "pngSuccess": "Exported PNG",
+            "pngSuccessTransparent": "Exported PNG (transparent background)",
+            "pngSuccessSolid": "Exported PNG (non-transparent background)",
             "scaleCapped": "Export scale was capped from {requested} to {used} (GPU limit: {limit}px).",
-            "fail": "Export failed: {reason}"
+            "fail": "Export failed: {reason}",
+            "selectHint": "Drag to draw a box; drag/move handles to refine; click confirm to export.",
+            "selectCancel": "Cancel",
+            "selectConfirm": "Export selection"
         },
         "lammps": {
             "mappingMissing": "Unresolved LAMMPS type→element mappings found (placeholder 'E'). Please complete them in Settings for correct colors/radii/bond inference."

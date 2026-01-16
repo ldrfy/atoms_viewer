@@ -8,6 +8,10 @@ export type RecordSelectCtx = {
   isSelectingRecordArea: MaybeRef<boolean>;
   recordDraftBox: MaybeRef<CropBox | null>;
   recordDelaySec: MaybeRef<number>;
+  selectHint?: MaybeRef<string | null>;
+  selectConfirmLabel?: MaybeRef<string | null>;
+  selectCancelLabel?: MaybeRef<string | null>;
+  showDelayInput?: MaybeRef<boolean>;
 
   onRecordOverlayDown: (e: PointerEvent) => void;
   onRecordOverlayMove: (e: PointerEvent) => void;
@@ -25,6 +29,10 @@ export function createRecordSelectCtx(
     isSelectingRecordArea: recording.isSelectingRecordArea,
     recordDraftBox: recording.recordDraftBox,
     recordDelaySec: recording.recordDelaySec,
+    selectHint: recording.selectHint,
+    selectConfirmLabel: recording.selectConfirmLabel,
+    selectCancelLabel: recording.selectCancelLabel,
+    showDelayInput: recording.showDelayInput,
 
     onRecordOverlayDown: recording.onRecordOverlayDown,
     onRecordOverlayMove: recording.onRecordOverlayMove,

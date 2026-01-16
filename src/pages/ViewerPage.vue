@@ -32,7 +32,15 @@ const settingsModel = computed<ViewerSettings>({
 });
 
 type ViewerStageExpose = {
-  exportPng: (payload: { scale: number; transparent: boolean }) => void | Promise<void>;
+  exportPng: (payload: {
+    scale: number;
+    transparent: boolean;
+    cropBox?: { x: number; y: number; w: number; h: number };
+  }) => void | Promise<void>;
+  exportPngWithSelection: (payload: {
+    scale: number;
+    transparent: boolean;
+  }) => void;
   openFilePicker: () => void;
   loadFile: (file: File) => Promise<void>;
   loadFiles: (files: File[]) => Promise<void>;

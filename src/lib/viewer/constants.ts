@@ -34,3 +34,9 @@ export const DUAL_VIEW_SPLIT_MAX_PCT = 90;
 // Auto-rotate → settings rotation sync interval (ms).
 // 自动旋转同步到设置面板的时间间隔（毫秒）。
 export const AUTO_ROTATE_ROTATION_SYNC_INTERVAL_MS = 200;
+// Manual rotation → settings rotation sync interval (ms).
+// 手动旋转同步到设置面板的时间间隔（毫秒）。
+export const MANUAL_ROTATION_SYNC_INTERVAL_MS = 120;
+// Manual zoom → settings distance sync interval (ms).
+// 手动缩放同步到设置面板的时间间隔（毫秒）。
+export const DUAL_VIEW_DISTANCE_SYNC_INTERVAL_MS = 120;

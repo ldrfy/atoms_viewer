@@ -16,7 +16,10 @@ import { useI18n } from 'vue-i18n';
 
 import { createThreeStage, type ThreeStage } from '../../lib/three/stage';
 import { getAutoRotatePreset } from '../../lib/viewer/autoRotate';
-import { AUTO_ROTATE_ROTATION_SYNC_INTERVAL_MS } from '../../lib/viewer/constants';
+import {
+  AUTO_ROTATE_ROTATION_SYNC_INTERVAL_MS,
+  DUAL_VIEW_DISTANCE_SYNC_INTERVAL_MS,
+} from '../../lib/viewer/constants';
 import { normalizeViewPresets } from '../../lib/viewer/viewPresets';
 import { bindViewerStageSettings } from './bindSettings';
 import {
@@ -796,7 +799,7 @@ export function useViewerStage(
         if (settingsSync.isSuppressed()) return;
 
         // Throttle sync to reduce UI churn while keeping wheel/gesture zoom responsive.
-        if (t - lastT < 50) return;
+        if (t - lastT < DUAL_VIEW_DISTANCE_SYNC_INTERVAL_MS) return;
         lastT = t;
 
         const dist = stage.getDualViewDistance();

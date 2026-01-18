@@ -4,6 +4,7 @@ import type { Ref } from 'vue';
 
 import type { ViewerSettings } from '../../../lib/viewer/settings';
 import { normalizeViewPresets } from '../../../lib/viewer/viewPresets';
+import { MANUAL_ROTATION_SYNC_INTERVAL_MS } from '../../../lib/viewer/constants';
 import { ATOMIC_SYMBOLS } from '../../../lib/structure/chem';
 import type { Atom } from '../../../lib/structure/types';
 import type { AnyCamera } from '../../../lib/three/camera';
@@ -442,9 +443,8 @@ export function createViewerPickingController(deps: RenderDeps) {
     if (!deps.patchSettings) return;
     if (!dragRotationDeg) return;
 
-    const ROT_SYNC_INTERVAL_MS = 120;
     const now = performance.now();
-    if (!force && now - lastRotSyncMs < ROT_SYNC_INTERVAL_MS) return;
+    if (!force && now - lastRotSyncMs < MANUAL_ROTATION_SYNC_INTERVAL_MS) return;
 
     lastRotSyncMs = now;
     deps.patchSettings({ rotationDeg: { ...dragRotationDeg } });
@@ -453,8 +453,6 @@ export function createViewerPickingController(deps: RenderDeps) {
   function scheduleRotationSync(force = false): void {
     if (!deps.patchSettings) return;
     if (!dragRotationDeg) return;
-
-    const ROT_SYNC_INTERVAL_MS = 120;
 
     if (force) {
       if (rotSyncTimer) {
@@ -470,7 +468,7 @@ export function createViewerPickingController(deps: RenderDeps) {
 
     const due = Math.max(
       0,
-      ROT_SYNC_INTERVAL_MS - (performance.now() - lastRotSyncMs),
+      MANUAL_ROTATION_SYNC_INTERVAL_MS - (performance.now() - lastRotSyncMs),
     );
     rotSyncTimer = window.setTimeout(() => {
       rotSyncTimer = 0;

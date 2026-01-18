@@ -110,11 +110,16 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { APP_SAMPLES_URL } from '../lib/appMeta';
-import { readUrlListParam } from '../lib/urlParams';
+import { readUrlListParam, writeUrlListParam } from '../lib/urlParams';
 import type { SampleManifestItem } from '../lib/structure/types';
 import { DownOutlined } from '@ant-design/icons-vue';
-import { APP_AUTHOR, APP_DISPLAY_NAME, APP_VERSION, APP_YUHLDR_URL } from '../lib/appMeta';
+import {
+  APP_AUTHOR,
+  APP_DISPLAY_NAME,
+  APP_SAMPLES_URL,
+  APP_VERSION,
+  APP_YUHLDR_URL,
+} from '../lib/appMeta';
 import { fetchWithTimeout } from '../lib/net/index.ts';
 
 const { t } = useI18n();
@@ -126,13 +131,11 @@ const copyrightYearsText
     ? `${COPYRIGHT_START_YEAR}–${copyrightEndYear}`
     : String(COPYRIGHT_START_YEAR);
 
-const props = withDefaults(
+withDefaults(
   defineProps<{
     logoSrc?: string;
   }>(),
-  {
-    logoSrc: import.meta.env.BASE_URL + 'lav.svg',
-  },
+  { logoSrc: import.meta.env.BASE_URL + 'lav.svg' },
 );
 
 const emit = defineEmits<{
@@ -144,46 +147,106 @@ const emit = defineEmits<{
 const sampleOptions = ref<SampleManifestItem[]>([]);
 const loadingSamples = ref(false);
 const sampleLoadError = ref<string | null>(null);
-const FALLBACK_SAMPLES: SampleManifestItem[] = [
-  {
-    fileName: 'graphene.xyz',
-    label: 'graphene.xyz',
-    url: import.meta.env.BASE_URL + 'samples/graphene.xyz',
-    size: 0.003,
-  },
-  {
-    fileName: 'cnt.xyz',
-    label: 'cnt.xyz',
-    url: import.meta.env.BASE_URL + 'samples/cnt.xyz',
-    size: 0.009,
-  },
-  {
-    fileName: 'cnt.data',
-    label: 'cnt.data',
-    url: import.meta.env.BASE_URL + 'samples/cnt.data',
-    size: 0.009,
-  },
-];
+const LOCAL_SAMPLES_MANIFEST_URL = import.meta.env.BASE_URL + 'samples/data.json';
+const SAMPLES_URL_STORAGE_KEY = 'samples_manifest_url';
+
+// CN: 从 sessionStorage 读取上次的 samples 清单地址
+// EN: Read last samples manifest URL from sessionStorage.
+function getStoredSamplesManifestUrl(): string {
+  if (typeof window === 'undefined') return '';
+  try {
+    return sessionStorage.getItem(SAMPLES_URL_STORAGE_KEY) ?? '';
+  }
+  catch {
+    return '';
+  }
+}
+
+// CN: 保存 samples 清单地址到 sessionStorage
+// EN: Persist samples manifest URL into sessionStorage.
+function setStoredSamplesManifestUrl(url: string): void {
+  if (typeof window === 'undefined') return;
+  try {
+    sessionStorage.setItem(SAMPLES_URL_STORAGE_KEY, url);
+  }
+  catch {}
+}
+
+// CN: 统一获取 samples 清单地址，必要时回写 URL
+// EN: Resolve samples manifest URL and sync it into the query when needed.
+function getSamplesManifestUrl(): string {
+  const fromQuery = (readUrlListParam('samples')[0] ?? '').trim();
+  if (fromQuery) {
+    setStoredSamplesManifestUrl(fromQuery);
+    return fromQuery;
+  }
+  const fromStorage = getStoredSamplesManifestUrl().trim();
+  if (fromStorage) {
+    writeUrlListParam('samples', [fromStorage]);
+    return fromStorage;
+  }
+  const fallback = APP_SAMPLES_URL.trim();
+  if (!fallback) return '';
+  writeUrlListParam('samples', [fallback]);
+  setStoredSamplesManifestUrl(fallback);
+  return fallback;
+}
+
+// CN: 站内地址尽量保持为相对 URL
+// EN: Keep same-origin URLs as relative paths when possible.
+function compactSameOriginUrl(url: URL): string {
+  if (url.origin === window.location.origin) {
+    return `${url.pathname}${url.search}${url.hash}`;
+  }
+  return url.toString();
+}
+
+// CN: 解析并规范化 manifest 项
+// EN: Parse and normalize manifest items.
+function normalizeManifestItems(manifestUrl: string, data: unknown): SampleManifestItem[] {
+  if (!Array.isArray(data)) throw new Error('manifest JSON 不是数组');
+
+  const base = new URL(manifestUrl, window.location.href);
+
+  return data
+    .filter((x: any) => x && typeof x === 'object')
+    .map((x: any): SampleManifestItem | null => {
+      const fileName = typeof x.fileName === 'string' ? x.fileName.trim() : '';
+      const rawUrl = typeof x.url === 'string' ? x.url.trim() : '';
+      if (!fileName || !rawUrl) return null;
+
+      let url = rawUrl;
+      try {
+        url = compactSameOriginUrl(new URL(rawUrl, base));
+      }
+      catch {}
+
+      const label = typeof x.label === 'string' && x.label.trim() ? x.label.trim() : fileName;
+      const size = typeof x.size === 'number' && Number.isFinite(x.size) ? x.size : 0;
+
+      return { fileName, label, url, size };
+    })
+    .filter((x): x is SampleManifestItem => !!x);
+}
+
+// CN: 拉取并解析 manifest
+// EN: Fetch and parse the manifest.
+async function fetchManifest(manifestUrl: string): Promise<SampleManifestItem[]> {
+  const res = await fetchWithTimeout(manifestUrl, { cache: 'no-store' }, 5000);
+  if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
+  const data = (await res.json()) as unknown;
+  return normalizeManifestItems(manifestUrl, data);
+}
 
 async function loadSampleManifest(): Promise<void> {
   loadingSamples.value = true;
   sampleLoadError.value = null;
 
   try {
-    const overrideUrl = readUrlListParam('samples')[0] ?? '';
-    const targetUrl = overrideUrl || APP_SAMPLES_URL;
+    const targetUrl = getSamplesManifestUrl();
     if (!targetUrl) throw new Error('samples url is empty');
 
-    const res = await fetchWithTimeout(targetUrl, { cache: 'no-store' }, 5000);
-    if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
-
-    const data = (await res.json()) as unknown;
-    if (!Array.isArray(data)) throw new Error('manifest JSON 不是数组');
-
-    const parsed: SampleManifestItem[] = data
-      .filter(x => x.fileName && x.url);
-
-    sampleOptions.value = parsed;
+    sampleOptions.value = await fetchManifest(targetUrl);
   }
   catch (e: any) {
     if (e?.name === 'AbortError') {
@@ -192,7 +255,13 @@ async function loadSampleManifest(): Promise<void> {
     else {
       sampleLoadError.value = e?.message ? String(e.message) : String(e);
     }
-    sampleOptions.value = FALLBACK_SAMPLES;
+    try {
+      writeUrlListParam('samples', [LOCAL_SAMPLES_MANIFEST_URL]);
+      sampleOptions.value = await fetchManifest(LOCAL_SAMPLES_MANIFEST_URL);
+    }
+    catch {
+      sampleOptions.value = [];
+    }
   }
   finally {
     loadingSamples.value = false;
@@ -261,8 +330,6 @@ function onSampleMenuClick(info: { key: string | number }): void {
 onMounted(() => {
   void loadSampleManifest();
 });
-
-const logoSrc = props.logoSrc;
 </script>
 
 <style scoped>

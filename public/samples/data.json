@@ -1,0 +1,20 @@
+[
+    {
+        "fileName": "graphene.xyz",
+        "label": "graphene.xyz",
+        "url": "graphene.xyz",
+        "size": 0.003
+    },
+    {
+        "fileName": "cnt.xyz",
+        "label": "cnt.xyz",
+        "url": "cnt.xyz",
+        "size": 0.009
+    },
+    {
+        "fileName": "cnt.data",
+        "label": "cnt.data",
+        "url": "cnt.data",
+        "size": 0.009
+    }
+]

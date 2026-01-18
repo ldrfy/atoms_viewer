@@ -143,6 +143,8 @@ function openWithFiles(files: File[]): void {
 async function preloadSample(sample: SampleManifestItem): Promise<void> {
   const { url, fileName } = sample;
   writeUrlListParam('url', [url]);
+  // Keep the viewer URL short: `samples` is only useful on EmptyPage.
+  writeUrlListParam('samples', []);
   loadRequest.value = { kind: 'url', url, fileName };
   page.value = 'viewer';
 }

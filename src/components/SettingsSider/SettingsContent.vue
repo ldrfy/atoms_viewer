@@ -206,6 +206,8 @@ type SettingsExportPayload = {
         | 'frame_rate'
         | 'autoRotateOnLoad'
         | 'themeReadabilityCheckOnOpen'
+        | 'atomRoughness'
+        | 'modelLightIntensity'
     >;
     files: Pick<ViewerSettings, 'exportPngScale' | 'exportPngTransparent'>;
   };
@@ -254,6 +256,8 @@ function buildExportPayload(v: ViewerSettings): SettingsExportPayload {
         frame_rate: v.frame_rate,
         autoRotateOnLoad: v.autoRotateOnLoad,
         themeReadabilityCheckOnOpen: v.themeReadabilityCheckOnOpen,
+        atomRoughness: v.atomRoughness,
+        modelLightIntensity: v.modelLightIntensity,
       },
       files: {
         exportPngScale: v.exportPngScale,
@@ -335,6 +339,8 @@ const layerDisplayDirty = computed(() => {
     || cur.sphereSegments !== DEFAULT_LAYER_DISPLAY.sphereSegments
     || cur.bondFactor !== DEFAULT_LAYER_DISPLAY.bondFactor
     || cur.bondRadius !== DEFAULT_LAYER_DISPLAY.bondRadius
+    || settings.value.modelLightIntensity !== DEFAULT_SETTINGS.modelLightIntensity
+    || settings.value.atomRoughness !== DEFAULT_SETTINGS.atomRoughness
   );
 });
 

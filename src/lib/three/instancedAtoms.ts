@@ -30,6 +30,8 @@ export function buildAtomMeshesByElement(params: {
   colorMap?: Record<string, string>;
   /** If true, set per-instance colors (reduces draw calls for many typeIds). */
   useInstanceColor?: boolean;
+  /** Material roughness for atom spheres (0..1). */
+  roughness?: number;
 }): THREE.InstancedMesh[] {
   const {
     atoms,
@@ -40,6 +42,7 @@ export function buildAtomMeshesByElement(params: {
     getColorKey,
     colorMap,
     useInstanceColor = false,
+    roughness = 0.9,
   } = params;
 
   type Group = { element: string; indices: number[] };
@@ -81,7 +84,7 @@ export function buildAtomMeshesByElement(params: {
     const material = new THREE.MeshStandardMaterial({
       color: new THREE.Color(useInstanceColor ? '#ffffff' : col),
       metalness: 0.05,
-      roughness: 0.9,
+      roughness: Math.min(1, Math.max(0, roughness)),
       vertexColors: useInstanceColor,
     });
 

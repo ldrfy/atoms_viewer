@@ -52,36 +52,6 @@
       </a-row>
     </a-form-item>
 
-    <a-form-item :label="t('settings.panel.layerDisplay.bondFactor')">
-      <a-row :gutter="8" align="middle">
-        <a-col :flex="1">
-          <a-slider
-            v-model:value="bondFactorModel"
-            :min="BOND_FACTOR_MIN"
-            :max="BOND_FACTOR_MAX"
-            :step="0.01"
-            :disabled="controlsDisabled || !showBondsModel"
-          />
-        </a-col>
-        <a-col class="settings-col-compact">
-          <a-input-number
-            v-model:value="bondFactorModel"
-            :aria-label="t('settings.panel.layerDisplay.bondFactor')"
-            :title="t('settings.panel.layerDisplay.bondFactor')"
-            :min="BOND_FACTOR_MIN"
-            :max="BOND_FACTOR_MAX"
-            :step="0.01"
-            :disabled="controlsDisabled || !showBondsModel"
-            class="settings-full-width"
-          />
-        </a-col>
-      </a-row>
-
-      <a-typography-text type="secondary" class="settings-text-secondary">
-        {{ t('settings.panel.layerDisplay.bondFactorHint') }}
-      </a-typography-text>
-    </a-form-item>
-
     <a-form-item :label="t('settings.panel.layerDisplay.bondRadius')">
       <a-row :gutter="8" align="middle">
         <a-col :flex="1">
@@ -134,34 +104,56 @@
       </a-row>
     </a-form-item>
 
-    <a-form-item :label="t('settings.panel.layerDisplay.sphereSegments')">
+    <a-form-item :label="t('settings.panel.layerDisplay.modelLightIntensity')">
       <a-row :gutter="8" align="middle">
         <a-col :flex="1">
           <a-slider
-            v-model:value="sphereSegmentsModel"
-            :min="SPHERE_SEGMENTS_MIN"
-            :max="SPHERE_SEGMENTS_MAX"
-            :step="1"
+            v-model:value="modelLightIntensityModel"
+            :min="MODEL_LIGHT_INTENSITY_MIN"
+            :max="MODEL_LIGHT_INTENSITY_MAX"
+            :step="0.05"
             :disabled="controlsDisabled"
           />
         </a-col>
         <a-col class="settings-col-compact">
           <a-input-number
-            v-model:value="sphereSegmentsModel"
-            :aria-label="t('settings.panel.layerDisplay.sphereSegments')"
-            :title="t('settings.panel.layerDisplay.sphereSegments')"
-            :min="SPHERE_SEGMENTS_MIN"
-            :max="SPHERE_SEGMENTS_MAX"
-            :step="1"
+            v-model:value="modelLightIntensityModel"
+            :aria-label="t('settings.panel.layerDisplay.modelLightIntensity')"
+            :title="t('settings.panel.layerDisplay.modelLightIntensity')"
+            :min="MODEL_LIGHT_INTENSITY_MIN"
+            :max="MODEL_LIGHT_INTENSITY_MAX"
+            :step="0.05"
             :disabled="controlsDisabled"
             class="settings-full-width"
           />
         </a-col>
       </a-row>
+    </a-form-item>
 
-      <a-typography-text type="secondary" class="settings-text-secondary">
-        {{ t('settings.panel.layerDisplay.sphereSegmentsHint') }}
-      </a-typography-text>
+    <a-form-item :label="t('settings.panel.layerDisplay.atomRoughness')">
+      <a-row :gutter="8" align="middle">
+        <a-col :flex="1">
+          <a-slider
+            v-model:value="atomRoughnessModel"
+            :min="ATOM_ROUGHNESS_MIN"
+            :max="ATOM_ROUGHNESS_MAX"
+            :step="0.05"
+            :disabled="controlsDisabled"
+          />
+        </a-col>
+        <a-col class="settings-col-compact">
+          <a-input-number
+            v-model:value="atomRoughnessModel"
+            :aria-label="t('settings.panel.layerDisplay.atomRoughness')"
+            :title="t('settings.panel.layerDisplay.atomRoughness')"
+            :min="ATOM_ROUGHNESS_MIN"
+            :max="ATOM_ROUGHNESS_MAX"
+            :step="0.05"
+            :disabled="controlsDisabled"
+            class="settings-full-width"
+          />
+        </a-col>
+      </a-row>
     </a-form-item>
 
     <a-form-item v-if="layerDisplayDirty">
@@ -169,29 +161,97 @@
         {{ t('settings.panel.layerDisplay.reset') }}
       </a-button>
     </a-form-item>
+
+    <a-form-item :label="t('settings.panel.layerDisplay.bondFactor')">
+      <a-row :gutter="8" align="middle">
+        <a-col :flex="1">
+          <a-slider
+            v-model:value="bondFactorModel"
+            :min="BOND_FACTOR_MIN"
+            :max="BOND_FACTOR_MAX"
+            :step="0.01"
+            :disabled="controlsDisabled || !showBondsModel"
+          />
+        </a-col>
+        <a-col class="settings-col-compact">
+          <a-input-number
+            v-model:value="bondFactorModel"
+            :aria-label="t('settings.panel.layerDisplay.bondFactor')"
+            :title="t('settings.panel.layerDisplay.bondFactor')"
+            :min="BOND_FACTOR_MIN"
+            :max="BOND_FACTOR_MAX"
+            :step="0.01"
+            :disabled="controlsDisabled || !showBondsModel"
+            class="settings-full-width"
+          />
+        </a-col>
+      </a-row>
+
+      <a-form-item :label="t('settings.panel.layerDisplay.sphereSegments')">
+        <a-row :gutter="8" align="middle">
+          <a-col :flex="1">
+            <a-slider
+              v-model:value="sphereSegmentsModel"
+              :min="SPHERE_SEGMENTS_MIN"
+              :max="SPHERE_SEGMENTS_MAX"
+              :step="1"
+              :disabled="controlsDisabled"
+            />
+          </a-col>
+          <a-col class="settings-col-compact">
+            <a-input-number
+              v-model:value="sphereSegmentsModel"
+              :aria-label="t('settings.panel.layerDisplay.sphereSegments')"
+              :title="t('settings.panel.layerDisplay.sphereSegments')"
+              :min="SPHERE_SEGMENTS_MIN"
+              :max="SPHERE_SEGMENTS_MAX"
+              :step="1"
+              :disabled="controlsDisabled"
+              class="settings-full-width"
+            />
+          </a-col>
+        </a-row>
+
+        <a-typography-text type="secondary" class="settings-text-secondary">
+          {{ t('settings.panel.layerDisplay.sphereSegmentsHint') }}
+        </a-typography-text>
+      </a-form-item>
+
+      <a-typography-text type="secondary" class="settings-text-secondary">
+        {{ t('settings.panel.layerDisplay.bondFactorHint') }}
+      </a-typography-text>
+    </a-form-item>
   </a-form>
 </template>
 
 <script setup lang="ts">
 import { computed, inject, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { DEFAULT_LAYER_DISPLAY, type LayerDisplaySettings } from '../../../lib/viewer/settings';
+import {
+  DEFAULT_LAYER_DISPLAY,
+  DEFAULT_SETTINGS,
+  type LayerDisplaySettings,
+} from '../../../lib/viewer/settings';
 import { viewerApiRef } from '../../../lib/viewer/bridge';
 import { useSettingsSiderContext } from '../useSettingsSiderContext';
 import { settingsSiderDerivedContextKey } from '../context';
 import {
+  ATOM_ROUGHNESS_MIN,
+  ATOM_ROUGHNESS_MAX,
   ATOM_SCALE_MIN,
   ATOM_SCALE_MAX,
   BOND_FACTOR_MIN,
   BOND_FACTOR_MAX,
   BOND_RADIUS_MIN,
   BOND_RADIUS_MAX,
+  MODEL_LIGHT_INTENSITY_MIN,
+  MODEL_LIGHT_INTENSITY_MAX,
   SPHERE_SEGMENTS_MIN,
   SPHERE_SEGMENTS_MAX,
 } from '../../../lib/viewer/constants';
 
 const { t } = useI18n();
-const { hasAnyLayer } = useSettingsSiderContext();
+const { settings, patchSettings, hasAnyLayer } = useSettingsSiderContext();
 
 const viewerApi = computed(() => viewerApiRef.value);
 const layerList = computed(() => viewerApi.value?.layers.value ?? []);
@@ -243,6 +303,16 @@ const sphereSegmentsModel = computed({
   set: (v: number) => patchDisplay({ sphereSegments: v }),
 });
 
+const modelLightIntensityModel = computed({
+  get: () => settings.value.modelLightIntensity ?? DEFAULT_SETTINGS.modelLightIntensity,
+  set: (v: number) => patchSettings({ modelLightIntensity: v }),
+});
+
+const atomRoughnessModel = computed({
+  get: () => settings.value.atomRoughness ?? DEFAULT_SETTINGS.atomRoughness,
+  set: (v: number) => patchSettings({ atomRoughness: v }),
+});
+
 const derivedContext = inject(settingsSiderDerivedContextKey, null);
 const layerDisplayDirty = computed(() => {
   if (derivedContext) return derivedContext.layerDisplayDirty.value;
@@ -253,6 +323,8 @@ const layerDisplayDirty = computed(() => {
     || cur.sphereSegments !== DEFAULT_LAYER_DISPLAY.sphereSegments
     || cur.bondFactor !== DEFAULT_LAYER_DISPLAY.bondFactor
     || cur.bondRadius !== DEFAULT_LAYER_DISPLAY.bondRadius
+    || settings.value.modelLightIntensity !== DEFAULT_SETTINGS.modelLightIntensity
+    || settings.value.atomRoughness !== DEFAULT_SETTINGS.atomRoughness
   );
 });
 
@@ -263,6 +335,10 @@ function onResetDisplay(): void {
     sphereSegments: DEFAULT_LAYER_DISPLAY.sphereSegments,
     bondFactor: DEFAULT_LAYER_DISPLAY.bondFactor,
     bondRadius: DEFAULT_LAYER_DISPLAY.bondRadius,
+  });
+  patchSettings({
+    modelLightIntensity: DEFAULT_SETTINGS.modelLightIntensity,
+    atomRoughness: DEFAULT_SETTINGS.atomRoughness,
   });
 }
 </script>

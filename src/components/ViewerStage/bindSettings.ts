@@ -24,6 +24,7 @@ export function bindViewerStageSettings(params: {
   resetView: () => void;
 
   applyAtomScale: () => void;
+  applyAtomRoughness: () => void;
   applyShowBonds: () => void;
   applyShowAxes: () => void;
 
@@ -34,6 +35,7 @@ export function bindViewerStageSettings(params: {
     pauseOnInteract: boolean;
     resumeDelayMs: number;
   }) => void;
+  setModelLightIntensity: (intensity: number) => void;
 
   setViewPresets: (presets: ViewPreset[]) => void;
   setDualViewDistance: (dist: number) => void;
@@ -49,6 +51,7 @@ export function bindViewerStageSettings(params: {
     setProjectionMode,
     resetView,
     applyAtomScale,
+    applyAtomRoughness,
     applyShowBonds,
     applyShowAxes,
 
@@ -56,6 +59,7 @@ export function bindViewerStageSettings(params: {
     setViewPresets,
     setDualViewDistance,
     setDualViewSplit,
+    setModelLightIntensity,
     applyBackgroundColor,
   } = params;
 
@@ -137,6 +141,14 @@ export function bindViewerStageSettings(params: {
     ),
   );
 
+  stops.push(
+    watch(
+      () => settingsRef.value.atomRoughness,
+      () => applyAtomRoughness(),
+      { immediate: true },
+    ),
+  );
+
   // 显示键合 / show bonds
   stops.push(
     watch(
@@ -159,6 +171,14 @@ export function bindViewerStageSettings(params: {
     watch(
       () => settingsRef.value.showAxes,
       () => applyShowAxes(),
+      { immediate: true },
+    ),
+  );
+
+  stops.push(
+    watch(
+      () => settingsRef.value.modelLightIntensity,
+      v => setModelLightIntensity(Number.isFinite(v) ? v : 1),
       { immediate: true },
     ),
   );

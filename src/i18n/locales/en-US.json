@@ -249,6 +249,8 @@
                 "recordFpsHint": "Target recording frame rate; commonly 30 / 60.",
                 "autoRotateOnLoad": "Auto rotate after loading models",
                 "themeReadabilityCheckOnOpen": "Check theme readability when opening viewer",
+                "modelLightIntensity": "Model light intensity",
+                "atomRoughness": "Atom material roughness",
                 "reset": "Reset other settings"
             },
             "colors": {
@@ -277,6 +279,8 @@
                 "bondRadius": "Bond thickness",
                 "atomSize": "Atom size",
                 "sphereSegments": "Sphere segments",
+                "modelLightIntensity": "Model light intensity",
+                "atomRoughness": "Atom material roughness",
                 "reset": "Reset layer appearance",
                 "sphereSegmentsHint": "Higher values look smoother but are slower to render."
             }

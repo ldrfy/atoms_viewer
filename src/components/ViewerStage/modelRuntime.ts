@@ -2,11 +2,12 @@
 import * as THREE from 'three';
 import { ref, type Ref } from 'vue';
 
-import type {
-  ViewerSettings,
-  LammpsTypeMapItem,
-  AtomTypeColorMapItem,
-  LayerDisplaySettings,
+import {
+  DEFAULT_SETTINGS,
+  type ViewerSettings,
+  type LammpsTypeMapItem,
+  type AtomTypeColorMapItem,
+  type LayerDisplaySettings,
 } from '../../lib/viewer/settings';
 import type { Atom, FrameMeta, StructureModel } from '../../lib/structure/types';
 import { getElementColorHex } from '../../lib/structure/chem';
@@ -221,6 +222,7 @@ export type ModelRuntime = {
   getFrameMetaForLayer: (id: string | null, frameIndex?: number) => FrameMeta | null;
 
   applyAtomScale: () => void;
+  applyAtomRoughness: () => void;
   applyShowBonds: () => void;
   applyShowAxes: () => void;
   applyModelRotation: () => void;
@@ -505,6 +507,12 @@ export function createModelRuntime(args: {
     return settingsRef.value;
   }
 
+  function getAtomRoughness(): number {
+    const raw = getSettings().atomRoughness;
+    const base = Number.isFinite(raw) ? raw : DEFAULT_SETTINGS.atomRoughness;
+    return Math.min(1, Math.max(0, base));
+  }
+
   function getDisplayDefaults(): LayerDisplaySettings {
     return normalizeLayerDisplay(
       {
@@ -694,6 +702,7 @@ export function createModelRuntime(args: {
       getColorKey,
       colorMap,
       useInstanceColor: false,
+      roughness: getAtomRoughness(),
     });
     for (const m of layer.atomMeshes) {
       (m.userData as any).layerId = layer.info.id;
@@ -1139,6 +1148,19 @@ export function createModelRuntime(args: {
     tickCameraClipping(true);
     invalidate();
   }
+
+  let lastAtomRoughness = NaN;
+  function applyAtomRoughness(): void {
+    const next = getAtomRoughness();
+    if (Math.abs(next - lastAtomRoughness) < 1e-6) return;
+    lastAtomRoughness = next;
+
+    for (const l of layerMap.values()) {
+      for (const m of l.atomMeshes) setMeshRoughness(m, next);
+    }
+
+    invalidate();
+  }
   function rebuildBondsForLayer(layer: LayerInternal, atoms: Atom[]): void {
     // Rebuild (and re-center) bond meshes to match the current frame.
     // This is intentionally separated from applyShowBonds so playback can
@@ -1476,6 +1498,20 @@ export function createModelRuntime(args: {
     if (matAny) matAny.needsUpdate = true;
   }
 
+  function setMeshRoughness(mesh: THREE.InstancedMesh, roughness: number): void {
+    const matAny = mesh.material as any;
+    const apply = (m: any) => {
+      if (!m) return;
+      if ('roughness' in m) m.roughness = roughness;
+      m.needsUpdate = true;
+    };
+    if (Array.isArray(matAny)) {
+      for (const m of matAny) apply(m);
+      return;
+    }
+    apply(matAny);
+  }
+
   function setMeshInstanceColors(
     mesh: THREE.InstancedMesh,
     instanceColorKeys: string[],
@@ -1626,6 +1662,7 @@ export function createModelRuntime(args: {
     getFrameMetaForLayer,
 
     applyAtomScale,
+    applyAtomRoughness,
     applyShowBonds,
     applyShowAxes,
     applyModelRotation,

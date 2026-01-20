@@ -249,6 +249,8 @@
                 "refreshBondsOnPlay": "播放时原子连接每帧刷新",
                 "autoRotateOnLoad": "载入模型后自动旋转",
                 "themeReadabilityCheckOnOpen": "打开模型时检查主题可读性",
+                "modelLightIntensity": "模型灯光亮度",
+                "atomRoughness": "原子球材质粗糙度",
                 "reset": "恢复其他默认值"
             },
             "colors": {
@@ -277,6 +279,8 @@
                 "bondRadius": "键粗细",
                 "atomSize": "原子大小",
                 "sphereSegments": "球体细分",
+                "modelLightIntensity": "模型灯光亮度",
+                "atomRoughness": "原子球材质粗糙度",
                 "reset": "恢复图层外观默认值",
                 "sphereSegmentsHint": "数值越大越圆滑，但渲染开销越高。"
             }

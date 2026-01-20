@@ -80,6 +80,10 @@ export type ViewerSettings = {
   backgroundTransparent?: boolean;
   /** Check theme/background readability when entering viewer. */
   themeReadabilityCheckOnOpen?: boolean;
+  /** Light intensity multiplier for model lighting. */
+  modelLightIntensity: number;
+  /** Material roughness for atom spheres. */
+  atomRoughness: number;
 
   /** Multi-view presets (choose 1 => single view, choose 2 => dual view). */
   viewPresets?: ViewPreset[];
@@ -158,6 +162,8 @@ export const DEFAULT_SETTINGS: ViewerSettings = {
   backgroundColorMode: 'custom',
   backgroundTransparent: true,
   themeReadabilityCheckOnOpen: true,
+  modelLightIntensity: 1.1,
+  atomRoughness: 0.35,
 
   // Enforce "at least one view" at the settings level. This avoids the UI being in an
   // undefined state for first-time users and ensures distance syncing works consistently.

@@ -98,6 +98,8 @@ export type ThreeStage = {
     pauseOnInteract: boolean;
     resumeDelayMs: number;
   }) => void;
+  /** Update model lighting intensity (multiplier). */
+  setModelLightIntensity: (intensity: number) => void;
 };
 
 /**
@@ -171,10 +173,13 @@ export function createThreeStage(params: {
   const labelRenderer = attachCss2dRenderer(host, '2');
 
   // --- lights / 灯光 ---
-  scene.add(new THREE.AmbientLight(0xffffff, 0.7));
-  const dir = new THREE.DirectionalLight(0xffffff, 0.85);
-  dir.position.set(5, 8, 10);
-  scene.add(dir);
+  const ambientBaseIntensity = 0.7;
+  const directionalBaseIntensity = 0.85;
+  const ambientLight = new THREE.AmbientLight(0xffffff, ambientBaseIntensity);
+  const directionalLight = new THREE.DirectionalLight(0xffffff, directionalBaseIntensity);
+  directionalLight.position.set(5, 8, 10);
+  scene.add(ambientLight);
+  scene.add(directionalLight);
 
   // --- controls / 轨道控制 ---
   let controls = new OrbitControls(camera, renderer.domElement);
@@ -275,6 +280,16 @@ export function createThreeStage(params: {
   const invalidate = (): void => {
     invalidated = true;
     if (!inFrame) scheduleFrame();
+  };
+
+  let modelLightIntensity = 1;
+  const setModelLightIntensity = (intensity: number): void => {
+    const next = Number.isFinite(intensity) ? Math.max(0, intensity) : 1;
+    if (Math.abs(next - modelLightIntensity) < 1e-6) return;
+    modelLightIntensity = next;
+    ambientLight.intensity = ambientBaseIntensity * modelLightIntensity;
+    directionalLight.intensity = directionalBaseIntensity * modelLightIntensity;
+    invalidate();
   };
 
   const bindControlsForRedraw = (c: OrbitControls): (() => void) => {
@@ -788,5 +803,6 @@ export function createThreeStage(params: {
     setDualViewSplit,
 
     setAutoRotateConfig,
+    setModelLightIntensity,
   };
 }

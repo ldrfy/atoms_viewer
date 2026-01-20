@@ -750,10 +750,12 @@ export function useViewerStage(
       setDualViewSplit: r => stage?.setDualViewSplit(r),
 
       applyAtomScale: () => runtime?.applyAtomScale(),
+      applyAtomRoughness: () => runtime?.applyAtomRoughness(),
       applyShowBonds: () => runtime?.applyShowBonds(),
       applyShowAxes: () => runtime?.applyShowAxes(),
 
       setAutoRotateConfig: cfg => stage?.setAutoRotateConfig(cfg),
+      setModelLightIntensity: v => stage?.setModelLightIntensity(v),
 
       hasModel,
       hasAnyTypeId: () => runtime?.hasAnyTypeId() ?? false,

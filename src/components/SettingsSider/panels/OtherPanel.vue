@@ -89,7 +89,10 @@ import { computed, inject } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import { useSettingsSiderContext } from '../useSettingsSiderContext';
-import { RECORD_FPS_MIN, RECORD_FPS_MAX } from '../../../lib/viewer/constants';
+import {
+  RECORD_FPS_MIN,
+  RECORD_FPS_MAX,
+} from '../../../lib/viewer/constants';
 import { DEFAULT_SETTINGS } from '../../../lib/viewer/settings';
 import { settingsSiderDerivedContextKey } from '../context';
 

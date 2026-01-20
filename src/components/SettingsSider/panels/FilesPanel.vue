@@ -9,7 +9,7 @@
             :aria-label="t('settings.panel.files.export.scaleLabel')"
             :title="t('settings.panel.files.export.scaleLabel')"
             :min="1"
-            :max="5"
+            :max="10"
             :step="0.1"
             :precision="1"
             class="settings-input-wide"

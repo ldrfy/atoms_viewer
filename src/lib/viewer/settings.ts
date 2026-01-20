@@ -162,7 +162,7 @@ export const DEFAULT_SETTINGS: ViewerSettings = {
   backgroundColorMode: 'custom',
   backgroundTransparent: true,
   themeReadabilityCheckOnOpen: true,
-  modelLightIntensity: 1.1,
+  modelLightIntensity: 1.5,
   atomRoughness: 0.35,
 
   // Enforce "at least one view" at the settings level. This avoids the UI being in an

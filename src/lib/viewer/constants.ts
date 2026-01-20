@@ -14,7 +14,7 @@ export const RECORD_FPS_MIN = 1;
 export const RECORD_FPS_MAX = 120;
 // Model light intensity range (multiplier). / 模型灯光亮度范围（倍数）。
 export const MODEL_LIGHT_INTENSITY_MIN = 0;
-export const MODEL_LIGHT_INTENSITY_MAX = 2;
+export const MODEL_LIGHT_INTENSITY_MAX = 3;
 // Atom material roughness range. / 原子材质粗糙度范围。
 export const ATOM_ROUGHNESS_MIN = 0;
 export const ATOM_ROUGHNESS_MAX = 1;

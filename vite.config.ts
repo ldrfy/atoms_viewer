@@ -21,4 +21,7 @@ export default defineConfig({
     }),
   ],
   base: '/atoms_viewer/',
+  build: {
+    outDir: 'atoms_viewer',
+  },
 });

@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { ref, type Ref } from 'vue';
 
 import {
-  DEFAULT_SETTINGS,
+  DEFAULT_LAYER_DISPLAY,
   type ViewerSettings,
   type LammpsTypeMapItem,
   type AtomTypeColorMapItem,
@@ -38,6 +38,10 @@ import {
   getAtomTypeColorKey,
   syncColorMapRowsFromAtoms,
 } from './colorMap';
+import type {
+  LayerSnapshot,
+  LayerSourceInfo,
+} from '../../lib/viewer/sessionTypes';
 
 function normalizeLayerDisplay(
   patch: Partial<LayerDisplaySettings>,
@@ -54,22 +58,21 @@ function normalizeLayerDisplay(
   const showBonds
     = typeof patch.showBonds === 'boolean' ? patch.showBonds : base.showBonds;
 
+  const atomRoughness = Number.isFinite(patch.atomRoughness)
+    ? patch.atomRoughness as number
+    : base.atomRoughness;
+
   return {
     atomScale,
     showBonds,
     sphereSegments,
     bondFactor,
     bondRadius,
+    atomRoughness: Math.min(1, Math.max(0, atomRoughness)),
   };
 }
 
-const DEFAULT_LAYER_DISPLAY_LOCAL: LayerDisplaySettings = {
-  atomScale: 1,
-  showBonds: true,
-  sphereSegments: 24,
-  bondFactor: 1.05,
-  bondRadius: 0.09,
-};
+const DEFAULT_LAYER_DISPLAY_LOCAL: LayerDisplaySettings = { ...DEFAULT_LAYER_DISPLAY };
 
 export type ModelLayerInfo = {
   id: string;
@@ -79,6 +82,16 @@ export type ModelLayerInfo = {
   frameCount: number;
   sourceFormat?: string;
   sourceFileName?: string;
+  /** Optional file hash (md5) to track per-layer settings across reloads. */
+  sourceMd5?: string;
+  /** Original source size in bytes (if available). */
+  sourceSize?: number;
+  /** file/url/text */
+  sourceType?: 'file' | 'url' | 'text';
+  sourceUrl?: string;
+  sourceMime?: string;
+  /** Whether raw data is cached locally for export/session restore. */
+  sourceCached?: boolean;
   createdAtMs: number;
 };
 
@@ -206,11 +219,12 @@ export type ModelRuntime = {
 
   renderModel: (
     model: StructureModel,
-    opts?: { hidePreviousLayers?: boolean },
-  ) => { frameCount: number; hasAnimation: boolean };
+    opts?: { hidePreviousLayers?: boolean; sourceMeta?: LayerSourceInfo },
+  ) => { frameCount: number; hasAnimation: boolean; layerId: string };
   replaceActiveLayerModel: (model: StructureModel) => {
     frameCount: number;
     hasAnimation: boolean;
+    layerId: string;
   };
 
   clearModel: () => void;
@@ -234,6 +248,10 @@ export type ModelRuntime = {
   hasAnyTypeId: () => boolean;
   onTypeMapChanged: () => void;
   onColorMapChanged: (opts?: { applyToAll?: boolean }) => void;
+  getLayerSnapshots: () => LayerSnapshot[];
+  applyLayerSnapshots: (
+    snaps: LayerSnapshot[],
+  ) => void;
 
   setActiveLayerTypeMapRows: (rows: LammpsTypeMapItem[]) => void;
   resetAllLayersTypeMapToDefaults: (opts?: {
@@ -507,9 +525,8 @@ export function createModelRuntime(args: {
     return settingsRef.value;
   }
 
-  function getAtomRoughness(): number {
-    const raw = getSettings().atomRoughness;
-    const base = Number.isFinite(raw) ? raw : DEFAULT_SETTINGS.atomRoughness;
+  function normalizeAtomRoughnessValue(raw: number | undefined): number {
+    const base = Number.isFinite(raw) ? raw as number : DEFAULT_LAYER_DISPLAY.atomRoughness;
     return Math.min(1, Math.max(0, base));
   }
 
@@ -521,6 +538,7 @@ export function createModelRuntime(args: {
         sphereSegments: getSettings().sphereSegments,
         bondFactor: getSettings().bondFactor,
         bondRadius: getSettings().bondRadius,
+        atomRoughness: getSettings().atomRoughness,
       },
       DEFAULT_LAYER_DISPLAY_LOCAL,
     );
@@ -702,7 +720,7 @@ export function createModelRuntime(args: {
       getColorKey,
       colorMap,
       useInstanceColor: false,
-      roughness: getAtomRoughness(),
+      roughness: normalizeAtomRoughnessValue(display.atomRoughness),
     });
     for (const m of layer.atomMeshes) {
       (m.userData as any).layerId = layer.info.id;
@@ -738,6 +756,8 @@ export function createModelRuntime(args: {
       centerTmp: centerTmp2,
       matTmp,
     });
+
+    applyLayerSurfaceSettings([layer]);
   }
 
   function hideAllLayers(): void {
@@ -817,8 +837,8 @@ export function createModelRuntime(args: {
 
   function renderModel(
     model: StructureModel,
-    opts?: { hidePreviousLayers?: boolean },
-  ): { frameCount: number; hasAnimation: boolean } {
+    opts?: { hidePreviousLayers?: boolean; sourceMeta?: LayerSourceInfo },
+  ): { frameCount: number; hasAnimation: boolean; layerId: string } {
     // New model load: hide previous layers by default (layer-like behavior).
     // When loading multiple files at once, the caller can disable this per-file
     // so all newly-added layers remain visible.
@@ -837,6 +857,8 @@ export function createModelRuntime(args: {
 
     const firstAtoms = model.frames?.[0] ?? model.atoms;
 
+    const srcMeta = opts?.sourceMeta;
+
     const layer: LayerInternal = {
       info: {
         id,
@@ -845,7 +867,13 @@ export function createModelRuntime(args: {
         atomCount: model.atoms.length,
         frameCount,
         sourceFormat: model.source?.format,
-        sourceFileName: model.source?.filename,
+        sourceFileName: srcMeta?.fileName ?? model.source?.filename,
+        sourceMd5: srcMeta?.md5,
+        sourceSize: srcMeta?.size,
+        sourceType: srcMeta?.type,
+        sourceUrl: srcMeta?.url,
+        sourceMime: srcMeta?.mime,
+        sourceCached: !!srcMeta?.cached,
         createdAtMs: Date.now(),
       },
       model,
@@ -929,12 +957,13 @@ export function createModelRuntime(args: {
 
     invalidate();
 
-    return { frameCount, hasAnimation };
+    return { frameCount, hasAnimation, layerId: id };
   }
 
   function replaceActiveLayerModel(model: StructureModel): {
     frameCount: number;
     hasAnimation: boolean;
+    layerId: string;
   } {
     const active = getActiveLayer();
     if (!active) {
@@ -943,11 +972,12 @@ export function createModelRuntime(args: {
 
     active.model = model;
 
-    active.info.name = safeLayerName(model.source?.filename);
+    const nextFileName = model.source?.filename;
+    active.info.name = safeLayerName(nextFileName ?? active.info.name);
     active.info.atomCount = model.atoms.length;
     active.info.frameCount = model.frames?.length ? model.frames.length : 1;
     active.info.sourceFormat = model.source?.format;
-    active.info.sourceFileName = model.source?.filename;
+    active.info.sourceFileName = nextFileName ?? active.info.sourceFileName;
 
     active.frameIndex = 0;
 
@@ -1008,6 +1038,7 @@ export function createModelRuntime(args: {
     return {
       frameCount: active.info.frameCount,
       hasAnimation: active.info.frameCount > 1,
+      layerId: active.info.id,
     };
   }
 
@@ -1149,17 +1180,8 @@ export function createModelRuntime(args: {
     invalidate();
   }
 
-  let lastAtomRoughness = NaN;
   function applyAtomRoughness(): void {
-    const next = getAtomRoughness();
-    if (Math.abs(next - lastAtomRoughness) < 1e-6) return;
-    lastAtomRoughness = next;
-
-    for (const l of layerMap.values()) {
-      for (const m of l.atomMeshes) setMeshRoughness(m, next);
-    }
-
-    invalidate();
+    applyLayerSurfaceSettings(Array.from(layerMap.values()));
   }
   function rebuildBondsForLayer(layer: LayerInternal, atoms: Atom[]): void {
     // Rebuild (and re-center) bond meshes to match the current frame.
@@ -1200,9 +1222,12 @@ export function createModelRuntime(args: {
     layer.bondFactorUsed = bf;
     layer.bondRadiusUsed = display.bondRadius;
     for (const b of layer.bondMeshes) layer.group.add(b);
+
+    applyLayerSurfaceSettings([layer]);
   }
 
   function applyShowBonds(): void {
+    const touchedLayers: LayerInternal[] = [];
     for (const l of layerMap.values()) {
       const display = getLayerDisplay(l);
       const bf = display.bondFactor;
@@ -1247,6 +1272,7 @@ export function createModelRuntime(args: {
         l.bondFactorUsed = bf;
         l.bondRadiusUsed = display.bondRadius;
         for (const b of l.bondMeshes) l.group.add(b);
+        touchedLayers.push(l);
       }
       else {
         if (l.bondMeshes.length === 0) continue;
@@ -1256,6 +1282,10 @@ export function createModelRuntime(args: {
         l.bondFactorUsed = NaN;
         l.bondRadiusUsed = NaN;
       }
+    }
+
+    if (touchedLayers.length > 0) {
+      applyLayerSurfaceSettings(touchedLayers);
     }
 
     invalidate();
@@ -1282,6 +1312,120 @@ export function createModelRuntime(args: {
     active.currentMappedAtoms = null;
     active.mappedFrameIndex = -1;
     updateAxesForAtoms(atoms);
+    invalidate();
+  }
+
+  function getLayerSnapshots(): LayerSnapshot[] {
+    const res: LayerSnapshot[] = [];
+    for (const l of layerMap.values()) {
+      const layerDisplay = { ...getLayerDisplay(l) };
+      const typeMap = (l.typeMapRows ?? []).map(r => ({ ...r }));
+      const colorMap = cloneColorRows(l.colorMapRows);
+      res.push({
+        id: l.info.id,
+        name: l.info.name,
+        visible: l.info.visible,
+        source: {
+          md5: l.info.sourceMd5,
+          size: l.info.sourceSize,
+          fileName: l.info.sourceFileName,
+          mime: l.info.sourceMime,
+          type: l.info.sourceType,
+          url: l.info.sourceUrl,
+          cached: l.info.sourceCached,
+        },
+        details: layerDisplay,
+        lammps: typeMap,
+        colors: colorMap,
+      });
+    }
+    return res;
+  }
+
+  function applyLayerSnapshotToLayer(
+    layer: LayerInternal,
+    snap: LayerSnapshot,
+  ): void {
+    const baseDisplay = getDisplayDefaults();
+    const snapDisplay = snap.details;
+    const nextDisplay = normalizeLayerDisplay(snapDisplay ?? baseDisplay, baseDisplay);
+    const prevDisplay = getLayerDisplay(layer);
+    layer.display = nextDisplay;
+
+    layer.info.visible = snap.visible ?? true;
+    layer.group.visible = layer.info.visible;
+
+    const atoms = (layer.model.frames?.[layer.frameIndex]
+      ?? layer.model.atoms) as Atom[];
+    layer.currentFrameAtoms = atoms;
+    layer.currentMappedAtoms = null;
+    layer.mappedFrameIndex = -1;
+    const mapped = mapAtomsByTypeMap(layer, atoms);
+    layer.currentMappedAtoms = mapped;
+    layer.mappedFrameIndex = layer.frameIndex;
+
+    const snapTypeMap = snap.lammps ?? [];
+    layer.typeMapRows = (snapTypeMap ?? []).map(r => ({ ...r }));
+    layer.typeMapApplied = false;
+
+    const colorSource = snap.colors ?? [];
+    layer.colorMapRows = syncColorMapRowsFromAtoms(colorSource, mapped, layer.hasAnyTypeId);
+
+    rebuildVisualsForLayer(layer, mapped);
+
+    const atomChanged
+      = Math.abs(prevDisplay.atomScale - nextDisplay.atomScale) > 1e-6
+        || prevDisplay.sphereSegments !== nextDisplay.sphereSegments;
+    const bondChanged
+      = prevDisplay.showBonds !== nextDisplay.showBonds
+        || Math.abs(prevDisplay.bondFactor - nextDisplay.bondFactor) > 1e-6
+        || Math.abs(prevDisplay.bondRadius - nextDisplay.bondRadius) > 1e-6;
+    if (atomChanged) applyAtomScale();
+    if (bondChanged) applyShowBonds();
+  }
+
+  function applyLayerSnapshots(
+    snaps: LayerSnapshot[],
+  ): void {
+    if (!snaps || snaps.length === 0) return;
+
+    const remaining = [...snaps];
+    const matches: Array<{ layer: LayerInternal; snap: LayerSnapshot }> = [];
+
+    for (const layer of layerMap.values()) {
+      const md5 = layer.info.sourceMd5;
+      if (!md5) continue;
+      const idx = remaining.findIndex(s => s.source?.md5 && s.source.md5 === md5);
+      if (idx >= 0) {
+        matches.push({ layer, snap: remaining[idx]! });
+        remaining.splice(idx, 1);
+      }
+    }
+
+    for (const layer of layerMap.values()) {
+      const already = matches.some(m => m.layer === layer);
+      if (already) continue;
+      const snap = remaining.shift();
+      if (!snap) break;
+      matches.push({ layer, snap });
+    }
+
+    if (matches.length === 0) return;
+
+    for (const { layer, snap } of matches) {
+      applyLayerSnapshotToLayer(layer, snap);
+    }
+
+    // 更新 layers 列表以触发可见性等变更的响应式更新
+    layers.value = [...layers.value];
+
+    syncActiveTypeMap();
+    syncActiveColorMap();
+    syncActiveDisplay();
+    recomputeVisibleCustomColors();
+    applyShowAxes();
+    recomputeVisibleClipRadius();
+    tickCameraClipping(true);
     invalidate();
   }
 
@@ -1462,6 +1606,7 @@ export function createModelRuntime(args: {
 
     let atomScaleChanged = false;
     let bondsChanged = false;
+    let surfaceChanged = false;
 
     for (const l of targets) {
       const prev = getLayerDisplay(l);
@@ -1473,29 +1618,38 @@ export function createModelRuntime(args: {
         = prev.showBonds !== next.showBonds
           || Math.abs(prev.bondFactor - next.bondFactor) > 1e-6
           || Math.abs(prev.bondRadius - next.bondRadius) > 1e-6;
+      const surfaceChangedForLayer
+        = Math.abs(prev.atomRoughness - next.atomRoughness) > 1e-6;
 
       l.display = next;
       atomScaleChanged = atomScaleChanged || atomChanged;
       bondsChanged = bondsChanged || bondChanged;
+      surfaceChanged = surfaceChanged || surfaceChangedForLayer;
     }
 
     if (atomScaleChanged) applyAtomScale();
     if (bondsChanged) applyShowBonds();
+    if (surfaceChanged) applyLayerSurfaceSettings(targets);
 
     syncActiveDisplay();
   }
 
-  function setMeshColor(mesh: THREE.InstancedMesh, color: string): void {
+  function setMeshColor(
+    mesh: THREE.InstancedMesh,
+    color: string | THREE.Color,
+  ): void {
     const matAny = mesh.material as any;
-    if (Array.isArray(matAny)) {
-      for (const m of matAny) {
-        if (m?.color) m.color.set(color);
-        if (m) m.needsUpdate = true;
+    const apply = (m: any) => {
+      if (m?.color) {
+        m.color.set(color as any);
       }
+      if (m) m.needsUpdate = true;
+    };
+    if (Array.isArray(matAny)) {
+      for (const m of matAny) apply(m);
       return;
     }
-    if (matAny?.color) matAny.color.set(color);
-    if (matAny) matAny.needsUpdate = true;
+    apply(matAny);
   }
 
   function setMeshRoughness(mesh: THREE.InstancedMesh, roughness: number): void {
@@ -1547,19 +1701,18 @@ export function createModelRuntime(args: {
     if (ic) ic.needsUpdate = true;
   }
 
-  function onColorMapChanged(opts?: { applyToAll?: boolean }): void {
-    const targets = opts?.applyToAll
-      ? Array.from(layerMap.values())
-      : (() => {
-          const a = getActiveLayer();
-          return a ? [a] : [];
-        })();
-    if (targets.length === 0) return;
-    for (const layer of targets) {
+  function applyLayerSurfaceSettings(layers: LayerInternal[]): void {
+    if (!layers || layers.length === 0) return;
+
+    for (const layer of layers) {
       const map = buildColorMapRecord(layer.colorMapRows);
+      const display = getLayerDisplay(layer);
+      const roughness = normalizeAtomRoughnessValue(display.atomRoughness);
 
       // Atoms
       for (const m of layer.atomMeshes) {
+        setMeshRoughness(m, roughness);
+
         const perInstKeys = (m.userData as any).instanceColorKeys as
           | string[]
           | undefined;
@@ -1585,7 +1738,6 @@ export function createModelRuntime(args: {
         }
 
         const key = (b.userData as any).colorKey as string | undefined;
-        // bond segment groups are still "by element" for default
         const el = (b.userData as any).element as string | undefined;
         const fallbackEl = el ?? 'E';
         const col = (key && map[key]) ? map[key]! : getElementColorHex(fallbackEl);
@@ -1594,6 +1746,18 @@ export function createModelRuntime(args: {
     }
 
     invalidate();
+  }
+
+  function onColorMapChanged(opts?: { applyToAll?: boolean }): void {
+    const targets = opts?.applyToAll
+      ? Array.from(layerMap.values())
+      : (() => {
+          const a = getActiveLayer();
+          return a ? [a] : [];
+        })();
+    if (targets.length === 0) return;
+
+    applyLayerSurfaceSettings(targets);
     syncActiveColorMap();
   }
 
@@ -1672,6 +1836,7 @@ export function createModelRuntime(args: {
     hasAnyTypeId,
     onTypeMapChanged,
     onColorMapChanged,
+    applyLayerSnapshots,
     setActiveLayerTypeMapRows,
     resetAllLayersTypeMapToDefaults,
     setActiveLayerColorMapRows,
@@ -1684,6 +1849,8 @@ export function createModelRuntime(args: {
     setLayerVisible,
 
     visibleCustomColors,
+
+    getLayerSnapshots,
 
     getActiveAtomMeshes,
     getVisibleAtomMeshes,

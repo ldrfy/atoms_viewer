@@ -1,6 +1,6 @@
 <template>
   <a-form layout="vertical">
-    <a-form-item :label="t('settings.panel.display.viewPresets')">
+    <a-form-item :label="t('settings.panel.view.viewPresets')">
       <div class="settings-center">
         <a-checkbox-group
           :value="viewPresetsModel"
@@ -11,13 +11,13 @@
       </div>
 
       <a-typography-text type="secondary" class="settings-text-secondary settings-text-center">
-        {{ t('settings.panel.display.viewPresetsHint') }}
+        {{ t('settings.panel.view.viewPresetsHint') }}
       </a-typography-text>
     </a-form-item>
 
     <a-form-item
       v-if="viewPresetsModel.length === 2"
-      :label="t('settings.panel.display.dualViewSplit')"
+      :label="t('settings.panel.view.dualViewSplit')"
     >
       <a-row :gutter="8" align="middle">
         <a-col :flex="1">
@@ -32,8 +32,8 @@
         <a-col class="settings-col-compact">
           <a-input-number
             v-model:value="dualViewSplitPctModel"
-            :aria-label="t('settings.panel.display.dualViewSplit')"
-            :title="t('settings.panel.display.dualViewSplit')"
+            :aria-label="t('settings.panel.view.dualViewSplit')"
+            :title="t('settings.panel.view.dualViewSplit')"
             :min="DUAL_VIEW_SPLIT_MIN_PCT"
             :max="DUAL_VIEW_SPLIT_MAX_PCT"
             :step="1"
@@ -43,18 +43,18 @@
         </a-col>
       </a-row>
       <a-typography-text type="secondary" class="settings-text-secondary">
-        {{ t('settings.panel.display.dualViewSplitHint') }}
+        {{ t('settings.panel.view.dualViewSplitHint') }}
       </a-typography-text>
     </a-form-item>
 
     <a-form-item>
       <a-row justify="space-between" align="middle">
-        <a-col>{{ t('settings.panel.display.perspective') }}</a-col>
+        <a-col>{{ t('settings.panel.view.perspective') }}</a-col>
         <a-col>
           <a-switch
             v-model:checked="orthographicModel"
-            :aria-label="t('settings.panel.display.perspective')"
-            :title="t('settings.panel.display.perspective')"
+            :aria-label="t('settings.panel.view.perspective')"
+            :title="t('settings.panel.view.perspective')"
             :disabled="!hasAnyLayer"
           />
         </a-col>
@@ -63,7 +63,7 @@
 
     <a-form-item
       v-if="viewPresetsModel.length > 0"
-      :label="t('settings.panel.display.dualViewDistance')"
+      :label="t('settings.panel.view.dualViewDistance')"
     >
       <a-row :gutter="8" align="middle">
         <a-col :flex="1">
@@ -78,8 +78,8 @@
         <a-col class="settings-col-compact">
           <a-input-number
             v-model:value="dualViewDistanceModel"
-            :aria-label="t('settings.panel.display.dualViewDistance')"
-            :title="t('settings.panel.display.dualViewDistance')"
+            :aria-label="t('settings.panel.view.dualViewDistance')"
+            :title="t('settings.panel.view.dualViewDistance')"
             :min="DUAL_VIEW_DISTANCE_MIN"
             :max="dualViewDistanceMax"
             :step="0.5"
@@ -90,7 +90,7 @@
       </a-row>
     </a-form-item>
 
-    <a-form-item :label="t('settings.panel.display.rotX')">
+    <a-form-item :label="t('settings.panel.view.rotX')">
       <a-row :gutter="8" align="middle">
         <a-col :flex="1">
           <a-slider
@@ -104,8 +104,8 @@
         <a-col class="settings-col-compact">
           <a-input-number
             v-model:value="rotXModel"
-            :aria-label="t('settings.panel.display.rotX')"
-            :title="t('settings.panel.display.rotX')"
+            :aria-label="t('settings.panel.view.rotX')"
+            :title="t('settings.panel.view.rotX')"
             :min="-180"
             :max="180"
             :step="1"
@@ -116,7 +116,7 @@
       </a-row>
     </a-form-item>
 
-    <a-form-item :label="t('settings.panel.display.rotY')">
+    <a-form-item :label="t('settings.panel.view.rotY')">
       <a-row :gutter="8" align="middle">
         <a-col :flex="1">
           <a-slider
@@ -130,8 +130,8 @@
         <a-col class="settings-col-compact">
           <a-input-number
             v-model:value="rotYModel"
-            :aria-label="t('settings.panel.display.rotY')"
-            :title="t('settings.panel.display.rotY')"
+            :aria-label="t('settings.panel.view.rotY')"
+            :title="t('settings.panel.view.rotY')"
             :min="-180"
             :max="180"
             :step="1"
@@ -142,7 +142,7 @@
       </a-row>
     </a-form-item>
 
-    <a-form-item :label="t('settings.panel.display.rotZ')">
+    <a-form-item :label="t('settings.panel.view.rotZ')">
       <a-row :gutter="8" align="middle">
         <a-col :flex="1">
           <a-slider
@@ -156,8 +156,8 @@
         <a-col class="settings-col-compact">
           <a-input-number
             v-model:value="rotZModel"
-            :aria-label="t('settings.panel.display.rotZ')"
-            :title="t('settings.panel.display.rotZ')"
+            :aria-label="t('settings.panel.view.rotZ')"
+            :title="t('settings.panel.view.rotZ')"
             :min="-180"
             :max="180"
             :step="1"
@@ -172,12 +172,12 @@
       <a-row :gutter="8" align="middle">
         <a-col :flex="1">
           <a-button block :disabled="!hasAnyLayer" @click="resetPose">
-            {{ t('settings.panel.display.resetPose') }}
+            {{ t('settings.panel.view.resetPose') }}
           </a-button>
         </a-col>
         <a-col :flex="1">
           <a-button block :disabled="!hasAnyLayer" @click="resetDistance">
-            {{ t('settings.panel.display.resetView') }}
+            {{ t('settings.panel.view.resetView') }}
           </a-button>
         </a-col>
       </a-row>
@@ -201,9 +201,9 @@ const { t } = useI18n();
 const { settings, patchSettings, hasAnyLayer } = useSettingsSiderContext();
 
 const viewPresetOptions = computed(() => [
-  { label: t('settings.panel.display.viewPresetFront'), value: 'front' as const },
-  { label: t('settings.panel.display.viewPresetSide'), value: 'side' as const },
-  { label: t('settings.panel.display.viewPresetTop'), value: 'top' as const },
+  { label: t('settings.panel.view.viewPresetFront'), value: 'front' as const },
+  { label: t('settings.panel.view.viewPresetSide'), value: 'side' as const },
+  { label: t('settings.panel.view.viewPresetTop'), value: 'top' as const },
 ]);
 
 // Controlled selection (max two, min one)
@@ -237,7 +237,7 @@ function onViewPresetsChange(nextRaw: any): void {
   const prev = viewPresetsModel.value;
 
   if (!next || next.length === 0) {
-    message.warning(t('settings.panel.display.viewPresetsNeedOne'));
+    message.warning(t('settings.panel.view.viewPresetsNeedOne'));
     return;
   }
 

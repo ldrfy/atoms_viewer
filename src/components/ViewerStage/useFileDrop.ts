@@ -22,7 +22,7 @@ export type FileDropBindings = {
  * while still exposing the same handler API to the ViewerStage template.
  */
 export function useFileDrop(params: {
-  loadFiles: (files: File[], source: 'drop' | 'picker') => Promise<void>;
+  loadFiles: (files: File[], source: 'drop' | 'picker' | 'api') => Promise<void>;
 }): FileDropBindings {
   const { loadFiles } = params;
 

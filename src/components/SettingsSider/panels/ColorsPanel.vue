@@ -116,7 +116,7 @@ const { patchSettings, hasAnyLayer } = useSettingsSiderContext();
 const viewerApi = computed(() => viewerApiRef.value);
 const layerList = computed(() => viewerApi.value?.layers.value ?? []);
 const activeLayerId = computed(() => viewerApi.value?.activeLayerId.value ?? null);
-const applyToAllLayers = ref(false);
+const applyToAllLayers = ref(true);
 const activeLayerInfo = computed(() => {
   const id = activeLayerId.value;
   if (!id) return null;

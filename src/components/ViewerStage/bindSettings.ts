@@ -1,5 +1,6 @@
 import { watch, type Ref } from 'vue';
 import type { ViewerSettings } from '../../lib/viewer/settings';
+import { DEFAULT_SETTINGS } from '../../lib/viewer/settings';
 import {
   normalizeViewPresets,
   type ViewPreset,
@@ -24,7 +25,6 @@ export function bindViewerStageSettings(params: {
   resetView: () => void;
 
   applyAtomScale: () => void;
-  applyAtomRoughness: () => void;
   applyShowBonds: () => void;
   applyShowAxes: () => void;
 
@@ -51,15 +51,14 @@ export function bindViewerStageSettings(params: {
     setProjectionMode,
     resetView,
     applyAtomScale,
-    applyAtomRoughness,
     applyShowBonds,
     applyShowAxes,
 
     setAutoRotateConfig,
+    setModelLightIntensity,
     setViewPresets,
     setDualViewDistance,
     setDualViewSplit,
-    setModelLightIntensity,
     applyBackgroundColor,
   } = params;
 
@@ -141,14 +140,6 @@ export function bindViewerStageSettings(params: {
     ),
   );
 
-  stops.push(
-    watch(
-      () => settingsRef.value.atomRoughness,
-      () => applyAtomRoughness(),
-      { immediate: true },
-    ),
-  );
-
   // 显示键合 / show bonds
   stops.push(
     watch(
@@ -178,7 +169,7 @@ export function bindViewerStageSettings(params: {
   stops.push(
     watch(
       () => settingsRef.value.modelLightIntensity,
-      v => setModelLightIntensity(Number.isFinite(v) ? v : 1),
+      v => setModelLightIntensity(Number.isFinite(v) ? v : DEFAULT_SETTINGS.modelLightIntensity),
       { immediate: true },
     ),
   );

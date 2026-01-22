@@ -30,6 +30,9 @@ export function readSettingsOverridesFromUrl(
     'colorMapTemplate',
   ]);
   const groupPrefixes = new Set<string>([
+    'rotation',
+    'view',
+    'details',
     'display',
     'layerDisplay',
     'background',

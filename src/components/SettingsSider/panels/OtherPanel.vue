@@ -48,6 +48,38 @@
       </a-row>
     </a-form-item>
 
+    <a-form-item :label="t('viewer.theme.title')">
+      <a-segmented
+        v-model:value="themeModeModel"
+        block
+        :options="themeSegmentOptions"
+      />
+    </a-form-item>
+
+    <a-form-item :label="t('settings.panel.details.modelLightIntensity')">
+      <a-row :gutter="8" align="middle">
+        <a-col :flex="1">
+          <a-slider
+            v-model:value="modelLightIntensityModel"
+            :min="MODEL_LIGHT_INTENSITY_MIN"
+            :max="MODEL_LIGHT_INTENSITY_MAX"
+            :step="0.05"
+          />
+        </a-col>
+        <a-col class="settings-col-compact">
+          <a-input-number
+            v-model:value="modelLightIntensityModel"
+            :aria-label="t('settings.panel.details.modelLightIntensity')"
+            :title="t('settings.panel.details.modelLightIntensity')"
+            :min="MODEL_LIGHT_INTENSITY_MIN"
+            :max="MODEL_LIGHT_INTENSITY_MAX"
+            :step="0.05"
+            class="settings-full-width"
+          />
+        </a-col>
+      </a-row>
+    </a-form-item>
+
     <a-form-item :label="t('settings.panel.other.recordFps')">
       <a-row :gutter="8" align="middle">
         <a-col :flex="1">
@@ -92,9 +124,12 @@ import { useSettingsSiderContext } from '../useSettingsSiderContext';
 import {
   RECORD_FPS_MIN,
   RECORD_FPS_MAX,
+  MODEL_LIGHT_INTENSITY_MIN,
+  MODEL_LIGHT_INTENSITY_MAX,
 } from '../../../lib/viewer/constants';
 import { DEFAULT_SETTINGS } from '../../../lib/viewer/settings';
 import { settingsSiderDerivedContextKey } from '../context';
+import { getThemeMode, setThemeMode, type ThemeMode } from '../../../theme/mode';
 
 const { t } = useI18n();
 const { settings, patchSettings } = useSettingsSiderContext();
@@ -138,6 +173,25 @@ const themeReadabilityCheckOnOpenModel = computed({
   set: (v: boolean) => patchSettings({ themeReadabilityCheckOnOpen: v }),
 });
 
+const modelLightIntensityModel = computed({
+  get: () => settings.value.modelLightIntensity ?? DEFAULT_SETTINGS.modelLightIntensity,
+  set: (v: number) => patchSettings({ modelLightIntensity: v }),
+});
+
+const themeModeModel = computed<ThemeMode>({
+  get: () => settings.value.themeMode ?? getThemeMode(),
+  set: (v) => {
+    setThemeMode(v);
+    patchSettings({ themeMode: v });
+  },
+});
+
+const themeSegmentOptions = computed(() => [
+  { label: t('viewer.theme.mode.system'), value: 'system' },
+  { label: t('viewer.theme.mode.light'), value: 'light' },
+  { label: t('viewer.theme.mode.dark'), value: 'dark' },
+]);
+
 const isOtherDirty = computed(() => {
   if (derivedContext) return derivedContext.otherDirty.value;
   return (
@@ -145,6 +199,8 @@ const isOtherDirty = computed(() => {
     || settings.value.refreshBondsOnPlay !== DEFAULT_SETTINGS.refreshBondsOnPlay
     || settings.value.autoRotateOnLoad !== DEFAULT_SETTINGS.autoRotateOnLoad
     || settings.value.frame_rate !== DEFAULT_SETTINGS.frame_rate
+    || settings.value.modelLightIntensity !== DEFAULT_SETTINGS.modelLightIntensity
+    || settings.value.themeMode !== DEFAULT_SETTINGS.themeMode
     || (settings.value.themeReadabilityCheckOnOpen ?? true)
       !== (DEFAULT_SETTINGS.themeReadabilityCheckOnOpen ?? true)
   );
@@ -156,7 +212,10 @@ function resetOtherSettings(): void {
     refreshBondsOnPlay: DEFAULT_SETTINGS.refreshBondsOnPlay,
     autoRotateOnLoad: DEFAULT_SETTINGS.autoRotateOnLoad,
     frame_rate: DEFAULT_SETTINGS.frame_rate,
+    modelLightIntensity: DEFAULT_SETTINGS.modelLightIntensity,
     themeReadabilityCheckOnOpen: DEFAULT_SETTINGS.themeReadabilityCheckOnOpen,
+    themeMode: DEFAULT_SETTINGS.themeMode,
   });
+  setThemeMode(DEFAULT_SETTINGS.themeMode);
 }
 </script>

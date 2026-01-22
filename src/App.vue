@@ -36,13 +36,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watchEffect, defineAsyncComponent, watch } from 'vue';
+import { ref, computed, watchEffect, defineAsyncComponent, watch, onMounted, onBeforeUnmount } from 'vue';
+import { useI18n } from 'vue-i18n';
 import SettingsSider from './components/SettingsSider';
 import TopHear from './components/TopHear';
 import EmptyPage from './pages/EmptyPage.vue';
 import type { ViewerSettings, OpenSettingsPayload } from './lib/viewer/settings';
-import { theme as antdTheme, message } from 'ant-design-vue';
-import { isDark, applyThemeToDom } from './theme/mode';
+import { theme as antdTheme, message, Modal } from 'ant-design-vue';
+import { isDark, applyThemeToDom, setThemeMode, getThemeMode } from './theme/mode';
 import type { LoadRequest } from './pages/types';
 import type { SampleManifestItem } from './lib/structure/types';
 import {
@@ -52,11 +53,18 @@ import {
 import { readUrlListParam, writeUrlListParam, clearQueryParams } from './lib/urlParams';
 import { mergeSettings } from './lib/viewer/mergeSettings';
 import { readSettingsOverridesFromUrl } from './lib/settingsUrl';
+import { viewerApiRef } from './lib/viewer/bridge';
+import { readStoredSessionMeta, loadSessionFromStorage } from './lib/viewer/sessionStorage';
+import type { SessionSnapshot, LayerSourceData } from './lib/viewer/sessionTypes';
+import { flattenCategorizedSettings } from './lib/viewer/sessionTemplates';
+import { normalizeSettings } from './lib/viewer/settingsStorage';
+import { PANEL_KEYS } from './lib/viewer/panelKeys';
 
 const ViewerPage = defineAsyncComponent(() => import('./pages/ViewerPage.vue'));
 const antdAlgorithm = computed(() =>
   isDark.value ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm,
 );
+const { t } = useI18n();
 
 const settingsOpen = ref(false);
 
@@ -64,13 +72,15 @@ const settingsOpen = ref(false);
  * Settings 折叠面板当前展开项（非 accordion：可多项展开；空数组表示全部折叠）
  * Current expanded panel keys for SettingsSider (non-accordion; empty = all collapsed)
  */
-const settingsActiveKey = ref<string[]>(['display']);
+const settingsActiveKey = ref<string[]>([PANEL_KEYS.view]);
 
 const settings = ref<ViewerSettings>(loadSettingsFromStorage());
+setThemeMode(settings.value.themeMode ?? getThemeMode());
 const settingsOverrides = readSettingsOverridesFromUrl(settings.value);
 if (Object.keys(settingsOverrides).length > 0) {
   settings.value = mergeSettings(settings.value, settingsOverrides);
 }
+const pendingRestore = ref<{ snapshot: SessionSnapshot; files: File[] } | null>(null);
 
 watch(
   settings,
@@ -86,9 +96,67 @@ watchEffect(() => {
 
 message.config({ duration: 4 });
 
+watch(
+  viewerApiRef,
+  () => {
+    void tryApplyPendingRestore();
+  },
+);
+
+onMounted(() => {
+  void maybePromptSessionRestore();
+});
+
+function handleImportSessionEvent(ev: Event): void {
+  const detail = (ev as CustomEvent).detail as { snapshot?: SessionSnapshot; files?: File[] } | undefined;
+  if (!detail?.snapshot) return;
+  message.loading(t('settings.importing'), 1);
+  pendingRestore.value = {
+    snapshot: detail.snapshot,
+    files: detail.files ?? [],
+  };
+  page.value = 'viewer';
+  void tryApplyPendingRestore();
+}
+
+onMounted(() => {
+  window.addEventListener('atoms-viewer:import-session', handleImportSessionEvent);
+});
+
+onBeforeUnmount(() => {
+  window.removeEventListener('atoms-viewer:import-session', handleImportSessionEvent);
+});
+
 // 页面流程控制（空页 / viewer）
 const page = ref<'empty' | 'viewer'>('empty');
+
+watch(
+  [page, pendingRestore, viewerApiRef],
+  async ([p]) => {
+    if (p !== 'viewer') return;
+    await tryApplyPendingRestore();
+  },
+);
 const loadRequest = ref<LoadRequest | null>(null);
+function fileNameWithMd5(src: LayerSourceData, idx: number): string {
+  if (src.fileName) return src.fileName;
+  const ext = (() => {
+    const name = src.fileName ?? '';
+    const i = name.lastIndexOf('.');
+    return i >= 0 ? name.slice(i) : '.bin';
+  })();
+  if (src.md5) return `${src.md5}${ext}`;
+  return `model-${idx + 1}${ext}`;
+}
+function buildFilesFromSources(sources: LayerSourceData[]): File[] {
+  const files: File[] = [];
+  sources.forEach((src, idx) => {
+    if (!src.buffer) return;
+    const name = fileNameWithMd5(src, idx);
+    files.push(new File([src.buffer], name, { type: src.mime }));
+  });
+  return files;
+}
 
 function inferFileNameFromUrl(url: string, index: number): string {
   try {
@@ -153,6 +221,54 @@ function goHome(): void {
   page.value = 'empty';
   loadRequest.value = null;
   clearQueryParams();
+}
+
+async function tryApplyPendingRestore(): Promise<void> {
+  const payload = pendingRestore.value;
+  const api = viewerApiRef.value;
+  if (!payload || !api?.applySessionSnapshot) return;
+  try {
+    await api.applySessionSnapshot(payload.snapshot as SessionSnapshot, payload.files);
+    pendingRestore.value = null;
+  }
+  catch (err) {
+    console.error(err);
+    message.error(t('common.error'));
+  }
+}
+
+async function maybePromptSessionRestore(): Promise<void> {
+  const meta = readStoredSessionMeta();
+  if (!meta || !meta.snapshot?.layers || meta.snapshot.layers.length === 0) return;
+  if (loadRequest.value) return;
+  Modal.confirm({
+    title: t('viewer.session.restoreTitle'),
+    content: t('viewer.session.restoreContent'),
+    okText: t('viewer.session.restoreConfirm'),
+    cancelText: t('common.cancel'),
+    centered: true,
+    onOk: async () => {
+      try {
+        const stored = await loadSessionFromStorage();
+        if (!stored) throw new Error('missing session');
+        const files = buildFilesFromSources(stored.sources ?? []);
+        const rawSettings = stored.snapshot.settings as any;
+        const isCategorized = rawSettings && typeof rawSettings === 'object'
+          && ('files' in rawSettings || 'rotation' in rawSettings || 'view' in rawSettings);
+        settings.value = isCategorized
+          ? flattenCategorizedSettings(rawSettings)
+          : normalizeSettings(rawSettings as ViewerSettings);
+        pendingRestore.value = { snapshot: stored.snapshot, files };
+        page.value = 'viewer';
+
+        await tryApplyPendingRestore();
+      }
+      catch (err) {
+        console.error(err);
+        message.error(t('common.error'));
+      }
+    },
+  });
 }
 
 /**

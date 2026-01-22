@@ -120,6 +120,11 @@
         "autoRotate": {
             "enabledHint": "自动旋转已开启。临时关闭：设置-自动旋转-启用；永久关闭：设置-其他设置-载入模型后自动旋转。",
             "disabledHint": "检测到相关设置已展开，已停止自动旋转。"
+        },
+        "session": {
+            "restoreTitle": "恢复上次会话？",
+            "restoreContent": "检测到之前的模型和设置，是否恢复？",
+            "restoreConfirm": "恢复"
         }
     },
     "settings": {
@@ -132,10 +137,11 @@
         "importSettings": "导入设置",
         "exportSuccess": "设置已导出",
         "importSuccess": "设置已导入",
+        "importing": "正在导入…",
         "importFailed": "导入失败，文件格式不正确。",
         "panel": {
-            "display": {
-                "header": "显示控制",
+            "view": {
+                "header": "视图控制",
                 "viewPresets": "视角选择",
                 "viewPresetsHint": "可勾选 1 个视角显示单视图，或勾选 2 个视角显示双视图（左右并排）。",
                 "viewPresetsNeedOne": "至少选择一个视角（无法取消最后一个）。",
@@ -152,7 +158,7 @@
                 "resetPose": "回到旋转前",
                 "resetView": "恢复原始视距"
             },
-            "autoRotate": {
+            "rotation": {
                 "header": "自动旋转",
                 "enable": "启用",
                 "mode": "旋转轴预设",
@@ -192,7 +198,7 @@
                     },
                     "diagXZ": {
                         "name": "XZ 平面对角",
-                        "hint": "绕 XZ 平面对角方向旋转"
+                "hint": "绕 XZ 平面对角方向旋转"
                     },
                     "space": {
                         "name": "空间对角",
@@ -205,7 +211,7 @@
                 }
             },
             "lammps": {
-                "header": "LAMMPS",
+                "header": "LAMMPS映射",
                 "alert": "当 LAMMPS dump 以及 LAMMPS data 只提供 type（数字）时，需要在这里指定 type 对应元素符号，用于颜色/半径/键推断与稳定显示。",
                 "currentLayer": "当前图层",
                 "mapLabel": "type id → 元素符号（支持搜索）",
@@ -217,7 +223,7 @@
                 "hint": "建议 dump 输出包含 id、type、x y z。若每帧顺序不固定，解析端会按 id 排序以保证动画不抖动。"
             },
             "files": {
-                "header": "导出 / 解析",
+                "header": "文件导出",
                 "openFile": "打开文件",
                 "openFileHint": "你也可以将文件拖拽到画面中加载。新加载的模型会作为新图层加入，并默认隐藏旧图层。",
                 "export": {
@@ -228,12 +234,19 @@
                     "transparent": "透明背景",
                     "hint": "scale 会按倍率放大渲染分辨率。"
                 },
+                "project": {
+                    "header": "模型打包",
+                    "export": "导出压缩包",
+                    "import": "导入压缩包",
+                    "cacheRemote": "缓存远程模型用于导出/恢复",
+                    "hint": "压缩包会包含 config.json；未缓存的远程模型将按 URL 重新下载。"
+                },
                 "parse": {
                     "header": "解析信息"
                 }
             },
             "layers": {
-                "header": "模型图层",
+                "header": "图层管理",
                 "noViewer": "当前没有可用的 Viewer 实例。",
                 "empty": "尚未加载任何模型。",
                 "meta": "{atoms} 原子 · {frames} 帧",
@@ -254,7 +267,7 @@
                 "reset": "恢复其他默认值"
             },
             "colors": {
-                "header": "原子颜色",
+                "header": "颜色设定",
                 "alert": "修改颜色后，需要点击“刷新显示”才会应用到模型。",
                 "currentLayer": "当前图层",
                 "applyAll": "同时修改所有图层",
@@ -267,8 +280,8 @@
                 "hint": "提示：若该图层存在 typeId（如 LAMMPS），将按元素+typeId 显示为 C1、C2…；否则按元素显示。",
                 "empty": "当前图层暂无可编辑的原子类型。"
             },
-            "layerDisplay": {
-                "header": "图层外观",
+            "details": {
+                "header": "模型细节",
                 "alert": "以下设置按图层保存，开启“同时修改所有图层”可一次广播到全部图层。",
                 "currentLayer": "当前图层",
                 "applyAll": "同时修改所有图层",

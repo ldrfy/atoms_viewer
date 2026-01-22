@@ -46,3 +46,7 @@ export const MANUAL_ROTATION_SYNC_INTERVAL_MS = 120;
 // Manual zoom → settings distance sync interval (ms).
 // 手动缩放同步到设置面板的时间间隔（毫秒）。
 export const DUAL_VIEW_DISTANCE_SYNC_INTERVAL_MS = 120;
+
+// Session save debounce (ms). / 会话保存节流（毫秒）。
+export const SESSION_SAVE_DELAY_LAYERS_MS = 500;
+export const SESSION_SAVE_DELAY_SETTINGS_MS = 600;

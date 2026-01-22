@@ -120,6 +120,11 @@
         "autoRotate": {
             "enabledHint": "Auto-rotation enabled. Temporary off: Settings → Auto-rotate → Enable; permanent off: Settings → Other → Auto rotate after loading models.",
             "disabledHint": "Related panels are open; auto-rotate has been stopped."
+        },
+        "session": {
+            "restoreTitle": "Restore last session?",
+            "restoreContent": "A previous session with models and settings was found. Restore it?",
+            "restoreConfirm": "Restore"
         }
     },
     "settings": {
@@ -132,10 +137,11 @@
         "importSettings": "Import settings",
         "exportSuccess": "Settings exported",
         "importSuccess": "Settings imported",
+        "importing": "Importing…",
         "importFailed": "Import failed. Invalid file format.",
         "panel": {
-            "display": {
-                "header": "Display",
+            "view": {
+                "header": "View Control",
                 "viewPresets": "View presets",
                 "viewPresetsHint": "Select 1 preset for single view, or select 2 presets for side-by-side dual view.",
                 "viewPresetsNeedOne": "Please keep at least one view preset selected (cannot uncheck the last one).",
@@ -152,8 +158,8 @@
                 "resetPose": "Reset rotation",
                 "resetView": "Reset original distance"
             },
-            "autoRotate": {
-                "header": "Auto rotation",
+            "rotation": {
+                "header": "Auto Spin",
                 "enable": "Enable",
                 "mode": "Axis preset",
                 "speed": "Speed (°/s)",
@@ -205,7 +211,7 @@
                 }
             },
             "lammps": {
-                "header": "LAMMPS",
+                "header": "LAMMPS Map",
                 "alert": "When a LAMMPS dump or LAMMPS data file provides only numeric types, specify the element symbol for each type here to ensure correct color/radius, bond inference, and stable rendering.",
                 "currentLayer": "Current layer",
                 "mapLabel": "type id → element symbol (searchable)",
@@ -217,7 +223,7 @@
                 "hint": "Recommended dump fields: id, type, x y z. If per-frame ordering is not fixed, the parser will sort by id to avoid animation jitter."
             },
             "files": {
-                "header": "Export / Parse",
+                "header": "File I/O",
                 "openFile": "Open file",
                 "openFileHint": "You can also drag & drop a file onto the canvas. New loads are added as layers and previous layers are hidden by default.",
                 "export": {
@@ -228,12 +234,19 @@
                     "selectButton": "Select Range Export",
                     "hint": "Scale multiplies the render resolution."
                 },
+                "project": {
+                    "header": "Project package",
+                    "export": "Export ZIP",
+                    "import": "Import ZIP",
+                    "cacheRemote": "Cache remote models for export/restore",
+                    "hint": "ZIP contains config.json; uncached remote models will be re-fetched via URL."
+                },
                 "parse": {
                     "header": "Parse info"
                 }
             },
             "layers": {
-                "header": "Model layers",
+                "header": "Layers Manage",
                 "noViewer": "Viewer is not available.",
                 "empty": "No models loaded yet.",
                 "meta": "{atoms} atoms · {frames} frames",
@@ -254,7 +267,7 @@
                 "reset": "Reset other settings"
             },
             "colors": {
-                "header": "Atom Colors",
+                "header": "Colors Set",
                 "alert": "After editing colors, click “Refresh” to apply them to the model.",
                 "currentLayer": "Current layer",
                 "applyAll": "Edit all layers",
@@ -267,8 +280,8 @@
                 "hint": "Tip: If the active layer has typeId (e.g. LAMMPS), colors are keyed as element+typeId (C1, C2, ...); otherwise they are keyed by element.",
                 "empty": "No editable atom types in the active layer."
             },
-            "layerDisplay": {
-                "header": "Layer Appearance",
+            "details": {
+                "header": "Model Details",
                 "alert": "These options are saved per layer. Turn on “Edit all layers” to broadcast changes.",
                 "currentLayer": "Current layer",
                 "applyAll": "Edit all layers",

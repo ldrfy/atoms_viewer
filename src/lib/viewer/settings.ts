@@ -1,4 +1,5 @@
 import type { ViewPreset } from './viewPresets';
+import type { ThemeMode } from '../../theme/mode';
 import type { AutoRotatePresetId } from './autoRotate';
 export type LammpsTypeMapItem = {
   typeId: number;
@@ -47,33 +48,55 @@ export type AutoRotateSettings = {
   resumeDelayMs: number;
 };
 
+/**
+ * 扁平的 ViewerSettings，但字段顺序/分组与 Settings 面板一致：
+ * files -> rotation -> view -> details -> lammps/colors -> other
+ */
 export type ViewerSettings = {
+  // files
+  /** PNG 导出倍率 */
+  exportPngScale: number;
+  /** PNG 导出是否透明背景 */
+  exportPngTransparent: boolean;
+
+  // autoRotate
+  /** Auto rotation (around an arbitrary axis with a constant speed). */
+  autoRotate: AutoRotateSettings;
+  /** Auto-enable rotation on model load (system hint). */
+  autoRotateOnLoad: boolean;
+
+  // display (view/camera)
+  rotationDeg: RotationDeg;
+  orthographic: boolean;
+  resetViewSeq: number;
+  /** Multi-view presets (choose 1 => single view, choose 2 => dual view). */
+  viewPresets?: ViewPreset[];
+  dualViewEnabled?: boolean;
+  dualViewDistance?: number;
+  initialDualViewDistance?: number;
+  dualViewSplit?: number;
+
+  // layerDisplay (per-layer defaults)
   atomScale: number;
   /** Sphere geometry segments (quality vs performance). */
   sphereSegments: number;
-  showAxes: boolean;
   showBonds: boolean;
   /** Bond cutoff factor used for bond inference: cutoff = (r_i + r_j) * bondFactor. */
   bondFactor: number;
   /** Bond cylinder radius (world units). */
   bondRadius: number;
-  /** During multi-frame playback, refresh bond meshes each frame. */
-  refreshBondsOnPlay: boolean;
-  rotationDeg: RotationDeg;
+  /** Material roughness for atom spheres. */
+  atomRoughness: number;
 
-  /** Auto rotation (around an arbitrary axis with a constant speed). */
-  autoRotate: AutoRotateSettings;
-  /** Auto-enable rotation on model load (system hint). */
-  autoRotateOnLoad: boolean;
-  // 新增：是否正交（关闭透视）
-  orthographic: boolean;
-
-  // 新增：触发“恢复视角”的序号（每次 +1）
-  resetViewSeq: number;
-
+  // lammps / colors defaults
   lammpsTypeMap: LammpsTypeMapItem[];
   /** Optional user-defined color map template (applied on new layer load). */
   colorMapTemplate?: AtomTypeColorMapItem[];
+
+  // other
+  showAxes: boolean;
+  /** During multi-frame playback, refresh bond meshes each frame. */
+  refreshBondsOnPlay: boolean;
   backgroundColor: string;
   /** Auto background follows theme; custom background sticks to user color. */
   backgroundColorMode?: 'auto' | 'custom';
@@ -82,31 +105,10 @@ export type ViewerSettings = {
   themeReadabilityCheckOnOpen?: boolean;
   /** Light intensity multiplier for model lighting. */
   modelLightIntensity: number;
-  /** Material roughness for atom spheres. */
-  atomRoughness: number;
-
-  /** Multi-view presets (choose 1 => single view, choose 2 => dual view). */
-  viewPresets?: ViewPreset[];
-
-  /** Dual view: show front + side view simultaneously */
-  dualViewEnabled?: boolean;
-  /** Dual view camera distance (world units, used for both views) */
-  dualViewDistance?: number;
-  /**
-   * The fitted (original) distance captured on model load.
-   * Used by the "Reset original distance" UI.
-   */
-  initialDualViewDistance?: number;
-  /** Dual view split ratio for left viewport width (0..1). */
-  dualViewSplit?: number;
-
-  /** PNG 导出倍率 */
-  exportPngScale: number;
-  /** PNG 导出是否透明背景 */
-  exportPngTransparent: boolean;
-
   //   录制帧率
   frame_rate: number;
+  /** UI theme mode */
+  themeMode: ThemeMode;
 };
 
 export type LayerDisplaySettings = {
@@ -115,6 +117,7 @@ export type LayerDisplaySettings = {
   sphereSegments: number;
   bondFactor: number;
   bondRadius: number;
+  atomRoughness: number;
 };
 
 export const DEFAULT_LAYER_DISPLAY: LayerDisplaySettings = {
@@ -122,7 +125,73 @@ export const DEFAULT_LAYER_DISPLAY: LayerDisplaySettings = {
   showBonds: true,
   sphereSegments: 24,
   bondFactor: 1.05,
-  bondRadius: 0.09,
+  bondRadius: 0.1,
+  atomRoughness: 0.35,
+};
+
+// 分组默认值（与设置面板分类一致）
+export type FileSettingsGroup = Pick<ViewerSettings, 'exportPngScale' | 'exportPngTransparent'>;
+export const DEFAULT_FILES: FileSettingsGroup = {
+  exportPngScale: 2,
+  exportPngTransparent: true,
+};
+
+export const DEFAULT_AUTO_ROTATE: AutoRotateSettings = {
+  enabled: false,
+  presetId: 'diag',
+  speedDegPerSec: 8,
+  pauseOnInteract: true,
+  resumeDelayMs: 600,
+};
+
+export type DisplaySettingsGroup = {
+  rotationDeg: RotationDeg;
+  orthographic: boolean;
+  resetViewSeq: number;
+  viewPresets: ViewPreset[];
+  dualViewEnabled: boolean;
+  dualViewDistance: number;
+  initialDualViewDistance: number;
+  dualViewSplit: number;
+};
+export const DEFAULT_DISPLAY: DisplaySettingsGroup = {
+  rotationDeg: { x: 0, y: 0, z: 0 } as RotationDeg,
+  orthographic: false,
+  resetViewSeq: 0,
+  viewPresets: ['front'] as ViewPreset[],
+  dualViewEnabled: false,
+  dualViewDistance: 10,
+  initialDualViewDistance: 10,
+  dualViewSplit: 0.5,
+};
+
+export const DEFAULT_TYPE_MAP: LammpsTypeMapItem[] = [];
+export const DEFAULT_COLOR_MAP: AtomTypeColorMapItem[] = [];
+
+export type OtherSettingsGroup = Pick<
+  ViewerSettings,
+  | 'showAxes'
+  | 'refreshBondsOnPlay'
+  | 'backgroundColor'
+  | 'backgroundColorMode'
+  | 'backgroundTransparent'
+  | 'themeReadabilityCheckOnOpen'
+  | 'modelLightIntensity'
+  | 'frame_rate'
+  | 'autoRotateOnLoad'
+  | 'themeMode'
+>;
+export const DEFAULT_OTHER: OtherSettingsGroup = {
+  showAxes: false,
+  refreshBondsOnPlay: true,
+  backgroundColor: '#ffffff',
+  backgroundColorMode: 'custom' as ViewerSettings['backgroundColorMode'],
+  backgroundTransparent: true,
+  themeReadabilityCheckOnOpen: true,
+  modelLightIntensity: 1.5,
+  frame_rate: 60,
+  autoRotateOnLoad: true,
+  themeMode: 'system',
 };
 
 /**
@@ -130,56 +199,46 @@ export const DEFAULT_LAYER_DISPLAY: LayerDisplaySettings = {
  * 初始默认设置（首次进入或清理后使用）。
  */
 export const DEFAULT_SETTINGS: ViewerSettings = {
-  atomScale: 1,
-  sphereSegments: 24,
-  showAxes: false,
-  showBonds: true,
-  bondFactor: 1.05,
-  bondRadius: 0.09,
-  colorMapTemplate: [],
-  // Refreshing bonds each frame during playback can be extremely expensive for
-  // large models. Default to OFF; users can enable explicitly when needed.
-  refreshBondsOnPlay: true,
-  // Default camera rotation in degrees. / 默认相机旋转角度（度）。
-  rotationDeg: { x: 0, y: 0, z: 0 },
+  // layer display defaults (mirrors layerDisplay section)
+  atomScale: DEFAULT_LAYER_DISPLAY.atomScale,
+  sphereSegments: DEFAULT_LAYER_DISPLAY.sphereSegments,
+  showBonds: DEFAULT_LAYER_DISPLAY.showBonds,
+  bondFactor: DEFAULT_LAYER_DISPLAY.bondFactor,
+  bondRadius: DEFAULT_LAYER_DISPLAY.bondRadius,
+  atomRoughness: DEFAULT_LAYER_DISPLAY.atomRoughness,
 
-  // Auto-rotation defaults. / 自动旋转默认值。
-  autoRotate: {
-    enabled: false,
-    presetId: 'diag',
-    speedDegPerSec: 8,
-    pauseOnInteract: true,
-    resumeDelayMs: 600,
-  },
-  autoRotateOnLoad: true,
+  // files
+  exportPngScale: DEFAULT_FILES.exportPngScale,
+  exportPngTransparent: DEFAULT_FILES.exportPngTransparent,
 
-  // false = perspective (UI switch is inverted). / false 表示透视（UI 开关反向）。
-  orthographic: false,
-  resetViewSeq: 0,
+  // auto-rotate
+  autoRotate: { ...DEFAULT_AUTO_ROTATE },
+  autoRotateOnLoad: DEFAULT_OTHER.autoRotateOnLoad,
 
-  lammpsTypeMap: [],
-  backgroundColor: '#ffffff',
-  backgroundColorMode: 'custom',
-  backgroundTransparent: true,
-  themeReadabilityCheckOnOpen: true,
-  modelLightIntensity: 1.5,
-  atomRoughness: 0.35,
+  // display (view)
+  rotationDeg: DEFAULT_DISPLAY.rotationDeg,
+  orthographic: DEFAULT_DISPLAY.orthographic,
+  resetViewSeq: DEFAULT_DISPLAY.resetViewSeq,
+  viewPresets: DEFAULT_DISPLAY.viewPresets,
+  dualViewEnabled: DEFAULT_DISPLAY.dualViewEnabled,
+  dualViewDistance: DEFAULT_DISPLAY.dualViewDistance,
+  initialDualViewDistance: DEFAULT_DISPLAY.initialDualViewDistance,
+  dualViewSplit: DEFAULT_DISPLAY.dualViewSplit,
 
-  // Enforce "at least one view" at the settings level. This avoids the UI being in an
-  // undefined state for first-time users and ensures distance syncing works consistently.
-  // Ensure at least one view preset is selected. / 保证至少选择一个视图预设。
-  viewPresets: ['front'],
+  // defaults: colors & lammps
+  lammpsTypeMap: DEFAULT_TYPE_MAP,
+  colorMapTemplate: DEFAULT_COLOR_MAP,
 
-  // Dual-view defaults. / 双视图默认参数。
-  dualViewEnabled: false,
-  dualViewDistance: 10,
-  initialDualViewDistance: 10,
-  dualViewSplit: 0.5,
-
-  exportPngScale: 2,
-  exportPngTransparent: true,
-
-  frame_rate: 60,
+  // other
+  showAxes: DEFAULT_OTHER.showAxes,
+  refreshBondsOnPlay: DEFAULT_OTHER.refreshBondsOnPlay,
+  backgroundColor: DEFAULT_OTHER.backgroundColor,
+  backgroundColorMode: DEFAULT_OTHER.backgroundColorMode,
+  backgroundTransparent: DEFAULT_OTHER.backgroundTransparent,
+  themeReadabilityCheckOnOpen: DEFAULT_OTHER.themeReadabilityCheckOnOpen,
+  modelLightIntensity: DEFAULT_OTHER.modelLightIntensity,
+  frame_rate: DEFAULT_OTHER.frame_rate,
+  themeMode: DEFAULT_OTHER.themeMode,
 };
 
 /**

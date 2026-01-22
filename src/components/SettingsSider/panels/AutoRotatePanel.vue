@@ -2,19 +2,19 @@
   <a-form layout="vertical">
     <a-form-item>
       <a-row justify="space-between" align="middle">
-        <a-col>{{ t('settings.panel.autoRotate.enable') }}</a-col>
+        <a-col>{{ t('settings.panel.rotation.enable') }}</a-col>
         <a-col>
           <a-switch
             v-model:checked="autoRotateEnabledModel"
-            :aria-label="t('settings.panel.autoRotate.enable')"
-            :title="t('settings.panel.autoRotate.enable')"
+            :aria-label="t('settings.panel.rotation.enable')"
+            :title="t('settings.panel.rotation.enable')"
             :disabled="!hasAnyLayer"
           />
         </a-col>
       </a-row>
     </a-form-item>
 
-    <a-form-item :label="t('settings.panel.autoRotate.mode')">
+    <a-form-item :label="t('settings.panel.rotation.mode')">
       <a-dropdown trigger="click">
         <a-button block :disabled="!hasAnyLayer">
           {{ currentAutoRotatePresetLabel }}
@@ -37,7 +37,7 @@
       </a-typography-text>
     </a-form-item>
 
-    <a-form-item :label="t('settings.panel.autoRotate.speed')">
+    <a-form-item :label="t('settings.panel.rotation.speed')">
       <a-row :gutter="8" align="middle">
         <a-col :flex="1">
           <a-slider
@@ -51,8 +51,8 @@
         <a-col class="settings-col-compact">
           <a-input-number
             v-model:value="autoRotateSpeedModel"
-            :aria-label="t('settings.panel.autoRotate.speed')"
-            :title="t('settings.panel.autoRotate.speed')"
+            :aria-label="t('settings.panel.rotation.speed')"
+            :title="t('settings.panel.rotation.speed')"
             :min="AUTO_ROTATE_SPEED_MIN"
             :max="AUTO_ROTATE_SPEED_MAX"
             :step="1"
@@ -62,18 +62,18 @@
         </a-col>
       </a-row>
       <a-typography-text type="secondary" class="settings-text-secondary">
-        {{ t('settings.panel.autoRotate.speedHint') }}
+        {{ t('settings.panel.rotation.speedHint') }}
       </a-typography-text>
     </a-form-item>
 
     <a-form-item>
       <a-row justify="space-between" align="middle">
-        <a-col>{{ t('settings.panel.autoRotate.pauseOnInteract') }}</a-col>
+        <a-col>{{ t('settings.panel.rotation.pauseOnInteract') }}</a-col>
         <a-col>
           <a-switch
             v-model:checked="autoRotatePauseOnInteractModel"
-            :aria-label="t('settings.panel.autoRotate.pauseOnInteract')"
-            :title="t('settings.panel.autoRotate.pauseOnInteract')"
+            :aria-label="t('settings.panel.rotation.pauseOnInteract')"
+            :title="t('settings.panel.rotation.pauseOnInteract')"
             :disabled="!hasAnyLayer"
           />
         </a-col>
@@ -82,7 +82,7 @@
 
     <a-form-item
       v-if="autoRotatePauseOnInteractModel"
-      :label="t('settings.panel.autoRotate.resumeDelay')"
+      :label="t('settings.panel.rotation.resumeDelay')"
     >
       <a-row :gutter="8" align="middle">
         <a-col :flex="1">
@@ -97,8 +97,8 @@
         <a-col class="settings-col-compact">
           <a-input-number
             v-model:value="autoRotateResumeDelayMsModel"
-            :aria-label="t('settings.panel.autoRotate.resumeDelay')"
-            :title="t('settings.panel.autoRotate.resumeDelay')"
+            :aria-label="t('settings.panel.rotation.resumeDelay')"
+            :title="t('settings.panel.rotation.resumeDelay')"
             :min="AUTO_ROTATE_RESUME_MIN"
             :max="AUTO_ROTATE_RESUME_MAX"
             :step="50"
@@ -111,7 +111,7 @@
 
     <a-form-item v-if="isAutoRotateDirty">
       <a-button block :disabled="!hasAnyLayer" @click="resetAutoRotateSettings">
-        {{ t('settings.panel.autoRotate.reset') }}
+        {{ t('settings.panel.rotation.reset') }}
       </a-button>
     </a-form-item>
   </a-form>
@@ -215,8 +215,8 @@ const autoRotatePresetOptions = computed(() => {
     // "off" is legacy; enable switch controls ON/OFF.
     .filter(p => p.id !== 'off')
     .map((p) => {
-      const labelKey = `settings.panel.autoRotate.presets.${p.id}.name`;
-      const hintKey = `settings.panel.autoRotate.presets.${p.id}.hint`;
+      const labelKey = `settings.panel.rotation.presets.${p.id}.name`;
+      const hintKey = `settings.panel.rotation.presets.${p.id}.hint`;
       return {
         id: p.id,
         label: t(labelKey),
@@ -242,7 +242,7 @@ function onAutoRotatePresetClick(info: any): void {
 }
 
 const isAutoRotateDirty = computed(() => {
-  if (derivedContext) return derivedContext.autoRotateDirty.value;
+  if (derivedContext) return derivedContext.rotationDirty.value;
   const cur = settings.value.autoRotate;
   const def = DEFAULT_SETTINGS.autoRotate;
   return (

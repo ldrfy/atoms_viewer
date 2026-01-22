@@ -26,6 +26,7 @@ type RenderDeps = {
   getRuntime: () => ModelRuntime | null;
 
   patchSettings?: (patch: Partial<ViewerSettings>) => void;
+  onRotationCommitted?: () => void;
 
   inspectCtx: InspectCtx;
 
@@ -448,6 +449,10 @@ export function createViewerPickingController(deps: RenderDeps) {
 
     lastRotSyncMs = now;
     deps.patchSettings({ rotationDeg: { ...dragRotationDeg } });
+    // 旋转结束或强制同步时，确保触发一次会话保存（防止快速刷新丢失角度）
+    if (force) {
+      deps.onRotationCommitted?.();
+    }
   }
 
   function scheduleRotationSync(force = false): void {

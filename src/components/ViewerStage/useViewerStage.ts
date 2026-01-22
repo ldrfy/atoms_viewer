@@ -2,6 +2,7 @@
 import { onBeforeUnmount, onMounted, ref, computed, watch } from 'vue';
 import type { Ref, ComponentPublicInstance } from 'vue';
 import * as THREE from 'three';
+import { message } from 'ant-design-vue';
 
 import type {
   ViewerSettings,
@@ -19,6 +20,8 @@ import { getAutoRotatePreset } from '../../lib/viewer/autoRotate';
 import {
   AUTO_ROTATE_ROTATION_SYNC_INTERVAL_MS,
   DUAL_VIEW_DISTANCE_SYNC_INTERVAL_MS,
+  SESSION_SAVE_DELAY_LAYERS_MS,
+  SESSION_SAVE_DELAY_SETTINGS_MS,
 } from '../../lib/viewer/constants';
 import { normalizeViewPresets } from '../../lib/viewer/viewPresets';
 import { bindViewerStageSettings } from './bindSettings';
@@ -27,6 +30,7 @@ import {
   type ModelRuntime,
   type ModelLayerInfo,
 } from './modelRuntime';
+import { createLayerSourceStore } from './logic/sourceStore';
 
 import { createInspectCtx, type InspectCtx } from './ctx/inspect';
 import { createRecordingController, type RecordingBindings, type CropBox } from './recording';
@@ -48,6 +52,11 @@ import { createPngExporter } from './logic/viewerExportPng';
 import { createViewerLoader } from './logic/viewerLoader';
 import { createViewerAnimationController } from './logic/viewerAnimation';
 import { createSettingsSync } from './settingsSync';
+import { buildSettingsSnapshot, parseProjectZip } from '../../lib/viewer/projectPackage';
+import { flattenCategorizedSettings } from '../../lib/viewer/sessionTemplates';
+import { normalizeSettings } from '../../lib/viewer/settingsStorage';
+import { saveSessionToStorage, clearSessionStorage } from '../../lib/viewer/sessionStorage';
+import { setThemeMode } from '../../theme/mode';
 
 /**
  * Template ref callback param type (works for DOM + component instance).
@@ -127,6 +136,24 @@ type ViewerStageBridgeApi = {
 
   /** 可见图层是否存在自定义颜色 */
   visibleCustomColors: Ref<boolean>;
+
+  /** 获取图层快照（含源信息与设置），用于导出/会话恢复 */
+  getLayerSnapshots: () => Promise<import('../../lib/viewer/sessionTypes').LayerSnapshot[]>;
+  /** 应用图层快照（按 MD5 匹配，失败按顺序 fallback） */
+  applyLayerSnapshots: (
+    snaps: import('../../lib/viewer/sessionTypes').LayerSnapshot[],
+  ) => Promise<void>;
+  /** 获取图层源数据（用于打包/会话恢复） */
+  getLayerSources: () => Promise<import('../../lib/viewer/sessionTypes').LayerSourceData[]>;
+  /** 应用完整会话快照（含设置 + 图层），可附带模型文件列表 */
+  applySessionSnapshot: (
+    snapshot: import('../../lib/viewer/sessionTypes').SessionSnapshot,
+    files?: File[],
+  ) => Promise<void>;
+  /** 远程模型是否缓存用于导出/恢复 */
+  cacheRemoteOnExport: Ref<boolean>;
+  /** 切换远程模型缓存开关 */
+  setCacheRemoteOnExport: (v: boolean) => void;
 };
 
 type ViewerStageExposedApi = {
@@ -431,6 +458,93 @@ export function useViewerStage(
   // inspect
   const inspectCtx = createInspectCtx();
 
+  const layerSourceStore = createLayerSourceStore();
+  const cacheRemoteOnExport = ref(false);
+  const CACHE_REMOTE_KEY = 'atomsViewer.cacheRemoteModels';
+  try {
+    const raw = localStorage.getItem(CACHE_REMOTE_KEY);
+    if (raw != null) cacheRemoteOnExport.value = raw === '1';
+  }
+  catch {
+    // ignore
+  }
+  function setCacheRemoteOnExportFlag(v: boolean): void {
+    cacheRemoteOnExport.value = !!v;
+    try {
+      localStorage.setItem(CACHE_REMOTE_KEY, cacheRemoteOnExport.value ? '1' : '0');
+    }
+    catch {
+      // ignore
+    }
+  }
+  let sessionSaveTimer: number | null = null;
+  let lastSessionSignature = '';
+
+  function collectLayerSources(): import('../../lib/viewer/sessionTypes').LayerSourceData[] {
+    const res: import('../../lib/viewer/sessionTypes').LayerSourceData[] = [];
+    for (const [layerId, data] of layerSourceStore.entries()) {
+      res.push({ ...data, layerId });
+    }
+    return res;
+  }
+
+  async function persistSessionSnapshot(): Promise<void> {
+    if (!runtime) return;
+
+    if (!runtime.layers.value || runtime.layers.value.length === 0) {
+      lastSessionSignature = '';
+      await clearSessionStorage();
+      return;
+    }
+
+    const layerSnapshots = runtime.getLayerSnapshots();
+    if (!layerSnapshots || layerSnapshots.length === 0) {
+      lastSessionSignature = '';
+      await clearSessionStorage();
+      return;
+    }
+
+    const snapshot = buildSettingsSnapshot(settingsRef.value, layerSnapshots);
+    const sources = collectLayerSources();
+    const curSettings = settingsRef.value;
+    const sig = JSON.stringify({
+      settings: {
+        atomScale: curSettings.atomScale,
+        bondFactor: curSettings.bondFactor,
+        bondRadius: curSettings.bondRadius,
+        rotationDeg: curSettings.rotationDeg,
+        dualViewDistance: curSettings.dualViewDistance,
+      },
+      layers: layerSnapshots.map(s => `${s.source?.md5 ?? s.id}:${s.visible ? 1 : 0}:${s.details.atomScale}:${s.lammps.length}:${s.colors.length}`),
+      sources: sources.map(s => `${s.md5 ?? s.layerId}:${s.size ?? 0}:${s.cached ? 1 : 0}`),
+    });
+    if (sig === lastSessionSignature) return;
+    lastSessionSignature = sig;
+    await saveSessionToStorage(snapshot, sources);
+  }
+
+  function scheduleSessionSave(reason: 'settings' | 'layers' = 'layers'): void {
+    const delay = reason === 'settings'
+      ? SESSION_SAVE_DELAY_SETTINGS_MS
+      : SESSION_SAVE_DELAY_LAYERS_MS;
+    if (sessionSaveTimer) {
+      window.clearTimeout(sessionSaveTimer);
+    }
+    sessionSaveTimer = window.setTimeout(() => {
+      sessionSaveTimer = null;
+      void persistSessionSnapshot();
+    }, delay);
+  }
+
+  watch(
+    () => settingsRef.value,
+    () => {
+      if (!hasModel.value) return;
+      scheduleSessionSave('settings');
+    },
+    { deep: true },
+  );
+
   // model file name provider (set after loader is created)
   let modelFileNameProvider: () => string | undefined = () => undefined;
 
@@ -450,6 +564,7 @@ export function useViewerStage(
     getStage: () => stage,
     getRuntime: () => runtime,
     patchSettings: settingsSync.patch,
+    onRotationCommitted: () => scheduleSessionSave('settings'),
     inspectCtx,
     isSelectingRecordArea: recording.isSelectingRecordArea,
     getActiveLayerId: () => activeLayerId.value,
@@ -480,6 +595,8 @@ export function useViewerStage(
     frameCount: anim.frameCount,
     hasAnimation: anim.hasAnimation,
     stopPlay: anim.stopPlay,
+    sourceStore: layerSourceStore,
+    shouldCacheRemote: () => cacheRemoteOnExport.value,
   });
 
   const frameMeta = computed<FrameMeta | null>(() => {
@@ -518,7 +635,7 @@ export function useViewerStage(
   }
 
   // file drop depends on loadFiles
-  const fileDrop = useFileDrop({ loadFiles: loader.loadFiles });
+  const fileDrop = useFileDrop({ loadFiles: loadFilesWithSession });
   const {
     isDragging,
     onDragEnter,
@@ -530,6 +647,202 @@ export function useViewerStage(
 
   function openFilePicker(): void {
     fileInputRef.value?.click();
+  }
+
+  async function loadFileWithSession(
+    file: File,
+    opts?: { hidePreviousLayers?: boolean },
+  ): Promise<void> {
+    const lower = file.name.toLowerCase();
+    if (lower.endsWith('.zip')) {
+      await loadFilesWithSession([file], 'api', opts);
+      return;
+    }
+    await loader.loadFile(file, opts);
+    scheduleSessionSave('layers');
+  }
+
+  async function loadFilesWithSession(
+    files: File[],
+    _source?: 'drop' | 'picker' | 'api',
+    opts?: { hidePreviousLayers?: boolean },
+  ): Promise<void> {
+    const zipFiles = files.filter(f => f.name.toLowerCase().endsWith('.zip'));
+    const otherFiles = files.filter(f => !zipFiles.includes(f));
+
+    for (const zip of zipFiles) {
+      await importProjectPackage(zip);
+    }
+
+    if (otherFiles.length === 0) return;
+    const mergedOpts = zipFiles.length > 0
+      ? { ...(opts ?? {}), hidePreviousLayers: false }
+      : opts;
+    await loader.loadFiles(otherFiles, mergedOpts);
+    scheduleSessionSave('layers');
+  }
+
+  async function loadUrlWithSession(
+    url: string,
+    fileName: string,
+    opts?: { hidePreviousLayers?: boolean },
+  ): Promise<void> {
+    await loader.loadUrl(url, fileName, opts);
+    scheduleSessionSave('layers');
+  }
+
+  async function loadUrlsWithSession(
+    items: { url: string; fileName: string }[],
+    opts?: { hidePreviousLayers?: boolean },
+  ): Promise<void> {
+    await loader.loadUrls(items, opts);
+    scheduleSessionSave('layers');
+  }
+
+  function guessMd5FromName(name: string): string | null {
+    const base = (name ?? '').split('/').pop() ?? '';
+    const stem = base.includes('.') ? base.slice(0, base.lastIndexOf('.')) : base;
+    const m = stem.match(/[a-fA-F0-9]{32}/);
+    return m ? m[0]!.toLowerCase() : null;
+  }
+
+  async function waitForRuntimeReady(maxAttempts = 30, stepMs = 100): Promise<boolean> {
+    if (runtime) return true;
+    for (let i = 0; i < maxAttempts; i += 1) {
+      await new Promise(resolve => window.setTimeout(resolve, stepMs));
+      if (runtime) return true;
+    }
+    return !!runtime;
+  }
+
+  async function applySessionSnapshot(
+    snapshot: import('../../lib/viewer/sessionTypes').SessionSnapshot,
+    files?: File[],
+  ): Promise<void> {
+    if (!snapshot) return;
+    if (!runtime && !(await waitForRuntimeReady())) return;
+    if (!runtime) return;
+
+    // 过滤掉配置文件，只保留模型文件
+    const importFiles = (files ?? []).filter(f => f.name.toLowerCase() !== 'config.json');
+    const hasFiles = importFiles.length > 0;
+    const layerSnaps = snapshot.layers ?? [];
+    if (!hasFiles && layerSnaps.length === 0) {
+      message.error(t('settings.importFailed'));
+      return;
+    }
+
+    // 先还原设置
+    const rawSettings = snapshot.settings as any;
+    const isCategorized = rawSettings && typeof rawSettings === 'object'
+      && (
+        'files' in rawSettings
+        || 'rotation' in rawSettings
+        || 'view' in rawSettings
+        || 'details' in rawSettings
+        || 'colors' in rawSettings
+        || 'lammps' in rawSettings
+      );
+    const settingsPatched = isCategorized
+      ? flattenCategorizedSettings(rawSettings) as ViewerSettings
+      : normalizeSettings(rawSettings as ViewerSettings);
+    if (patchSettings) {
+      settingsSync.suspend(300);
+      patchSettings(settingsPatched);
+      // 同步主题到全局
+      if (settingsPatched.themeMode) {
+        setThemeMode(settingsPatched.themeMode as any);
+      }
+    }
+
+    inspectCtx.clear();
+    runtime.clearModel();
+    layerSourceStore.clear();
+
+    // 按 md5 匹配模型文件，匹配不到时按顺序 fallback
+    const renameFile = (file: File, name?: string): File => {
+      if (!name || name === file.name) return file;
+      try {
+        return new File([file], name, { type: file.type });
+      }
+      catch {
+        return file;
+      }
+    };
+
+    const filesByMd5 = new Map<string, File>();
+    const usedFiles = new Set<File>();
+    for (const f of importFiles) {
+      const md5 = guessMd5FromName(f.name);
+      if (md5) filesByMd5.set(md5, f);
+    }
+
+    let loadedLayers = 0;
+    for (const layer of layerSnaps) {
+      let file: File | undefined;
+      const md5 = layer.source?.md5?.toLowerCase();
+      if (md5 && filesByMd5.has(md5)) {
+        file = filesByMd5.get(md5);
+      }
+      else {
+        file = importFiles.find(f => !usedFiles.has(f));
+      }
+
+      if (file) {
+        usedFiles.add(file);
+        const fileWithName = renameFile(file, layer.source?.fileName ?? layer.name);
+        await loadFilesWithSession([fileWithName], 'api', { hidePreviousLayers: false });
+        loadedLayers += 1;
+        continue;
+      }
+
+      const url = layer.source?.url;
+      if (url) {
+        await loadUrlsWithSession(
+          [{ url, fileName: layer.source?.fileName ?? layer.name ?? 'remote' }],
+          { hidePreviousLayers: false },
+        );
+        loadedLayers += 1;
+      }
+    }
+
+    // 把余下的文件全部加载一遍（用户增加/顺序变化时仍然恢复）
+    const leftovers = importFiles.filter(f => !usedFiles.has(f));
+    if (leftovers.length > 0) {
+      await loadFilesWithSession(leftovers, 'api', { hidePreviousLayers: false });
+      loadedLayers += leftovers.length;
+    }
+    if (loadedLayers === 0 && importFiles.length > 0) {
+      await loadFilesWithSession(importFiles, 'api', { hidePreviousLayers: false });
+      loadedLayers = importFiles.length;
+    }
+
+    // 应用每层的外观/颜色/LAMMPS 设置，并恢复视角
+    runtime.applyLayerSnapshots(layerSnaps);
+    runtimeTick.value += 1;
+    applyViewFromSettings(settingsPatched);
+    scheduleSessionSave('layers');
+
+    const afterCount = runtime.layers.value.length;
+    if (loadedLayers > 0 || afterCount > 0) {
+      message.success(t('settings.importSuccess'));
+    }
+    else {
+      message.error(t('settings.importFailed'));
+    }
+  }
+
+  async function importProjectPackage(file: File): Promise<void> {
+    try {
+      const parsed = await parseProjectZip(file);
+      const parsedFiles = parsed.files?.map(f => f.file) ?? [];
+      await applySessionSnapshot(parsed.snapshot, parsedFiles);
+      message.success(t('settings.importSuccess'));
+    }
+    catch (err) {
+      console.error(err);
+      message.error(t('common.error'));
+    }
   }
 
   function syncUiFromRuntime(): void {
@@ -559,11 +872,13 @@ export function useViewerStage(
     runtime.setLayerVisible(id, visible);
     syncUiFromRuntime();
     inspectCtx.clear();
+    scheduleSessionSave('layers');
   }
 
   function setActiveLayerTypeMap(rows: LammpsTypeMapItem[]): void {
     if (!runtime) return;
     runtime.setActiveLayerTypeMapRows(rows);
+    scheduleSessionSave('layers');
   }
 
   function resetAllLayersTypeMapToDefaults(
@@ -576,22 +891,26 @@ export function useViewerStage(
     runtime.resetAllLayersTypeMapToDefaults(opts);
     syncUiFromRuntime();
     inspectCtx.clear();
+    scheduleSessionSave('layers');
   }
 
   function setActiveLayerColorMap(rows: AtomTypeColorMapItem[]): void {
     if (!runtime) return;
     runtime.setActiveLayerColorMapRows(rows);
+    scheduleSessionSave('layers');
   }
 
   function setAllLayersColorMap(rows: AtomTypeColorMapItem[]): void {
     if (!runtime) return;
     runtime.setAllLayersColorMapRows(rows);
+    scheduleSessionSave('layers');
   }
 
   function resetAllLayersColorMapToDefaults(): void {
     if (!runtime) return;
     runtime.resetAllLayersColorMapToDefaults();
     syncUiFromRuntime();
+    scheduleSessionSave('layers');
   }
 
   function setActiveLayerDisplay(
@@ -609,14 +928,18 @@ export function useViewerStage(
     if (patch.sphereSegments != null) next.sphereSegments = patch.sphereSegments;
     if (patch.bondFactor != null) next.bondFactor = patch.bondFactor;
     if (patch.bondRadius != null) next.bondRadius = patch.bondRadius;
+    if (patch.atomRoughness != null) next.atomRoughness = patch.atomRoughness;
     if (Object.keys(next).length > 0) settingsSync.patch(next);
+    scheduleSessionSave('layers');
   }
 
   function removeLayer(id: string): void {
     if (!runtime) return;
     inspectCtx.clear();
     runtime.removeLayer(id);
+    layerSourceStore.delete(id);
     syncUiFromRuntime();
+    scheduleSessionSave('layers');
   }
 
   function resetView(): void {
@@ -750,7 +1073,6 @@ export function useViewerStage(
       setDualViewSplit: r => stage?.setDualViewSplit(r),
 
       applyAtomScale: () => runtime?.applyAtomScale(),
-      applyAtomRoughness: () => runtime?.applyAtomRoughness(),
       applyShowBonds: () => runtime?.applyShowBonds(),
       applyShowAxes: () => runtime?.applyShowAxes(),
 
@@ -839,6 +1161,10 @@ export function useViewerStage(
   });
 
   onBeforeUnmount(() => {
+    if (sessionSaveTimer) {
+      window.clearTimeout(sessionSaveTimer);
+      sessionSaveTimer = null;
+    }
     window.removeEventListener('dragover', preventWindowDropDefault);
     window.removeEventListener('drop', preventWindowDropDefault);
 
@@ -931,16 +1257,34 @@ export function useViewerStage(
     applyViewFromSettings,
     suspendSettingsSync: (ms = 200) => settingsSync.suspend(ms),
     visibleCustomColors,
+    getLayerSnapshots: async () => runtime?.getLayerSnapshots() ?? [],
+    applyLayerSnapshots: async (snaps) => {
+      runtime?.applyLayerSnapshots(snaps);
+      runtimeTick.value += 1;
+      scheduleSessionSave('layers');
+    },
+    getLayerSources: async () => {
+      const res: import('../../lib/viewer/sessionTypes').LayerSourceData[] = [];
+      for (const [layerId, data] of layerSourceStore.entries()) {
+        res.push({ ...data, layerId });
+      }
+      return res;
+    },
+    applySessionSnapshot: async (snapshot, files) => {
+      await applySessionSnapshot(snapshot, files);
+    },
+    cacheRemoteOnExport,
+    setCacheRemoteOnExport: setCacheRemoteOnExportFlag,
   };
 
   const exposedApi: ViewerStageExposedApi = {
     exportPng: exporter.onExportPng,
     exportPngWithSelection,
     openFilePicker,
-    loadFile: loader.loadFile,
-    loadFiles: (files: File[]) => loader.loadFiles(files),
-    loadUrl: loader.loadUrl,
-    loadUrls: loader.loadUrls,
+    loadFile: loadFileWithSession,
+    loadFiles: (files: File[]) => loadFilesWithSession(files),
+    loadUrl: loadUrlWithSession,
+    loadUrls: loadUrlsWithSession,
   };
 
   return {
@@ -1007,10 +1351,10 @@ export function useViewerStage(
     onDrop,
     onFilePicked,
 
-    loadFile: loader.loadFile,
-    loadFiles: loader.loadFiles,
-    loadUrl: loader.loadUrl,
-    loadUrls: loader.loadUrls,
+    loadFile: loadFileWithSession,
+    loadFiles: loadFilesWithSession,
+    loadUrl: loadUrlWithSession,
+    loadUrls: loadUrlsWithSession,
 
     onExportPng: exporter.onExportPng,
   };

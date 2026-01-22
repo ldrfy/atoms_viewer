@@ -40,29 +40,6 @@
             </template>
           </a-dropdown>
 
-          <!-- 主题 -->
-          <a-dropdown trigger="click" placement="bottomLeft">
-            <a-button
-              type="text"
-              class="btn-icon"
-              aria-label="theme"
-              :title="t('viewer.theme.title')"
-            >
-              <BgColorsOutlined />
-            </a-button>
-
-            <template #overlay>
-              <a-menu
-                :selected-keys="[themeMode]"
-                @click="(e: MenuInfo) => onSelectThemeMode(e.key as ThemeMode)"
-              >
-                <a-menu-item v-for="item in themeSegmentOptions" :key="item.value">
-                  {{ item.label }}
-                </a-menu-item>
-              </a-menu>
-            </template>
-          </a-dropdown>
-
           <!-- GitHub -->
           <a-button
             type="text"
@@ -143,26 +120,6 @@
             </a-radio>
           </a-radio-group>
         </a-collapse-panel>
-
-        <!-- 主题 -->
-        <a-collapse-panel key="theme">
-          <template #header>
-            <span class="collapse-header">
-              {{ t("viewer.theme.title") }}
-              <span class="collapse-value">
-                {{ t(`viewer.theme.mode.${themeMode}`) }}
-              </span>
-            </span>
-          </template>
-
-          <a-segmented
-            v-model:value="themeModeProxy"
-            block
-            :options="themeSegmentOptions"
-            class="theme_segmented"
-            @change="onSelectThemeMode(themeModeProxy)"
-          />
-        </a-collapse-panel>
       </a-collapse>
 
       <a-space direction="vertical" class="drawer-links">
@@ -195,7 +152,6 @@ import { useI18n } from 'vue-i18n';
 import {
   HomeOutlined,
   GlobalOutlined,
-  BgColorsOutlined,
   SettingOutlined,
   MenuOutlined,
   GithubOutlined,
@@ -209,7 +165,6 @@ import {
   setLocale,
   type SupportLocale,
 } from '../../i18n';
-import { getThemeMode, setThemeMode, type ThemeMode } from '../../theme/mode';
 import { APP_DISPLAY_NAME, APP_GITHUB_URL, APP_DOCS_URL } from '../../lib/appMeta';
 
 const props = withDefaults(
@@ -256,16 +211,6 @@ const currentLocaleItem = computed(() =>
   localeItems.value.find(i => i.key === curLocaleProxy.value),
 );
 
-/* ===== theme ===== */
-const themeMode = computed(() => getThemeMode());
-const themeModeProxy = ref<ThemeMode>(themeMode.value);
-
-const themeSegmentOptions = computed(() => [
-  { label: t('viewer.theme.mode.system'), value: 'system' },
-  { label: t('viewer.theme.mode.light'), value: 'light' },
-  { label: t('viewer.theme.mode.dark'), value: 'dark' },
-]);
-
 /* ===== 行为 ===== */
 function closeDrawer() {
   mobileOpen.value = false;
@@ -289,11 +234,6 @@ function openDocs() {
 
 function onSelectLocale(key: string) {
   curLocaleProxy.value = key as SupportLocale;
-  closeDrawer();
-}
-
-function onSelectThemeMode(key: string) {
-  setThemeMode(key as ThemeMode);
   closeDrawer();
 }
 
@@ -375,12 +315,6 @@ function onClickBrand(): void {
 
 .lang-radio-item:last-child {
     margin-bottom: 0;
-}
-
-.theme_segmented {
-    margin-left: 24px;
-    margin-top: -8px;
-    margin-bottom: 8px;
 }
 
 .plain-click {

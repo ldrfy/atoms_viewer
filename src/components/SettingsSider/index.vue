@@ -49,6 +49,7 @@ import {
 } from '../../lib/dom/pullToRefreshBlock';
 import { clampNumber } from '../../lib/utils/number';
 import { loadNumber, saveNumber } from '../../lib/utils/storage';
+import { PANEL_KEYS } from '../../lib/viewer/panelKeys';
 
 import SettingsContent from './SettingsContent.vue';
 import {
@@ -66,7 +67,7 @@ const props = withDefaults(
     activeKey?: string[];
   }>(),
   {
-    activeKey: () => ['display'],
+    activeKey: () => [PANEL_KEYS.view],
   },
 );
 

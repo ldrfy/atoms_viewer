@@ -35,10 +35,10 @@ export const settingsSiderDirtyContextKey: InjectionKey<SettingsSiderDirtyContex
 export interface SettingsSiderDerivedContext {
   filesDirty: ComputedRef<boolean>;
   layersDirty: ComputedRef<boolean>;
-  displayDirty: ComputedRef<boolean>;
-  autoRotateDirty: ComputedRef<boolean>;
+  viewDirty: ComputedRef<boolean>;
+  rotationDirty: ComputedRef<boolean>;
   otherDirty: ComputedRef<boolean>;
-  layerDisplayDirty: ComputedRef<boolean>;
+  detailsDirty: ComputedRef<boolean>;
 }
 
 export const settingsSiderDerivedContextKey: InjectionKey<SettingsSiderDerivedContext> = Symbol(

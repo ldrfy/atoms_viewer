@@ -14,6 +14,8 @@ import {
   DEFAULT_LAYER_DISPLAY,
 } from '../../../lib/viewer/settings';
 import { normalizeViewPresets } from '../../../lib/viewer/viewPresets';
+import { computeMd5ForArrayBuffer } from '../../../lib/file/md5';
+import type { LayerSourceInfo } from '../../../lib/viewer/sessionTypes';
 
 import { parseStructure, toForcedFilename } from '../../../lib/structure/parse';
 import type { ParseMode, ParseInfo } from '../../../lib/structure/parse';
@@ -26,6 +28,7 @@ import {
   normalizeTypeMapRows,
   typeMapEquals,
 } from '../typeMap';
+import { PANEL_KEYS, type PanelKey } from '../../../lib/viewer/panelKeys';
 
 import { isLammpsDumpFormat } from '../../../lib/structure/parsers/lammpsDump';
 import { isLammpsDataFormat } from '../../../lib/structure/parsers/lammpsData';
@@ -34,6 +37,7 @@ import { applyAnimationInfo } from '../animation';
 import type { ThreeStage } from '../../../lib/three/stage';
 import type { ModelRuntime } from '../modelRuntime';
 import type { InspectCtx } from '../ctx/inspect';
+import type { LayerSourceData } from './sourceStore';
 
 type RenderReason = 'load' | 'reparse';
 
@@ -57,7 +61,16 @@ export function createViewerLoader(deps: {
   hasAnimation: Ref<boolean>;
 
   stopPlay: () => void;
+
+  sourceStore: {
+    set: (id: string, data: LayerSourceData) => void;
+    get: (id: string) => LayerSourceData | undefined;
+    delete: (id: string) => void;
+    clear: () => void;
+  };
+  shouldCacheRemote?: () => boolean;
 }) {
+  const textDecoder = new TextDecoder();
   const parseMode = ref<ParseMode>('auto');
 
   const parseInfo = reactive<ParseInfo>({
@@ -105,7 +118,7 @@ export function createViewerLoader(deps: {
     // When parsing fails and user needs to manually choose a parse mode,
     // automatically open Settings and focus the Files panel.
     lastLoadNeedsLammpsFocus = false;
-    deps.requestOpenSettings?.({ focusKey: 'files', open: true });
+    deps.requestOpenSettings?.({ focusKey: PANEL_KEYS.files, open: true });
   }
 
   function handleLammpsTypeMapAndSettings(
@@ -167,11 +180,11 @@ export function createViewerLoader(deps: {
     text: string,
     fileName: string,
     reason: RenderReason,
-    opts?: { hidePreviousLayers?: boolean },
-  ): void {
+    opts?: { hidePreviousLayers?: boolean; sourceMeta?: LayerSourceInfo },
+  ): { frameCount: number; hasAnimation: boolean; layerId: string } | null {
     const stage = deps.getStage();
     const runtime = deps.getRuntime();
-    if (!stage || !runtime) return;
+    if (!stage || !runtime) return null;
 
     if (reason === 'load') deps.inspectCtx.clear();
 
@@ -189,6 +202,7 @@ export function createViewerLoader(deps: {
         ? runtime.replaceActiveLayerModel(model)
         : runtime.renderModel(model, {
             hidePreviousLayers: opts?.hidePreviousLayers,
+            sourceMeta: opts?.sourceMeta,
           });
 
     applyAnimationInfo(
@@ -223,6 +237,8 @@ export function createViewerLoader(deps: {
         deps.t('viewer.parse.reparseSuccess', { format: parseInfo.format }),
       );
     }
+
+    return info;
   }
 
   function syncViewPresetAndDistanceOnModelLoad(): void {
@@ -389,10 +405,10 @@ export function createViewerLoader(deps: {
     const wantsLayerDisplay = isLayerDisplayModified();
 
     const focusKeys: string[] = [];
-    if (wantsLammps) focusKeys.push('lammps');
-    if (wantsLayers) focusKeys.push('layers');
-    if (wantsColors) focusKeys.push('colors');
-    if (wantsLayerDisplay) focusKeys.push('layerDisplay');
+    if (wantsLammps) focusKeys.push(PANEL_KEYS.lammps);
+    if (wantsLayers) focusKeys.push(PANEL_KEYS.layers);
+    if (wantsColors) focusKeys.push(PANEL_KEYS.colors);
+    if (wantsLayerDisplay) focusKeys.push(PANEL_KEYS.details);
 
     if (focusKeys.length > 0) {
       deps.requestOpenSettings?.({
@@ -406,9 +422,9 @@ export function createViewerLoader(deps: {
       return;
     }
 
-    const openKeys = ['display'];
+    const openKeys: PanelKey[] = [PANEL_KEYS.view];
     if (deps.settingsRef.value.autoRotateOnLoad) {
-      openKeys.push('autoRotate');
+      openKeys.push(PANEL_KEYS.rotation);
     }
     deps.requestOpenSettings?.({
       focusKeys: openKeys,
@@ -428,16 +444,18 @@ export function createViewerLoader(deps: {
     t0: number,
     text: string,
     fileName: string,
-    opts?: { hidePreviousLayers?: boolean },
-  ): Promise<void> {
+    opts?: { hidePreviousLayers?: boolean; sourceMeta?: LayerSourceInfo },
+  ): Promise<string | null> {
+    let info: { layerId: string } | null = null;
     try {
       deps.stopPlay();
 
       lastRawText = text;
       lastRawFileName = fileName;
 
-      renderFromText(text, fileName, 'load', {
+      info = renderFromText(text, fileName, 'load', {
         hidePreviousLayers: opts?.hidePreviousLayers,
+        sourceMeta: opts?.sourceMeta,
       });
 
       syncViewPresetAndDistanceOnModelLoad();
@@ -484,24 +502,51 @@ export function createViewerLoader(deps: {
 
     parseMode.value = 'auto';
     parseInfo.fileName = fileName;
+
+    return info?.layerId ?? null;
   }
 
-  async function loadUrl(url: string, fileName: string): Promise<void> {
+  async function loadUrl(
+    url: string,
+    fileName: string,
+    opts?: { hidePreviousLayers?: boolean },
+  ): Promise<void> {
     if (deps.isLoading.value) return;
     await loadInit();
     const t0 = performance.now();
 
     const res = await fetch(url);
     if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
-    const text = await res.text();
+    const buf = await res.arrayBuffer();
+    const text = textDecoder.decode(buf);
+    const md5 = computeMd5ForArrayBuffer(buf);
+    const cacheRemote = deps.shouldCacheRemote?.() ?? false;
+    const sourceMeta: LayerSourceInfo = {
+      md5,
+      size: buf.byteLength,
+      fileName,
+      url,
+      type: 'url',
+      cached: cacheRemote,
+    };
 
-    await loadText(t0, text, fileName, {
-      hidePreviousLayers: true,
+    const layerId = await loadText(t0, text, fileName, {
+      hidePreviousLayers: opts?.hidePreviousLayers ?? true,
+      sourceMeta,
     });
+
+    if (layerId) {
+      deps.sourceStore.set(layerId, {
+        layerId,
+        ...sourceMeta,
+        buffer: cacheRemote ? buf : undefined,
+      });
+    }
   }
 
   async function loadUrls(
     items: { url: string; fileName: string }[],
+    opts?: { hidePreviousLayers?: boolean },
   ): Promise<void> {
     if (!deps.getStage() || !deps.getRuntime()) return;
     if (deps.isLoading.value) return;
@@ -522,17 +567,37 @@ export function createViewerLoader(deps: {
         try {
           const res = await fetch(item.url);
           if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
-          const text = await res.text();
+          const buf = await res.arrayBuffer();
+          const text = textDecoder.decode(buf);
+          const md5 = computeMd5ForArrayBuffer(buf);
+          const cacheRemote = deps.shouldCacheRemote?.() ?? false;
+          const sourceMeta: LayerSourceInfo = {
+            md5,
+            size: buf.byteLength,
+            fileName: displayName,
+            url: item.url,
+            type: 'url',
+            cached: cacheRemote,
+          };
 
           lastRawText = text;
           lastRawFileName = displayName;
 
-          renderFromText(text, displayName, 'load', {
-            hidePreviousLayers: okCount === 0,
+          const info = renderFromText(text, displayName, 'load', {
+            hidePreviousLayers: opts?.hidePreviousLayers ?? okCount === 0,
+            sourceMeta,
           });
 
           okCount += 1;
           lastOkName = displayName;
+
+          if (info?.layerId) {
+            deps.sourceStore.set(info.layerId, {
+              layerId: info.layerId,
+              ...sourceMeta,
+              buffer: cacheRemote ? buf : undefined,
+            });
+          }
         }
         catch (err) {
           const msg = (err as Error).message ?? String(err);
@@ -584,6 +649,7 @@ export function createViewerLoader(deps: {
 
   async function loadFilesInternal(
     files: File[],
+    opts?: { hidePreviousLayers?: boolean },
   ): Promise<void> {
     if (!deps.getStage() || !deps.getRuntime()) return;
     if (deps.isLoading.value) return;
@@ -599,17 +665,42 @@ export function createViewerLoader(deps: {
       let lastOkName = '';
 
       for (const f of files) {
+        const lowerName = f.name.toLowerCase();
+        if (lowerName === 'config.json') {
+          // Skip project config files if passed to the generic loader.
+          continue;
+        }
         try {
-          const text = await f.text();
+          const buf = await f.arrayBuffer();
+          const text = textDecoder.decode(buf);
+          const md5 = computeMd5ForArrayBuffer(buf);
           lastRawText = text;
           lastRawFileName = f.name;
 
-          renderFromText(text, f.name, 'load', {
-            hidePreviousLayers: okCount === 0,
+          const sourceMeta: LayerSourceInfo = {
+            md5,
+            size: f.size,
+            fileName: f.name,
+            mime: f.type,
+            type: 'file',
+            cached: true,
+          };
+
+          const info = renderFromText(text, f.name, 'load', {
+            hidePreviousLayers: opts?.hidePreviousLayers ?? okCount === 0,
+            sourceMeta,
           });
 
           okCount += 1;
           lastOkName = f.name;
+
+          if (info?.layerId) {
+            deps.sourceStore.set(info.layerId, {
+              layerId: info.layerId,
+              ...sourceMeta,
+              buffer: buf,
+            });
+          }
         }
         catch (err) {
           const msg = (err as Error).message ?? String(err);
@@ -661,12 +752,16 @@ export function createViewerLoader(deps: {
 
   async function loadFiles(
     files: File[],
+    opts?: { hidePreviousLayers?: boolean },
   ): Promise<void> {
-    await loadFilesInternal(files);
+    await loadFilesInternal(files, opts);
   }
 
-  async function loadFile(file: File): Promise<void> {
-    await loadFilesInternal([file]);
+  async function loadFile(
+    file: File,
+    opts?: { hidePreviousLayers?: boolean },
+  ): Promise<void> {
+    await loadFilesInternal([file], opts);
   }
 
   return {

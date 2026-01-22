@@ -125,11 +125,19 @@ import {
   normalizeSettings,
   saveSettingsToStorage,
 } from '../../lib/viewer/settingsStorage';
+import { clearSessionStorage } from '../../lib/viewer/sessionStorage';
+import { buildExportFilename } from '../../lib/file/filename';
 import { APP_VERSION } from '../../lib/appMeta';
 import { getThemeMode, setThemeMode, type ThemeMode } from '../../theme/mode';
 import { getLocale, setLocale, SUPPORT_LOCALES, type SupportLocale } from '../../i18n';
 import { isLammpsDumpFormat } from '../../lib/structure/parsers/lammpsDump';
 import { isLammpsDataFormat } from '../../lib/structure/parsers/lammpsData';
+import type { LayerSnapshot, SessionSnapshot } from '../../lib/viewer/sessionTypes';
+import {
+  buildCategorizedSettings,
+  flattenCategorizedSettings,
+} from '../../lib/viewer/sessionTemplates';
+import { PANEL_KEYS, PANEL_HEADER_KEYS } from '../../lib/viewer/panelKeys';
 
 const props = withDefaults(
   defineProps<{
@@ -166,104 +174,27 @@ const activeLayerIsLammps = computed(() => {
   return isLammpsDumpFormat(format) || isLammpsDataFormat(format);
 });
 
-type SettingsExportPayload = {
-  version: string;
+type SettingsExportPayload = SessionSnapshot & {
   app: {
     themeMode: ThemeMode;
     locale: SupportLocale;
   };
-  settings: {
-    display: Pick<
-      ViewerSettings,
-      | 'viewPresets'
-        | 'dualViewEnabled'
-        | 'dualViewDistance'
-        | 'initialDualViewDistance'
-        | 'dualViewSplit'
-        | 'orthographic'
-        | 'rotationDeg'
-        | 'resetViewSeq'
-    >;
-    layerDisplay: Pick<
-      ViewerSettings,
-      | 'atomScale'
-        | 'sphereSegments'
-        | 'showBonds'
-        | 'bondFactor'
-        | 'bondRadius'
-    >;
-    autoRotate: ViewerSettings['autoRotate'];
-    background: Pick<
-      ViewerSettings,
-      'backgroundColor' | 'backgroundColorMode' | 'backgroundTransparent'
-    >;
-    colors: Pick<ViewerSettings, 'colorMapTemplate'>;
-    lammps: Pick<ViewerSettings, 'lammpsTypeMap'>;
-    other: Pick<
-      ViewerSettings,
-      'showAxes'
-        | 'refreshBondsOnPlay'
-        | 'frame_rate'
-        | 'autoRotateOnLoad'
-        | 'themeReadabilityCheckOnOpen'
-        | 'atomRoughness'
-        | 'modelLightIntensity'
-    >;
-    files: Pick<ViewerSettings, 'exportPngScale' | 'exportPngTransparent'>;
-  };
 };
 
-function buildExportPayload(v: ViewerSettings): SettingsExportPayload {
+function buildExportPayload(
+  v: ViewerSettings,
+  layers: LayerSnapshot[],
+): SettingsExportPayload {
+  const settingsByCategory = buildCategorizedSettings(v) as unknown as ViewerSettings;
   return {
     version: APP_VERSION,
+    savedAt: new Date().toISOString(),
     app: {
       themeMode: getThemeMode(),
       locale: getLocale(),
     },
-    settings: {
-      display: {
-        viewPresets: v.viewPresets,
-        dualViewEnabled: v.dualViewEnabled,
-        dualViewDistance: v.dualViewDistance,
-        initialDualViewDistance: v.initialDualViewDistance,
-        dualViewSplit: v.dualViewSplit,
-        orthographic: v.orthographic,
-        rotationDeg: v.rotationDeg,
-        resetViewSeq: v.resetViewSeq,
-      },
-      layerDisplay: {
-        atomScale: v.atomScale,
-        sphereSegments: v.sphereSegments,
-        showBonds: v.showBonds,
-        bondFactor: v.bondFactor,
-        bondRadius: v.bondRadius,
-      },
-      autoRotate: v.autoRotate,
-      background: {
-        backgroundColor: v.backgroundColor,
-        backgroundColorMode: v.backgroundColorMode,
-        backgroundTransparent: v.backgroundTransparent,
-      },
-      colors: {
-        colorMapTemplate: v.colorMapTemplate,
-      },
-      lammps: {
-        lammpsTypeMap: v.lammpsTypeMap,
-      },
-      other: {
-        showAxes: v.showAxes,
-        refreshBondsOnPlay: v.refreshBondsOnPlay,
-        frame_rate: v.frame_rate,
-        autoRotateOnLoad: v.autoRotateOnLoad,
-        themeReadabilityCheckOnOpen: v.themeReadabilityCheckOnOpen,
-        atomRoughness: v.atomRoughness,
-        modelLightIntensity: v.modelLightIntensity,
-      },
-      files: {
-        exportPngScale: v.exportPngScale,
-        exportPngTransparent: v.exportPngTransparent,
-      },
-    },
+    settings: settingsByCategory,
+    layers,
   };
 }
 
@@ -271,6 +202,7 @@ function extractSettingsPayload(input: unknown): {
   settings: Partial<ViewerSettings>;
   themeMode?: ThemeMode;
   locale?: SupportLocale;
+  layers?: LayerSnapshot[];
 } {
   if (!input || typeof input !== 'object') {
     return { settings: {} };
@@ -280,20 +212,36 @@ function extractSettingsPayload(input: unknown): {
   const app = anyInput.app as Record<string, unknown> | undefined;
   const themeMode = app?.themeMode as ThemeMode | undefined;
   const locale = app?.locale as SupportLocale | undefined;
+  const layers = Array.isArray(anyInput.layers)
+    ? (anyInput.layers as LayerSnapshot[])
+    : undefined;
+
+  const maybeCategorized = topSettings && typeof topSettings === 'object'
+    && (
+      'files' in topSettings
+      || 'rotation' in topSettings
+      || 'view' in topSettings
+      || 'details' in topSettings
+      || 'colors' in topSettings
+      || 'lammps' in topSettings
+    );
+
+  if (maybeCategorized) {
+    const categorized = topSettings as any;
+    const flat = flattenCategorizedSettings(categorized as any);
+    return {
+      themeMode,
+      locale,
+      layers,
+      settings: flat,
+    };
+  }
   if (topSettings && typeof topSettings === 'object') {
     return {
       themeMode,
       locale,
-      settings: {
-        ...(topSettings.display ?? {}),
-        ...(topSettings.layerDisplay ?? {}),
-        autoRotate: topSettings.autoRotate,
-        ...(topSettings.background ?? {}),
-        ...(topSettings.colors ?? {}),
-        ...(topSettings.lammps ?? {}),
-        ...(topSettings.other ?? {}),
-        ...(topSettings.files ?? {}),
-      } as Partial<ViewerSettings>,
+      layers,
+      settings: topSettings as Partial<ViewerSettings>,
     };
   }
   const data = anyInput.data;
@@ -301,12 +249,14 @@ function extractSettingsPayload(input: unknown): {
     return {
       themeMode,
       locale,
+      layers,
       settings: data as Partial<ViewerSettings>,
     };
   }
   return {
     themeMode,
     locale,
+    layers,
     settings: anyInput as Partial<ViewerSettings>,
   };
 }
@@ -330,7 +280,7 @@ const filesDirty = computed(() => {
 });
 const layersDirty = computed(() => (viewerApi.value?.layers.value.length ?? 0) > 1);
 
-const layerDisplayDirty = computed(() => {
+const detailsDirty = computed(() => {
   const active = viewerApi.value?.activeLayerDisplay?.value;
   const cur = active ?? settings.value;
   return (
@@ -339,12 +289,11 @@ const layerDisplayDirty = computed(() => {
     || cur.sphereSegments !== DEFAULT_LAYER_DISPLAY.sphereSegments
     || cur.bondFactor !== DEFAULT_LAYER_DISPLAY.bondFactor
     || cur.bondRadius !== DEFAULT_LAYER_DISPLAY.bondRadius
-    || settings.value.modelLightIntensity !== DEFAULT_SETTINGS.modelLightIntensity
-    || settings.value.atomRoughness !== DEFAULT_SETTINGS.atomRoughness
+    || cur.atomRoughness !== DEFAULT_LAYER_DISPLAY.atomRoughness
   );
 });
 
-const displayDirty = computed(() => {
+const viewDirty = computed(() => {
   const defaultDistance = Number.isFinite(settings.value.initialDualViewDistance)
     ? (settings.value.initialDualViewDistance as number)
     : DEFAULT_SETTINGS.dualViewDistance;
@@ -360,7 +309,7 @@ const displayDirty = computed(() => {
   );
 });
 
-const autoRotateDirty = computed(() => {
+const rotationDirty = computed(() => {
   const cur = settings.value.autoRotate;
   const def = DEFAULT_SETTINGS.autoRotate;
   return (
@@ -379,6 +328,8 @@ const otherDirty = computed(() => {
     || settings.value.refreshBondsOnPlay !== DEFAULT_SETTINGS.refreshBondsOnPlay
     || settings.value.frame_rate !== DEFAULT_SETTINGS.frame_rate
     || settings.value.autoRotateOnLoad !== DEFAULT_SETTINGS.autoRotateOnLoad
+    || settings.value.themeMode !== DEFAULT_SETTINGS.themeMode
+    || settings.value.modelLightIntensity !== DEFAULT_SETTINGS.modelLightIntensity
     || (settings.value.themeReadabilityCheckOnOpen ?? true)
       !== (DEFAULT_SETTINGS.themeReadabilityCheckOnOpen ?? true)
   );
@@ -387,10 +338,10 @@ const otherDirty = computed(() => {
 provide(settingsSiderDerivedContextKey, {
   filesDirty,
   layersDirty,
-  displayDirty,
-  autoRotateDirty,
+  viewDirty,
+  rotationDirty,
   otherDirty,
-  layerDisplayDirty,
+  detailsDirty,
 });
 
 function arraysEqual(a: unknown, b: unknown): boolean {
@@ -417,31 +368,31 @@ function isTypeMapApplied(): boolean {
 }
 
 function isPanelDirty(key: string): boolean {
-  if (key === 'files') return filesDirty.value;
-  if (key === 'layers') return layersDirty.value;
-  if (key === 'colors') return hasCustomColors();
-  if (key === 'lammps') return isTypeMapApplied() && hasCustomTypeMap();
-  if (key === 'layerDisplay') return layerDisplayDirty.value;
-  if (key === 'display') return displayDirty.value;
-  if (key === 'autoRotate') return autoRotateDirty.value;
-  if (key === 'other') return otherDirty.value;
+  if (key === PANEL_KEYS.files) return filesDirty.value;
+  if (key === PANEL_KEYS.layers) return layersDirty.value;
+  if (key === PANEL_KEYS.colors) return hasCustomColors();
+  if (key === PANEL_KEYS.lammps) return isTypeMapApplied() && hasCustomTypeMap();
+  if (key === PANEL_KEYS.details) return detailsDirty.value;
+  if (key === PANEL_KEYS.view) return viewDirty.value;
+  if (key === PANEL_KEYS.rotation) return rotationDirty.value;
+  if (key === PANEL_KEYS.other) return otherDirty.value;
   return false;
 }
 
 const basePanels = [
-  { key: 'files', headerKey: 'settings.panel.files.header', comp: FilesPanel, icon: FolderOpenOutlined },
-  { key: 'autoRotate', headerKey: 'settings.panel.autoRotate.header', comp: AutoRotatePanel, icon: SyncOutlined },
-  { key: 'display', headerKey: 'settings.panel.display.header', comp: DisplayPanel, icon: EyeOutlined },
-  { key: 'layers', headerKey: 'settings.panel.layers.header', comp: LayersPanel, icon: AppstoreOutlined },
-  { key: 'lammps', headerKey: 'settings.panel.lammps.header', comp: LammpsPanel, icon: SwapOutlined },
-  { key: 'colors', headerKey: 'settings.panel.colors.header', comp: ColorsPanel, icon: BgColorsOutlined },
-  { key: 'layerDisplay', headerKey: 'settings.panel.layerDisplay.header', comp: LayerDisplayPanel, icon: SlidersOutlined },
-  { key: 'other', headerKey: 'settings.panel.other.header', comp: OtherPanel, icon: SettingOutlined },
+  { key: PANEL_KEYS.files, headerKey: PANEL_HEADER_KEYS.files, comp: FilesPanel, icon: FolderOpenOutlined },
+  { key: PANEL_KEYS.rotation, headerKey: PANEL_HEADER_KEYS.rotation, comp: AutoRotatePanel, icon: SyncOutlined },
+  { key: PANEL_KEYS.view, headerKey: PANEL_HEADER_KEYS.view, comp: DisplayPanel, icon: EyeOutlined },
+  { key: PANEL_KEYS.layers, headerKey: PANEL_HEADER_KEYS.layers, comp: LayersPanel, icon: AppstoreOutlined },
+  { key: PANEL_KEYS.lammps, headerKey: PANEL_HEADER_KEYS.lammps, comp: LammpsPanel, icon: SwapOutlined },
+  { key: PANEL_KEYS.details, headerKey: PANEL_HEADER_KEYS.details, comp: LayerDisplayPanel, icon: SlidersOutlined },
+  { key: PANEL_KEYS.colors, headerKey: PANEL_HEADER_KEYS.colors, comp: ColorsPanel, icon: BgColorsOutlined },
+  { key: PANEL_KEYS.other, headerKey: PANEL_HEADER_KEYS.other, comp: OtherPanel, icon: SettingOutlined },
 ] as const;
 const panels = computed(() =>
   activeLayerIsLammps.value
     ? basePanels
-    : basePanels.filter(p => p.key !== 'lammps'),
+    : basePanels.filter(p => p.key !== PANEL_KEYS.lammps),
 );
 
 const activeKeyProxy = computed<string[]>({
@@ -460,8 +411,8 @@ watch(
   () => activeLayerIsLammps.value,
   (isLammps) => {
     if (isLammps) return;
-    if (props.activeKey.includes('lammps')) {
-      emit('update:activeKey', props.activeKey.filter(k => k !== 'lammps'));
+    if (props.activeKey.includes(PANEL_KEYS.lammps)) {
+      emit('update:activeKey', props.activeKey.filter(k => k !== PANEL_KEYS.lammps));
     }
   },
 );
@@ -506,6 +457,7 @@ function applyDefaults() {
       sphereSegments: DEFAULT_LAYER_DISPLAY.sphereSegments,
       bondFactor: DEFAULT_LAYER_DISPLAY.bondFactor,
       bondRadius: DEFAULT_LAYER_DISPLAY.bondRadius,
+      atomRoughness: DEFAULT_LAYER_DISPLAY.atomRoughness,
     },
     { applyToAll: true },
   );
@@ -533,22 +485,35 @@ function onClearStorage(): void {
       if (nextSettings) {
         saveSettingsToStorage(nextSettings);
       }
+      void clearSessionStorage();
     },
   });
 }
 
-function onExportSettings(): void {
-  const data = normalizeSettings(settings.value);
-  const payload = buildExportPayload(data);
-  const json = JSON.stringify(payload, null, 2);
-  const blob = new Blob([json], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'atoms-viewer-settings.json';
-  a.click();
-  URL.revokeObjectURL(url);
-  message.success(t('settings.exportSuccess'));
+async function onExportSettings(): Promise<void> {
+  try {
+    const data = normalizeSettings(settings.value);
+    const api = viewerApiRef.value;
+    const layerSnapshots: LayerSnapshot[] = api?.getLayerSnapshots
+      ? await api.getLayerSnapshots()
+      : [];
+
+    const payload = buildExportPayload(data, layerSnapshots);
+    const json = JSON.stringify(payload, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const fileStem = api?.parseInfo?.fileName ?? 'atoms-viewer';
+    a.download = buildExportFilename({ modelFileName: fileStem, ext: 'json' });
+    a.click();
+    URL.revokeObjectURL(url);
+    message.success(t('settings.exportSuccess'));
+  }
+  catch (err) {
+    console.error(err);
+    message.error(t('common.error'));
+  }
 }
 
 function onImportSettings(): void {
@@ -565,7 +530,9 @@ function onImportFile(e: Event): void {
       const raw = String(reader.result ?? '');
       const parsed = JSON.parse(raw) as any;
       const extracted = extractSettingsPayload(parsed);
-      const nextSettings = normalizeSettings(extracted.settings);
+      const nextSettings = normalizeSettings(
+        flattenCategorizedSettings(extracted.settings as any),
+      );
 
       const api = viewerApiRef.value;
       if (api) {
@@ -584,25 +551,33 @@ function onImportFile(e: Event): void {
       replaceSettings(nextSettings);
       saveSettingsToStorage(nextSettings);
 
+      const layerSnapshots = extracted.layers;
       if (api) {
-        void nextTick(() => {
+        void nextTick(async () => {
           api.applyViewFromSettings(nextSettings);
-          api.setActiveLayerDisplay(
-            {
-              atomScale: nextSettings.atomScale,
-              sphereSegments: nextSettings.sphereSegments,
-              showBonds: nextSettings.showBonds,
-              bondFactor: nextSettings.bondFactor,
-              bondRadius: nextSettings.bondRadius,
-            },
-            { applyToAll: true },
-          );
-        });
-        api.setAllLayersColorMap(nextSettings.colorMapTemplate ?? []);
-        api.refreshColorMap({ applyToAll: true });
-        api.resetAllLayersTypeMapToDefaults({
-          templateRows: [...(nextSettings.lammpsTypeMap ?? [])],
-          useAtomDefaults: false,
+          const hasLayerSnapshots = Array.isArray(layerSnapshots) && layerSnapshots.length > 0;
+          if (hasLayerSnapshots && api.applyLayerSnapshots) {
+            await api.applyLayerSnapshots(layerSnapshots as LayerSnapshot[]);
+          }
+          else {
+            api.setActiveLayerDisplay(
+              {
+                atomScale: nextSettings.atomScale,
+                sphereSegments: nextSettings.sphereSegments,
+                showBonds: nextSettings.showBonds,
+                bondFactor: nextSettings.bondFactor,
+                bondRadius: nextSettings.bondRadius,
+                atomRoughness: nextSettings.atomRoughness,
+              },
+              { applyToAll: true },
+            );
+            api.setAllLayersColorMap(nextSettings.colorMapTemplate ?? []);
+            api.refreshColorMap({ applyToAll: true });
+            api.resetAllLayersTypeMapToDefaults({
+              templateRows: [...(nextSettings.lammpsTypeMap ?? [])],
+              useAtomDefaults: false,
+            });
+          }
         });
       }
       message.success(t('settings.importSuccess'));

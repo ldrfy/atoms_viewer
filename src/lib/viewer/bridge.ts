@@ -88,6 +88,23 @@ export type ViewerPublicApi = {
     patch: Partial<LayerDisplaySettings>,
     opts?: { applyToAll?: boolean },
   ) => void;
+  /** Snapshot current layers with metadata/settings (for export/session). */
+  getLayerSnapshots: () => Promise<import('./sessionTypes').LayerSnapshot[]>;
+  /** Apply per-layer snapshots with MD5 matching fallback by order. */
+  applyLayerSnapshots: (
+    snaps: import('./sessionTypes').LayerSnapshot[],
+  ) => Promise<void>;
+  /** Get layer source blobs/metadata for export/session restore. */
+  getLayerSources: () => Promise<import('./sessionTypes').LayerSourceData[]>;
+  /** Apply a full session snapshot (settings + layers), optionally with bundled files. */
+  applySessionSnapshot: (
+    snapshot: import('./sessionTypes').SessionSnapshot,
+    files?: File[],
+  ) => Promise<void>;
+  /** Whether remote models should be cached locally for export/restore. */
+  cacheRemoteOnExport: Ref<boolean>;
+  /** Toggle remote model caching for export/restore. */
+  setCacheRemoteOnExport: (v: boolean) => void;
   /** Apply view-related settings (distance/rotation) to the stage immediately. */
   applyViewFromSettings: (overrides?: Partial<ViewerSettings>) => void;
   /** Temporarily suspend settings sync from controls/auto-rotation. */

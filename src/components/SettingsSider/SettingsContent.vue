@@ -104,11 +104,11 @@ import {
 
 import FilesPanel from './panels/FilesPanel.vue';
 import LayersPanel from './panels/LayersPanel.vue';
-import DisplayPanel from './panels/DisplayPanel.vue';
-import AutoRotatePanel from './panels/AutoRotatePanel.vue';
+import ViewPanel from './panels/ViewPanel.vue';
+import RotatePanel from './panels/RotatePanel.vue';
 import LammpsPanel from './panels/LammpsPanel.vue';
 import ColorsPanel from './panels/ColorsPanel.vue';
-import LayerDisplayPanel from './panels/LayerDisplayPanel.vue';
+import DetailsPanel from './panels/DetailsPanel.vue';
 import OtherPanel from './panels/OtherPanel.vue';
 import {
   DEFAULT_SETTINGS,
@@ -381,11 +381,11 @@ function isPanelDirty(key: string): boolean {
 
 const basePanels = [
   { key: PANEL_KEYS.files, headerKey: PANEL_HEADER_KEYS.files, comp: FilesPanel, icon: FolderOpenOutlined },
-  { key: PANEL_KEYS.rotation, headerKey: PANEL_HEADER_KEYS.rotation, comp: AutoRotatePanel, icon: SyncOutlined },
-  { key: PANEL_KEYS.view, headerKey: PANEL_HEADER_KEYS.view, comp: DisplayPanel, icon: EyeOutlined },
+  { key: PANEL_KEYS.rotation, headerKey: PANEL_HEADER_KEYS.rotation, comp: RotatePanel, icon: SyncOutlined },
+  { key: PANEL_KEYS.view, headerKey: PANEL_HEADER_KEYS.view, comp: ViewPanel, icon: EyeOutlined },
   { key: PANEL_KEYS.layers, headerKey: PANEL_HEADER_KEYS.layers, comp: LayersPanel, icon: AppstoreOutlined },
   { key: PANEL_KEYS.lammps, headerKey: PANEL_HEADER_KEYS.lammps, comp: LammpsPanel, icon: SwapOutlined },
-  { key: PANEL_KEYS.details, headerKey: PANEL_HEADER_KEYS.details, comp: LayerDisplayPanel, icon: SlidersOutlined },
+  { key: PANEL_KEYS.details, headerKey: PANEL_HEADER_KEYS.details, comp: DetailsPanel, icon: SlidersOutlined },
   { key: PANEL_KEYS.colors, headerKey: PANEL_HEADER_KEYS.colors, comp: ColorsPanel, icon: BgColorsOutlined },
   { key: PANEL_KEYS.other, headerKey: PANEL_HEADER_KEYS.other, comp: OtherPanel, icon: SettingOutlined },
 ] as const;

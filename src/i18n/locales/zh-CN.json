@@ -285,7 +285,6 @@
                 "alert": "以下设置按图层保存，开启“同时修改所有图层”可一次广播到全部图层。",
                 "currentLayer": "当前图层",
                 "applyAll": "同时修改所有图层",
-                "hint": "原子大小和键参数默认只影响当前图层，除非你选择同步到所有图层。",
                 "bonds": "显示键",
                 "bondFactor": "键长阈值系数（bondFactor）",
                 "bondFactorHint": "用于推断键合：cutoff = (r_i + r_j) × bondFactor，数值越大越容易生成键。",

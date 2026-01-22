@@ -1,40 +1,38 @@
 <template>
   <a-form layout="vertical">
-    <a-alert type="info" show-icon :message="t('settings.panel.colors.alert')" />
-
-    <a-space :size="6" class="settings-gap-top-sm settings-flex-wrap">
-      <a-typography-text type="secondary">
-        {{ t('settings.panel.colors.currentLayer') }}:
-      </a-typography-text>
-      <a-tooltip v-if="activeLayerInfo" :title="activeLayerInfo.sourceFileName || activeLayerInfo.id">
-        <a-tag class="settings-tag-full">
-          <span
-            class="settings-tag-ellipsis"
-          >
-            {{ activeLayerInfo.name }}
-          </span>
-        </a-tag>
-      </a-tooltip>
-      <a-typography-text v-else type="secondary">
-        -
-      </a-typography-text>
-    </a-space>
-
-    <a-row justify="space-between" align="middle" class="settings-gap-top-sm">
-      <a-col>
-        <a-typography-text type="secondary">
+    <a-form-item>
+      <a-row justify="space-between">
+        <a-col>
           {{ t('settings.panel.colors.applyAll') }}
-        </a-typography-text>
-      </a-col>
-      <a-col>
-        <a-switch
-          v-model:checked="applyToAllLayers"
-          :disabled="!hasAnyLayer"
-          :aria-label="t('settings.panel.colors.applyAll')"
-          :title="t('settings.panel.colors.applyAll')"
-        />
-      </a-col>
-    </a-row>
+        </a-col>
+        <a-col>
+          <a-switch
+            v-model:checked="applyToAllLayers"
+            :disabled="!hasAnyLayer"
+            :aria-label="t('settings.panel.colors.applyAll')"
+            :title="t('settings.panel.colors.applyAll')"
+          />
+        </a-col>
+      </a-row>
+
+      <a-row v-if="!applyToAllLayers">
+        <a-space :size="6" class="settings-gap-top-sm settings-flex-wrap">
+          <a-typography-text type="secondary">
+            {{ t('settings.panel.colors.currentLayer') }}:
+          </a-typography-text>
+          <a-tooltip v-if="activeLayerInfo" :title="activeLayerInfo.sourceFileName || activeLayerInfo.id">
+            <a-tag class="settings-tag-full">
+              <span class="settings-tag-ellipsis">
+                {{ activeLayerInfo.name }}
+              </span>
+            </a-tag>
+          </a-tooltip>
+          <a-typography-text v-else type="secondary">
+            -
+          </a-typography-text>
+        </a-space>
+      </a-row>
+    </a-form-item>
 
     <a-form-item :label="t('settings.panel.colors.mapLabel')" class="settings-gap-top-md">
       <template v-if="colorMapModel.length === 0">

@@ -59,6 +59,7 @@ import type { SessionSnapshot, LayerSourceData } from './lib/viewer/sessionTypes
 import { flattenCategorizedSettings } from './lib/viewer/sessionTemplates';
 import { normalizeSettings } from './lib/viewer/settingsStorage';
 import { PANEL_KEYS } from './lib/viewer/panelKeys';
+import { VIEW_SETTINGS_SAVE_DELAY_MS } from './lib/viewer/constants';
 
 const ViewerPage = defineAsyncComponent(() => import('./pages/ViewerPage.vue'));
 const antdAlgorithm = computed(() =>
@@ -67,6 +68,14 @@ const antdAlgorithm = computed(() =>
 const { t } = useI18n();
 
 const settingsOpen = ref(false);
+let saveSettingsTimer: number | null = null;
+
+function buildSettingsSignature(input: ViewerSettings): string {
+  const {
+    ...rest
+  } = input;
+  return JSON.stringify(rest);
+}
 
 /**
  * Settings 折叠面板当前展开项（非 accordion：可多项展开；空数组表示全部折叠）
@@ -76,6 +85,7 @@ const settingsActiveKey = ref<string[]>([PANEL_KEYS.view]);
 
 const settings = ref<ViewerSettings>(loadSettingsFromStorage());
 setThemeMode(settings.value.themeMode ?? getThemeMode());
+let lastNonViewSignature = buildSettingsSignature(settings.value);
 const settingsOverrides = readSettingsOverridesFromUrl(settings.value);
 if (Object.keys(settingsOverrides).length > 0) {
   settings.value = mergeSettings(settings.value, settingsOverrides);
@@ -84,8 +94,25 @@ const pendingRestore = ref<{ snapshot: SessionSnapshot; files: File[] } | null>(
 
 watch(
   settings,
-  (v) => {
-    saveSettingsToStorage(v);
+  () => {
+    const sig = buildSettingsSignature(settings.value);
+    if (sig !== lastNonViewSignature) {
+      if (saveSettingsTimer != null) {
+        window.clearTimeout(saveSettingsTimer);
+        saveSettingsTimer = null;
+      }
+      saveSettingsToStorage(settings.value);
+      lastNonViewSignature = sig;
+      return;
+    }
+    if (saveSettingsTimer != null) {
+      window.clearTimeout(saveSettingsTimer);
+    }
+    saveSettingsTimer = window.setTimeout(() => {
+      saveSettingsTimer = null;
+      saveSettingsToStorage(settings.value);
+      lastNonViewSignature = buildSettingsSignature(settings.value);
+    }, VIEW_SETTINGS_SAVE_DELAY_MS);
   },
   { deep: true },
 );
@@ -125,6 +152,10 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   window.removeEventListener('atoms-viewer:import-session', handleImportSessionEvent);
+  if (saveSettingsTimer != null) {
+    window.clearTimeout(saveSettingsTimer);
+    saveSettingsTimer = null;
+  }
 });
 
 // 页面流程控制（空页 / viewer）

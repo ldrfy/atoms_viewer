@@ -50,3 +50,6 @@ export const DUAL_VIEW_DISTANCE_SYNC_INTERVAL_MS = 120;
 // Session save debounce (ms). / 会话保存节流（毫秒）。
 export const SESSION_SAVE_DELAY_LAYERS_MS = 500;
 export const SESSION_SAVE_DELAY_SETTINGS_MS = 600;
+// View settings (rotation/distance) save debounce (ms).
+// 视角设置（旋转/视距）本地保存防抖（毫秒）。
+export const VIEW_SETTINGS_SAVE_DELAY_MS = 700;

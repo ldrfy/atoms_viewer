@@ -167,7 +167,6 @@ const autoRotateOnLoadModel = computed({
         autoRotate: {
           ...settings.value.autoRotate,
           enabled: false,
-          autoEnabledBySystem: false,
         },
       });
       return;

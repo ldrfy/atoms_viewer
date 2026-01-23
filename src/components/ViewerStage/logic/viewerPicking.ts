@@ -337,9 +337,7 @@ export function createViewerPickingController(deps: RenderDeps) {
     const presets
       = normalizeViewPresets(rawPresets).length > 0
         ? normalizeViewPresets(rawPresets)
-        : deps.settingsRef.value.dualViewEnabled
-          ? (['front', 'side'] as const)
-          : ([] as const);
+        : ([] as const);
 
     const isDual = presets.length === 2;
 

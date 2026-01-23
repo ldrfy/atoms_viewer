@@ -202,12 +202,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed, inject, ref } from 'vue';
+import { computed, inject, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { DEFAULT_LAYER_DISPLAY, type LayerDisplaySettings, type RepresentationId } from '../../../lib/viewer/settings';
 import { viewerApiRef } from '../../../lib/viewer/bridge';
 import { useSettingsSiderContext } from '../useSettingsSiderContext';
 import { settingsSiderDerivedContextKey } from '../context';
+import { readApplyAllLayersFlags, writeApplyAllLayersFlags } from '../applyAllStorage';
 import {
   ATOM_ROUGHNESS_MIN,
   ATOM_ROUGHNESS_MAX,
@@ -222,7 +223,7 @@ import {
 } from '../../../lib/viewer/constants';
 
 const { t } = useI18n();
-const { hasAnyLayer } = useSettingsSiderContext();
+const { hasAnyLayer, patchSettings } = useSettingsSiderContext();
 
 const viewerApi = computed(() => viewerApiRef.value);
 const layerList = computed(() => viewerApi.value?.layers.value ?? []);
@@ -233,7 +234,14 @@ const activeLayerInfo = computed(() => {
   return layerList.value.find(l => l.id === id) ?? null;
 });
 
-const applyToAllLayers = ref(true);
+const applyToAllLayers = ref(readApplyAllLayersFlags().details ?? true);
+
+watch(
+  applyToAllLayers,
+  (v) => {
+    writeApplyAllLayersFlags({ details: v });
+  },
+);
 
 const displayModel = computed<LayerDisplaySettings | null>(() => {
   return viewerApi.value?.activeLayerDisplay.value ?? null;
@@ -247,6 +255,18 @@ function patchDisplay(patch: Partial<LayerDisplaySettings>): void {
   const api = viewerApi.value;
   if (!api || !activeLayerInfo.value) return;
   api.setActiveLayerDisplay(patch, { applyToAll: applyToAllLayers.value });
+  if (!applyToAllLayers.value) return;
+  const cur = displayModel.value ?? DEFAULT_LAYER_DISPLAY;
+  const next = { ...cur, ...patch };
+  patchSettings({
+    representation: next.representation,
+    atomScale: next.atomScale,
+    showBonds: next.showBonds,
+    sphereSegments: next.sphereSegments,
+    bondFactor: next.bondFactor,
+    bondRadius: next.bondRadius,
+    atomRoughness: next.atomRoughness,
+  });
 }
 
 const showBondsModel = computed({

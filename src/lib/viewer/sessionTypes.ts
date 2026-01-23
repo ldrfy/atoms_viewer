@@ -41,17 +41,25 @@ export type ViewerSettingsCategorized = {
   files: FileSettingsGroup;
   rotation: AutoRotateSettings;
   view: DisplaySettingsGroup;
-  details: LayerDisplaySettings;
+  details: LayerDisplaySettings & {
+    applyAllLayers?: boolean;
+  };
   lammps: LammpsTypeMapItem[];
-  colors: AtomTypeColorMapItem[];
+  colors:
+    | AtomTypeColorMapItem[]
+    | {
+      rows: AtomTypeColorMapItem[];
+      applyAllLayers?: boolean;
+    };
   other: OtherSettingsGroup;
 };
 
 export type SessionSnapshot = {
-  version: string;
-  savedAt: string;
   app?: {
+    version?: string;
+    savedAt?: string;
     locale?: string;
+    buildTime?: string;
   };
   settings: ViewerSettingsCategorized | ViewerSettings;
   layers: LayerSnapshot[];

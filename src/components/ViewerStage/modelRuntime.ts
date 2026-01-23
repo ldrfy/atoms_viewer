@@ -1350,7 +1350,7 @@ export function createModelRuntime(args: {
     for (const l of layerMap.values()) {
       const layerDisplay = { ...getLayerDisplay(l) };
       const typeMap = (l.typeMapRows ?? []).map(r => ({ ...r }));
-      const colorMap = cloneColorRows(l.colorMapRows).filter(r => r.isCustom);
+      const colorMap = cloneColorRows(l.colorMapRows);
       res.push({
         id: l.info.id,
         name: l.info.name,

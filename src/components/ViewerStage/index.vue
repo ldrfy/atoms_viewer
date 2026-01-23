@@ -124,8 +124,7 @@ const isLoading = stage.isLoading;
 
 const showDualViewDivider = computed(() => {
   const presets = normalizeViewPresets(settingsRef.value.viewPresets);
-  if (presets.length === 2) return true;
-  return !!settingsRef.value.dualViewEnabled;
+  return presets.length === 2;
 });
 
 const dualViewDividerStyle = computed(() => {

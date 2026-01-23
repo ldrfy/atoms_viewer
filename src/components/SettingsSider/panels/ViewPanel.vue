@@ -215,15 +215,11 @@ function syncViewPresetsFromSettings(): void {
     viewPresetsModel.value = cur;
     return;
   }
-  if (settings.value.dualViewEnabled) {
-    viewPresetsModel.value = ['front', 'side'];
-    return;
-  }
   viewPresetsModel.value = ['front'];
 }
 
 watch(
-  () => [settings.value.viewPresets, settings.value.dualViewEnabled] as const,
+  () => settings.value.viewPresets,
   () => syncViewPresetsFromSettings(),
   { immediate: true, deep: true },
 );
@@ -247,7 +243,7 @@ function onViewPresetsChange(nextRaw: any): void {
   while (merged.length > 2) merged.shift();
 
   viewPresetsModel.value = merged;
-  patchSettings({ viewPresets: merged, dualViewEnabled: false });
+  patchSettings({ viewPresets: merged });
 }
 
 const dualViewDistanceModel = computed({

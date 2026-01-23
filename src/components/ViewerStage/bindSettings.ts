@@ -76,20 +76,11 @@ export function bindViewerStageSettings(params: {
   // 多视角视图 / multi-view presets
   stops.push(
     watch(
-      () =>
-        [
-          settingsRef.value.viewPresets,
-          settingsRef.value.dualViewEnabled,
-        ] as const,
+      () => settingsRef.value.viewPresets,
       () => {
         const v = normalizeViewPresets(settingsRef.value.viewPresets);
         if (v.length > 0) {
           setViewPresets(v);
-          return;
-        }
-        // Backward-compat: old dualViewEnabled implies [front, side]
-        if (settingsRef.value.dualViewEnabled) {
-          setViewPresets(['front', 'side']);
           return;
         }
         setViewPresets([]);

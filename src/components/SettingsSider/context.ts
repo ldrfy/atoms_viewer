@@ -47,6 +47,7 @@ export const settingsSiderDerivedContextKey: InjectionKey<SettingsSiderDerivedCo
 
 export interface SettingsSiderControlContext {
   replaceSettings: (next: ViewerSettings) => void;
+  notifyClearStorageUi?: () => void;
 }
 
 export const settingsSiderControlContextKey: InjectionKey<SettingsSiderControlContext> = Symbol(

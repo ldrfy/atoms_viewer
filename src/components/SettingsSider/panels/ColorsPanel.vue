@@ -97,7 +97,7 @@
 
 <script setup lang="ts">
 import { ReloadOutlined } from '@ant-design/icons-vue';
-import { computed, onBeforeUnmount, ref } from 'vue';
+import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { message } from 'ant-design-vue';
 import { useI18n } from 'vue-i18n';
 
@@ -106,6 +106,7 @@ import { useSettingsSiderContext } from '../useSettingsSiderContext';
 import type { AtomTypeColorMapItem } from '../../../lib/viewer/settings';
 import { getElementColorHex } from '../../../lib/structure/chem';
 import { getVisualStylePreset } from '../../../lib/viewer/visualStyles';
+import { readApplyAllLayersFlags, writeApplyAllLayersFlags } from '../applyAllStorage';
 
 import { getAtomTypeColorKey } from '../../ViewerStage/colorMap';
 
@@ -115,7 +116,14 @@ const { patchSettings, hasAnyLayer, settings } = useSettingsSiderContext();
 const viewerApi = computed(() => viewerApiRef.value);
 const layerList = computed(() => viewerApi.value?.layers.value ?? []);
 const activeLayerId = computed(() => viewerApi.value?.activeLayerId.value ?? null);
-const applyToAllLayers = ref(true);
+const applyToAllLayers = ref(readApplyAllLayersFlags().colors ?? true);
+
+watch(
+  applyToAllLayers,
+  (v) => {
+    writeApplyAllLayersFlags({ colors: v });
+  },
+);
 const activeLayerInfo = computed(() => {
   const id = activeLayerId.value;
   if (!id) return null;

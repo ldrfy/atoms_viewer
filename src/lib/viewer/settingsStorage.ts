@@ -38,7 +38,8 @@ export function normalizeSettings(input: Partial<ViewerSettings> | null): Viewer
   const base = buildDefaultSettings();
   if (!input || typeof input !== 'object') return base;
 
-  const v = input as Partial<ViewerSettings>;
+  const v = { ...(input as Partial<ViewerSettings> & { dualViewEnabled?: unknown }) };
+  if ('dualViewEnabled' in v) delete (v as { dualViewEnabled?: unknown }).dualViewEnabled;
   const inferredBgMode = (() => {
     if (typeof v.backgroundColorMode === 'string') return v.backgroundColorMode;
     if (typeof v.backgroundColor === 'string') {
@@ -55,8 +56,6 @@ export function normalizeSettings(input: Partial<ViewerSettings> | null): Viewer
     autoRotate: {
       ...base.autoRotate,
       ...(v.autoRotate ?? {}),
-      // Never persist system auto-enable state.
-      autoEnabledBySystem: false,
     },
     lammpsTypeMap: Array.isArray(v.lammpsTypeMap)
       ? v.lammpsTypeMap.map(r => ({ ...r }))
@@ -131,10 +130,6 @@ export function saveSettingsToStorage(settings: ViewerSettings): void {
       autoRotate: { ...settings.autoRotate },
       rotationDeg: { ...settings.rotationDeg },
     };
-    if (data.autoRotate.autoEnabledBySystem) {
-      data.autoRotate.enabled = false;
-      data.autoRotate.autoEnabledBySystem = false;
-    }
     const payload: StoredSettings = {
       version: SETTINGS_STORAGE_VERSION,
       data,

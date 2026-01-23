@@ -34,7 +34,6 @@
           :show-grab="drawerPlacement === 'bottom'"
           @close="onCloseClick"
           @resize-start="onResizeStart"
-          @clear-storage="onClearStorage"
         />
       </div>
     </Transition>
@@ -111,6 +110,7 @@ provide(settingsSiderContextKey, {
 
 provide(settingsSiderControlContextKey, {
   replaceSettings,
+  notifyClearStorageUi: onClearStorage,
 });
 
 /**

@@ -125,28 +125,69 @@
         @change="onProjectFilePicked"
       >
     </a-form-item>
+
+    <a-form-item :label="t('settings.title')">
+      <a-row :gutter="8">
+        <a-col :span="12">
+          <a-button block @click="onExportSettings">
+            {{ t('settings.exportSettings') }}
+          </a-button>
+        </a-col>
+        <a-col :span="12">
+          <a-button block @click="onImportSettings">
+            {{ t('settings.importSettings') }}
+          </a-button>
+        </a-col>
+      </a-row>
+      <a-button
+        block
+        danger
+        class="settings-gap-top-sm"
+        @click="onClearStorage"
+      >
+        {{ t('settings.clearStorage') }}
+      </a-button>
+      <a-typography-text type="secondary" class="settings-text-secondary">
+        {{ t('settings.clearStorageHint') }}
+      </a-typography-text>
+      <input
+        ref="settingsImportInputRef"
+        class="settings-import-input"
+        type="file"
+        accept="application/json,.json"
+        hidden
+        @change="onImportFile"
+      >
+    </a-form-item>
   </a-form>
 </template>
 
 <script setup lang="ts">
-import { computed, inject, onBeforeUnmount, ref, watch } from 'vue';
+import { computed, inject, nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { message } from 'ant-design-vue';
+import { message, Modal } from 'ant-design-vue';
 
 import { viewerApiRef } from '../../../lib/viewer/bridge';
 import { settingsSiderDirtyContextKey } from '../context';
 import { useSettingsSiderContext } from '../useSettingsSiderContext';
+import { useSettingsSiderControlContext } from '../useSettingsSiderControlContext';
 import { PANEL_KEYS } from '../../../lib/viewer/panelKeys';
 import { DEFAULT_SETTINGS } from '../../../lib/viewer/settings';
 import { buildProjectZip, parseProjectZip } from '../../../lib/viewer/projectPackage';
-import { getLocale } from '../../../i18n';
+import { readApplyAllLayersFlags, writeApplyAllLayersFlags } from '../applyAllStorage';
+import { getLocale, setLocale, SUPPORT_LOCALES } from '../../../i18n';
 import type { StructureExportFormat } from '../../../lib/structure/export';
+import { buildSettingsExportJson, clearAllSettings, applyImportedSettings, parseSettingsImport } from '../../../lib/viewer/settingsActions';
+import { buildExportFilename } from '../../../lib/file/filename';
+import { setThemeMode } from '../../../theme/mode';
 
 const { t } = useI18n();
 const { hasAnyLayer, settings, patchSettings } = useSettingsSiderContext();
+const { replaceSettings, notifyClearStorageUi } = useSettingsSiderControlContext();
 
 const viewerApi = computed(() => viewerApiRef.value);
 const projectInputRef = ref<HTMLInputElement | null>(null);
+const settingsImportInputRef = ref<HTMLInputElement | null>(null);
 const DEFAULT_EXPORT_SCALE = DEFAULT_SETTINGS.exportPngScale;
 const DEFAULT_EXPORT_TRANSPARENT = DEFAULT_SETTINGS.exportPngTransparent;
 const DEFAULT_CACHE_REMOTE = DEFAULT_SETTINGS.cacheRemoteOnExport;
@@ -212,6 +253,87 @@ onBeforeUnmount(() => {
   dirtyContext?.setPanelDirty(PANEL_KEYS.files, false);
 });
 
+function onClearStorage(): void {
+  Modal.confirm({
+    title: t('settings.clearStorageConfirmTitle'),
+    content: t('settings.clearStorageConfirmBody'),
+    centered: true,
+    okText: t('common.confirm'),
+    cancelText: t('common.cancel'),
+    onOk: async () => {
+      await clearAllSettings({
+        currentSettings: settings.value,
+        viewerApi: viewerApi.value,
+        replaceSettings,
+        nextTick,
+        onAfterClear: notifyClearStorageUi,
+      });
+    },
+  });
+}
+
+async function onExportSettings(): Promise<void> {
+  try {
+    const { json, fileStem } = await buildSettingsExportJson({
+      settings: settings.value,
+      viewerApi: viewerApi.value,
+      locale: getLocale(),
+      applyAllLayers: readApplyAllLayersFlags(),
+    });
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = buildExportFilename({ modelFileName: fileStem, ext: 'json' });
+    a.click();
+    URL.revokeObjectURL(url);
+    message.success(t('settings.exportSuccess'));
+  }
+  catch (err) {
+    console.error(err);
+    message.error(t('common.error'));
+  }
+}
+
+function onImportSettings(): void {
+  settingsImportInputRef.value?.click();
+}
+
+function onImportFile(e: Event): void {
+  const input = e.target as HTMLInputElement | null;
+  const file = input?.files?.[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async () => {
+    try {
+      const raw = String(reader.result ?? '');
+      const parsed = parseSettingsImport(raw);
+      if (parsed.applyAllLayers) {
+        writeApplyAllLayersFlags(parsed.applyAllLayers);
+      }
+      const locale = parsed.locale && SUPPORT_LOCALES.includes(parsed.locale)
+        ? parsed.locale
+        : undefined;
+      await applyImportedSettings({
+        parsed: { ...parsed, locale },
+        viewerApi: viewerApi.value,
+        replaceSettings,
+        setLocale: locale ? setLocale : undefined,
+        setThemeMode,
+        nextTick,
+      });
+      message.success(t('settings.importSuccess'));
+    }
+    catch {
+      message.error(t('settings.importFailed'));
+    }
+    finally {
+      if (input) input.value = '';
+    }
+  };
+  reader.readAsText(file);
+}
+
 function onExport(): void {
   if (!viewerApi.value) return;
   void viewerApi.value.exportPng({
@@ -259,6 +381,7 @@ async function onExportProject(): Promise<void> {
       sources,
       modelFileName: api.parseInfo?.fileName ?? 'atoms-viewer',
       app: { locale: getLocale() },
+      applyAllLayers: readApplyAllLayersFlags(),
     });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');

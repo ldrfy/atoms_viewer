@@ -54,36 +54,6 @@
       </a-collapse-panel>
     </a-collapse>
 
-    <div class="settings-reset">
-      <a-button block danger @click="onClearStorage">
-        {{ t('settings.clearStorage') }}
-      </a-button>
-      <a-typography-text type="secondary" class="settings-text-secondary">
-        {{ t('settings.clearStorageHint') }}
-      </a-typography-text>
-      <div class="settings-import-export">
-        <a-row :gutter="8">
-          <a-col :span="12">
-            <a-button block @click="onExportSettings">
-              {{ t('settings.exportSettings') }}
-            </a-button>
-          </a-col>
-          <a-col :span="12">
-            <a-button block @click="onImportSettings">
-              {{ t('settings.importSettings') }}
-            </a-button>
-          </a-col>
-        </a-row>
-        <input
-          ref="importInputRef"
-          class="settings-import-input"
-          type="file"
-          accept="application/json,.json"
-          @change="onImportFile"
-        >
-      </div>
-    </div>
-
     <div class="settings-build-info">
       <a-typography-text type="secondary" class="settings-text-secondary">
         {{ t('settings.buildTime') }} {{ buildTimeText }}
@@ -93,9 +63,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, provide, reactive, ref, watch } from 'vue';
+import { computed, provide, reactive, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { Modal, message } from 'ant-design-vue';
 import {
   AppstoreOutlined,
   BgColorsOutlined,
@@ -120,30 +89,16 @@ import {
   DEFAULT_SETTINGS,
   DEFAULT_LAYER_DISPLAY,
 } from '../../lib/viewer/settings';
-import type { ViewerSettings, AtomTypeColorMapItem } from '../../lib/viewer/settings';
+import type { AtomTypeColorMapItem } from '../../lib/viewer/settings';
 import { useSettingsSiderContext } from './useSettingsSiderContext';
-import { useSettingsSiderControlContext } from './useSettingsSiderControlContext';
 import { settingsSiderDirtyContextKey, settingsSiderDerivedContextKey } from './context';
 import { viewerApiRef } from '../../lib/viewer/bridge';
-import {
-  buildDefaultSettings,
-  clearSettingsStorage,
-  normalizeSettings,
-  saveSettingsToStorage,
-} from '../../lib/viewer/settingsStorage';
-import { clearSessionStorage } from '../../lib/viewer/sessionStorage';
-import { buildExportFilename } from '../../lib/file/filename';
-import { setThemeMode } from '../../theme/mode';
-import { getLocale, setLocale, SUPPORT_LOCALES, type SupportLocale } from '../../i18n';
 import { APP_BUILD_TIME } from '../../lib/appMeta';
 import { isLammpsDumpFormat } from '../../lib/structure/parsers/lammpsDump';
 import { isLammpsDataFormat } from '../../lib/structure/parsers/lammpsData';
-import type { LayerSnapshot } from '../../lib/viewer/sessionTypes';
-import { flattenCategorizedSettings } from '../../lib/viewer/sessionTemplates';
 import { getVisualStylePreset } from '../../lib/viewer/visualStyles';
 import { getElementColorHex } from '../../lib/structure/chem';
 import { getAtomTypeColorKey } from '../ViewerStage/colorMap';
-import { buildSettingsSnapshot } from '../../lib/viewer/projectPackage';
 import { PANEL_KEYS, PANEL_HEADER_KEYS } from '../../lib/viewer/panelKeys';
 
 const props = withDefaults(
@@ -159,16 +114,13 @@ const props = withDefaults(
 const emit = defineEmits<{
   (e: 'close'): void;
   (e: 'resize-start', ev: PointerEvent): void;
-  (e: 'clear-storage'): void;
   (e: 'update:activeKey', v: string[]): void;
 }>();
 
 const { t, locale } = useI18n();
 const { settings } = useSettingsSiderContext();
-const { replaceSettings } = useSettingsSiderControlContext();
 
 const viewerApi = computed(() => viewerApiRef.value);
-const importInputRef = ref<HTMLInputElement | null>(null);
 const layerList = computed(() => viewerApi.value?.layers.value ?? []);
 const activeLayerId = computed(() => viewerApi.value?.activeLayerId.value ?? null);
 const activeLayerInfo = computed(() => {
@@ -180,63 +132,6 @@ const activeLayerIsLammps = computed(() => {
   const format = activeLayerInfo.value?.sourceFormat ?? '';
   return isLammpsDumpFormat(format) || isLammpsDataFormat(format);
 });
-
-function extractSettingsPayload(input: unknown): {
-  settings: Partial<ViewerSettings>;
-  locale?: SupportLocale;
-  layers?: LayerSnapshot[];
-} {
-  if (!input || typeof input !== 'object') {
-    return { settings: {} };
-  }
-  const anyInput = input as Record<string, unknown>;
-  const topSettings = anyInput.settings as Record<string, any> | undefined;
-  const app = anyInput.app as Record<string, unknown> | undefined;
-  const locale = app?.locale as SupportLocale | undefined;
-  const layers = Array.isArray(anyInput.layers)
-    ? (anyInput.layers as LayerSnapshot[])
-    : undefined;
-
-  const maybeCategorized = topSettings && typeof topSettings === 'object'
-    && (
-      'files' in topSettings
-      || 'rotation' in topSettings
-      || 'view' in topSettings
-      || 'details' in topSettings
-      || 'colors' in topSettings
-      || 'lammps' in topSettings
-    );
-
-  if (maybeCategorized) {
-    const categorized = topSettings as any;
-    const flat = flattenCategorizedSettings(categorized as any);
-    return {
-      locale,
-      layers,
-      settings: flat,
-    };
-  }
-  if (topSettings && typeof topSettings === 'object') {
-    return {
-      locale,
-      layers,
-      settings: topSettings as Partial<ViewerSettings>,
-    };
-  }
-  const data = anyInput.data;
-  if (data && typeof data === 'object') {
-    return {
-      locale,
-      layers,
-      settings: data as Partial<ViewerSettings>,
-    };
-  }
-  return {
-    locale,
-    layers,
-    settings: anyInput as Partial<ViewerSettings>,
-  };
-}
 
 const panelDirtyFlags = reactive<Record<string, boolean>>({});
 provide(settingsSiderDirtyContextKey, {
@@ -280,7 +175,6 @@ const viewDirty = computed(() => {
     : DEFAULT_SETTINGS.dualViewDistance;
   return (
     settings.value.orthographic !== DEFAULT_SETTINGS.orthographic
-    || settings.value.dualViewEnabled !== DEFAULT_SETTINGS.dualViewEnabled
     || !arraysEqual(settings.value.viewPresets, DEFAULT_SETTINGS.viewPresets)
     || settings.value.dualViewSplit !== DEFAULT_SETTINGS.dualViewSplit
     || (settings.value.dualViewDistance ?? defaultDistance) !== defaultDistance
@@ -299,7 +193,6 @@ const rotationDirty = computed(() => {
     || cur.speedDegPerSec !== def.speedDegPerSec
     || !!cur.pauseOnInteract !== !!def.pauseOnInteract
     || cur.resumeDelayMs !== def.resumeDelayMs
-    || !!cur.autoEnabledBySystem
   );
 });
 
@@ -447,172 +340,4 @@ function onResizeStart(ev: PointerEvent): void {
   emit('resize-start', ev);
 }
 
-function applyDefaults() {
-  const defaults = buildDefaultSettings();
-  const initialDistance = settings.value.initialDualViewDistance;
-  const dist = typeof initialDistance === 'number' && Number.isFinite(initialDistance)
-    ? initialDistance
-    : defaults.initialDualViewDistance;
-
-  const nextSettings = {
-    ...defaults,
-    dualViewDistance: dist,
-    initialDualViewDistance: dist,
-    rotationDeg: { x: 0, y: 0, z: 0 },
-    resetViewSeq: settings.value.resetViewSeq,
-  };
-
-  const api = viewerApiRef.value;
-  if (api) {
-    api.suspendSettingsSync(300);
-    api.setCacheRemoteOnExport?.(nextSettings.cacheRemoteOnExport ?? true);
-  }
-
-  replaceSettings(nextSettings);
-  if (api) {
-    void nextTick(() => {
-      api.applyViewFromSettings(nextSettings);
-    });
-  }
-
-  if (!api) return nextSettings;
-
-  api.setActiveLayerDisplay(
-    {
-      atomScale: DEFAULT_LAYER_DISPLAY.atomScale,
-      showBonds: DEFAULT_LAYER_DISPLAY.showBonds,
-      sphereSegments: DEFAULT_LAYER_DISPLAY.sphereSegments,
-      bondFactor: DEFAULT_LAYER_DISPLAY.bondFactor,
-      bondRadius: DEFAULT_LAYER_DISPLAY.bondRadius,
-      atomRoughness: DEFAULT_LAYER_DISPLAY.atomRoughness,
-    },
-    { applyToAll: true },
-  );
-
-  api.resetAllLayersTypeMapToDefaults({
-    templateRows: [...(DEFAULT_SETTINGS.lammpsTypeMap ?? [])],
-    useAtomDefaults: false,
-  });
-  api.resetAllLayersColorMapToDefaults();
-
-  return nextSettings;
-}
-
-function onClearStorage(): void {
-  Modal.confirm({
-    title: t('settings.clearStorageConfirmTitle'),
-    content: t('settings.clearStorageConfirmBody'),
-    centered: true,
-    okText: t('common.confirm'),
-    cancelText: t('common.cancel'),
-    onOk: () => {
-      clearSettingsStorage();
-      emit('clear-storage');
-      const nextSettings = applyDefaults();
-      if (nextSettings) {
-        saveSettingsToStorage(nextSettings);
-      }
-      void clearSessionStorage();
-    },
-  });
-}
-
-async function onExportSettings(): Promise<void> {
-  try {
-    const data = normalizeSettings(settings.value);
-    const api = viewerApiRef.value;
-    const layerSnapshots: LayerSnapshot[] = api?.getLayerSnapshots
-      ? await api.getLayerSnapshots()
-      : [];
-
-    const payload = buildSettingsSnapshot(data, layerSnapshots, { locale: getLocale() });
-    const json = JSON.stringify(payload, null, 2);
-    const blob = new Blob([json], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    const fileStem = api?.parseInfo?.fileName ?? 'atoms-viewer';
-    a.download = buildExportFilename({ modelFileName: fileStem, ext: 'json' });
-    a.click();
-    URL.revokeObjectURL(url);
-    message.success(t('settings.exportSuccess'));
-  }
-  catch (err) {
-    console.error(err);
-    message.error(t('common.error'));
-  }
-}
-
-function onImportSettings(): void {
-  importInputRef.value?.click();
-}
-
-function onImportFile(e: Event): void {
-  const input = e.target as HTMLInputElement | null;
-  const file = input?.files?.[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = () => {
-    try {
-      const raw = String(reader.result ?? '');
-      const parsed = JSON.parse(raw) as any;
-      const extracted = extractSettingsPayload(parsed);
-      const nextSettings = normalizeSettings(extracted.settings as ViewerSettings);
-
-      const api = viewerApiRef.value;
-      if (api) {
-        api.suspendSettingsSync(300);
-      }
-
-      if (extracted.locale && SUPPORT_LOCALES.includes(extracted.locale)) {
-        setLocale(extracted.locale);
-      }
-
-      replaceSettings(nextSettings);
-      if (api) {
-        api.setCacheRemoteOnExport?.(nextSettings.cacheRemoteOnExport ?? true);
-      }
-      setThemeMode(nextSettings.themeMode);
-      saveSettingsToStorage(nextSettings);
-
-      const layerSnapshots = extracted.layers;
-      if (api) {
-        void nextTick(async () => {
-          api.applyViewFromSettings(nextSettings);
-          const hasLayerSnapshots = Array.isArray(layerSnapshots) && layerSnapshots.length > 0;
-          if (hasLayerSnapshots && api.applyLayerSnapshots) {
-            await api.applyLayerSnapshots(layerSnapshots as LayerSnapshot[]);
-          }
-          else {
-            api.setActiveLayerDisplay(
-              {
-                atomScale: nextSettings.atomScale,
-                sphereSegments: nextSettings.sphereSegments,
-                showBonds: nextSettings.showBonds,
-                bondFactor: nextSettings.bondFactor,
-                bondRadius: nextSettings.bondRadius,
-                atomRoughness: nextSettings.atomRoughness,
-              },
-              { applyToAll: true },
-            );
-            api.setAllLayersColorMap(nextSettings.colorMapTemplate ?? []);
-            api.refreshColorMap({ applyToAll: true });
-            api.resetAllLayersTypeMapToDefaults({
-              templateRows: [...(nextSettings.lammpsTypeMap ?? [])],
-              useAtomDefaults: false,
-            });
-          }
-        });
-      }
-      message.success(t('settings.importSuccess'));
-    }
-    catch {
-      message.error(t('settings.importFailed'));
-    }
-    finally {
-      if (input) input.value = '';
-    }
-  };
-  reader.readAsText(file);
-}
 </script>

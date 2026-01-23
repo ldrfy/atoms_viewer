@@ -7,7 +7,6 @@ const STORE_NAME = 'model-sources';
 
 type StoredSessionMeta = {
   version: number;
-  savedAt: string;
   snapshot: SessionSnapshot;
   cachedMd5s: string[];
 };
@@ -154,13 +153,20 @@ export async function saveSessionToStorage(
   const cachedMd5s = await saveSourcesToDb(
     (sources ?? []).filter(s => s.md5 && s.buffer) as LayerSourceData[],
   );
+  const savedAt = snapshot.app?.savedAt ?? new Date().toISOString();
   const payload: StoredSessionMeta = {
     version: 1,
-    savedAt: snapshot.savedAt ?? new Date().toISOString(),
     snapshot,
     cachedMd5s,
   };
   try {
+    payload.snapshot = {
+      ...snapshot,
+      app: {
+        savedAt,
+        ...(snapshot.app ?? {}),
+      },
+    };
     localStorage.setItem(SESSION_KEY, JSON.stringify(payload));
   }
   catch (err) {

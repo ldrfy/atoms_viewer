@@ -262,15 +262,11 @@ export function createViewerLoader(deps: {
     }
 
     let presets = normalizeViewPresets(getSettings().viewPresets);
-    if (presets.length === 0 && !!getSettings().dualViewEnabled) {
-      presets = ['front', 'side'];
-    }
-
     if (presets.length === 0) {
       const w = stage.host.getBoundingClientRect().width;
       presets = w >= 900 ? ['front', 'side'] : ['front'];
       if (canPatch)
-        deps.patchSettings!({ viewPresets: presets, dualViewEnabled: false });
+        deps.patchSettings!({ viewPresets: presets });
     }
 
     stage.setViewPresets(presets);
@@ -462,9 +458,6 @@ export function createViewerLoader(deps: {
           autoRotate: {
             ...current,
             enabled,
-            autoEnabledBySystem: enabledBySystem
-              ? true
-              : !!current.autoEnabledBySystem,
           },
         });
         if (enabledBySystem) {

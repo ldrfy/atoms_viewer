@@ -54,6 +54,7 @@ import { createViewerAnimationController } from './logic/viewerAnimation';
 import { createSettingsSync } from './settingsSync';
 import { buildSettingsSnapshot, parseProjectZip } from '../../lib/viewer/projectPackage';
 import { flattenCategorizedSettings } from '../../lib/viewer/sessionTemplates';
+import { readApplyAllLayersFlags, writeApplyAllLayersFlags } from '../SettingsSider/applyAllStorage';
 import { normalizeSettings } from '../../lib/viewer/settingsStorage';
 import { computeMd5ForArrayBuffer } from '../../lib/file/md5';
 import { buildExportFilename } from '../../lib/file/filename';
@@ -557,7 +558,12 @@ export function useViewerStage(
       return;
     }
 
-    const snapshot = buildSettingsSnapshot(settingsRef.value, layerSnapshots);
+    const snapshot = buildSettingsSnapshot(
+      settingsRef.value,
+      layerSnapshots,
+      undefined,
+      readApplyAllLayersFlags(),
+    );
     const sources = collectLayerSources();
     const curSettings = settingsRef.value;
     const sig = JSON.stringify({
@@ -806,6 +812,15 @@ export function useViewerStage(
 
     // 先还原设置
     const rawSettings = snapshot.settings as any;
+    if (rawSettings && typeof rawSettings === 'object') {
+      const colorsPayload = rawSettings?.colors;
+      writeApplyAllLayersFlags({
+        details: rawSettings?.details?.applyAllLayers,
+        colors: Array.isArray(colorsPayload)
+          ? undefined
+          : colorsPayload?.applyAllLayers,
+      });
+    }
     const isCategorized = rawSettings && typeof rawSettings === 'object'
       && (
         'files' in rawSettings
@@ -1048,12 +1063,7 @@ export function useViewerStage(
     };
 
     const presets = normalizeViewPresets(next.viewPresets);
-    if (presets.length > 0) {
-      stage.setViewPresets(presets);
-    }
-    else if (next.dualViewEnabled) {
-      stage.setViewPresets(['front', 'side']);
-    }
+    stage.setViewPresets(presets);
 
     const split = next.dualViewSplit;
     if (typeof split === 'number' && Number.isFinite(split)) {

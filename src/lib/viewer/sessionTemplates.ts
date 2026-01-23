@@ -25,40 +25,44 @@ export function buildCategorizedSettings(
       exportPngTransparent: settings.exportPngTransparent,
       cacheRemoteOnExport: settings.cacheRemoteOnExport,
     },
-    rotation: settings.autoRotate,
-    view: {
-      rotationDeg: settings.rotationDeg,
-      orthographic: settings.orthographic,
-      viewPresets: settings.viewPresets ?? [],
-      dualViewEnabled: settings.dualViewEnabled ?? false,
-      dualViewDistance: Number(settings.dualViewDistance ?? DEFAULT_SETTINGS.dualViewDistance),
-      initialDualViewDistance: Number(settings.initialDualViewDistance ?? DEFAULT_SETTINGS.initialDualViewDistance),
-      dualViewSplit: Number(settings.dualViewSplit ?? DEFAULT_SETTINGS.dualViewSplit),
-      resetViewSeq: Number(settings.resetViewSeq ?? 0),
+    rotation: {
+      enabled: settings.autoRotate.enabled,
+      presetId: settings.autoRotate.presetId,
+      speedDegPerSec: settings.autoRotate.speedDegPerSec,
+      pauseOnInteract: settings.autoRotate.pauseOnInteract,
+      resumeDelayMs: settings.autoRotate.resumeDelayMs,
     },
-    details: {
-      representation: settings.representation,
-      atomScale: settings.atomScale,
-      sphereSegments: settings.sphereSegments,
-      showBonds: settings.showBonds,
-      bondFactor: settings.bondFactor,
-      bondRadius: settings.bondRadius,
-      atomRoughness: settings.atomRoughness,
+    view: {
+      viewPresets: settings.viewPresets ?? [],
+      dualViewSplit: Number(settings.dualViewSplit ?? DEFAULT_SETTINGS.dualViewSplit),
+      orthographic: settings.orthographic,
+      dualViewDistance: Number(settings.dualViewDistance ?? DEFAULT_SETTINGS.dualViewDistance),
+      rotationDeg: settings.rotationDeg,
+      initialDualViewDistance: Number(settings.initialDualViewDistance ?? DEFAULT_SETTINGS.initialDualViewDistance),
     },
     lammps: (settings.lammpsTypeMap ?? []).map(r => ({ ...r })),
+    details: {
+      representation: settings.representation,
+      showBonds: settings.showBonds,
+      bondRadius: settings.bondRadius,
+      atomScale: settings.atomScale,
+      atomRoughness: settings.atomRoughness,
+      bondFactor: settings.bondFactor,
+      sphereSegments: settings.sphereSegments,
+    },
     colors: (settings.colorMapTemplate ?? []).map(r => ({ ...r })),
     other: {
+      themeMode: settings.themeMode,
+      themeReadabilityCheckOnOpen: settings.themeReadabilityCheckOnOpen,
+      visualStyle: settings.visualStyle,
+      modelLightIntensity: settings.modelLightIntensity,
       showAxes: settings.showAxes,
+      autoRotateOnLoad: settings.autoRotateOnLoad,
       refreshBondsOnPlay: settings.refreshBondsOnPlay,
+      frame_rate: settings.frame_rate,
       backgroundColor: settings.backgroundColor,
       backgroundColorMode: settings.backgroundColorMode,
       backgroundTransparent: settings.backgroundTransparent,
-      themeReadabilityCheckOnOpen: settings.themeReadabilityCheckOnOpen,
-      modelLightIntensity: settings.modelLightIntensity,
-      frame_rate: settings.frame_rate,
-      autoRotateOnLoad: settings.autoRotateOnLoad,
-      themeMode: settings.themeMode,
-      visualStyle: settings.visualStyle,
     },
   };
 }
@@ -83,11 +87,9 @@ export function flattenCategorizedSettings(
     base.rotationDeg = apply.view.rotationDeg ?? base.rotationDeg;
     if (apply.view.orthographic !== undefined) base.orthographic = apply.view.orthographic;
     if (apply.view.viewPresets) base.viewPresets = apply.view.viewPresets;
-    if (apply.view.dualViewEnabled !== undefined) base.dualViewEnabled = apply.view.dualViewEnabled;
     if (apply.view.dualViewDistance !== undefined) base.dualViewDistance = apply.view.dualViewDistance;
     if (apply.view.initialDualViewDistance !== undefined) base.initialDualViewDistance = apply.view.initialDualViewDistance;
     if (apply.view.dualViewSplit !== undefined) base.dualViewSplit = apply.view.dualViewSplit;
-    if (apply.view.resetViewSeq !== undefined) base.resetViewSeq = apply.view.resetViewSeq;
   }
 
   if (apply.details) {
@@ -104,7 +106,12 @@ export function flattenCategorizedSettings(
     base.lammpsTypeMap = apply.lammps.map(r => ({ ...r }));
   }
   if (apply.colors) {
-    base.colorMapTemplate = apply.colors.map(r => ({ ...r }));
+    const rows = Array.isArray(apply.colors)
+      ? apply.colors
+      : Array.isArray(apply.colors.rows)
+        ? apply.colors.rows
+        : [];
+    base.colorMapTemplate = rows.map(r => ({ ...r }));
   }
 
   if (apply.other) {

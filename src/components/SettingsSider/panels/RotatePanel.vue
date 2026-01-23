@@ -148,7 +148,6 @@ function patchAutoRotate(patch: Partial<(typeof settings.value)['autoRotate']>):
     autoRotate: {
       ...settings.value.autoRotate,
       ...patch,
-      autoEnabledBySystem: false,
     },
   });
 }
@@ -251,7 +250,6 @@ const isAutoRotateDirty = computed(() => {
     || cur.speedDegPerSec !== def.speedDegPerSec
     || !!cur.pauseOnInteract !== !!def.pauseOnInteract
     || cur.resumeDelayMs !== def.resumeDelayMs
-    || !!cur.autoEnabledBySystem
   );
 });
 

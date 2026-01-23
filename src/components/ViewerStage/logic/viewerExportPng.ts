@@ -81,9 +81,7 @@ export function createPngExporter(deps: {
       const presets = (() => {
         const v = normalizeViewPresets(settings.viewPresets);
         if (v.length > 0) return v;
-        return settings.dualViewEnabled
-          ? (['front', 'side'] as const)
-          : ([] as const);
+        return [] as const;
       })();
 
       if (presets.length === 2) {
@@ -111,8 +109,9 @@ export function createPngExporter(deps: {
           return qFront;
         };
 
-        const qL = presetQuat(presets[0]).clone();
-        const qR = presetQuat(presets[1]).clone();
+        const [leftPreset, rightPreset] = presets as [string, string];
+        const qL = presetQuat(leftPreset).clone();
+        const qR = presetQuat(rightPreset).clone();
         const offset = qR.multiply(qL.invert());
 
         const viewVec = camera.position.clone().sub(target);

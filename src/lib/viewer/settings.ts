@@ -36,8 +36,6 @@ export type RotationDeg = {
 export type AutoRotateSettings = {
   /** Enable auto rotation in the render loop. */
   enabled: boolean;
-  /** Set when auto-rotation was enabled automatically (do not persist). */
-  autoEnabledBySystem?: boolean;
   /** Built-in preset id (UI maps it to an axis direction). */
   presetId: AutoRotatePresetId;
   /** Angular speed in degrees per second (independent from preset). */
@@ -82,7 +80,6 @@ export type ViewerSettings = {
   resetViewSeq: number;
   /** Multi-view presets (choose 1 => single view, choose 2 => dual view). */
   viewPresets?: ViewPreset[];
-  dualViewEnabled?: boolean;
   dualViewDistance?: number;
   initialDualViewDistance?: number;
   dualViewSplit?: number;
@@ -167,9 +164,8 @@ export const DEFAULT_AUTO_ROTATE: AutoRotateSettings = {
 export type DisplaySettingsGroup = {
   rotationDeg: RotationDeg;
   orthographic: boolean;
-  resetViewSeq: number;
+  resetViewSeq?: number;
   viewPresets: ViewPreset[];
-  dualViewEnabled: boolean;
   dualViewDistance: number;
   initialDualViewDistance: number;
   dualViewSplit: number;
@@ -179,7 +175,6 @@ export const DEFAULT_DISPLAY: DisplaySettingsGroup = {
   orthographic: false,
   resetViewSeq: 0,
   viewPresets: ['front'] as ViewPreset[],
-  dualViewEnabled: false,
   dualViewDistance: 10,
   initialDualViewDistance: 10,
   dualViewSplit: 0.5,
@@ -242,9 +237,8 @@ export const DEFAULT_SETTINGS: ViewerSettings = {
   // display (view)
   rotationDeg: DEFAULT_DISPLAY.rotationDeg,
   orthographic: DEFAULT_DISPLAY.orthographic,
-  resetViewSeq: DEFAULT_DISPLAY.resetViewSeq,
+  resetViewSeq: DEFAULT_DISPLAY.resetViewSeq ?? 0,
   viewPresets: DEFAULT_DISPLAY.viewPresets,
-  dualViewEnabled: DEFAULT_DISPLAY.dualViewEnabled,
   dualViewDistance: DEFAULT_DISPLAY.dualViewDistance,
   initialDualViewDistance: DEFAULT_DISPLAY.initialDualViewDistance,
   dualViewSplit: DEFAULT_DISPLAY.dualViewSplit,

@@ -23,12 +23,15 @@ export const ATOM_ROUGHNESS_MAX = 1;
 export const DUAL_VIEW_DISTANCE_MIN = 1;
 
 // Layer display ranges. / 图层外观参数范围。
-export const BOND_FACTOR_MIN = 0.8;
-export const BOND_FACTOR_MAX = 1.3;
-export const BOND_RADIUS_MIN = 0.03;
-export const BOND_RADIUS_MAX = 0.3;
-export const ATOM_SCALE_MIN = 0.05;
-export const ATOM_SCALE_MAX = 2;
+export const BOND_FACTOR_MIN = 0.5;
+export const BOND_FACTOR_MAX = 2;
+// 键半径
+export const BOND_RADIUS_MIN = 0.01;
+export const BOND_RADIUS_MAX = 0.5;
+// 原子大小
+export const ATOM_SCALE_MIN = 0.01;
+export const ATOM_SCALE_MAX = 5;
+// 亮度
 export const SPHERE_SEGMENTS_MIN = 8;
 export const SPHERE_SEGMENTS_MAX = 64;
 

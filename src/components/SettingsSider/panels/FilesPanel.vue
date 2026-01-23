@@ -408,6 +408,10 @@ async function onProjectFilePicked(e: Event): Promise<void> {
   try {
     const parsed = await parseProjectZip(file);
     const files = parsed.files?.map(f => f.file) ?? [];
+    if (!parsed.snapshot) {
+      message.error(t('settings.importFailed'));
+      return;
+    }
     const api = viewerApi.value;
     if (api && api.applySessionSnapshot) {
       message.loading(t('settings.importing'), 1);

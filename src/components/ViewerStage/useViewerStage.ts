@@ -1364,8 +1364,6 @@ export function useViewerStage(
     setLayerVisible,
     setAllLayersVisible,
     sortLayers,
-    setAllLayersVisible,
-    sortLayers,
     removeLayer,
 
     activeLayerTypeMap,

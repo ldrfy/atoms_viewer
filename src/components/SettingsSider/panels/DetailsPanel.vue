@@ -326,7 +326,7 @@ const REPRESENTATION_PRESETS: Record<RepresentationId, Partial<LayerDisplaySetti
   spacefill: {
     representation: 'spacefill',
     showBonds: false,
-    atomScale: 1.6,
+    atomScale: 3.6,
     sphereSegments: DEFAULT_LAYER_DISPLAY.sphereSegments,
   },
   points: {

@@ -264,6 +264,10 @@
                 "themeReadabilityCheckOnOpen": "Check theme readability when opening viewer",
                 "modelLightIntensity": "Model light intensity",
                 "atomRoughness": "Atom material roughness",
+                "visualStyle": "Visual style",
+                "visualStyleDefault": "Default",
+                "visualStyleJmol": "Jmol style",
+                "visualStyleHint": "Switch preset colors and atom thickness.",
                 "reset": "Reset other settings"
             },
             "colors": {

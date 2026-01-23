@@ -114,7 +114,7 @@ import {
   DEFAULT_SETTINGS,
   DEFAULT_LAYER_DISPLAY,
 } from '../../lib/viewer/settings';
-import type { ViewerSettings } from '../../lib/viewer/settings';
+import type { ViewerSettings, AtomTypeColorMapItem } from '../../lib/viewer/settings';
 import { useSettingsSiderContext } from './useSettingsSiderContext';
 import { useSettingsSiderControlContext } from './useSettingsSiderControlContext';
 import { settingsSiderDirtyContextKey, settingsSiderDerivedContextKey } from './context';
@@ -133,6 +133,9 @@ import { isLammpsDumpFormat } from '../../lib/structure/parsers/lammpsDump';
 import { isLammpsDataFormat } from '../../lib/structure/parsers/lammpsData';
 import type { LayerSnapshot } from '../../lib/viewer/sessionTypes';
 import { flattenCategorizedSettings } from '../../lib/viewer/sessionTemplates';
+import { getVisualStylePreset } from '../../lib/viewer/visualStyles';
+import { getElementColorHex } from '../../lib/structure/chem';
+import { getAtomTypeColorKey } from '../ViewerStage/colorMap';
 import { buildSettingsSnapshot } from '../../lib/viewer/projectPackage';
 import { PANEL_KEYS, PANEL_HEADER_KEYS } from '../../lib/viewer/panelKeys';
 
@@ -250,13 +253,16 @@ const layersDirty = computed(() => (viewerApi.value?.layers.value.length ?? 0) >
 const detailsDirty = computed(() => {
   const active = viewerApi.value?.activeLayerDisplay?.value;
   const cur = active ?? settings.value;
+  const styleBase = getVisualStylePreset(
+    settings.value.visualStyle ?? DEFAULT_SETTINGS.visualStyle,
+  ).display;
   return (
-    cur.atomScale !== DEFAULT_LAYER_DISPLAY.atomScale
+    cur.atomScale !== styleBase.atomScale
     || cur.showBonds !== DEFAULT_LAYER_DISPLAY.showBonds
     || cur.sphereSegments !== DEFAULT_LAYER_DISPLAY.sphereSegments
-    || cur.bondFactor !== DEFAULT_LAYER_DISPLAY.bondFactor
-    || cur.bondRadius !== DEFAULT_LAYER_DISPLAY.bondRadius
-    || cur.atomRoughness !== DEFAULT_LAYER_DISPLAY.atomRoughness
+    || cur.bondFactor !== styleBase.bondFactor
+    || cur.bondRadius !== styleBase.bondRadius
+    || cur.atomRoughness !== styleBase.atomRoughness
   );
 });
 
@@ -290,13 +296,17 @@ const rotationDirty = computed(() => {
 });
 
 const otherDirty = computed(() => {
+  const styleBase = getVisualStylePreset(
+    settings.value.visualStyle ?? DEFAULT_SETTINGS.visualStyle,
+  ).display;
   return (
     settings.value.showAxes !== DEFAULT_SETTINGS.showAxes
     || settings.value.refreshBondsOnPlay !== DEFAULT_SETTINGS.refreshBondsOnPlay
     || settings.value.frame_rate !== DEFAULT_SETTINGS.frame_rate
     || settings.value.autoRotateOnLoad !== DEFAULT_SETTINGS.autoRotateOnLoad
     || settings.value.themeMode !== DEFAULT_SETTINGS.themeMode
-    || settings.value.modelLightIntensity !== DEFAULT_SETTINGS.modelLightIntensity
+    || settings.value.visualStyle !== DEFAULT_SETTINGS.visualStyle
+    || settings.value.modelLightIntensity !== styleBase.modelLightIntensity
     || (settings.value.themeReadabilityCheckOnOpen ?? true)
       !== (DEFAULT_SETTINGS.themeReadabilityCheckOnOpen ?? true)
   );
@@ -318,9 +328,37 @@ function arraysEqual(a: unknown, b: unknown): boolean {
   return arrA.every((v, i) => v === arrB[i]);
 }
 
+function buildPresetColorMap(styleId: string): Record<string, string> {
+  const preset = getVisualStylePreset(styleId as any);
+  const out: Record<string, string> = {};
+  for (const r of preset.colorMapTemplate ?? []) {
+    const key = getAtomTypeColorKey(r.element, r.typeId);
+    if (!key) continue;
+    const c = String(r.color ?? '').trim().toUpperCase();
+    if (!c) continue;
+    out[key] = c;
+  }
+  return out;
+}
+
+function getBaseColorForRow(styleId: string, row: AtomTypeColorMapItem): string {
+  if (styleId !== 'default') {
+    const preset = buildPresetColorMap(styleId);
+    const key = getAtomTypeColorKey(row.element, row.typeId);
+    return preset[key] ?? getElementColorHex(row.element ?? 'E');
+  }
+  return getElementColorHex(row.element ?? 'E');
+}
+
 function hasCustomColors(): boolean {
-  const rows = viewerApi.value?.activeLayerColorMap?.value ?? [];
-  return rows.some(r => r.isCustom);
+  const styleId = settings.value.visualStyle ?? DEFAULT_SETTINGS.visualStyle;
+  const template = settings.value.colorMapTemplate ?? [];
+  if (template.length === 0) return false;
+  return template.some((row) => {
+    const base = getBaseColorForRow(styleId, row);
+    const cur = String(row.color ?? '').trim().toUpperCase();
+    return cur !== String(base).trim().toUpperCase();
+  });
 }
 
 function hasCustomTypeMap(): boolean {

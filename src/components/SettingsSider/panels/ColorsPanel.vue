@@ -51,7 +51,7 @@
             </a-col>
 
             <a-col :span="3">
-              <a-tooltip v-if="row.isCustom" :title="t('settings.panel.colors.resetTooltip')">
+              <a-tooltip v-if="isRowCustom(row)" :title="t('settings.panel.colors.resetTooltip')">
                 <a-button
                   type="text"
                   size="small"
@@ -105,11 +105,12 @@ import { viewerApiRef } from '../../../lib/viewer/bridge';
 import { useSettingsSiderContext } from '../useSettingsSiderContext';
 import type { AtomTypeColorMapItem } from '../../../lib/viewer/settings';
 import { getElementColorHex } from '../../../lib/structure/chem';
+import { getVisualStylePreset } from '../../../lib/viewer/visualStyles';
 
 import { getAtomTypeColorKey } from '../../ViewerStage/colorMap';
 
 const { t } = useI18n();
-const { patchSettings, hasAnyLayer } = useSettingsSiderContext();
+const { patchSettings, hasAnyLayer, settings } = useSettingsSiderContext();
 
 const viewerApi = computed(() => viewerApiRef.value);
 const layerList = computed(() => viewerApi.value?.layers.value ?? []);
@@ -132,6 +133,35 @@ const colorMapModel = computed<AtomTypeColorMapItem[]>({
 
 function formatColorKey(row: AtomTypeColorMapItem): string {
   return getAtomTypeColorKey(row.element, row.typeId);
+}
+
+function buildPresetColorMap(): Record<string, string> {
+  const preset = getVisualStylePreset(settings.value.visualStyle ?? 'default');
+  const out: Record<string, string> = {};
+  for (const r of preset.colorMapTemplate ?? []) {
+    const key = getAtomTypeColorKey(r.element, r.typeId);
+    if (!key) continue;
+    const c = String(r.color ?? '').trim().toUpperCase();
+    if (!c) continue;
+    out[key] = c;
+  }
+  return out;
+}
+
+function getBaseColorForRow(row: AtomTypeColorMapItem): string {
+  const styleId = settings.value.visualStyle ?? 'default';
+  if (styleId !== 'default') {
+    const key = getAtomTypeColorKey(row.element, row.typeId);
+    const preset = buildPresetColorMap();
+    return preset[key] ?? getElementColorHex(row.element ?? 'E');
+  }
+  return getElementColorHex(row.element ?? 'E');
+}
+
+function isRowCustom(row: AtomTypeColorMapItem): boolean {
+  const base = getBaseColorForRow(row);
+  const cur = String(row.color ?? '').trim().toUpperCase();
+  return cur !== String(base).trim().toUpperCase();
 }
 
 function normalizeHexColor(input: unknown): string | null {
@@ -162,7 +192,7 @@ function patchColorAt(idx: number, colorHex: string): void {
       : r,
   );
   colorMapModel.value = nextRows;
-  patchSettings({ colorMapTemplate: nextRows.map(r => ({ ...r })) });
+  updateColorTemplate(nextRows);
   scheduleRefreshColorMap();
 }
 
@@ -170,7 +200,7 @@ function onResetColor(idx: number): void {
   const rows = colorMapModel.value;
   if (!rows || idx < 0 || idx >= rows.length) return;
   const row = rows[idx];
-  const def = getElementColorHex(row?.element ?? 'E');
+  const def = getBaseColorForRow(row ?? { element: 'E' } as AtomTypeColorMapItem);
   const nextRows = rows.map((r, i) =>
     i === idx
       ? {
@@ -182,7 +212,7 @@ function onResetColor(idx: number): void {
       : r,
   );
   colorMapModel.value = nextRows;
-  patchSettings({ colorMapTemplate: nextRows.map(r => ({ ...r })) });
+  updateColorTemplate(nextRows);
   scheduleRefreshColorMap();
 }
 
@@ -199,6 +229,21 @@ function onColorPickerChange(idx: number, v: unknown): void {
   const hex = normalizeHexColor(v);
   if (!hex) return;
   patchColorAt(idx, hex);
+}
+
+function updateColorTemplate(rows: AtomTypeColorMapItem[]): void {
+  const styleId = settings.value.visualStyle ?? 'default';
+  const allMatchBase = rows.every(r => !isRowCustom(r));
+  if (allMatchBase) {
+    if (styleId === 'default') {
+      patchSettings({ colorMapTemplate: [] });
+      return;
+    }
+    const preset = getVisualStylePreset(styleId);
+    patchSettings({ colorMapTemplate: preset.colorMapTemplate.map(r => ({ ...r })) });
+    return;
+  }
+  patchSettings({ colorMapTemplate: rows.map(r => ({ ...r })) });
 }
 
 let refreshTimer: number | null = null;

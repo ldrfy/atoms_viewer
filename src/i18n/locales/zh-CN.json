@@ -264,6 +264,10 @@
                 "themeReadabilityCheckOnOpen": "打开模型时检查主题可读性",
                 "modelLightIntensity": "模型灯光亮度",
                 "atomRoughness": "原子球材质粗糙度",
+                "visualStyle": "渲染风格",
+                "visualStyleDefault": "默认",
+                "visualStyleJmol": "Jmol 风格",
+                "visualStyleHint": "切换配色与原子粗细预设。",
                 "reset": "恢复其他默认值"
             },
             "colors": {

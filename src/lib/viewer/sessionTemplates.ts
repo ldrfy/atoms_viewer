@@ -57,6 +57,7 @@ export function buildCategorizedSettings(
       frame_rate: settings.frame_rate,
       autoRotateOnLoad: settings.autoRotateOnLoad,
       themeMode: settings.themeMode,
+      visualStyle: settings.visualStyle,
     },
   };
 }

@@ -1,40 +1,12 @@
 <template>
   <a-form layout="vertical">
-    <a-form-item>
-      <a-row justify="space-between" align="middle">
-        <a-col>{{ t('settings.panel.other.axes') }}</a-col>
-        <a-col>
-          <a-switch v-model:checked="showAxesModel" :aria-label="t('settings.panel.other.axes')" :title="t('settings.panel.other.axes')" />
-        </a-col>
-      </a-row>
+    <a-form-item :label="t('viewer.theme.title')">
+      <a-segmented
+        v-model:value="themeModeModel"
+        block
+        :options="themeSegmentOptions"
+      />
     </a-form-item>
-
-    <a-form-item>
-      <a-row justify="space-between" align="middle">
-        <a-col>{{ t('settings.panel.other.refreshBondsOnPlay') }}</a-col>
-        <a-col>
-          <a-switch
-            v-model:checked="refreshBondsOnPlayModel"
-            :aria-label="t('settings.panel.other.refreshBondsOnPlay')"
-            :title="t('settings.panel.other.refreshBondsOnPlay')"
-          />
-        </a-col>
-      </a-row>
-    </a-form-item>
-
-    <a-form-item>
-      <a-row justify="space-between" align="middle">
-        <a-col>{{ t('settings.panel.other.autoRotateOnLoad') }}</a-col>
-        <a-col>
-          <a-switch
-            v-model:checked="autoRotateOnLoadModel"
-            :aria-label="t('settings.panel.other.autoRotateOnLoad')"
-            :title="t('settings.panel.other.autoRotateOnLoad')"
-          />
-        </a-col>
-      </a-row>
-    </a-form-item>
-
     <a-form-item>
       <a-row justify="space-between" align="middle">
         <a-col>{{ t('settings.panel.other.themeReadabilityCheckOnOpen') }}</a-col>
@@ -48,12 +20,15 @@
       </a-row>
     </a-form-item>
 
-    <a-form-item :label="t('viewer.theme.title')">
-      <a-segmented
-        v-model:value="themeModeModel"
-        block
-        :options="themeSegmentOptions"
+    <a-form-item :label="t('settings.panel.other.visualStyle')">
+      <a-select
+        v-model:value="visualStyleModel"
+        :options="visualStyleOptions"
+        class="settings-full-width"
       />
+      <a-typography-text type="secondary" class="settings-text-secondary">
+        {{ t('settings.panel.other.visualStyleHint') }}
+      </a-typography-text>
     </a-form-item>
 
     <a-form-item :label="t('settings.panel.details.modelLightIntensity')">
@@ -75,6 +50,41 @@
             :max="MODEL_LIGHT_INTENSITY_MAX"
             :step="0.05"
             class="settings-full-width"
+          />
+        </a-col>
+      </a-row>
+    </a-form-item>
+
+    <a-form-item>
+      <a-row justify="space-between" align="middle">
+        <a-col>{{ t('settings.panel.other.axes') }}</a-col>
+        <a-col>
+          <a-switch v-model:checked="showAxesModel" :aria-label="t('settings.panel.other.axes')" :title="t('settings.panel.other.axes')" />
+        </a-col>
+      </a-row>
+    </a-form-item>
+
+    <a-form-item>
+      <a-row justify="space-between" align="middle">
+        <a-col>{{ t('settings.panel.other.autoRotateOnLoad') }}</a-col>
+        <a-col>
+          <a-switch
+            v-model:checked="autoRotateOnLoadModel"
+            :aria-label="t('settings.panel.other.autoRotateOnLoad')"
+            :title="t('settings.panel.other.autoRotateOnLoad')"
+          />
+        </a-col>
+      </a-row>
+    </a-form-item>
+
+    <a-form-item>
+      <a-row justify="space-between" align="middle">
+        <a-col>{{ t('settings.panel.other.refreshBondsOnPlay') }}</a-col>
+        <a-col>
+          <a-switch
+            v-model:checked="refreshBondsOnPlayModel"
+            :aria-label="t('settings.panel.other.refreshBondsOnPlay')"
+            :title="t('settings.panel.other.refreshBondsOnPlay')"
           />
         </a-col>
       </a-row>
@@ -127,13 +137,16 @@ import {
   MODEL_LIGHT_INTENSITY_MIN,
   MODEL_LIGHT_INTENSITY_MAX,
 } from '../../../lib/viewer/constants';
-import { DEFAULT_SETTINGS } from '../../../lib/viewer/settings';
+import { DEFAULT_SETTINGS, type VisualStyleId } from '../../../lib/viewer/settings';
+import { viewerApiRef } from '../../../lib/viewer/bridge';
 import { settingsSiderDerivedContextKey } from '../context';
 import { getThemeMode, setThemeMode, type ThemeMode } from '../../../theme/mode';
+import { getVisualStylePreset, VISUAL_STYLE_PRESETS } from '../../../lib/viewer/visualStyles';
 
 const { t } = useI18n();
 const { settings, patchSettings } = useSettingsSiderContext();
 const derivedContext = inject(settingsSiderDerivedContextKey, null);
+const viewerApi = computed(() => viewerApiRef.value);
 
 const showAxesModel = computed({
   get: () => settings.value.showAxes,
@@ -192,15 +205,67 @@ const themeSegmentOptions = computed(() => [
   { label: t('viewer.theme.mode.dark'), value: 'dark' },
 ]);
 
+function applyVisualStyle(styleId: VisualStyleId): void {
+  const preset = getVisualStylePreset(styleId);
+  const api = viewerApi.value;
+  const isDefault = styleId === 'default';
+  const colorTemplate = isDefault
+    ? []
+    : preset.colorMapTemplate.map(r => ({ ...r, isCustom: true }));
+  patchSettings({
+    visualStyle: styleId,
+    colorMapTemplate: colorTemplate,
+    atomScale: preset.display.atomScale,
+    atomRoughness: preset.display.atomRoughness,
+    bondRadius: preset.display.bondRadius,
+    bondFactor: preset.display.bondFactor,
+    modelLightIntensity: preset.display.modelLightIntensity,
+  });
+  if (!api) return;
+  api.suspendSettingsSync(300);
+  if (isDefault) {
+    api.resetAllLayersColorMapToDefaults();
+  }
+  else {
+    api.setAllLayersColorMap(colorTemplate);
+    api.refreshColorMap({ applyToAll: true });
+  }
+  api.setActiveLayerDisplay(
+    {
+      atomScale: preset.display.atomScale,
+      atomRoughness: preset.display.atomRoughness,
+      bondRadius: preset.display.bondRadius,
+      bondFactor: preset.display.bondFactor,
+    },
+    { applyToAll: true },
+  );
+}
+
+const visualStyleModel = computed<VisualStyleId>({
+  get: () => settings.value.visualStyle ?? DEFAULT_SETTINGS.visualStyle,
+  set: (v) => {
+    applyVisualStyle(v);
+  },
+});
+
+const visualStyleOptions = computed(() =>
+  (Object.values(VISUAL_STYLE_PRESETS) as typeof VISUAL_STYLE_PRESETS[keyof typeof VISUAL_STYLE_PRESETS][])
+    .map(p => ({ label: t(p.labelKey), value: p.id })),
+);
+
 const isOtherDirty = computed(() => {
   if (derivedContext) return derivedContext.otherDirty.value;
+  const styleBase = getVisualStylePreset(
+    settings.value.visualStyle ?? DEFAULT_SETTINGS.visualStyle,
+  ).display;
   return (
     settings.value.showAxes !== DEFAULT_SETTINGS.showAxes
     || settings.value.refreshBondsOnPlay !== DEFAULT_SETTINGS.refreshBondsOnPlay
     || settings.value.autoRotateOnLoad !== DEFAULT_SETTINGS.autoRotateOnLoad
     || settings.value.frame_rate !== DEFAULT_SETTINGS.frame_rate
-    || settings.value.modelLightIntensity !== DEFAULT_SETTINGS.modelLightIntensity
+    || settings.value.modelLightIntensity !== styleBase.modelLightIntensity
     || settings.value.themeMode !== DEFAULT_SETTINGS.themeMode
+    || settings.value.visualStyle !== DEFAULT_SETTINGS.visualStyle
     || (settings.value.themeReadabilityCheckOnOpen ?? true)
       !== (DEFAULT_SETTINGS.themeReadabilityCheckOnOpen ?? true)
   );
@@ -215,7 +280,9 @@ function resetOtherSettings(): void {
     modelLightIntensity: DEFAULT_SETTINGS.modelLightIntensity,
     themeReadabilityCheckOnOpen: DEFAULT_SETTINGS.themeReadabilityCheckOnOpen,
     themeMode: DEFAULT_SETTINGS.themeMode,
+    visualStyle: DEFAULT_SETTINGS.visualStyle,
   });
   setThemeMode(DEFAULT_SETTINGS.themeMode);
+  applyVisualStyle(DEFAULT_SETTINGS.visualStyle);
 }
 </script>

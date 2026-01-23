@@ -48,6 +48,8 @@ export type AutoRotateSettings = {
   resumeDelayMs: number;
 };
 
+export type VisualStyleId = 'default' | 'jmol';
+
 /**
  * 扁平的 ViewerSettings，但字段顺序/分组与 Settings 面板一致：
  * files -> rotation -> view -> details -> lammps/colors -> other
@@ -111,6 +113,8 @@ export type ViewerSettings = {
   frame_rate: number;
   /** UI theme mode */
   themeMode: ThemeMode;
+  /** Visual style preset */
+  visualStyle: VisualStyleId;
 };
 
 export type LayerDisplaySettings = {
@@ -186,6 +190,7 @@ export type OtherSettingsGroup = Pick<
   | 'frame_rate'
   | 'autoRotateOnLoad'
   | 'themeMode'
+  | 'visualStyle'
 >;
 export const DEFAULT_OTHER: OtherSettingsGroup = {
   showAxes: false,
@@ -198,6 +203,7 @@ export const DEFAULT_OTHER: OtherSettingsGroup = {
   frame_rate: 60,
   autoRotateOnLoad: true,
   themeMode: 'system',
+  visualStyle: 'default',
 };
 
 /**
@@ -246,6 +252,7 @@ export const DEFAULT_SETTINGS: ViewerSettings = {
   modelLightIntensity: DEFAULT_OTHER.modelLightIntensity,
   frame_rate: DEFAULT_OTHER.frame_rate,
   themeMode: DEFAULT_OTHER.themeMode,
+  visualStyle: DEFAULT_OTHER.visualStyle,
 };
 
 /**

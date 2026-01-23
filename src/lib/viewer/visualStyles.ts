@@ -1,0 +1,152 @@
+import type { AtomTypeColorMapItem, VisualStyleId } from './settings';
+import { DEFAULT_COLOR_MAP, DEFAULT_LAYER_DISPLAY, DEFAULT_OTHER } from './settings';
+
+export type VisualStylePreset = {
+  id: VisualStyleId;
+  labelKey: string;
+  colorMapTemplate: AtomTypeColorMapItem[];
+  display: {
+    atomScale: number;
+    atomRoughness: number;
+    bondRadius: number;
+    bondFactor: number;
+    modelLightIntensity: number;
+  };
+};
+
+const JMOL_COLOR_MAP: AtomTypeColorMapItem[] = [
+  { element: 'H', color: '#FFFFFF' },
+  { element: 'He', color: '#D9FFFF' },
+  { element: 'Li', color: '#CC80FF' },
+  { element: 'Be', color: '#C2FF00' },
+  { element: 'B', color: '#FFB5B5' },
+  { element: 'C', color: '#909090' },
+  { element: 'N', color: '#3050F8' },
+  { element: 'O', color: '#FF0D0D' },
+  { element: 'F', color: '#90E050' },
+  { element: 'Ne', color: '#B3E3F5' },
+  { element: 'Na', color: '#AB5CF2' },
+  { element: 'Mg', color: '#8AFF00' },
+  { element: 'Al', color: '#BFA6A6' },
+  { element: 'Si', color: '#F0C8A0' },
+  { element: 'P', color: '#FF8000' },
+  { element: 'S', color: '#FFFF30' },
+  { element: 'Cl', color: '#1FF01F' },
+  { element: 'Ar', color: '#80D1E3' },
+  { element: 'K', color: '#8F40D4' },
+  { element: 'Ca', color: '#3DFF00' },
+  { element: 'Sc', color: '#E6E6E6' },
+  { element: 'Ti', color: '#BFC2C7' },
+  { element: 'V', color: '#A6A6AB' },
+  { element: 'Cr', color: '#8A99C7' },
+  { element: 'Mn', color: '#9C7AC7' },
+  { element: 'Fe', color: '#E06633' },
+  { element: 'Co', color: '#F090A0' },
+  { element: 'Ni', color: '#50D050' },
+  { element: 'Cu', color: '#C88033' },
+  { element: 'Zn', color: '#7D80B0' },
+  { element: 'Ga', color: '#C28F8F' },
+  { element: 'Ge', color: '#668F8F' },
+  { element: 'As', color: '#BD80E3' },
+  { element: 'Se', color: '#FFA100' },
+  { element: 'Br', color: '#A62929' },
+  { element: 'Kr', color: '#5CB8D1' },
+  { element: 'Rb', color: '#702EB0' },
+  { element: 'Sr', color: '#00FF00' },
+  { element: 'Y', color: '#94FFFF' },
+  { element: 'Zr', color: '#94E0E0' },
+  { element: 'Nb', color: '#73C2C9' },
+  { element: 'Mo', color: '#54B5B5' },
+  { element: 'Tc', color: '#3B9E9E' },
+  { element: 'Ru', color: '#248F8F' },
+  { element: 'Rh', color: '#0A7D8C' },
+  { element: 'Pd', color: '#006985' },
+  { element: 'Ag', color: '#C0C0C0' },
+  { element: 'Cd', color: '#FFD98F' },
+  { element: 'In', color: '#A67573' },
+  { element: 'Sn', color: '#668080' },
+  { element: 'Sb', color: '#9E63B5' },
+  { element: 'Te', color: '#D47A00' },
+  { element: 'I', color: '#940094' },
+  { element: 'Xe', color: '#429EB0' },
+  { element: 'Cs', color: '#57178F' },
+  { element: 'Ba', color: '#00C900' },
+  { element: 'La', color: '#70D4FF' },
+  { element: 'Ce', color: '#FFFFC7' },
+  { element: 'Pr', color: '#D9FFC7' },
+  { element: 'Nd', color: '#C7FFC7' },
+  { element: 'Pm', color: '#A3FFC7' },
+  { element: 'Sm', color: '#8FFFC7' },
+  { element: 'Eu', color: '#61FFC7' },
+  { element: 'Gd', color: '#45FFC7' },
+  { element: 'Tb', color: '#30FFC7' },
+  { element: 'Dy', color: '#1FFFC7' },
+  { element: 'Ho', color: '#00FF9C' },
+  { element: 'Er', color: '#00E675' },
+  { element: 'Tm', color: '#00D452' },
+  { element: 'Yb', color: '#00BF38' },
+  { element: 'Lu', color: '#00AB24' },
+  { element: 'Hf', color: '#4DC2FF' },
+  { element: 'Ta', color: '#4DA6FF' },
+  { element: 'W', color: '#2194D6' },
+  { element: 'Re', color: '#267DAB' },
+  { element: 'Os', color: '#266696' },
+  { element: 'Ir', color: '#175487' },
+  { element: 'Pt', color: '#D0D0E0' },
+  { element: 'Au', color: '#FFD123' },
+  { element: 'Hg', color: '#B8B8D0' },
+  { element: 'Tl', color: '#A6544D' },
+  { element: 'Pb', color: '#575961' },
+  { element: 'Bi', color: '#9E4FB5' },
+  { element: 'Po', color: '#AB5C00' },
+  { element: 'At', color: '#754F45' },
+  { element: 'Rn', color: '#428296' },
+  { element: 'Fr', color: '#420066' },
+  { element: 'Ra', color: '#007D00' },
+  { element: 'Ac', color: '#70ABFA' },
+  { element: 'Th', color: '#00BAFF' },
+  { element: 'Pa', color: '#00A1FF' },
+  { element: 'U', color: '#008FFF' },
+  { element: 'Np', color: '#0080FF' },
+  { element: 'Pu', color: '#006BFF' },
+  { element: 'Am', color: '#545CF2' },
+  { element: 'Cm', color: '#785CE3' },
+  { element: 'Bk', color: '#8A4FE3' },
+  { element: 'Cf', color: '#A136D4' },
+  { element: 'Es', color: '#B31FD4' },
+  { element: 'Fm', color: '#B31FBA' },
+  { element: 'Md', color: '#B30DA6' },
+  { element: 'No', color: '#BD0D87' },
+  { element: 'Lr', color: '#C70066' },
+];
+
+export const VISUAL_STYLE_PRESETS: Record<VisualStyleId, VisualStylePreset> = {
+  default: {
+    id: 'default',
+    labelKey: 'settings.panel.other.visualStyleDefault',
+    colorMapTemplate: DEFAULT_COLOR_MAP,
+    display: {
+      atomScale: DEFAULT_LAYER_DISPLAY.atomScale,
+      atomRoughness: DEFAULT_LAYER_DISPLAY.atomRoughness,
+      bondRadius: DEFAULT_LAYER_DISPLAY.bondRadius,
+      bondFactor: DEFAULT_LAYER_DISPLAY.bondFactor,
+      modelLightIntensity: DEFAULT_OTHER.modelLightIntensity,
+    },
+  },
+  jmol: {
+    id: 'jmol',
+    labelKey: 'settings.panel.other.visualStyleJmol',
+    colorMapTemplate: JMOL_COLOR_MAP,
+    display: {
+      atomScale: DEFAULT_LAYER_DISPLAY.atomScale,
+      atomRoughness: DEFAULT_LAYER_DISPLAY.atomRoughness,
+      bondRadius: 0.15,
+      bondFactor: DEFAULT_LAYER_DISPLAY.bondFactor,
+      modelLightIntensity: DEFAULT_OTHER.modelLightIntensity,
+    },
+  },
+};
+
+export function getVisualStylePreset(id: VisualStyleId): VisualStylePreset {
+  return VISUAL_STYLE_PRESETS[id] ?? VISUAL_STYLE_PRESETS.default;
+}

@@ -73,6 +73,9 @@ export function normalizeSettings(input: Partial<ViewerSettings> | null): Viewer
     exportPngTransparent: typeof v.exportPngTransparent === 'boolean'
       ? v.exportPngTransparent
       : base.exportPngTransparent,
+    visualStyle: typeof v.visualStyle === 'string'
+      ? v.visualStyle as any
+      : base.visualStyle,
     cacheRemoteOnExport: typeof v.cacheRemoteOnExport === 'boolean'
       ? v.cacheRemoteOnExport
       : base.cacheRemoteOnExport,

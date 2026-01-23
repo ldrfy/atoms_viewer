@@ -56,8 +56,10 @@ import { buildSettingsSnapshot, parseProjectZip } from '../../lib/viewer/project
 import { flattenCategorizedSettings } from '../../lib/viewer/sessionTemplates';
 import { normalizeSettings } from '../../lib/viewer/settingsStorage';
 import { computeMd5ForArrayBuffer } from '../../lib/file/md5';
+import { buildExportFilename } from '../../lib/file/filename';
 import { saveSessionToStorage, clearSessionStorage } from '../../lib/viewer/sessionStorage';
 import { setThemeMode } from '../../theme/mode';
+import { exportStructureText, type StructureExportFormat } from '../../lib/structure/export';
 
 /**
  * Template ref callback param type (works for DOM + component instance).
@@ -78,6 +80,11 @@ type ViewerStageBridgeApi = {
     scale: number;
     transparent: boolean;
   }) => void;
+  /** 导出当前图层为结构文件 */
+  exportStructureFile: (format: StructureExportFormat) => Promise<{
+    blob: Blob;
+    filename: string;
+  }>;
 
   /** 重新应用 LAMMPS 类型映射 */
   refreshTypeMap: () => void;
@@ -167,6 +174,10 @@ type ViewerStageExposedApi = {
     scale: number;
     transparent: boolean;
   }) => void;
+  exportStructureFile: (format: StructureExportFormat) => Promise<{
+    blob: Blob;
+    filename: string;
+  }>;
   openFilePicker: () => void;
   loadFile: (file: File) => Promise<void>;
   loadFiles: (files: File[]) => Promise<void>;
@@ -676,6 +687,25 @@ export function useViewerStage(
     });
   }
 
+  async function exportStructureFile(
+    format: StructureExportFormat,
+  ): Promise<{ blob: Blob; filename: string }> {
+    if (!runtime) throw new Error('No runtime');
+    const atoms = runtime.getActiveAtoms();
+    if (!atoms || atoms.length === 0) {
+      throw new Error('No atoms to export');
+    }
+    const fileStem = loader.parseInfo?.fileName ?? 'atoms-viewer';
+    const text = exportStructureText({
+      atoms,
+      format,
+      comment: fileStem,
+    });
+    const blob = new Blob([text], { type: 'text/plain' });
+    const filename = buildExportFilename({ modelFileName: fileStem, ext: format });
+    return { blob, filename };
+  }
+
   // file drop depends on loadFiles
   const fileDrop = useFileDrop({ loadFiles: loadFilesWithSession });
   const {
@@ -879,7 +909,6 @@ export function useViewerStage(
       const parsed = await parseProjectZip(file);
       const parsedFiles = parsed.files?.map(f => f.file) ?? [];
       await applySessionSnapshot(parsed.snapshot, parsedFiles);
-      message.success(t('settings.importSuccess'));
     }
     catch (err) {
       console.error(err);
@@ -1270,6 +1299,7 @@ export function useViewerStage(
     openFilePicker,
     exportPng: exporter.onExportPng,
     exportPngWithSelection,
+    exportStructureFile,
 
     refreshTypeMap: () => void loader.refreshTypeMap(),
     refreshColorMap: opts => void loader.refreshColorMap(opts),
@@ -1325,6 +1355,7 @@ export function useViewerStage(
   const exposedApi: ViewerStageExposedApi = {
     exportPng: exporter.onExportPng,
     exportPngWithSelection,
+    exportStructureFile,
     openFilePicker,
     loadFile: loadFileWithSession,
     loadFiles: (files: File[]) => loadFilesWithSession(files),

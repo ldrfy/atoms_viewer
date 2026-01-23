@@ -11,6 +11,7 @@ import {
 } from '../../lib/viewer/settings';
 import type { Atom, FrameMeta, StructureModel } from '../../lib/structure/types';
 import { getElementColorHex } from '../../lib/structure/chem';
+import { unwrapAtomsPeriodic } from '../../lib/structure/bonds';
 
 import type { ThreeStage } from '../../lib/three/stage';
 import { makeTextLabel } from '../../lib/three/labels2d';
@@ -47,6 +48,7 @@ function normalizeLayerDisplay(
   patch: Partial<LayerDisplaySettings>,
   base: LayerDisplaySettings,
 ): LayerDisplaySettings {
+  const representation = patch.representation ?? base.representation;
   const atomScale = patch.atomScale ?? base.atomScale;
 
   const sphereSegments = patch.sphereSegments ?? base.sphereSegments;
@@ -63,6 +65,7 @@ function normalizeLayerDisplay(
     : base.atomRoughness;
 
   return {
+    representation,
     atomScale,
     showBonds,
     sphereSegments,
@@ -533,6 +536,7 @@ export function createModelRuntime(args: {
   function getDisplayDefaults(): LayerDisplaySettings {
     return normalizeLayerDisplay(
       {
+        representation: getSettings().representation,
         atomScale: getSettings().atomScale,
         showBonds: getSettings().showBonds,
         sphereSegments: getSettings().sphereSegments,
@@ -612,6 +616,21 @@ export function createModelRuntime(args: {
     return mapped;
   }
 
+  function getDisplayAtoms(
+    layer: LayerInternal,
+    atoms: Atom[],
+  ): { atoms: Atom[]; usePeriodicBonds: boolean } {
+    const cell = layer.model.cell;
+    if (!cell || atoms.length === 0) return { atoms, usePeriodicBonds: false };
+    if (!atoms.every(a => a.fracPosition)) return { atoms, usePeriodicBonds: false };
+    const display = getLayerDisplay(layer);
+    if (!display.showBonds) return { atoms, usePeriodicBonds: false };
+    return {
+      atoms: unwrapAtomsPeriodic(atoms, cell, display.bondFactor),
+      usePeriodicBonds: false,
+    };
+  }
+
   function disposeLayer(layer: LayerInternal): void {
     removeAndDisposeInstancedMeshes(layer.group, layer.atomMeshes);
     removeAndDisposeInstancedMeshes(layer.group, layer.bondMeshes);
@@ -688,6 +707,8 @@ export function createModelRuntime(args: {
     atomsForVisuals: Atom[],
   ): void {
     const display = getLayerDisplay(layer);
+    const displayInfo = getDisplayAtoms(layer, atomsForVisuals);
+    const displayAtoms = displayInfo.atoms;
 
     // clear old
     removeAndDisposeInstancedMeshes(layer.group, layer.atomMeshes);
@@ -712,7 +733,7 @@ export function createModelRuntime(args: {
 
     // atoms
     layer.atomMeshes = buildAtomMeshesByElement({
-      atoms: atomsForVisuals,
+      atoms: displayAtoms,
       atomSizeFactor,
       atomScale: display.atomScale,
       sphereSegments: display.sphereSegments,
@@ -729,8 +750,8 @@ export function createModelRuntime(args: {
 
     // bonds (optional)
     if (display.showBonds) {
-      const c = computeMeanCenterInto(atomsForVisuals, centerTmp);
-      const centeredAtoms = makeCenteredAtomsView(atomsForVisuals, c);
+      const c = computeMeanCenterInto(displayAtoms, centerTmp);
+      const centeredAtoms = makeCenteredAtomsView(displayAtoms, c);
 
       const bf = display.bondFactor;
       const res = buildBondMeshesBicolor({
@@ -738,6 +759,7 @@ export function createModelRuntime(args: {
         bondFactor: bf,
         atomSizeFactor,
         bondRadius: display.bondRadius,
+        cell: displayInfo.usePeriodicBonds ? layer.model.cell : undefined,
         getColorKey,
         colorMap,
       });
@@ -750,7 +772,7 @@ export function createModelRuntime(args: {
 
     // center atoms in-place to match visual coordinate space
     applyFrameAtomsToMeshes({
-      frameAtoms: atomsForVisuals,
+      frameAtoms: displayAtoms,
       atomMeshes: layer.atomMeshes,
       baseCenter: layer.baseCenter,
       centerTmp: centerTmp2,
@@ -947,7 +969,7 @@ export function createModelRuntime(args: {
     syncActiveColorMap();
     syncActiveDisplay();
 
-    fitCameraToAtomsCentered(layer, mappedFirstAtoms);
+    fitCameraToAtomsCentered(layer, getDisplayAtoms(layer, mappedFirstAtoms).atoms);
     applyModelRotation();
     applyBackgroundColor();
     applyShowAxes();
@@ -1027,7 +1049,7 @@ export function createModelRuntime(args: {
     syncActiveDisplay();
     recomputeVisibleCustomColors();
 
-    fitCameraToAtomsCentered(active, mappedFirstAtoms);
+    fitCameraToAtomsCentered(active, getDisplayAtoms(active, mappedFirstAtoms).atoms);
     applyShowAxes();
 
     recomputeVisibleClipRadius();
@@ -1142,8 +1164,9 @@ export function createModelRuntime(args: {
     active.currentMappedAtoms = null;
     active.mappedFrameIndex = -1;
 
+    const displayAtoms = getDisplayAtoms(active, frameAtoms).atoms;
     applyFrameAtomsToMeshes({
-      frameAtoms,
+      frameAtoms: displayAtoms,
       atomMeshes: active.atomMeshes,
       baseCenter: active.baseCenter,
       centerTmp: centerTmp,
@@ -1160,7 +1183,7 @@ export function createModelRuntime(args: {
       }
     }
 
-    if (getSettings().showAxes) updateAxesForAtoms(frameAtoms);
+    if (getSettings().showAxes) updateAxesForAtoms(displayAtoms);
 
     invalidate();
   }
@@ -1183,6 +1206,7 @@ export function createModelRuntime(args: {
   function applyAtomRoughness(): void {
     applyLayerSurfaceSettings(Array.from(layerMap.values()));
   }
+
   function rebuildBondsForLayer(layer: LayerInternal, atoms: Atom[]): void {
     // Rebuild (and re-center) bond meshes to match the current frame.
     // This is intentionally separated from applyShowBonds so playback can
@@ -1197,8 +1221,10 @@ export function createModelRuntime(args: {
       layer.lastBondSegCount = 0;
     }
 
-    const c = computeMeanCenterInto(atoms, centerTmp2);
-    const centeredAtoms = makeCenteredAtomsView(atoms, c);
+    const displayInfo = getDisplayAtoms(layer, atoms);
+    const displayAtoms = displayInfo.atoms;
+    const c = computeMeanCenterInto(displayAtoms, centerTmp2);
+    const centeredAtoms = makeCenteredAtomsView(displayAtoms, c);
 
     const preferTypeId = !!layer.hasAnyTypeId;
     const getColorKey = (a: Atom) =>
@@ -1213,6 +1239,7 @@ export function createModelRuntime(args: {
       bondFactor: bf,
       atomSizeFactor,
       bondRadius: display.bondRadius,
+      cell: displayInfo.usePeriodicBonds ? layer.model.cell : undefined,
       getColorKey,
       colorMap,
     });
@@ -1249,8 +1276,10 @@ export function createModelRuntime(args: {
         const atoms = (l.model.frames?.[l.frameIndex]
           ?? l.model.atoms) as Atom[];
         const mapped = mapAtomsByTypeMap(l, atoms);
-        const c = computeMeanCenterInto(mapped, centerTmp);
-        const centeredAtoms = makeCenteredAtomsView(mapped, c);
+        const displayInfo = getDisplayAtoms(l, mapped);
+        const displayAtoms = displayInfo.atoms;
+        const c = computeMeanCenterInto(displayAtoms, centerTmp);
+        const centeredAtoms = makeCenteredAtomsView(displayAtoms, c);
 
         const preferTypeId = !!l.hasAnyTypeId;
         const getColorKey = (a: Atom) =>
@@ -1264,6 +1293,7 @@ export function createModelRuntime(args: {
           bondFactor: bf,
           atomSizeFactor,
           bondRadius: display.bondRadius,
+          cell: displayInfo.usePeriodicBonds ? l.model.cell : undefined,
           getColorKey,
           colorMap,
         });
@@ -1311,7 +1341,7 @@ export function createModelRuntime(args: {
     active.currentFrameAtoms = atoms;
     active.currentMappedAtoms = null;
     active.mappedFrameIndex = -1;
-    updateAxesForAtoms(atoms);
+    updateAxesForAtoms(getDisplayAtoms(active, atoms).atoms);
     invalidate();
   }
 
@@ -1320,7 +1350,7 @@ export function createModelRuntime(args: {
     for (const l of layerMap.values()) {
       const layerDisplay = { ...getLayerDisplay(l) };
       const typeMap = (l.typeMapRows ?? []).map(r => ({ ...r }));
-      const colorMap = cloneColorRows(l.colorMapRows);
+      const colorMap = cloneColorRows(l.colorMapRows).filter(r => r.isCustom);
       res.push({
         id: l.info.id,
         name: l.info.name,
@@ -1625,7 +1655,6 @@ export function createModelRuntime(args: {
           || Math.abs(prev.bondRadius - next.bondRadius) > 1e-6;
       const surfaceChangedForLayer
         = Math.abs(prev.atomRoughness - next.atomRoughness) > 1e-6;
-
       l.display = next;
       atomScaleChanged = atomScaleChanged || atomChanged;
       bondsChanged = bondsChanged || bondChanged;

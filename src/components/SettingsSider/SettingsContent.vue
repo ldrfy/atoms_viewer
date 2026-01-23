@@ -257,7 +257,8 @@ const detailsDirty = computed(() => {
     settings.value.visualStyle ?? DEFAULT_SETTINGS.visualStyle,
   ).display;
   return (
-    cur.atomScale !== styleBase.atomScale
+    cur.representation !== DEFAULT_LAYER_DISPLAY.representation
+    || cur.atomScale !== styleBase.atomScale
     || cur.showBonds !== DEFAULT_LAYER_DISPLAY.showBonds
     || cur.sphereSegments !== DEFAULT_LAYER_DISPLAY.sphereSegments
     || cur.bondFactor !== styleBase.bondFactor
@@ -536,9 +537,7 @@ function onImportFile(e: Event): void {
       const raw = String(reader.result ?? '');
       const parsed = JSON.parse(raw) as any;
       const extracted = extractSettingsPayload(parsed);
-      const nextSettings = normalizeSettings(
-        flattenCategorizedSettings(extracted.settings as any),
-      );
+      const nextSettings = normalizeSettings(extracted.settings as ViewerSettings);
 
       const api = viewerApiRef.value;
       if (api) {

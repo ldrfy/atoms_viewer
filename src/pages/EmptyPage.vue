@@ -101,7 +101,7 @@
       multiple
       :aria-label="t('viewer.empty.pickFile')"
       :title="t('viewer.empty.pickFile')"
-      accept=".xyz,.pdb,.dump,.lammpstrj,.traj,.data,.lmp"
+      accept=".xyz,.pdb,.mol,.sdf,.dump,.lammpstrj,.traj,.data,.lmp"
       @change="onFilePicked"
     >
   </div>
@@ -175,10 +175,17 @@ function setStoredSamplesManifestUrl(url: string): void {
 // CN: 统一获取 samples 清单地址，必要时回写 URL
 // EN: Resolve samples manifest URL and sync it into the query when needed.
 function getSamplesManifestUrl(): string {
+  const params = new URLSearchParams(window.location.search);
+  const hasSamplesParam = params.has('samples');
   const fromQuery = (readUrlListParam('samples')[0] ?? '').trim();
   if (fromQuery) {
     setStoredSamplesManifestUrl(fromQuery);
     return fromQuery;
+  }
+  if (!hasSamplesParam) {
+    // CN: 手动移除 samples 参数时视为恢复默认。
+    // EN: Treat removing the samples param as resetting to defaults.
+    setStoredSamplesManifestUrl('');
   }
   const fromStorage = getStoredSamplesManifestUrl().trim();
   if (fromStorage) {

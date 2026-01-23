@@ -12,6 +12,8 @@ export function buildParseModeOptions(t: (key: string) => string): ParseModeOpti
     { value: 'auto', label: t('viewer.parse.modeOptions.auto') },
     { value: 'xyz', label: t('viewer.parse.modeOptions.xyz') },
     { value: 'pdb', label: t('viewer.parse.modeOptions.pdb') },
+    { value: 'mol', label: t('viewer.parse.modeOptions.mol') },
+    { value: 'sdf', label: t('viewer.parse.modeOptions.sdf') },
     { value: 'lammpsdump', label: t('viewer.parse.modeOptions.lammpsdump') },
     { value: 'lammpsdata', label: t('viewer.parse.modeOptions.lammpsdata') },
   ];

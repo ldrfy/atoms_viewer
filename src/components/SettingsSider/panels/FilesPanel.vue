@@ -52,6 +52,32 @@
       </a-typography-text>
     </a-form-item>
 
+    <a-form-item :label="t('settings.panel.files.export.formatButton')">
+      <div>
+        <a-row :gutter="8" align="middle">
+          <a-col :span="12">
+            <a-select
+              v-model:value="exportFormatModel"
+              :options="exportFormatOptions"
+              class="settings-full-width"
+            />
+          </a-col>
+          <a-col :span="12">
+            <a-button
+              block
+              :disabled="!hasAnyLayer"
+              @click="onExportStructure"
+            >
+              {{ t('settings.panel.files.export.formatButton') }}
+            </a-button>
+          </a-col>
+        </a-row>
+        <a-typography-text type="secondary" class="settings-text-secondary">
+          {{ t('settings.panel.files.export.formatHint') }}
+        </a-typography-text>
+      </div>
+    </a-form-item>
+
     <a-form-item :label="t('settings.panel.files.project.header')">
       <a-row :gutter="8" align="middle">
         <a-col :span="12">
@@ -114,6 +140,7 @@ import { PANEL_KEYS } from '../../../lib/viewer/panelKeys';
 import { DEFAULT_SETTINGS } from '../../../lib/viewer/settings';
 import { buildProjectZip, parseProjectZip } from '../../../lib/viewer/projectPackage';
 import { getLocale } from '../../../i18n';
+import type { StructureExportFormat } from '../../../lib/structure/export';
 
 const { t } = useI18n();
 const { hasAnyLayer, settings, patchSettings } = useSettingsSiderContext();
@@ -123,6 +150,7 @@ const projectInputRef = ref<HTMLInputElement | null>(null);
 const DEFAULT_EXPORT_SCALE = DEFAULT_SETTINGS.exportPngScale;
 const DEFAULT_EXPORT_TRANSPARENT = DEFAULT_SETTINGS.exportPngTransparent;
 const DEFAULT_CACHE_REMOTE = DEFAULT_SETTINGS.cacheRemoteOnExport;
+const DEFAULT_EXPORT_FORMAT: StructureExportFormat = 'xyz';
 
 const exportScale = computed<number>({
   get: () => settings.value.exportPngScale ?? DEFAULT_EXPORT_SCALE,
@@ -145,6 +173,13 @@ const cacheRemoteModel = computed<boolean>({
     viewerApi.value?.setCacheRemoteOnExport?.(!!v);
   },
 });
+
+const exportFormatModel = ref<StructureExportFormat>(DEFAULT_EXPORT_FORMAT);
+const exportFormatOptions = computed(() => ([
+  { label: 'XYZ', value: 'xyz' },
+  { label: 'PDB', value: 'pdb' },
+  { label: 'MOL', value: 'mol' },
+] as { label: string; value: StructureExportFormat }[]));
 
 const dirtyContext = inject(settingsSiderDirtyContextKey, null);
 
@@ -191,6 +226,25 @@ function onExportSelect(): void {
     scale: exportScale.value,
     transparent: exportTransparent.value,
   });
+}
+
+async function onExportStructure(): Promise<void> {
+  const api = viewerApi.value;
+  if (!api) return;
+  try {
+    const { blob, filename } = await api.exportStructureFile(exportFormatModel.value);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+    message.success(t('settings.panel.files.export.formatSuccess'));
+  }
+  catch (err) {
+    console.error(err);
+    message.error(t('common.error'));
+  }
 }
 
 async function onExportProject(): Promise<void> {

@@ -48,6 +48,8 @@
                 "auto": "自动（推荐）",
                 "xyz": "XYZ",
                 "pdb": "PDB",
+                "mol": "MOL",
+                "sdf": "SDF",
                 "lammpsdump": "LAMMPS dump（轨迹）",
                 "lammpsdata": "LAMMPS data（read_data）"
             },
@@ -232,7 +234,10 @@
                     "button": "导出为 PNG",
                     "selectButton": "选择范围导出",
                     "transparent": "透明背景",
-                    "hint": "scale 会按倍率放大渲染分辨率。"
+                    "hint": "scale 会按倍率放大渲染分辨率。",
+                    "formatButton": "导出结构文件",
+                    "formatHint": "可将当前模型导出为其他格式（当前帧）。未验证，请自行判断正确与否。",
+                    "formatSuccess": "结构文件已导出"
                 },
                 "project": {
                     "header": "模型打包",
@@ -289,6 +294,15 @@
                 "alert": "以下设置按图层保存，开启“同时修改所有图层”可一次广播到全部图层。",
                 "currentLayer": "当前图层",
                 "applyAll": "同时修改所有图层",
+                "representation": "表现方式",
+                "repr": {
+                    "ballAndStick": "球棍模型",
+                    "stick": "棍棒模型",
+                    "wireframe": "线框模型",
+                    "spacefill": "球模型（空间填充）",
+                    "points": "点模型",
+                    "custom": "自定义"
+                },
                 "bonds": "显示键",
                 "bondFactor": "键长阈值系数（bondFactor）",
                 "bondFactorHint": "用于推断键合：cutoff = (r_i + r_j) × bondFactor，数值越大越容易生成键。",

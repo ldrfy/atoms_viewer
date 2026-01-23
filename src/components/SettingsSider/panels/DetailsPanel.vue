@@ -33,6 +33,15 @@
       </a-row>
     </a-form-item>
 
+    <a-form-item :label="t('settings.panel.details.representation')">
+      <a-select
+        v-model:value="representationModel"
+        :options="representationOptions"
+        :disabled="controlsDisabled"
+        class="settings-full-width"
+      />
+    </a-form-item>
+
     <a-form-item>
       <a-row justify="space-between" align="middle">
         <a-col>{{ t('settings.panel.details.bonds') }}</a-col>
@@ -80,7 +89,7 @@
             v-model:value="atomScaleModel"
             :min="ATOM_SCALE_MIN"
             :max="ATOM_SCALE_MAX"
-            :step="0.05"
+            :step="0.01"
             :disabled="controlsDisabled"
           />
         </a-col>
@@ -91,7 +100,7 @@
             :title="t('settings.panel.details.atomSize')"
             :min="ATOM_SCALE_MIN"
             :max="ATOM_SCALE_MAX"
-            :step="0.05"
+            :step="0.01"
             :disabled="controlsDisabled"
             class="settings-full-width"
           />
@@ -195,7 +204,7 @@
 <script setup lang="ts">
 import { computed, inject, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { DEFAULT_LAYER_DISPLAY, type LayerDisplaySettings } from '../../../lib/viewer/settings';
+import { DEFAULT_LAYER_DISPLAY, type LayerDisplaySettings, type RepresentationId } from '../../../lib/viewer/settings';
 import { viewerApiRef } from '../../../lib/viewer/bridge';
 import { useSettingsSiderContext } from '../useSettingsSiderContext';
 import { settingsSiderDerivedContextKey } from '../context';
@@ -271,11 +280,86 @@ const atomRoughnessModel = computed({
 });
 
 const derivedContext = inject(settingsSiderDerivedContextKey, null);
+
+const REPRESENTATION_PRESETS: Record<RepresentationId, Partial<LayerDisplaySettings> | null> = {
+  ballAndStick: {
+    representation: 'ballAndStick',
+    showBonds: true,
+    atomScale: DEFAULT_LAYER_DISPLAY.atomScale,
+    bondRadius: DEFAULT_LAYER_DISPLAY.bondRadius,
+    sphereSegments: DEFAULT_LAYER_DISPLAY.sphereSegments,
+  },
+  stick: {
+    representation: 'stick',
+    showBonds: true,
+    atomScale: 0.2,
+    bondRadius: 0.12,
+    sphereSegments: 12,
+  },
+  wireframe: {
+    representation: 'wireframe',
+    showBonds: true,
+    atomScale: 0.06,
+    bondRadius: 0.04,
+    sphereSegments: 8,
+  },
+  spacefill: {
+    representation: 'spacefill',
+    showBonds: false,
+    atomScale: 1.6,
+    sphereSegments: DEFAULT_LAYER_DISPLAY.sphereSegments,
+  },
+  points: {
+    representation: 'points',
+    showBonds: false,
+    atomScale: 0.08,
+    sphereSegments: 6,
+  },
+  custom: {
+    representation: 'custom',
+  },
+};
+
+const representationOptions = computed(() => ([
+  { value: 'ballAndStick', label: t('settings.panel.details.repr.ballAndStick') },
+  { value: 'stick', label: t('settings.panel.details.repr.stick') },
+  { value: 'wireframe', label: t('settings.panel.details.repr.wireframe') },
+  { value: 'spacefill', label: t('settings.panel.details.repr.spacefill') },
+  { value: 'points', label: t('settings.panel.details.repr.points') },
+  { value: 'custom', label: t('settings.panel.details.repr.custom') },
+] as { value: RepresentationId; label: string; disabled?: boolean }[]));
+
+function matchRepresentation(cur: LayerDisplaySettings | null): RepresentationId {
+  if (!cur) return 'custom';
+  if (cur.representation) return cur.representation;
+  const eq = (a: number, b: number) => Math.abs(a - b) < 1e-6;
+  const candidates = Object.entries(REPRESENTATION_PRESETS) as [RepresentationId, Partial<LayerDisplaySettings> | null][];
+  for (const [key, preset] of candidates) {
+    if (!preset) continue;
+    if (preset.showBonds != null && cur.showBonds !== preset.showBonds) continue;
+    if (preset.atomScale != null && !eq(cur.atomScale, preset.atomScale)) continue;
+    if (preset.bondRadius != null && !eq(cur.bondRadius, preset.bondRadius)) continue;
+    if (preset.sphereSegments != null && cur.sphereSegments !== preset.sphereSegments) continue;
+    return key;
+  }
+  return 'custom';
+}
+
+const representationModel = computed<RepresentationId>({
+  get: () => matchRepresentation(displayModel.value),
+  set: (v) => {
+    const preset = REPRESENTATION_PRESETS[v];
+    if (!preset) return;
+    patchDisplay(preset);
+  },
+});
+
 const detailsDirty = computed(() => {
   if (derivedContext) return derivedContext.detailsDirty.value;
   const cur = displayModel.value ?? DEFAULT_LAYER_DISPLAY;
   return (
-    cur.atomScale !== DEFAULT_LAYER_DISPLAY.atomScale
+    cur.representation !== DEFAULT_LAYER_DISPLAY.representation
+    || cur.atomScale !== DEFAULT_LAYER_DISPLAY.atomScale
     || cur.showBonds !== DEFAULT_LAYER_DISPLAY.showBonds
     || cur.sphereSegments !== DEFAULT_LAYER_DISPLAY.sphereSegments
     || cur.bondFactor !== DEFAULT_LAYER_DISPLAY.bondFactor
@@ -286,6 +370,7 @@ const detailsDirty = computed(() => {
 
 function onResetDisplay(): void {
   patchDisplay({
+    representation: DEFAULT_LAYER_DISPLAY.representation,
     atomScale: DEFAULT_LAYER_DISPLAY.atomScale,
     showBonds: DEFAULT_LAYER_DISPLAY.showBonds,
     sphereSegments: DEFAULT_LAYER_DISPLAY.sphereSegments,

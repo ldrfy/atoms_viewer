@@ -4,6 +4,8 @@ import { parseXyz } from './parsers/xyz';
 import { parsePdb } from './parsers/pdb';
 import { parseLammpsDump } from './parsers/lammpsDump';
 import { parseLammpsData } from './parsers/lammpsData';
+import { parseMol } from './parsers/mol';
+import { parseSdf } from './parsers/sdf';
 
 export type StructureParseOptions = {
   /**
@@ -47,6 +49,12 @@ export function parseStructure(
 
     case 'pdb':
       model = parsePdb(text);
+      break;
+    case 'mol':
+      model = parseMol(text);
+      break;
+    case 'sdf':
+      model = parseSdf(text);
       break;
 
     case 'dump':
@@ -138,6 +146,10 @@ function detectFormat(
       return { format: 'xyz', extNormalized };
     case 'pdb':
       return { format: 'pdb', extNormalized };
+    case 'mol':
+      return { format: 'mol', extNormalized };
+    case 'sdf':
+      return { format: 'sdf', extNormalized };
 
     case 'dump':
     case 'lammpstrj':
@@ -165,6 +177,14 @@ function detectFormat(
   // LAMMPS data signature: has an "Atoms" section (and not a dump)
   if (isLikelyLammpsData(text)) {
     return { format: 'lammpsdata', extNormalized };
+  }
+
+  if (isLikelyMol(text)) {
+    return { format: 'mol', extNormalized };
+  }
+
+  if (isLikelySdf(text)) {
+    return { format: 'sdf', extNormalized };
   }
 
   return { format: 'unknown', extNormalized };
@@ -204,7 +224,7 @@ function isLikelyLammpsData(text: string): boolean {
   return re.test(text);
 }
 
-export type ParseMode = 'auto' | 'xyz' | 'pdb' | 'lammpsdump' | 'lammpsdata';
+export type ParseMode = 'auto' | 'xyz' | 'pdb' | 'mol' | 'sdf' | 'lammpsdump' | 'lammpsdata';
 
 export type ParseInfo = {
   fileName: string;
@@ -215,6 +235,15 @@ export type ParseInfo = {
   errorMsg: string;
   errorSeq: number;
 };
+
+function isLikelyMol(text: string): boolean {
+  const lines = text.replace(/\r\n?/g, '\n').split('\n').slice(0, 6);
+  return lines.some(l => l.includes('V2000'));
+}
+
+function isLikelySdf(text: string): boolean {
+  return /\$\$\$\$/m.test(text) || /V2000/m.test(text);
+}
 
 function stripExt(name: string): string {
   const i = name.lastIndexOf('.');
@@ -232,7 +261,7 @@ export function toForcedFilename(
   const ext = (() => {
     if (mode === 'lammpsdump') return 'dump';
     if (mode === 'lammpsdata') return 'data';
-    return mode; // xyz/pdb
+    return mode; // xyz/pdb/mol/sdf
   })();
 
   return `${base}.__force__.${ext}`;

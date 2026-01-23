@@ -49,6 +49,13 @@ export type AutoRotateSettings = {
 };
 
 export type VisualStyleId = 'default' | 'jmol';
+export type RepresentationId
+  = | 'ballAndStick'
+    | 'stick'
+    | 'wireframe'
+    | 'spacefill'
+    | 'points'
+    | 'custom';
 
 /**
  * 扁平的 ViewerSettings，但字段顺序/分组与 Settings 面板一致：
@@ -81,6 +88,7 @@ export type ViewerSettings = {
   dualViewSplit?: number;
 
   // layerDisplay (per-layer defaults)
+  representation: RepresentationId;
   atomScale: number;
   /** Sphere geometry segments (quality vs performance). */
   sphereSegments: number;
@@ -118,6 +126,7 @@ export type ViewerSettings = {
 };
 
 export type LayerDisplaySettings = {
+  representation: RepresentationId;
   atomScale: number;
   showBonds: boolean;
   sphereSegments: number;
@@ -127,6 +136,7 @@ export type LayerDisplaySettings = {
 };
 
 export const DEFAULT_LAYER_DISPLAY: LayerDisplaySettings = {
+  representation: 'ballAndStick',
   atomScale: 1,
   showBonds: true,
   sphereSegments: 24,
@@ -212,6 +222,7 @@ export const DEFAULT_OTHER: OtherSettingsGroup = {
  */
 export const DEFAULT_SETTINGS: ViewerSettings = {
   // layer display defaults (mirrors layerDisplay section)
+  representation: DEFAULT_LAYER_DISPLAY.representation,
   atomScale: DEFAULT_LAYER_DISPLAY.atomScale,
   sphereSegments: DEFAULT_LAYER_DISPLAY.sphereSegments,
   showBonds: DEFAULT_LAYER_DISPLAY.showBonds,

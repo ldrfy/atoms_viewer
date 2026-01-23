@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import type { Atom } from '../structure/types';
+import type { Atom, CellParams } from '../structure/types';
 import { getElementColorHex, normalizeElementSymbol } from '../structure/chem';
 import { computeBonds } from '../structure/bonds';
 
@@ -41,16 +41,17 @@ export function buildBondMeshesBicolor(params: {
   bondFactor: number;
   atomSizeFactor: number; // kept for API compatibility
   bondRadius: number;
+  cell?: CellParams;
   /** Optional color key (matches atom color-map logic). Defaults to element. */
   getColorKey?: (atom: Atom) => string;
   /** Optional color map keyed by getColorKey result. */
   colorMap?: Record<string, string>;
 }): BondBuildResult {
-  const { atoms, bondFactor, bondRadius, getColorKey, colorMap } = params;
+  const { atoms, bondFactor, bondRadius, cell, getColorKey, colorMap } = params;
 
   const groups = new Map<string, Group>();
 
-  const bonds = computeBonds(atoms, bondFactor);
+  const bonds = computeBonds(atoms, bondFactor, { cell });
   let segCount = 0;
 
   const addSeg = (a: Atom, p1: Atom['position'], p2: Atom['position']): void => {
@@ -76,8 +77,8 @@ export function buildBondMeshesBicolor(params: {
     const d = b.length;
     if (d < 1.0e-9) continue;
 
-    const pi = ai.position;
-    const pj = aj.position;
+    const pi = b.p1 ?? ai.position;
+    const pj = b.p2 ?? aj.position;
 
     // Strict half/half split at the geometric midpoint.
     const mid: Atom['position'] = [

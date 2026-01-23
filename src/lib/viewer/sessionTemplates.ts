@@ -37,6 +37,7 @@ export function buildCategorizedSettings(
       resetViewSeq: Number(settings.resetViewSeq ?? 0),
     },
     details: {
+      representation: settings.representation,
       atomScale: settings.atomScale,
       sphereSegments: settings.sphereSegments,
       showBonds: settings.showBonds,
@@ -90,6 +91,7 @@ export function flattenCategorizedSettings(
   }
 
   if (apply.details) {
+    base.representation = apply.details.representation ?? base.representation;
     base.atomScale = apply.details.atomScale ?? base.atomScale;
     base.sphereSegments = apply.details.sphereSegments ?? base.sphereSegments;
     base.showBonds = apply.details.showBonds ?? base.showBonds;

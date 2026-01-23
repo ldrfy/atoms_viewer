@@ -48,6 +48,8 @@
                 "auto": "Auto (recommended)",
                 "xyz": "XYZ",
                 "pdb": "PDB",
+                "mol": "MOL",
+                "sdf": "SDF",
                 "lammpsdump": "LAMMPS dump (trajectory)",
                 "lammpsdata": "LAMMPS data (read_data)"
             },
@@ -232,7 +234,10 @@
                     "button": "Export as PNG",
                     "transparent": "Transparent background",
                     "selectButton": "Select Range Export",
-                    "hint": "Scale multiplies the render resolution."
+                    "hint": "Scale multiplies the render resolution.",
+                    "formatButton": "Export structure file",
+                    "formatHint": "Export the current model to another format (current frame). Not verified; please validate correctness.",
+                    "formatSuccess": "Structure file exported"
                 },
                 "project": {
                     "header": "Project package",
@@ -290,6 +295,15 @@
                 "currentLayer": "Current layer",
                 "applyAll": "Edit all layers",
                 "hint": "Atom size and bond settings do not affect other layers unless you choose to edit all layers.",
+                "representation": "Representation",
+                "repr": {
+                    "ballAndStick": "Ball and stick",
+                    "stick": "Stick",
+                    "wireframe": "Wireframe",
+                    "spacefill": "Spacefill (CPK)",
+                    "points": "Points",
+                    "custom": "Custom"
+                },
                 "bonds": "Show bonds",
                 "bondFactor": "Bond cutoff factor (bondFactor)",
                 "bondFactorHint": "Used to infer bonds: cutoff = (r_i + r_j) × bondFactor. Larger values create bonds more easily.",

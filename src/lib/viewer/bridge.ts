@@ -9,6 +9,7 @@ import type {
 
 import type { ParseMode, ParseInfo } from '../structure/parse';
 import type { ModelLayerInfo } from '../../components/ViewerStage/modelRuntime';
+import type { StructureExportFormat } from '../structure/export';
 
 export type ViewerPublicApi = {
   /** Open the OS file picker and load a model into the viewer. */
@@ -24,6 +25,11 @@ export type ViewerPublicApi = {
     scale: number;
     transparent: boolean;
   }) => void;
+  /** Export current active layer to a structure file (text formats). */
+  exportStructureFile: (format: StructureExportFormat) => Promise<{
+    blob: Blob;
+    filename: string;
+  }>;
 
   /**
    * Apply the current active-layer LAMMPS typeId→element mapping.

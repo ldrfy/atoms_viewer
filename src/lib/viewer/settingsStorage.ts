@@ -67,6 +67,9 @@ export function normalizeSettings(input: Partial<ViewerSettings> | null): Viewer
     viewPresets: Array.isArray(v.viewPresets)
       ? (v.viewPresets as any)
       : base.viewPresets,
+    representation: typeof v.representation === 'string'
+      ? v.representation as any
+      : base.representation,
     exportPngScale: Number.isFinite(v.exportPngScale)
       ? (v.exportPngScale as number)
       : base.exportPngScale,

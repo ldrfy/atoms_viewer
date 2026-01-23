@@ -58,6 +58,10 @@ export type ViewerPublicApi = {
   setActiveLayer: (id: string) => void;
   /** Toggle visibility of a layer without removing it. */
   setLayerVisible: (id: string, visible: boolean) => void;
+  /** Toggle visibility for all layers at once. */
+  setAllLayersVisible: (visible: boolean) => void;
+  /** Sort layer order for display. */
+  sortLayers: (opts: { by: 'time' | 'name'; direction: 'asc' | 'desc' }) => void;
   /** Remove a layer from the scene and internal state. */
   removeLayer: (id: string) => void;
 

@@ -107,6 +107,10 @@ type ViewerStageBridgeApi = {
   setActiveLayer: (id: string) => void;
   /** 设置图层可见性 */
   setLayerVisible: (id: string, visible: boolean) => void;
+  /** 设置所有图层可见性 */
+  setAllLayersVisible: (visible: boolean) => void;
+  /** 排序图层显示顺序 */
+  sortLayers: (opts: { by: 'time' | 'name'; direction: 'asc' | 'desc' }) => void;
   /** 移除图层 */
   removeLayer: (id: string) => void;
 
@@ -923,7 +927,12 @@ export function useViewerStage(
     try {
       const parsed = await parseProjectZip(file);
       const parsedFiles = parsed.files?.map(f => f.file) ?? [];
-      await applySessionSnapshot(parsed.snapshot, parsedFiles);
+      if (parsed.snapshot) {
+        await applySessionSnapshot(parsed.snapshot, parsedFiles);
+      }
+      else if (parsedFiles.length > 0) {
+        await loadFilesWithSession(parsedFiles, 'api', { hidePreviousLayers: false });
+      }
     }
     catch (err) {
       console.error(err);
@@ -959,6 +968,37 @@ export function useViewerStage(
     syncUiFromRuntime();
     inspectCtx.clear();
     scheduleSessionSave('layers');
+  }
+
+  function setAllLayersVisible(visible: boolean): void {
+    if (!runtime) return;
+    runtime.setAllLayersVisible(visible);
+    syncUiFromRuntime();
+    inspectCtx.clear();
+    scheduleSessionSave('layers');
+  }
+
+  function sortLayers(opts: { by: 'time' | 'name'; direction: 'asc' | 'desc' }): void {
+    if (!runtime) return;
+    const dir = opts.direction === 'desc' ? -1 : 1;
+    const by = opts.by;
+    const getName = (l: ModelLayerInfo): string => {
+      const name = String(l?.name ?? '').trim();
+      const file = String(l?.sourceFileName ?? '').trim();
+      return (name || file || String(l?.id ?? '')).toLowerCase();
+    };
+    runtime.sortLayers((a, b) => {
+      if (by === 'time') {
+        const ta = Number.isFinite(a.createdAtMs) ? Number(a.createdAtMs) : 0;
+        const tb = Number.isFinite(b.createdAtMs) ? Number(b.createdAtMs) : 0;
+        if (ta === tb) return 0;
+        return ta < tb ? -dir : dir;
+      }
+      const na = getName(a);
+      const nb = getName(b);
+      if (na === nb) return 0;
+      return na < nb ? -dir : dir;
+    });
   }
 
   function setActiveLayerTypeMap(rows: LammpsTypeMapItem[]): void {
@@ -1322,6 +1362,10 @@ export function useViewerStage(
     activeLayerId,
     setActiveLayer,
     setLayerVisible,
+    setAllLayersVisible,
+    sortLayers,
+    setAllLayersVisible,
+    sortLayers,
     removeLayer,
 
     activeLayerTypeMap,

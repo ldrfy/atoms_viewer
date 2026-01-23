@@ -89,7 +89,7 @@ export async function buildProjectZip(params: {
 }
 
 export type ParsedProjectZip = {
-  snapshot: SessionSnapshot;
+  snapshot?: SessionSnapshot;
   files: { md5?: string; file: File }[];
 };
 
@@ -103,11 +103,11 @@ function guessMd5FromName(name: string): string | undefined {
 export async function parseProjectZip(file: File | Blob): Promise<ParsedProjectZip> {
   const zip = await JSZip.loadAsync(file);
   const configEntry = zip.file(/config\.json$/i)[0];
-  if (!configEntry) {
-    throw new Error('配置文件 config.json 缺失');
+  let snapshot: SessionSnapshot | undefined;
+  if (configEntry) {
+    const configText = await configEntry.async('string');
+    snapshot = JSON.parse(configText) as SessionSnapshot;
   }
-  const configText = await configEntry.async('string');
-  const snapshot = JSON.parse(configText) as SessionSnapshot;
 
   const files: { md5?: string; file: File }[] = [];
   const modelDir = zip.folder('models');

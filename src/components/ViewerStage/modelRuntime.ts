@@ -222,7 +222,11 @@ export type ModelRuntime = {
 
   renderModel: (
     model: StructureModel,
-    opts?: { hidePreviousLayers?: boolean; sourceMeta?: LayerSourceInfo },
+    opts?: {
+      hidePreviousLayers?: boolean;
+      sourceMeta?: LayerSourceInfo;
+      skipAutoFit?: boolean;
+    },
   ) => { frameCount: number; hasAnimation: boolean; layerId: string };
   replaceActiveLayerModel: (model: StructureModel) => {
     frameCount: number;
@@ -247,6 +251,11 @@ export type ModelRuntime = {
 
   /** Update camera near/far each frame based on visible layers to prevent clipping. */
   tickCameraClipping: () => void;
+
+  /** Set visibility for all layers at once. */
+  setAllLayersVisible: (visible: boolean) => void;
+  /** Sort layers for display/order (does not change layer data). */
+  sortLayers: (compare: (a: ModelLayerInfo, b: ModelLayerInfo) => number) => void;
 
   hasAnyTypeId: () => boolean;
   onTypeMapChanged: () => void;
@@ -844,6 +853,43 @@ export function createModelRuntime(args: {
     invalidate();
   }
 
+  function setAllLayersVisible(visible: boolean): void {
+    if (layers.value.length === 0) return;
+    for (const l of layerMap.values()) {
+      l.info.visible = visible;
+      l.group.visible = visible;
+    }
+
+    if (!visible) {
+      activeLayerId.value = null;
+    }
+    else {
+      const active = activeLayerId.value ? layerMap.get(activeLayerId.value) : null;
+      if (!active || !active.info.visible) {
+        activeLayerId.value = layers.value.find(x => x.visible)?.id ?? null;
+      }
+    }
+
+    syncActiveTypeMap();
+    syncActiveColorMap();
+    syncActiveDisplay();
+    applyShowAxes();
+
+    recomputeVisibleClipRadius();
+    tickCameraClipping(true);
+
+    layers.value = [...layers.value];
+    syncHasModelFlag();
+    recomputeVisibleCustomColors();
+
+    invalidate();
+  }
+
+  function sortLayers(compare: (a: ModelLayerInfo, b: ModelLayerInfo) => number): void {
+    if (layers.value.length < 2) return;
+    layers.value = [...layers.value].sort(compare);
+  }
+
   function upsertLayerInternal(layer: LayerInternal): void {
     layerMap.set(layer.info.id, layer);
 
@@ -859,7 +905,7 @@ export function createModelRuntime(args: {
 
   function renderModel(
     model: StructureModel,
-    opts?: { hidePreviousLayers?: boolean; sourceMeta?: LayerSourceInfo },
+    opts?: { hidePreviousLayers?: boolean; sourceMeta?: LayerSourceInfo; skipAutoFit?: boolean },
   ): { frameCount: number; hasAnimation: boolean; layerId: string } {
     // New model load: hide previous layers by default (layer-like behavior).
     // When loading multiple files at once, the caller can disable this per-file
@@ -969,7 +1015,9 @@ export function createModelRuntime(args: {
     syncActiveColorMap();
     syncActiveDisplay();
 
-    fitCameraToAtomsCentered(layer, getDisplayAtoms(layer, mappedFirstAtoms).atoms);
+    if (!opts?.skipAutoFit) {
+      fitCameraToAtomsCentered(layer, getDisplayAtoms(layer, mappedFirstAtoms).atoms);
+    }
     applyModelRotation();
     applyBackgroundColor();
     applyShowAxes();
@@ -1866,6 +1914,8 @@ export function createModelRuntime(args: {
     applyModelRotation,
     applyBackgroundColor,
     tickCameraClipping,
+    setAllLayersVisible,
+    sortLayers,
 
     hasAnyTypeId,
     onTypeMapChanged,

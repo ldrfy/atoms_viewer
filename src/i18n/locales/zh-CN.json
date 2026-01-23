@@ -4,6 +4,7 @@
         "selfName": "中文"
     },
     "common": {
+        "error": "错误",
         "delete": "删除",
         "confirm": "确认",
         "cancel": "取消",
@@ -258,6 +259,14 @@
                 "empty": "尚未加载任何模型。",
                 "meta": "{atoms} 原子 · {frames} 帧",
                 "visible": "显示图层",
+                "showAll": "显示全部",
+                "hideAll": "隐藏全部",
+                "sort": {
+                    "timeAsc": "时间 ↑",
+                    "timeDesc": "时间 ↓",
+                    "nameAsc": "文件名 ↑",
+                    "nameDesc": "文件名 ↓"
+                },
                 "hint": "点击一行可设为当前图层；右侧开关控制显示/隐藏。拖入新模型会加入图层列表并默认隐藏旧图层。",
                 "deleteConfirm": "确定删除此图层吗？"
             },

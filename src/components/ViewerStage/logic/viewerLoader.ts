@@ -173,7 +173,11 @@ export function createViewerLoader(deps: {
     text: string,
     fileName: string,
     reason: RenderReason,
-    opts?: { hidePreviousLayers?: boolean; sourceMeta?: LayerSourceInfo },
+    opts?: {
+      hidePreviousLayers?: boolean;
+      sourceMeta?: LayerSourceInfo;
+      skipAutoFit?: boolean;
+    },
   ): { frameCount: number; hasAnimation: boolean; layerId: string } | null {
     const stage = deps.getStage();
     const runtime = deps.getRuntime();
@@ -196,6 +200,7 @@ export function createViewerLoader(deps: {
         : runtime.renderModel(model, {
             hidePreviousLayers: opts?.hidePreviousLayers,
             sourceMeta: opts?.sourceMeta,
+            skipAutoFit: opts?.skipAutoFit,
           });
 
     applyAnimationInfo(
@@ -647,7 +652,9 @@ export function createViewerLoader(deps: {
       let okCount = 0;
       let lastOkName = '';
 
-      for (const f of files) {
+      const isBatchLoad = files.length > 1;
+      for (let i = 0; i < files.length; i += 1) {
+        const f = files[i]!;
         const lowerName = f.name.toLowerCase();
         if (lowerName === 'config.json') {
           // Skip project config files if passed to the generic loader.
@@ -669,9 +676,11 @@ export function createViewerLoader(deps: {
             cached: true,
           };
 
+          const allowAutoFit = !isBatchLoad || okCount === 0 || i === files.length - 1;
           const info = renderFromText(text, f.name, 'load', {
             hidePreviousLayers: opts?.hidePreviousLayers ?? okCount === 0,
             sourceMeta,
+            skipAutoFit: !allowAutoFit,
           });
 
           okCount += 1;

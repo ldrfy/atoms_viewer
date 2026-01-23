@@ -4,6 +4,7 @@
         "selfName": "English"
     },
     "common": {
+        "error": "Error",
         "delete": "Delete",
         "confirm": "Confirm",
         "cancel": "Cancel",
@@ -258,6 +259,14 @@
                 "empty": "No models loaded yet.",
                 "meta": "{atoms} atoms · {frames} frames",
                 "visible": "Show layer",
+                "showAll": "Show all",
+                "hideAll": "Hide all",
+                "sort": {
+                    "timeAsc": "Time ↑",
+                    "timeDesc": "Time ↓",
+                    "nameAsc": "Name ↑",
+                    "nameDesc": "Name ↓"
+                },
                 "hint": "Click a row to set the active layer; use the toggle to show/hide. Dragging a new model adds a layer and hides previous layers by default.",
                 "deleteConfirm": "Delete this layer?"
             },

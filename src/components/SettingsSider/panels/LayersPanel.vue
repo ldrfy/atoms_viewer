@@ -15,8 +15,6 @@
       </a-typography-text>
     </div>
 
-    <a-divider class="settings-divider" />
-
     <a-alert
       v-if="!viewerApi"
       type="info"
@@ -31,54 +29,81 @@
       :message="t('settings.panel.layers.empty')"
     />
 
-    <div v-else class="layers-list">
-      <div
-        v-for="l in layerList"
-        :key="l.id"
-        class="layer-row"
-        :class="{ active: l.id === activeLayerId }"
-        @click="onSetActive(l.id)"
-      >
-        <div class="layer-left">
-          <a-radio :checked="l.id === activeLayerId" />
-        </div>
+    <div v-else>
+      <a-space :size="8" class="settings-full-width">
+        <a-button
+          size="small"
+          :disabled="layerList.length < 2"
+          @click="onToggleTimeSort"
+        >
+          {{ timeSortLabel }}
+        </a-button>
+        <a-button
+          size="small"
+          :disabled="layerList.length < 2"
+          @click="onToggleNameSort"
+        >
+          {{ nameSortLabel }}
+        </a-button>
+        <a-button
+          size="small"
+          :disabled="layerList.length === 0"
+          @click="onToggleAllVisible"
+        >
+          {{ toggleAllLabel }}
+        </a-button>
+      </a-space>
+      <a-divider class="settings-divider" />
 
-        <div class="layer-main">
-          <div class="layer-name" :title="layerPrimaryText(l)">
-            {{ layerPrimaryText(l) }}
+      <div class="layers-list">
+        <div
+          v-for="l in layerList"
+          :key="l.id"
+          class="layer-row"
+          :class="{ active: l.id === activeLayerId }"
+          @click="onSetActive(l.id)"
+        >
+          <div class="layer-left">
+            <a-radio :checked="l.id === activeLayerId" />
           </div>
-          <div class="layer-meta" :title="layerSecondaryText(l)">
-            {{ layerSecondaryText(l) }}
+
+          <div class="layer-main">
+            <div class="layer-name" :title="layerPrimaryText(l)">
+              {{ layerPrimaryText(l) }}
+            </div>
+            <div class="layer-meta" :title="layerSecondaryText(l)">
+              {{ layerSecondaryText(l) }}
+            </div>
           </div>
-        </div>
 
-        <div class="layer-right" @click.stop>
-          <a-space :size="6">
-            <a-switch
-              :checked="l.visible"
-              :aria-label="t('settings.panel.layers.visible')"
-              :title="t('settings.panel.layers.visible')"
-              @change="onToggleLayer(l.id, !!$event)"
-            />
+          <div class="layer-right" @click.stop>
+            <a-space :size="6">
+              <a-switch
+                :checked="l.visible"
+                :aria-label="t('settings.panel.layers.visible')"
+                :title="t('settings.panel.layers.visible')"
+                @change="onToggleLayer(l.id, !!$event)"
+              />
 
-            <a-popconfirm
-              :title="t('settings.panel.layers.deleteConfirm')"
-              :ok-text="t('common.delete')"
-              :cancel-text="t('common.cancel')"
-              placement="left"
-              @confirm="onDeleteLayer(l.id)"
-            >
-              <a-button
-                type="text"
-                size="small"
-                danger
-                :aria-label="t('common.delete')"
-                :title="t('common.delete')"
+              <a-popconfirm
+                :title="t('settings.panel.layers.deleteConfirm')"
+                :ok-text="t('common.delete')"
+                :cancel-text="t('common.cancel')"
+                placement="left"
+                @confirm="onDeleteLayer(l.id)"
               >
-                <DeleteOutlined />
-              </a-button>
-            </a-popconfirm>
-          </a-space>
+                <a-button
+                  type="text"
+                  size="small"
+                  danger
+                  :aria-label="t('common.delete')"
+                  :title="t('common.delete')"
+                >
+                  <DeleteOutlined />
+                </a-button>
+              </a-popconfirm>
+            </a-space>
+          </div>
         </div>
       </div>
     </div>
@@ -91,7 +116,7 @@
 
 <script setup lang="ts">
 import { DeleteOutlined } from '@ant-design/icons-vue';
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { viewerApiRef } from '../../../lib/viewer/bridge';
 
@@ -100,6 +125,15 @@ const { t } = useI18n();
 const viewerApi = computed(() => viewerApiRef.value);
 const layerList = computed(() => viewerApi.value?.layers.value ?? []);
 const activeLayerId = computed(() => viewerApi.value?.activeLayerId.value ?? null);
+const allVisible = computed(() => layerList.value.length > 0 && layerList.value.every(l => l.visible));
+
+const timeSortDir = ref<'timeAsc' | 'timeDesc'>('timeAsc');
+const nameSortDir = ref<'nameAsc' | 'nameDesc'>('nameAsc');
+const timeSortLabel = computed(() => t(`settings.panel.layers.sort.${timeSortDir.value}`));
+const nameSortLabel = computed(() => t(`settings.panel.layers.sort.${nameSortDir.value}`));
+const toggleAllLabel = computed(() => (
+  allVisible.value ? t('settings.panel.layers.hideAll') : t('settings.panel.layers.showAll')
+));
 
 /**
  * Primary text shown for a layer.
@@ -153,5 +187,21 @@ function onToggleLayer(id: string, visible: boolean): void {
 
 function onDeleteLayer(id: string): void {
   viewerApi.value?.removeLayer(id);
+}
+
+function onToggleAllVisible(): void {
+  viewerApi.value?.setAllLayersVisible(!allVisible.value);
+}
+
+function onToggleTimeSort(): void {
+  timeSortDir.value = timeSortDir.value === 'timeAsc' ? 'timeDesc' : 'timeAsc';
+  const direction = timeSortDir.value === 'timeDesc' ? 'desc' : 'asc';
+  viewerApi.value?.sortLayers({ by: 'time', direction });
+}
+
+function onToggleNameSort(): void {
+  nameSortDir.value = nameSortDir.value === 'nameAsc' ? 'nameDesc' : 'nameAsc';
+  const direction = nameSortDir.value === 'nameDesc' ? 'desc' : 'asc';
+  viewerApi.value?.sortLayers({ by: 'name', direction });
 }
 </script>

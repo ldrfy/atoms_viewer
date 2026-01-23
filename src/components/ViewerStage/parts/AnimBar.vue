@@ -1,12 +1,16 @@
 <template>
-  <div v-if="hasModel" class="anim-bar">
+  <div v-if="hasModelOrParseError" class="anim-bar">
     <a-row
-      v-if="frameNoteText"
-      :gutter="[8, 6]"
+      v-if="hasModelOrParseError"
+      :gutter="[6, 6]"
       align="middle"
       :wrap="false"
     >
-      <a-col flex="auto" class="anim-note">
+      <a-col flex="none" class="anim-note-icon">
+        <ParseInfoPopover :ctx="parseCtx" />
+      </a-col>
+
+      <a-col v-if="frameNoteText" flex="auto" class="anim-note">
         <a-tooltip :title="frameNoteText" overlay-class-name="anim-note-tooltip">
           <a-typography-text
             type="secondary"
@@ -175,13 +179,17 @@
 import { ReloadOutlined } from '@ant-design/icons-vue';
 import { computed, ref, unref } from 'vue';
 import { useI18n } from 'vue-i18n';
-import type { AnimCtx } from '../ctx';
+import type { AnimCtx, ParseCtx } from '../ctx';
 import { RECORD_FPS_MIN, RECORD_FPS_MAX } from '../../../lib/viewer/constants';
+import ParseInfoPopover from './ParseInfoPopover.vue';
 
-const props = defineProps<{ ctx: AnimCtx }>();
+const props = defineProps<{ ctx: AnimCtx; parseCtx: ParseCtx }>();
 const { t } = useI18n();
 
 const hasModel = computed(() => !!unref(props.ctx.hasModel));
+const hasModelOrParseError = computed(() =>
+  hasModel.value || parseCtx.value.parseInfo?.success === false,
+);
 const hasAnimation = computed(() => !!unref(props.ctx.hasAnimation));
 const isPlaying = computed(() => !!unref(props.ctx.isPlaying));
 const isRecording = computed(() => !!unref(props.ctx.isRecording));
@@ -204,6 +212,7 @@ const frameNoteText = computed(() => {
   if (meta.comment) parts.push(meta.comment);
   return parts.join(' · ');
 });
+const parseCtx = computed(() => props.parseCtx);
 
 /** UI 1-based <-> 内部 0-based */
 const frameIndexModel = computed<number>({
@@ -332,6 +341,11 @@ function resetBgToTransparent(): void {
 
 .anim-note {
     min-width: 0;
+}
+
+.anim-note-icon {
+    display: inline-flex;
+    align-items: center;
 }
 
 .anim-note-tooltip .ant-tooltip-inner {

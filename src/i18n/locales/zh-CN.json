@@ -239,7 +239,7 @@
                     "export": "导出压缩包",
                     "import": "导入压缩包",
                     "cacheRemote": "缓存远程模型用于导出/恢复",
-                    "hint": "压缩包会包含 config.json；未缓存的远程模型将按 URL 重新下载。"
+                    "hint": "压缩包会包含 config.json；未缓存的远程模型将按 URL 重新下载。用于复现当前状态与导出图片效果。"
                 },
                 "parse": {
                     "header": "解析信息"

@@ -55,6 +55,7 @@ import { createSettingsSync } from './settingsSync';
 import { buildSettingsSnapshot, parseProjectZip } from '../../lib/viewer/projectPackage';
 import { flattenCategorizedSettings } from '../../lib/viewer/sessionTemplates';
 import { normalizeSettings } from '../../lib/viewer/settingsStorage';
+import { computeMd5ForArrayBuffer } from '../../lib/file/md5';
 import { saveSessionToStorage, clearSessionStorage } from '../../lib/viewer/sessionStorage';
 import { setThemeMode } from '../../theme/mode';
 
@@ -459,7 +460,7 @@ export function useViewerStage(
   const inspectCtx = createInspectCtx();
 
   const layerSourceStore = createLayerSourceStore();
-  const cacheRemoteOnExport = ref(false);
+  const cacheRemoteOnExport = ref(true);
   const CACHE_REMOTE_KEY = 'atomsViewer.cacheRemoteModels';
   try {
     const raw = localStorage.getItem(CACHE_REMOTE_KEY);
@@ -476,7 +477,22 @@ export function useViewerStage(
     catch {
       // ignore
     }
+    if (!cacheRemoteOnExport.value) {
+      for (const [layerId, data] of layerSourceStore.entries()) {
+        if (data?.type !== 'url' || !data.buffer) continue;
+        layerSourceStore.set(layerId, { ...data, buffer: undefined, cached: false });
+      }
+    }
   }
+  watch(
+    () => settingsRef.value.cacheRemoteOnExport,
+    (v) => {
+      if (typeof v === 'boolean') {
+        setCacheRemoteOnExportFlag(v);
+      }
+    },
+    { immediate: true },
+  );
   let sessionSaveTimer: number | null = null;
   let lastSessionSignature = '';
 
@@ -486,6 +502,32 @@ export function useViewerStage(
       res.push({ ...data, layerId });
     }
     return res;
+  }
+
+  async function cacheRemoteSourcesForExport(): Promise<void> {
+    const tasks: Promise<void>[] = [];
+    for (const [layerId, data] of layerSourceStore.entries()) {
+      if (!data || data.buffer || !data.url) continue;
+      tasks.push((async () => {
+        try {
+          const res = await fetch(data.url!);
+          if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
+          const buf = await res.arrayBuffer();
+          const md5 = data.md5 ?? computeMd5ForArrayBuffer(buf);
+          layerSourceStore.set(layerId, {
+            ...data,
+            md5,
+            size: buf.byteLength,
+            buffer: buf,
+            cached: true,
+          });
+        }
+        catch (err) {
+          console.warn('Failed to cache remote source for export:', data.url, err);
+        }
+      })());
+    }
+    if (tasks.length > 0) await Promise.all(tasks);
   }
 
   async function persistSessionSnapshot(): Promise<void> {
@@ -1264,6 +1306,9 @@ export function useViewerStage(
       scheduleSessionSave('layers');
     },
     getLayerSources: async () => {
+      if (cacheRemoteOnExport.value) {
+        await cacheRemoteSourcesForExport();
+      }
       const res: import('../../lib/viewer/sessionTypes').LayerSourceData[] = [];
       for (const [layerId, data] of layerSourceStore.entries()) {
         res.push({ ...data, layerId });

@@ -73,6 +73,9 @@ export function normalizeSettings(input: Partial<ViewerSettings> | null): Viewer
     exportPngTransparent: typeof v.exportPngTransparent === 'boolean'
       ? v.exportPngTransparent
       : base.exportPngTransparent,
+    cacheRemoteOnExport: typeof v.cacheRemoteOnExport === 'boolean'
+      ? v.cacheRemoteOnExport
+      : base.cacheRemoteOnExport,
   };
 }
 

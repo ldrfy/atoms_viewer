@@ -50,6 +50,9 @@ export type ViewerSettingsCategorized = {
 export type SessionSnapshot = {
   version: string;
   savedAt: string;
+  app?: {
+    locale?: string;
+  };
   settings: ViewerSettingsCategorized | ViewerSettings;
   layers: LayerSnapshot[];
 };

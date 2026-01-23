@@ -22,25 +22,27 @@
         </a-col>
       </a-row>
 
-      <div class="settings-gap-top-sm">
-        <a-button
-          block
-          type="primary"
-          :disabled="!hasAnyLayer"
-          @click="onExport"
-        >
-          {{ t('settings.panel.files.export.button') }}
-        </a-button>
-      </div>
-      <div class="settings-gap-top-sm">
-        <a-button
-          block
-          :disabled="!hasAnyLayer"
-          @click="onExportSelect"
-        >
-          {{ t('settings.panel.files.export.selectButton') }}
-        </a-button>
-      </div>
+      <a-row :gutter="8" class="settings-gap-top-sm" align="middle">
+        <a-col :span="12">
+          <a-button
+            block
+            type="primary"
+            :disabled="!hasAnyLayer"
+            @click="onExport"
+          >
+            {{ t('settings.panel.files.export.button') }}
+          </a-button>
+        </a-col>
+        <a-col :span="12">
+          <a-button
+            block
+            :disabled="!hasAnyLayer"
+            @click="onExportSelect"
+          >
+            {{ t('settings.panel.files.export.selectButton') }}
+          </a-button>
+        </a-col>
+      </a-row>
 
       <a-typography-text
         type="secondary"
@@ -51,18 +53,23 @@
     </a-form-item>
 
     <a-form-item :label="t('settings.panel.files.project.header')">
-      <a-space direction="vertical" :size="6" class="settings-full-width">
-        <a-button
-          block
-          :disabled="!hasAnyLayer"
-          @click="onExportProject"
-        >
-          {{ t('settings.panel.files.project.export') }}
-        </a-button>
-        <a-button block @click="onImportProject">
-          {{ t('settings.panel.files.project.import') }}
-        </a-button>
-      </a-space>
+      <a-row :gutter="8" align="middle">
+        <a-col :span="12">
+          <a-button
+            type="primary"
+            block
+            :disabled="!hasAnyLayer"
+            @click="onExportProject"
+          >
+            {{ t('settings.panel.files.project.export') }}
+          </a-button>
+        </a-col>
+        <a-col :span="12">
+          <a-button block @click="onImportProject">
+            {{ t('settings.panel.files.project.import') }}
+          </a-button>
+        </a-col>
+      </a-row>
 
       <a-row justify="space-between" align="middle" class="settings-gap-top-sm">
         <a-col>
@@ -92,48 +99,6 @@
         @change="onProjectFilePicked"
       >
     </a-form-item>
-
-    <a-divider class="settings-divider" />
-
-    <a-form-item :label="t('settings.panel.files.parse.header')">
-      <a-space direction="vertical" :size="6" class="settings-full-width">
-        <a-select
-          v-model:value="parseModeModel"
-          :aria-label="t('viewer.parse.mode')"
-          :title="t('viewer.parse.mode')"
-          :options="parseModeOptions"
-          :disabled="!canChangeParseMode"
-          class="settings-full-width"
-        />
-
-        <a-alert
-          v-if="viewerApi?.parseInfo.success === false"
-          type="error"
-          show-icon
-          :description="viewerApi?.parseInfo.errorMsg || '-'"
-        />
-
-        <a-descriptions size="small" :column="1" bordered>
-          <a-descriptions-item :label="t('viewer.parse.format')">
-            <a-tag>{{ viewerApi?.parseInfo.format || '-' }}</a-tag>
-          </a-descriptions-item>
-          <a-descriptions-item :label="t('viewer.parse.file')">
-            <span class="settings-word-break">{{
-              viewerApi?.parseInfo.fileName || '-'
-            }}</span>
-          </a-descriptions-item>
-          <a-descriptions-item :label="t('viewer.parse.atoms')">
-            {{ viewerApi?.parseInfo.atomCount ?? 0 }}
-          </a-descriptions-item>
-          <a-descriptions-item
-            v-if="(viewerApi?.parseInfo.frameCount ?? 0) > 1"
-            :label="t('viewer.parse.frames')"
-          >
-            {{ viewerApi?.parseInfo.frameCount }}
-          </a-descriptions-item>
-        </a-descriptions>
-      </a-space>
-    </a-form-item>
   </a-form>
 </template>
 
@@ -146,28 +111,18 @@ import { viewerApiRef } from '../../../lib/viewer/bridge';
 import { settingsSiderDirtyContextKey } from '../context';
 import { useSettingsSiderContext } from '../useSettingsSiderContext';
 import { PANEL_KEYS } from '../../../lib/viewer/panelKeys';
-import type { ParseMode } from '../../../lib/structure/parse';
-import { buildParseModeOptions } from '../../../lib/structure/parseOptions';
 import { DEFAULT_SETTINGS } from '../../../lib/viewer/settings';
 import { buildProjectZip, parseProjectZip } from '../../../lib/viewer/projectPackage';
+import { getLocale } from '../../../i18n';
 
 const { t } = useI18n();
 const { hasAnyLayer, settings, patchSettings } = useSettingsSiderContext();
 
 const viewerApi = computed(() => viewerApiRef.value);
 const projectInputRef = ref<HTMLInputElement | null>(null);
-// Allow switching parse mode even if no layer was created, as long as a file was attempted.
-const canChangeParseMode = computed(() => {
-  const api = viewerApi.value;
-  if (!api) return false;
-  if (hasAnyLayer.value) return true;
-  const fn = api.parseInfo?.fileName;
-  return typeof fn === 'string' && fn.trim().length > 0;
-});
-
 const DEFAULT_EXPORT_SCALE = DEFAULT_SETTINGS.exportPngScale;
 const DEFAULT_EXPORT_TRANSPARENT = DEFAULT_SETTINGS.exportPngTransparent;
-const DEFAULT_PARSE_MODE: ParseMode = 'auto';
+const DEFAULT_CACHE_REMOTE = DEFAULT_SETTINGS.cacheRemoteOnExport;
 
 const exportScale = computed<number>({
   get: () => settings.value.exportPngScale ?? DEFAULT_EXPORT_SCALE,
@@ -183,15 +138,10 @@ const exportTransparent = computed<boolean>({
   },
 });
 
-const parseModeModel = computed<ParseMode>({
-  get: () => viewerApi.value?.parseMode.value ?? 'auto',
-  set: v => viewerApi.value?.setParseMode(v),
-});
-
-const parseModeOptions = computed(() => buildParseModeOptions(t));
 const cacheRemoteModel = computed<boolean>({
-  get: () => viewerApi.value?.cacheRemoteOnExport?.value ?? false,
+  get: () => settings.value.cacheRemoteOnExport ?? DEFAULT_CACHE_REMOTE,
   set: (v) => {
+    patchSettings({ cacheRemoteOnExport: !!v });
     viewerApi.value?.setCacheRemoteOnExport?.(!!v);
   },
 });
@@ -202,9 +152,18 @@ const isDirty = computed(() => {
   return (
     exportScale.value !== DEFAULT_EXPORT_SCALE
     || exportTransparent.value !== DEFAULT_EXPORT_TRANSPARENT
-    || parseModeModel.value !== DEFAULT_PARSE_MODE
+    || cacheRemoteModel.value !== DEFAULT_CACHE_REMOTE
   );
 });
+
+watch(
+  () => settings.value.cacheRemoteOnExport,
+  (v) => {
+    if (v == null) return;
+    viewerApi.value?.setCacheRemoteOnExport?.(!!v);
+  },
+  { immediate: true },
+);
 
 watch(
   isDirty,
@@ -245,6 +204,7 @@ async function onExportProject(): Promise<void> {
       layers: snaps,
       sources,
       modelFileName: api.parseInfo?.fileName ?? 'atoms-viewer',
+      app: { locale: getLocale() },
     });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');

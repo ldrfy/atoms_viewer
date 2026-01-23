@@ -41,7 +41,7 @@
     >
 
     <!-- 动画 + 录制控制条 -->
-    <AnimBar :ctx="stage.animCtx" />
+    <AnimBar :ctx="stage.animCtx" :parse-ctx="stage.parseCtx" />
 
     <!-- 录制中：显示裁剪虚线框（不影响操作） -->
     <RecordCropDash :ctx="stage.cropDashCtx" />

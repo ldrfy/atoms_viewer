@@ -127,16 +127,13 @@ import {
 } from '../../lib/viewer/settingsStorage';
 import { clearSessionStorage } from '../../lib/viewer/sessionStorage';
 import { buildExportFilename } from '../../lib/file/filename';
-import { APP_VERSION } from '../../lib/appMeta';
-import { getThemeMode, setThemeMode, type ThemeMode } from '../../theme/mode';
+import { setThemeMode } from '../../theme/mode';
 import { getLocale, setLocale, SUPPORT_LOCALES, type SupportLocale } from '../../i18n';
 import { isLammpsDumpFormat } from '../../lib/structure/parsers/lammpsDump';
 import { isLammpsDataFormat } from '../../lib/structure/parsers/lammpsData';
-import type { LayerSnapshot, SessionSnapshot } from '../../lib/viewer/sessionTypes';
-import {
-  buildCategorizedSettings,
-  flattenCategorizedSettings,
-} from '../../lib/viewer/sessionTemplates';
+import type { LayerSnapshot } from '../../lib/viewer/sessionTypes';
+import { flattenCategorizedSettings } from '../../lib/viewer/sessionTemplates';
+import { buildSettingsSnapshot } from '../../lib/viewer/projectPackage';
 import { PANEL_KEYS, PANEL_HEADER_KEYS } from '../../lib/viewer/panelKeys';
 
 const props = withDefaults(
@@ -174,33 +171,8 @@ const activeLayerIsLammps = computed(() => {
   return isLammpsDumpFormat(format) || isLammpsDataFormat(format);
 });
 
-type SettingsExportPayload = SessionSnapshot & {
-  app: {
-    themeMode: ThemeMode;
-    locale: SupportLocale;
-  };
-};
-
-function buildExportPayload(
-  v: ViewerSettings,
-  layers: LayerSnapshot[],
-): SettingsExportPayload {
-  const settingsByCategory = buildCategorizedSettings(v) as unknown as ViewerSettings;
-  return {
-    version: APP_VERSION,
-    savedAt: new Date().toISOString(),
-    app: {
-      themeMode: getThemeMode(),
-      locale: getLocale(),
-    },
-    settings: settingsByCategory,
-    layers,
-  };
-}
-
 function extractSettingsPayload(input: unknown): {
   settings: Partial<ViewerSettings>;
-  themeMode?: ThemeMode;
   locale?: SupportLocale;
   layers?: LayerSnapshot[];
 } {
@@ -210,7 +182,6 @@ function extractSettingsPayload(input: unknown): {
   const anyInput = input as Record<string, unknown>;
   const topSettings = anyInput.settings as Record<string, any> | undefined;
   const app = anyInput.app as Record<string, unknown> | undefined;
-  const themeMode = app?.themeMode as ThemeMode | undefined;
   const locale = app?.locale as SupportLocale | undefined;
   const layers = Array.isArray(anyInput.layers)
     ? (anyInput.layers as LayerSnapshot[])
@@ -230,7 +201,6 @@ function extractSettingsPayload(input: unknown): {
     const categorized = topSettings as any;
     const flat = flattenCategorizedSettings(categorized as any);
     return {
-      themeMode,
       locale,
       layers,
       settings: flat,
@@ -238,7 +208,6 @@ function extractSettingsPayload(input: unknown): {
   }
   if (topSettings && typeof topSettings === 'object') {
     return {
-      themeMode,
       locale,
       layers,
       settings: topSettings as Partial<ViewerSettings>,
@@ -247,14 +216,12 @@ function extractSettingsPayload(input: unknown): {
   const data = anyInput.data;
   if (data && typeof data === 'object') {
     return {
-      themeMode,
       locale,
       layers,
       settings: data as Partial<ViewerSettings>,
     };
   }
   return {
-    themeMode,
     locale,
     layers,
     settings: anyInput as Partial<ViewerSettings>,
@@ -271,11 +238,11 @@ provide(settingsSiderDirtyContextKey, {
 const filesDirty = computed(() => {
   const exportScale = settings.value.exportPngScale ?? DEFAULT_SETTINGS.exportPngScale;
   const exportTransparent = settings.value.exportPngTransparent ?? DEFAULT_SETTINGS.exportPngTransparent;
-  const parseMode = viewerApi.value?.parseMode.value ?? 'auto';
+  const cacheRemoteOnExport = settings.value.cacheRemoteOnExport ?? DEFAULT_SETTINGS.cacheRemoteOnExport;
   return (
     exportScale !== DEFAULT_SETTINGS.exportPngScale
     || exportTransparent !== DEFAULT_SETTINGS.exportPngTransparent
-    || parseMode !== 'auto'
+    || cacheRemoteOnExport !== DEFAULT_SETTINGS.cacheRemoteOnExport
   );
 });
 const layersDirty = computed(() => (viewerApi.value?.layers.value.length ?? 0) > 1);
@@ -439,6 +406,7 @@ function applyDefaults() {
   const api = viewerApiRef.value;
   if (api) {
     api.suspendSettingsSync(300);
+    api.setCacheRemoteOnExport?.(nextSettings.cacheRemoteOnExport ?? true);
   }
 
   replaceSettings(nextSettings);
@@ -498,7 +466,7 @@ async function onExportSettings(): Promise<void> {
       ? await api.getLayerSnapshots()
       : [];
 
-    const payload = buildExportPayload(data, layerSnapshots);
+    const payload = buildSettingsSnapshot(data, layerSnapshots, { locale: getLocale() });
     const json = JSON.stringify(payload, null, 2);
     const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -539,16 +507,15 @@ function onImportFile(e: Event): void {
         api.suspendSettingsSync(300);
       }
 
-      if (extracted.themeMode === 'system'
-        || extracted.themeMode === 'light'
-        || extracted.themeMode === 'dark') {
-        setThemeMode(extracted.themeMode);
-      }
       if (extracted.locale && SUPPORT_LOCALES.includes(extracted.locale)) {
         setLocale(extracted.locale);
       }
 
       replaceSettings(nextSettings);
+      if (api) {
+        api.setCacheRemoteOnExport?.(nextSettings.cacheRemoteOnExport ?? true);
+      }
+      setThemeMode(nextSettings.themeMode);
       saveSettingsToStorage(nextSettings);
 
       const layerSnapshots = extracted.layers;

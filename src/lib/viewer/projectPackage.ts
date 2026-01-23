@@ -1,5 +1,6 @@
 import JSZip from 'jszip';
 import { buildExportFilename } from '../file/filename';
+import { APP_VERSION } from '../appMeta';
 import type { ViewerSettings } from './settings';
 import type { LayerSnapshot, LayerSourceData, SessionSnapshot } from './sessionTypes';
 import { buildCategorizedSettings } from './sessionTemplates';
@@ -7,12 +8,14 @@ import { buildCategorizedSettings } from './sessionTemplates';
 export function buildSettingsSnapshot(
   settings: ViewerSettings,
   layers: LayerSnapshot[],
+  app?: SessionSnapshot['app'],
 ): SessionSnapshot {
   return {
-    version: '1.0.0',
+    version: APP_VERSION,
     savedAt: new Date().toISOString(),
     settings: buildCategorizedSettings(settings),
     layers,
+    app,
   };
 }
 
@@ -21,10 +24,11 @@ export async function buildProjectZip(params: {
   layers: LayerSnapshot[];
   sources: LayerSourceData[];
   modelFileName?: string;
+  app?: SessionSnapshot['app'];
 }): Promise<{ blob: Blob; filename: string }> {
-  const { settings, layers, sources, modelFileName } = params;
+  const { settings, layers, sources, modelFileName, app } = params;
   const zip = new JSZip();
-  const payload = buildSettingsSnapshot(settings, layers);
+  const payload = buildSettingsSnapshot(settings, layers, app);
   zip.file('config.json', JSON.stringify(payload, null, 2));
 
   for (const src of sources) {

@@ -58,6 +58,8 @@ export type ViewerSettings = {
   exportPngScale: number;
   /** PNG 导出是否透明背景 */
   exportPngTransparent: boolean;
+  /** 是否缓存远程模型用于导出/恢复 */
+  cacheRemoteOnExport: boolean;
 
   // autoRotate
   /** Auto rotation (around an arbitrary axis with a constant speed). */
@@ -130,10 +132,14 @@ export const DEFAULT_LAYER_DISPLAY: LayerDisplaySettings = {
 };
 
 // 分组默认值（与设置面板分类一致）
-export type FileSettingsGroup = Pick<ViewerSettings, 'exportPngScale' | 'exportPngTransparent'>;
+export type FileSettingsGroup = Pick<
+  ViewerSettings,
+  'exportPngScale' | 'exportPngTransparent' | 'cacheRemoteOnExport'
+>;
 export const DEFAULT_FILES: FileSettingsGroup = {
   exportPngScale: 2,
   exportPngTransparent: true,
+  cacheRemoteOnExport: true,
 };
 
 export const DEFAULT_AUTO_ROTATE: AutoRotateSettings = {
@@ -210,6 +216,7 @@ export const DEFAULT_SETTINGS: ViewerSettings = {
   // files
   exportPngScale: DEFAULT_FILES.exportPngScale,
   exportPngTransparent: DEFAULT_FILES.exportPngTransparent,
+  cacheRemoteOnExport: DEFAULT_FILES.cacheRemoteOnExport,
 
   // auto-rotate
   autoRotate: { ...DEFAULT_AUTO_ROTATE },

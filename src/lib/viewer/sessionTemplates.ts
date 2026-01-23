@@ -6,6 +6,7 @@ export type CategorizedSettings = Partial<ViewerSettingsCategorized> & {
   files?: {
     exportPngScale: number;
     exportPngTransparent: boolean;
+    cacheRemoteOnExport: boolean;
   };
   view?: ViewerSettingsCategorized['view'];
   rotation?: ViewerSettingsCategorized['rotation'];
@@ -22,6 +23,7 @@ export function buildCategorizedSettings(
     files: {
       exportPngScale: settings.exportPngScale,
       exportPngTransparent: settings.exportPngTransparent,
+      cacheRemoteOnExport: settings.cacheRemoteOnExport,
     },
     rotation: settings.autoRotate,
     view: {
@@ -68,6 +70,7 @@ export function flattenCategorizedSettings(
   if (apply.files) {
     base.exportPngScale = apply.files.exportPngScale ?? base.exportPngScale;
     base.exportPngTransparent = apply.files.exportPngTransparent ?? base.exportPngTransparent;
+    base.cacheRemoteOnExport = apply.files.cacheRemoteOnExport ?? base.cacheRemoteOnExport;
   }
 
   if (apply.rotation) {

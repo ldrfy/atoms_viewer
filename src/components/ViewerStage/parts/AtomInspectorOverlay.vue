@@ -31,7 +31,14 @@
           :class="placement === 'bottom' ? 'is-bottom' : 'is-right'"
           role="separator"
           aria-label="resize"
-          @pointerdown.prevent="onResizeStart"
+          @pointerdown.prevent="onResizeStart('width', $event)"
+        />
+        <div
+          v-if="placement === 'left'"
+          class="atom-inspector__resizer is-bottom-edge"
+          role="separator"
+          aria-label="resize"
+          @pointerdown.prevent="onResizeStart('height', $event)"
         />
 
         <div class="atom-inspector-panel__inner">
@@ -45,7 +52,7 @@
               :title="t('common.resize')"
               role="button"
               tabindex="0"
-              @pointerdown.prevent="onResizeStart"
+              @pointerdown.prevent="onResizeStart('mobile', $event)"
             >
               <div class="atom-inspector__grab-bar" />
             </div>
@@ -267,12 +274,21 @@ watch(
 
 /** --- Size persistence + resizing --- */
 const desktopWidth = ref(loadNumber('atomInspector.desktopWidth', 360)); // px
+const desktopHeight = ref(loadNumber('atomInspector.desktopHeight', 0)); // px
 const mobileHeight = ref(loadNumber('atomInspector.mobileHeight', 280)); // px
+
+onMounted(() => {
+  if (desktopHeight.value <= 0) {
+    desktopHeight.value = Math.floor(window.innerHeight * 0.64);
+    saveNumber('atomInspector.desktopHeight', desktopHeight.value);
+  }
+});
 
 let startX = 0;
 let startY = 0;
 let startW = 0;
 let startH = 0;
+let resizeMode: 'width' | 'height' | 'mobile' = 'width';
 const resizeDrag = createPointerDragWithPullToRefreshBlock({
   shouldBlockPullToRefresh: () => placement.value === 'bottom',
   onStart: (e) => {
@@ -288,7 +304,7 @@ const resizeDrag = createPointerDragWithPullToRefreshBlock({
     startX = e.clientX;
     startY = e.clientY;
     startW = desktopWidth.value;
-    startH = mobileHeight.value;
+    startH = resizeMode === 'mobile' ? mobileHeight.value : desktopHeight.value;
   },
   onMove: (e) => {
     // Cancel default panning while dragging (important on mobile Firefox).
@@ -301,11 +317,20 @@ const resizeDrag = createPointerDragWithPullToRefreshBlock({
     }
 
     if (placement.value === 'left') {
-      // drag handle on right edge: dragging right increases width
-      const dx = e.clientX - startX;
-      const maxW = Math.floor(window.innerWidth * 0.7);
-      desktopWidth.value = clampNumber(startW + dx, 260, Math.max(260, maxW));
-      saveNumber('atomInspector.desktopWidth', desktopWidth.value);
+      if (resizeMode === 'height') {
+        const dy = e.clientY - startY;
+        const topPx = Math.max(12, Math.floor(window.innerHeight * 0.18));
+        const maxH = Math.max(220, window.innerHeight - topPx - 12);
+        desktopHeight.value = clampNumber(startH + dy, 220, maxH);
+        saveNumber('atomInspector.desktopHeight', desktopHeight.value);
+      }
+      else {
+        // drag handle on right edge: dragging right increases width
+        const dx = e.clientX - startX;
+        const maxW = Math.floor(window.innerWidth * 0.7);
+        desktopWidth.value = clampNumber(startW + dx, 260, Math.max(260, maxW));
+        saveNumber('atomInspector.desktopWidth', desktopWidth.value);
+      }
     }
     else {
       // bottom panel: dragging up increases height
@@ -317,7 +342,8 @@ const resizeDrag = createPointerDragWithPullToRefreshBlock({
   },
 });
 
-function onResizeStart(e: PointerEvent) {
+function onResizeStart(mode: 'width' | 'height' | 'mobile', e: PointerEvent) {
+  resizeMode = mode;
   resizeDrag.start(e);
 }
 
@@ -329,12 +355,15 @@ onBeforeUnmount(() => onResizeEnd());
 const panelStyle = computed(() => {
   const z = 220;
   if (placement.value === 'left') {
+    const topPx = Math.max(12, Math.floor(window.innerHeight * 0.18));
+    const maxH = Math.max(220, window.innerHeight - topPx - 12);
+    const height = clampNumber(desktopHeight.value, 220, maxH);
     return {
       position: 'fixed',
       zIndex: z,
       left: 0,
-      top: '18%',
-      height: '64%',
+      top: `${topPx}px`,
+      height: `${height}px`,
       width: `${desktopWidth.value}px`,
       borderRadius: '0 10px 10px 0',
     } as Record<string, any>;
@@ -493,6 +522,14 @@ function fmt(v: number | null | undefined): string {
   left: 0;
   right: 0;
   top: 0;
+  height: 8px;
+  cursor: row-resize;
+}
+
+.atom-inspector__resizer.is-bottom-edge {
+  left: 0;
+  right: 0;
+  bottom: 0;
   height: 8px;
   cursor: row-resize;
 }

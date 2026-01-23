@@ -1574,7 +1574,12 @@ export function createModelRuntime(args: {
   function setAllLayersColorMapRows(rows: AtomTypeColorMapItem[]): void {
     const rowsSafe = cloneColorRows(rows ?? []);
     for (const l of layerMap.values()) {
-      l.colorMapRows = cloneColorRows(rowsSafe);
+      const mapped = getMappedAtomsForCurrentFrame(l);
+      l.colorMapRows = syncColorMapRowsFromAtoms(
+        rowsSafe,
+        mapped,
+        l.hasAnyTypeId,
+      );
     }
     const active = getActiveLayer();
     if (active) {

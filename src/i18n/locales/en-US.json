@@ -141,6 +141,8 @@
         "importSuccess": "Settings imported",
         "importing": "Importing…",
         "importFailed": "Import failed. Invalid file format.",
+        "buildTime": "Built at:",
+        "buildTimeUnknown": "Unknown",
         "panel": {
             "view": {
                 "header": "View Control",

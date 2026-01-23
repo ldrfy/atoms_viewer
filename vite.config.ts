@@ -20,6 +20,9 @@ export default defineConfig({
       // deleteOriginalAssets: false, // 默认就是 false，不建议删源文件
     }),
   ],
+  define: {
+    'import.meta.env.VITE_BUILD_TIME': JSON.stringify(new Date().toISOString()),
+  },
   base: '/atoms_viewer/',
   build: {
     outDir: 'atoms_viewer',

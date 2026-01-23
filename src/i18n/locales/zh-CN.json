@@ -141,6 +141,8 @@
         "importSuccess": "设置已导入",
         "importing": "正在导入…",
         "importFailed": "导入失败，文件格式不正确。",
+        "buildTime": "构建部署时间：",
+        "buildTimeUnknown": "未知",
         "panel": {
             "view": {
                 "header": "视图控制",

@@ -83,6 +83,12 @@
         >
       </div>
     </div>
+
+    <div class="settings-build-info">
+      <a-typography-text type="secondary" class="settings-text-secondary">
+        {{ t('settings.buildTime') }} {{ buildTimeText }}
+      </a-typography-text>
+    </div>
   </div>
 </template>
 
@@ -129,6 +135,7 @@ import { clearSessionStorage } from '../../lib/viewer/sessionStorage';
 import { buildExportFilename } from '../../lib/file/filename';
 import { setThemeMode } from '../../theme/mode';
 import { getLocale, setLocale, SUPPORT_LOCALES, type SupportLocale } from '../../i18n';
+import { APP_BUILD_TIME } from '../../lib/appMeta';
 import { isLammpsDumpFormat } from '../../lib/structure/parsers/lammpsDump';
 import { isLammpsDataFormat } from '../../lib/structure/parsers/lammpsData';
 import type { LayerSnapshot } from '../../lib/viewer/sessionTypes';
@@ -156,7 +163,7 @@ const emit = defineEmits<{
   (e: 'update:activeKey', v: string[]): void;
 }>();
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const { settings } = useSettingsSiderContext();
 const { replaceSettings } = useSettingsSiderControlContext();
 
@@ -411,6 +418,19 @@ const activeKeyProxy = computed<string[]>({
         : [];
     emit('update:activeKey', next);
   },
+});
+
+const buildTimeText = computed(() => {
+  if (!APP_BUILD_TIME) return t('settings.buildTimeUnknown');
+  const parsed = new Date(APP_BUILD_TIME);
+  if (Number.isNaN(parsed.getTime())) return t('settings.buildTimeUnknown');
+  return new Intl.DateTimeFormat(locale.value, {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(parsed);
 });
 
 watch(

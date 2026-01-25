@@ -1,23 +1,32 @@
 import type { ViewerPublicApi } from './bridge';
 import type { ViewerSettings } from './settings';
+import { buildColorTemplateRows } from './settings';
 import type { LayerSnapshot } from './sessionTypes';
 import type { SupportLocale } from '../../i18n';
+import { PANEL_KEYS } from './panelKeys';
 
 import {
   buildDefaultSettings,
   clearSettingsStorage,
-  normalizeSettings,
   saveSettingsToStorage,
 } from './settingsStorage';
 import { clearSessionStorage } from './sessionStorage';
-import { buildSettingsSnapshot, type ApplyAllLayersFlags } from './projectPackage';
+import { buildSettingsSnapshot } from './projectPackage';
 import { flattenCategorizedSettings } from './sessionTemplates';
 
 export type ParsedSettingsImport = {
   nextSettings: ViewerSettings;
   locale?: SupportLocale;
   layers?: LayerSnapshot[];
-  applyAllLayers?: ApplyAllLayersFlags;
+  applyAllLayers: {
+    details: boolean;
+    colors: boolean;
+  };
+  animState: {
+    frameIndex: number;
+    playFps: number;
+    recordDelaySec: number;
+  };
 };
 
 export async function applyDefaultSettings(params: {
@@ -28,21 +37,24 @@ export async function applyDefaultSettings(params: {
 }): Promise<ViewerSettings> {
   const { currentSettings, viewerApi, replaceSettings, nextTick } = params;
   const defaults = buildDefaultSettings();
-  const initialDistance = currentSettings.initialDualViewDistance;
+  const initialDistance = currentSettings.view.initialDualViewDistance;
   const dist = typeof initialDistance === 'number' && Number.isFinite(initialDistance)
     ? initialDistance
-    : defaults.initialDualViewDistance;
+    : defaults.view.initialDualViewDistance;
 
   const nextSettings: ViewerSettings = {
     ...defaults,
-    dualViewDistance: dist,
-    initialDualViewDistance: dist,
-    rotationDeg: { x: 0, y: 0, z: 0 },
+    view: {
+      ...defaults.view,
+      dualViewDistance: dist,
+      initialDualViewDistance: dist,
+      rotationDeg: { x: 0, y: 0, z: 0 },
+    },
   };
 
   if (viewerApi) {
     viewerApi.suspendSettingsSync(300);
-    viewerApi.setCacheRemoteOnExport?.(nextSettings.cacheRemoteOnExport ?? true);
+    viewerApi.setCacheRemoteOnExport?.(nextSettings.files.cacheRemoteOnExport ?? true);
   }
 
   replaceSettings(nextSettings);
@@ -55,18 +67,18 @@ export async function applyDefaultSettings(params: {
 
   viewerApi.setActiveLayerDisplay(
     {
-      atomScale: defaults.atomScale,
-      showBonds: defaults.showBonds,
-      sphereSegments: defaults.sphereSegments,
-      bondFactor: defaults.bondFactor,
-      bondRadius: defaults.bondRadius,
-      atomRoughness: defaults.atomRoughness,
+      atomScale: defaults.details.atomScale,
+      showBonds: defaults.details.showBonds,
+      sphereSegments: defaults.details.sphereSegments,
+      bondFactor: defaults.details.bondFactor,
+      bondRadius: defaults.details.bondRadius,
+      atomRoughness: defaults.details.atomRoughness,
     },
     { applyToAll: true },
   );
 
   viewerApi.resetAllLayersTypeMapToDefaults({
-    templateRows: [...(defaults.lammpsTypeMap ?? [])],
+    templateRows: [...(defaults.lammps ?? [])],
     useAtomDefaults: false,
   });
   viewerApi.resetAllLayersColorMapToDefaults();
@@ -92,17 +104,22 @@ export async function buildSettingsExportJson(params: {
   settings: ViewerSettings;
   viewerApi: ViewerPublicApi | null;
   locale?: SupportLocale;
-  applyAllLayers?: ApplyAllLayersFlags;
+  applyAllLayers: {
+    details: boolean;
+    colors: boolean;
+  };
 }): Promise<{ json: string; fileStem: string }> {
   const { settings, viewerApi, locale, applyAllLayers } = params;
-  const data = normalizeSettings(settings);
+  const data = settings;
   const layerSnapshots: LayerSnapshot[] = viewerApi?.getLayerSnapshots
     ? await viewerApi.getLayerSnapshots()
     : [];
+  const animState = viewerApi?.getAnimState ? viewerApi.getAnimState() : undefined;
   const payload = buildSettingsSnapshot(
     data,
     layerSnapshots,
     locale ? { locale } : undefined,
+    animState,
     applyAllLayers,
   );
   const json = JSON.stringify(payload, null, 2);
@@ -120,48 +137,52 @@ export function parseSettingsImport(raw: string): ParsedSettingsImport {
     ? (anyInput.layers as LayerSnapshot[])
     : undefined;
 
-  const applyAllLayers: ApplyAllLayersFlags = {};
-  if (topSettings?.details && typeof topSettings.details === 'object') {
-    const val = topSettings.details.applyAllLayers;
-    if (typeof val === 'boolean') applyAllLayers.details = val;
-  }
-  const colorsPayload = topSettings?.colors;
-  if (colorsPayload && typeof colorsPayload === 'object' && !Array.isArray(colorsPayload)) {
-    const val = (colorsPayload as any).applyAllLayers;
-    if (typeof val === 'boolean') applyAllLayers.colors = val;
+  if (!topSettings || typeof topSettings !== 'object') {
+    throw new Error('Invalid settings format');
   }
 
-  const maybeCategorized = topSettings && typeof topSettings === 'object'
-    && (
-      'files' in topSettings
-      || 'rotation' in topSettings
-      || 'view' in topSettings
-      || 'details' in topSettings
-      || 'colors' in topSettings
-      || 'lammps' in topSettings
-    );
+  const categorized = topSettings as any;
+  const anim = categorized.anim as Record<string, unknown> | undefined;
+  const details = categorized.details as Record<string, unknown> | undefined;
+  const colors = categorized.colors as Record<string, unknown> | undefined;
+  const applyAllLayers = {
+    details: typeof details?.applyAllLayers === 'boolean' ? details.applyAllLayers : true,
+    colors: typeof colors?.applyAllLayers === 'boolean' ? colors.applyAllLayers : true,
+  };
 
-  const extractedSettings = (() => {
-    if (maybeCategorized) {
-      const categorized = topSettings as any;
-      return flattenCategorizedSettings(categorized as any);
+  const normalizedColors: Record<string, string> = {};
+  if (colors && typeof colors === 'object' && typeof (colors as any).data === 'object') {
+    const colorData = (colors as any).data as Record<string, unknown>;
+    for (const [key, val] of Object.entries(colorData)) {
+      if (/\d/.test(key)) continue;
+      if (typeof val !== 'string') continue;
+      const c = String(val).trim();
+      if (!c) continue;
+      normalizedColors[key] = c;
     }
-    if (topSettings && typeof topSettings === 'object') {
-      return topSettings as Partial<ViewerSettings>;
-    }
-    const data = anyInput.data;
-    if (data && typeof data === 'object') {
-      return data as Partial<ViewerSettings>;
-    }
-    return anyInput as Partial<ViewerSettings>;
-  })();
+  }
 
-  const nextSettings = normalizeSettings(extractedSettings as ViewerSettings);
+  if (colors && typeof colors === 'object') {
+    categorized.colors = {
+      applyAllLayers: applyAllLayers.colors,
+      data: normalizedColors,
+    };
+  }
+
+  const extractedSettings = flattenCategorizedSettings(categorized as any);
+  const animState = {
+    frameIndex: Number(extractedSettings.anim.frameIndex ?? 0),
+    playFps: Number(extractedSettings.anim.playFps ?? 6),
+    recordDelaySec: Number(extractedSettings.anim.recordDelaySec ?? 0),
+  };
+
+  const nextSettings = extractedSettings as ViewerSettings;
   return {
     nextSettings,
     locale,
     layers,
-    applyAllLayers: Object.keys(applyAllLayers).length > 0 ? applyAllLayers : undefined,
+    applyAllLayers,
+    animState,
   };
 }
 
@@ -170,7 +191,7 @@ export async function applyImportedSettings(params: {
   viewerApi: ViewerPublicApi | null;
   replaceSettings: (next: ViewerSettings) => void;
   setLocale?: (loc: SupportLocale) => void;
-  setThemeMode?: (mode: ViewerSettings['themeMode']) => void;
+  setThemeMode?: (mode: ViewerSettings['other']['themeMode']) => void;
   nextTick?: () => Promise<void>;
 }): Promise<void> {
   const { parsed, viewerApi, replaceSettings, setLocale, setThemeMode, nextTick } = params;
@@ -185,8 +206,8 @@ export async function applyImportedSettings(params: {
   }
 
   replaceSettings(nextSettings);
-  viewerApi?.setCacheRemoteOnExport?.(nextSettings.cacheRemoteOnExport ?? true);
-  if (setThemeMode) setThemeMode(nextSettings.themeMode);
+  viewerApi?.setCacheRemoteOnExport?.(nextSettings.files.cacheRemoteOnExport ?? true);
+  if (setThemeMode) setThemeMode(nextSettings.other.themeMode);
   saveSettingsToStorage(nextSettings);
 
   if (!viewerApi || !nextTick) return;
@@ -196,24 +217,33 @@ export async function applyImportedSettings(params: {
   const hasLayerSnapshots = Array.isArray(layers) && layers.length > 0;
   if (hasLayerSnapshots && viewerApi.applyLayerSnapshots) {
     await viewerApi.applyLayerSnapshots(layers as LayerSnapshot[]);
+    viewerApi.applyAnimState?.(parsed.animState);
     return;
   }
 
   viewerApi.setActiveLayerDisplay(
     {
-      atomScale: nextSettings.atomScale,
-      sphereSegments: nextSettings.sphereSegments,
-      showBonds: nextSettings.showBonds,
-      bondFactor: nextSettings.bondFactor,
-      bondRadius: nextSettings.bondRadius,
-      atomRoughness: nextSettings.atomRoughness,
+      atomScale: nextSettings.details.atomScale,
+      sphereSegments: nextSettings.details.sphereSegments,
+      showBonds: nextSettings.details.showBonds,
+      bondFactor: nextSettings.details.bondFactor,
+      bondRadius: nextSettings.details.bondRadius,
+      atomRoughness: nextSettings.details.atomRoughness,
     },
     { applyToAll: true },
   );
-  viewerApi.setAllLayersColorMap(nextSettings.colorMapTemplate ?? []);
-  viewerApi.refreshColorMap({ applyToAll: true });
+  const colorRows = buildColorTemplateRows(nextSettings.colors.data);
+  if (parsed.applyAllLayers.colors) {
+    viewerApi.setAllLayersColorMap(colorRows);
+    viewerApi.refreshColorMap({ applyToAll: true });
+  }
+  else {
+    viewerApi.setActiveLayerColorMap(colorRows);
+    viewerApi.refreshColorMap({ applyToAll: false });
+  }
   viewerApi.resetAllLayersTypeMapToDefaults({
-    templateRows: [...(nextSettings.lammpsTypeMap ?? [])],
+    templateRows: [...(nextSettings.lammps ?? [])],
     useAtomDefaults: false,
   });
+  viewerApi.applyAnimState?.(parsed.animState);
 }

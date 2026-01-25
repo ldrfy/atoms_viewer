@@ -89,7 +89,6 @@ import {
   DEFAULT_SETTINGS,
   DEFAULT_LAYER_DISPLAY,
 } from '../../lib/viewer/settings';
-import type { AtomTypeColorMapItem } from '../../lib/viewer/settings';
 import { useSettingsSiderContext } from './useSettingsSiderContext';
 import { settingsSiderDirtyContextKey, settingsSiderDerivedContextKey } from './context';
 import { viewerApiRef } from '../../lib/viewer/bridge';
@@ -97,8 +96,6 @@ import { APP_BUILD_TIME } from '../../lib/appMeta';
 import { isLammpsDumpFormat } from '../../lib/structure/parsers/lammpsDump';
 import { isLammpsDataFormat } from '../../lib/structure/parsers/lammpsData';
 import { getVisualStylePreset } from '../../lib/viewer/visualStyles';
-import { getElementColorHex } from '../../lib/structure/chem';
-import { getAtomTypeColorKey } from '../ViewerStage/colorMap';
 import { PANEL_KEYS, PANEL_HEADER_KEYS } from '../../lib/viewer/panelKeys';
 
 const props = withDefaults(
@@ -141,22 +138,22 @@ provide(settingsSiderDirtyContextKey, {
 });
 
 const filesDirty = computed(() => {
-  const exportScale = settings.value.exportPngScale ?? DEFAULT_SETTINGS.exportPngScale;
-  const exportTransparent = settings.value.exportPngTransparent ?? DEFAULT_SETTINGS.exportPngTransparent;
-  const cacheRemoteOnExport = settings.value.cacheRemoteOnExport ?? DEFAULT_SETTINGS.cacheRemoteOnExport;
+  const exportScale = settings.value.files.exportPngScale ?? DEFAULT_SETTINGS.files.exportPngScale;
+  const exportTransparent = settings.value.files.exportPngTransparent ?? DEFAULT_SETTINGS.files.exportPngTransparent;
+  const cacheRemoteOnExport = settings.value.files.cacheRemoteOnExport ?? DEFAULT_SETTINGS.files.cacheRemoteOnExport;
   return (
-    exportScale !== DEFAULT_SETTINGS.exportPngScale
-    || exportTransparent !== DEFAULT_SETTINGS.exportPngTransparent
-    || cacheRemoteOnExport !== DEFAULT_SETTINGS.cacheRemoteOnExport
+    exportScale !== DEFAULT_SETTINGS.files.exportPngScale
+    || exportTransparent !== DEFAULT_SETTINGS.files.exportPngTransparent
+    || cacheRemoteOnExport !== DEFAULT_SETTINGS.files.cacheRemoteOnExport
   );
 });
 const layersDirty = computed(() => (viewerApi.value?.layers.value.length ?? 0) > 1);
 
 const detailsDirty = computed(() => {
   const active = viewerApi.value?.activeLayerDisplay?.value;
-  const cur = active ?? settings.value;
+  const cur = active ?? settings.value.details;
   const styleBase = getVisualStylePreset(
-    settings.value.visualStyle ?? DEFAULT_SETTINGS.visualStyle,
+    settings.value.other.visualStyle ?? DEFAULT_SETTINGS.other.visualStyle,
   ).display;
   return (
     cur.representation !== DEFAULT_LAYER_DISPLAY.representation
@@ -170,23 +167,23 @@ const detailsDirty = computed(() => {
 });
 
 const viewDirty = computed(() => {
-  const defaultDistance = Number.isFinite(settings.value.initialDualViewDistance)
-    ? (settings.value.initialDualViewDistance as number)
-    : DEFAULT_SETTINGS.dualViewDistance;
+  const defaultDistance = Number.isFinite(settings.value.view.initialDualViewDistance)
+    ? (settings.value.view.initialDualViewDistance as number)
+    : DEFAULT_SETTINGS.view.dualViewDistance;
   return (
-    settings.value.orthographic !== DEFAULT_SETTINGS.orthographic
-    || !arraysEqual(settings.value.viewPresets, DEFAULT_SETTINGS.viewPresets)
-    || settings.value.dualViewSplit !== DEFAULT_SETTINGS.dualViewSplit
-    || (settings.value.dualViewDistance ?? defaultDistance) !== defaultDistance
-    || settings.value.rotationDeg.x !== 0
-    || settings.value.rotationDeg.y !== 0
-    || settings.value.rotationDeg.z !== 0
+    settings.value.view.orthographic !== DEFAULT_SETTINGS.view.orthographic
+    || !arraysEqual(settings.value.view.viewPresets, DEFAULT_SETTINGS.view.viewPresets)
+    || settings.value.view.dualViewSplit !== DEFAULT_SETTINGS.view.dualViewSplit
+    || (settings.value.view.dualViewDistance ?? defaultDistance) !== defaultDistance
+    || settings.value.view.rotationDeg.x !== 0
+    || settings.value.view.rotationDeg.y !== 0
+    || settings.value.view.rotationDeg.z !== 0
   );
 });
 
 const rotationDirty = computed(() => {
-  const cur = settings.value.autoRotate;
-  const def = DEFAULT_SETTINGS.autoRotate;
+  const cur = settings.value.rotation;
+  const def = DEFAULT_SETTINGS.rotation;
   return (
     !!cur.enabled !== !!def.enabled
     || cur.presetId !== def.presetId
@@ -198,18 +195,18 @@ const rotationDirty = computed(() => {
 
 const otherDirty = computed(() => {
   const styleBase = getVisualStylePreset(
-    settings.value.visualStyle ?? DEFAULT_SETTINGS.visualStyle,
+    settings.value.other.visualStyle ?? DEFAULT_SETTINGS.other.visualStyle,
   ).display;
   return (
-    settings.value.showAxes !== DEFAULT_SETTINGS.showAxes
-    || settings.value.refreshBondsOnPlay !== DEFAULT_SETTINGS.refreshBondsOnPlay
-    || settings.value.frame_rate !== DEFAULT_SETTINGS.frame_rate
-    || settings.value.autoRotateOnLoad !== DEFAULT_SETTINGS.autoRotateOnLoad
-    || settings.value.themeMode !== DEFAULT_SETTINGS.themeMode
-    || settings.value.visualStyle !== DEFAULT_SETTINGS.visualStyle
-    || settings.value.modelLightIntensity !== styleBase.modelLightIntensity
-    || (settings.value.themeReadabilityCheckOnOpen ?? true)
-      !== (DEFAULT_SETTINGS.themeReadabilityCheckOnOpen ?? true)
+    settings.value.other.showAxes !== DEFAULT_SETTINGS.other.showAxes
+    || settings.value.other.refreshBondsOnPlay !== DEFAULT_SETTINGS.other.refreshBondsOnPlay
+    || settings.value.other.frame_rate !== DEFAULT_SETTINGS.other.frame_rate
+    || settings.value.other.autoRotateOnLoad !== DEFAULT_SETTINGS.other.autoRotateOnLoad
+    || settings.value.other.themeMode !== DEFAULT_SETTINGS.other.themeMode
+    || settings.value.other.visualStyle !== DEFAULT_SETTINGS.other.visualStyle
+    || settings.value.other.modelLightIntensity !== styleBase.modelLightIntensity
+    || (settings.value.other.themeReadabilityCheckOnOpen ?? true)
+      !== (DEFAULT_SETTINGS.other.themeReadabilityCheckOnOpen ?? true)
   );
 });
 
@@ -229,41 +226,12 @@ function arraysEqual(a: unknown, b: unknown): boolean {
   return arrA.every((v, i) => v === arrB[i]);
 }
 
-function buildPresetColorMap(styleId: string): Record<string, string> {
-  const preset = getVisualStylePreset(styleId as any);
-  const out: Record<string, string> = {};
-  for (const r of preset.colorMapTemplate ?? []) {
-    const key = getAtomTypeColorKey(r.element, r.typeId);
-    if (!key) continue;
-    const c = String(r.color ?? '').trim().toUpperCase();
-    if (!c) continue;
-    out[key] = c;
-  }
-  return out;
-}
-
-function getBaseColorForRow(styleId: string, row: AtomTypeColorMapItem): string {
-  if (styleId !== 'default') {
-    const preset = buildPresetColorMap(styleId);
-    const key = getAtomTypeColorKey(row.element, row.typeId);
-    return preset[key] ?? getElementColorHex(row.element ?? 'E');
-  }
-  return getElementColorHex(row.element ?? 'E');
-}
-
 function hasCustomColors(): boolean {
-  const styleId = settings.value.visualStyle ?? DEFAULT_SETTINGS.visualStyle;
-  const template = settings.value.colorMapTemplate ?? [];
-  if (template.length === 0) return false;
-  return template.some((row) => {
-    const base = getBaseColorForRow(styleId, row);
-    const cur = String(row.color ?? '').trim().toUpperCase();
-    return cur !== String(base).trim().toUpperCase();
-  });
+  return Object.keys(settings.value.colors.data ?? {}).length > 0;
 }
 
 function hasCustomTypeMap(): boolean {
-  const template = settings.value.lammpsTypeMap ?? [];
+  const template = settings.value.lammps ?? [];
   const rows = viewerApi.value?.activeLayerTypeMap?.value ?? [];
   const all = [...template, ...rows];
   return all.some(r => (r.element ?? '').toString().trim().toUpperCase() !== 'E');
@@ -286,9 +254,9 @@ function isPanelDirty(key: string): boolean {
 }
 
 const basePanels = [
-  { key: PANEL_KEYS.files, headerKey: PANEL_HEADER_KEYS.files, comp: FilesPanel, icon: FolderOpenOutlined },
-  { key: PANEL_KEYS.rotation, headerKey: PANEL_HEADER_KEYS.rotation, comp: RotatePanel, icon: SyncOutlined },
   { key: PANEL_KEYS.view, headerKey: PANEL_HEADER_KEYS.view, comp: ViewPanel, icon: EyeOutlined },
+  { key: PANEL_KEYS.rotation, headerKey: PANEL_HEADER_KEYS.rotation, comp: RotatePanel, icon: SyncOutlined },
+  { key: PANEL_KEYS.files, headerKey: PANEL_HEADER_KEYS.files, comp: FilesPanel, icon: FolderOpenOutlined },
   { key: PANEL_KEYS.layers, headerKey: PANEL_HEADER_KEYS.layers, comp: LayersPanel, icon: AppstoreOutlined },
   { key: PANEL_KEYS.lammps, headerKey: PANEL_HEADER_KEYS.lammps, comp: LammpsPanel, icon: SwapOutlined },
   { key: PANEL_KEYS.details, headerKey: PANEL_HEADER_KEYS.details, comp: DetailsPanel, icon: SlidersOutlined },

@@ -149,52 +149,52 @@ const derivedContext = inject(settingsSiderDerivedContextKey, null);
 const viewerApi = computed(() => viewerApiRef.value);
 
 const showAxesModel = computed({
-  get: () => settings.value.showAxes,
-  set: (v: boolean) => patchSettings({ showAxes: v }),
+  get: () => settings.value.other.showAxes,
+  set: (v: boolean) => patchSettings({ other: { showAxes: v } }),
 });
 
 const refreshBondsOnPlayModel = computed({
-  get: () => settings.value.refreshBondsOnPlay ?? false,
-  set: (v: boolean) => patchSettings({ refreshBondsOnPlay: v }),
+  get: () => settings.value.other.refreshBondsOnPlay ?? false,
+  set: (v: boolean) => patchSettings({ other: { refreshBondsOnPlay: v } }),
 });
 
 const autoRotateOnLoadModel = computed({
-  get: () => settings.value.autoRotateOnLoad ?? true,
+  get: () => settings.value.other.autoRotateOnLoad ?? true,
   set: (v: boolean) => {
     if (!v) {
       patchSettings({
-        autoRotateOnLoad: false,
-        autoRotate: {
-          ...settings.value.autoRotate,
+        other: { autoRotateOnLoad: false },
+        rotation: {
+          ...settings.value.rotation,
           enabled: false,
         },
       });
       return;
     }
-    patchSettings({ autoRotateOnLoad: true });
+    patchSettings({ other: { autoRotateOnLoad: true } });
   },
 });
 
 const recordFpsModel = computed({
-  get: () => settings.value.frame_rate ?? 60,
-  set: (v: number) => { patchSettings({ frame_rate: v }); },
+  get: () => settings.value.other.frame_rate ?? 60,
+  set: (v: number) => { patchSettings({ other: { frame_rate: v } }); },
 });
 
 const themeReadabilityCheckOnOpenModel = computed({
-  get: () => settings.value.themeReadabilityCheckOnOpen ?? true,
-  set: (v: boolean) => patchSettings({ themeReadabilityCheckOnOpen: v }),
+  get: () => settings.value.other.themeReadabilityCheckOnOpen ?? true,
+  set: (v: boolean) => patchSettings({ other: { themeReadabilityCheckOnOpen: v } }),
 });
 
 const modelLightIntensityModel = computed({
-  get: () => settings.value.modelLightIntensity ?? DEFAULT_SETTINGS.modelLightIntensity,
-  set: (v: number) => patchSettings({ modelLightIntensity: v }),
+  get: () => settings.value.other.modelLightIntensity ?? DEFAULT_SETTINGS.other.modelLightIntensity,
+  set: (v: number) => patchSettings({ other: { modelLightIntensity: v } }),
 });
 
 const themeModeModel = computed<ThemeMode>({
-  get: () => settings.value.themeMode ?? getThemeMode(),
+  get: () => settings.value.other.themeMode ?? getThemeMode(),
   set: (v) => {
     setThemeMode(v);
-    patchSettings({ themeMode: v });
+    patchSettings({ other: { themeMode: v } });
   },
 });
 
@@ -212,13 +212,18 @@ function applyVisualStyle(styleId: VisualStyleId): void {
     ? []
     : preset.colorMapTemplate.map(r => ({ ...r, isCustom: true }));
   patchSettings({
-    visualStyle: styleId,
-    colorMapTemplate: colorTemplate,
-    atomScale: preset.display.atomScale,
-    atomRoughness: preset.display.atomRoughness,
-    bondRadius: preset.display.bondRadius,
-    bondFactor: preset.display.bondFactor,
-    modelLightIntensity: preset.display.modelLightIntensity,
+    other: { visualStyle: styleId, modelLightIntensity: preset.display.modelLightIntensity },
+    details: {
+      atomScale: preset.display.atomScale,
+      atomRoughness: preset.display.atomRoughness,
+      bondRadius: preset.display.bondRadius,
+      bondFactor: preset.display.bondFactor,
+    },
+    colors: {
+      data: isDefault ? {} : Object.fromEntries(
+        colorTemplate.map(r => [r.element, r.color]),
+      ),
+    },
   });
   if (!api) return;
   api.suspendSettingsSync(300);
@@ -241,7 +246,7 @@ function applyVisualStyle(styleId: VisualStyleId): void {
 }
 
 const visualStyleModel = computed<VisualStyleId>({
-  get: () => settings.value.visualStyle ?? DEFAULT_SETTINGS.visualStyle,
+  get: () => settings.value.other.visualStyle ?? DEFAULT_SETTINGS.other.visualStyle,
   set: (v) => {
     applyVisualStyle(v);
   },
@@ -255,33 +260,26 @@ const visualStyleOptions = computed(() =>
 const isOtherDirty = computed(() => {
   if (derivedContext) return derivedContext.otherDirty.value;
   const styleBase = getVisualStylePreset(
-    settings.value.visualStyle ?? DEFAULT_SETTINGS.visualStyle,
+    settings.value.other.visualStyle ?? DEFAULT_SETTINGS.other.visualStyle,
   ).display;
   return (
-    settings.value.showAxes !== DEFAULT_SETTINGS.showAxes
-    || settings.value.refreshBondsOnPlay !== DEFAULT_SETTINGS.refreshBondsOnPlay
-    || settings.value.autoRotateOnLoad !== DEFAULT_SETTINGS.autoRotateOnLoad
-    || settings.value.frame_rate !== DEFAULT_SETTINGS.frame_rate
-    || settings.value.modelLightIntensity !== styleBase.modelLightIntensity
-    || settings.value.themeMode !== DEFAULT_SETTINGS.themeMode
-    || settings.value.visualStyle !== DEFAULT_SETTINGS.visualStyle
-    || (settings.value.themeReadabilityCheckOnOpen ?? true)
-      !== (DEFAULT_SETTINGS.themeReadabilityCheckOnOpen ?? true)
+    settings.value.other.showAxes !== DEFAULT_SETTINGS.other.showAxes
+    || settings.value.other.refreshBondsOnPlay !== DEFAULT_SETTINGS.other.refreshBondsOnPlay
+    || settings.value.other.autoRotateOnLoad !== DEFAULT_SETTINGS.other.autoRotateOnLoad
+    || settings.value.other.frame_rate !== DEFAULT_SETTINGS.other.frame_rate
+    || settings.value.other.modelLightIntensity !== styleBase.modelLightIntensity
+    || settings.value.other.themeMode !== DEFAULT_SETTINGS.other.themeMode
+    || settings.value.other.visualStyle !== DEFAULT_SETTINGS.other.visualStyle
+    || (settings.value.other.themeReadabilityCheckOnOpen ?? true)
+      !== (DEFAULT_SETTINGS.other.themeReadabilityCheckOnOpen ?? true)
   );
 });
 
 function resetOtherSettings(): void {
   patchSettings({
-    showAxes: DEFAULT_SETTINGS.showAxes,
-    refreshBondsOnPlay: DEFAULT_SETTINGS.refreshBondsOnPlay,
-    autoRotateOnLoad: DEFAULT_SETTINGS.autoRotateOnLoad,
-    frame_rate: DEFAULT_SETTINGS.frame_rate,
-    modelLightIntensity: DEFAULT_SETTINGS.modelLightIntensity,
-    themeReadabilityCheckOnOpen: DEFAULT_SETTINGS.themeReadabilityCheckOnOpen,
-    themeMode: DEFAULT_SETTINGS.themeMode,
-    visualStyle: DEFAULT_SETTINGS.visualStyle,
+    other: { ...DEFAULT_SETTINGS.other },
   });
-  setThemeMode(DEFAULT_SETTINGS.themeMode);
-  applyVisualStyle(DEFAULT_SETTINGS.visualStyle);
+  setThemeMode(DEFAULT_SETTINGS.other.themeMode);
+  applyVisualStyle(DEFAULT_SETTINGS.other.visualStyle);
 }
 </script>

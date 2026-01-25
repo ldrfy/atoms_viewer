@@ -236,18 +236,20 @@ const fpsModel = computed<number>({
 const bgColorInputRef = ref<HTMLInputElement | null>(null);
 
 const bgColorModel = computed<string>({
-  get: () => unref(props.ctx.settings).backgroundColor,
+  get: () => unref(props.ctx.settings).anim.backgroundColor,
   set: (v: string) =>
     props.ctx.patchSettings({
-      backgroundColor: v,
-      backgroundColorMode: 'custom',
-      backgroundTransparent: false,
+      anim: {
+        backgroundColor: v,
+        backgroundColorMode: 'custom',
+        backgroundTransparent: false,
+      },
     }),
 });
 
-const isBgTransparent = computed(() => unref(props.ctx.settings).backgroundTransparent);
+const isBgTransparent = computed(() => unref(props.ctx.settings).anim.backgroundTransparent);
 
-const showBgReset = computed(() => !unref(props.ctx.settings).backgroundTransparent);
+const showBgReset = computed(() => !unref(props.ctx.settings).anim.backgroundTransparent);
 
 const bgDisplayText = computed(() =>
   isBgTransparent.value
@@ -262,8 +264,10 @@ function onBgPickerClick(): void {
 
 function resetBgToTransparent(): void {
   props.ctx.patchSettings({
-    backgroundTransparent: true,
-    backgroundColorMode: 'custom',
+    anim: {
+      backgroundTransparent: true,
+      backgroundColorMode: 'custom',
+    },
   });
 }
 </script>

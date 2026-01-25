@@ -1,49 +1,56 @@
 import JSZip from 'jszip';
 import { buildExportFilename } from '../file/filename';
 import { APP_BUILD_TIME, APP_VERSION } from '../appMeta';
+import { normalizeElementSymbol } from '../structure/chem';
 import type { ViewerSettings } from './settings';
-import type { LayerSnapshot, LayerSourceData, SessionSnapshot } from './sessionTypes';
+import type {
+  LayerSnapshot,
+  LayerSourceData,
+  SessionSnapshot,
+  ViewerSettingsCategorized,
+} from './sessionTypes';
 import { buildCategorizedSettings } from './sessionTemplates';
 
-export type ApplyAllLayersFlags = {
-  details?: boolean;
-  colors?: boolean;
+type ApplyAllLayersFlags = {
+  details: boolean;
+  colors: boolean;
 };
 
-function applyApplyAllLayers(
-  settings: SessionSnapshot['settings'],
-  flags?: ApplyAllLayersFlags,
-): SessionSnapshot['settings'] {
-  if (!flags) return settings;
-  if (!settings || typeof settings !== 'object') return settings;
-  const categorized = settings as any;
-  if (categorized.details && typeof categorized.details === 'object' && typeof flags.details === 'boolean') {
-    categorized.details.applyAllLayers = flags.details;
-  }
-  if (typeof flags.colors === 'boolean') {
-    const colors = categorized.colors;
-    if (Array.isArray(colors)) {
-      categorized.colors = {
-        rows: colors,
-        applyAllLayers: flags.colors,
-      };
-    }
-    else if (colors && typeof colors === 'object') {
-      colors.applyAllLayers = flags.colors;
-    }
-  }
-  return settings;
+function elementFromColorKey(key: string): string | null {
+  const trimmed = String(key ?? '').trim();
+  if (!trimmed) return null;
+  const match = trimmed.match(/^([A-Za-z]+)(\d+)?$/);
+  const raw = match?.[1] ?? trimmed;
+  const norm = normalizeElementSymbol(raw) || '';
+  return norm || null;
 }
 
 export function buildSettingsSnapshot(
   settings: ViewerSettings,
   layers: LayerSnapshot[],
   app?: SessionSnapshot['app'],
-  applyAllLayers?: ApplyAllLayersFlags,
+  animState?: Partial<NonNullable<ViewerSettingsCategorized['anim']>>,
+  applyAllLayers?: Partial<ApplyAllLayersFlags>,
 ): SessionSnapshot {
   const savedAt = new Date().toISOString();
+  const categorized = buildCategorizedSettings(settings, animState, applyAllLayers);
+  if (Array.isArray(layers) && layers.length > 0) {
+    const merged = { ...categorized.colors.data };
+    for (const layer of layers) {
+      const data = layer.colors?.data ?? {};
+      for (const [key, color] of Object.entries(data)) {
+        const element = elementFromColorKey(key);
+        if (!element) continue;
+        if (merged[element]) continue;
+        const c = String(color ?? '').trim();
+        if (!c) continue;
+        merged[element] = c;
+      }
+    }
+    categorized.colors.data = merged;
+  }
   return {
-    settings: applyApplyAllLayers(buildCategorizedSettings(settings), applyAllLayers),
+    settings: categorized,
     layers,
     app: {
       version: APP_VERSION,
@@ -60,11 +67,20 @@ export async function buildProjectZip(params: {
   sources: LayerSourceData[];
   modelFileName?: string;
   app?: SessionSnapshot['app'];
-  applyAllLayers?: ApplyAllLayersFlags;
+  animState?: Partial<NonNullable<ViewerSettingsCategorized['anim']>>;
+  applyAllLayers?: Partial<ApplyAllLayersFlags>;
 }): Promise<{ blob: Blob; filename: string }> {
-  const { settings, layers, sources, modelFileName, app, applyAllLayers } = params;
+  const {
+    settings,
+    layers,
+    sources,
+    modelFileName,
+    app,
+    animState,
+    applyAllLayers,
+  } = params;
   const zip = new JSZip();
-  const payload = buildSettingsSnapshot(settings, layers, app, applyAllLayers);
+  const payload = buildSettingsSnapshot(settings, layers, app, animState, applyAllLayers);
   zip.file('config.json', JSON.stringify(payload, null, 2));
 
   for (const src of sources) {

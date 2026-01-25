@@ -5,10 +5,7 @@ import {
   normalizeViewPresets,
   type ViewPreset,
 } from '../../lib/viewer/viewPresets';
-import {
-  DEFAULT_AUTO_ROTATE_PRESET_ID,
-  getAutoRotatePreset,
-} from '../../lib/viewer/autoRotate';
+import { getAutoRotatePreset } from '../../lib/viewer/autoRotate';
 
 /**
  * 绑定 ViewerStage 与 settings 的 watch 逻辑，并返回统一的 stop 函数。
@@ -67,7 +64,7 @@ export function bindViewerStageSettings(params: {
   // 投影切换 / projection mode
   stops.push(
     watch(
-      () => settingsRef.value.orthographic,
+      () => settingsRef.value.view.orthographic,
       v => setProjectionMode(v),
       { immediate: true },
     ),
@@ -76,9 +73,9 @@ export function bindViewerStageSettings(params: {
   // 多视角视图 / multi-view presets
   stops.push(
     watch(
-      () => settingsRef.value.viewPresets,
+      () => settingsRef.value.view.viewPresets,
       () => {
-        const v = normalizeViewPresets(settingsRef.value.viewPresets);
+        const v = normalizeViewPresets(settingsRef.value.view.viewPresets);
         if (v.length > 0) {
           setViewPresets(v);
           return;
@@ -91,7 +88,7 @@ export function bindViewerStageSettings(params: {
 
   stops.push(
     watch(
-      () => settingsRef.value.dualViewDistance,
+      () => settingsRef.value.view.dualViewDistance,
       (v) => {
         const d = typeof v === 'number' && Number.isFinite(v) ? v : 10;
         setDualViewDistance(d);
@@ -101,7 +98,7 @@ export function bindViewerStageSettings(params: {
   );
 
   stops.push(
-    watch(() => settingsRef.value.dualViewSplit,
+    watch(() => settingsRef.value.view.dualViewSplit,
       v => setDualViewSplit(v ?? 0.5),
       { immediate: true },
     ),
@@ -110,7 +107,7 @@ export function bindViewerStageSettings(params: {
   // 复位视角 / reset view
   stops.push(
     watch(
-      () => settingsRef.value.resetViewSeq,
+      () => settingsRef.value.view.resetViewSeq,
       () => resetView(),
     ),
   );
@@ -118,7 +115,7 @@ export function bindViewerStageSettings(params: {
   // 原子缩放 / atom scale
   stops.push(
     watch(
-      () => settingsRef.value.atomScale,
+      () => settingsRef.value.details.atomScale,
       () => applyAtomScale(),
     ),
   );
@@ -126,7 +123,7 @@ export function bindViewerStageSettings(params: {
   // Sphere quality / sphere segments
   stops.push(
     watch(
-      () => settingsRef.value.sphereSegments,
+      () => settingsRef.value.details.sphereSegments,
       () => applyAtomScale(),
     ),
   );
@@ -134,7 +131,7 @@ export function bindViewerStageSettings(params: {
   // 显示键合 / show bonds
   stops.push(
     watch(
-      () => settingsRef.value.showBonds,
+      () => settingsRef.value.details.showBonds,
       () => applyShowBonds(),
       { immediate: true },
     ),
@@ -143,7 +140,7 @@ export function bindViewerStageSettings(params: {
   // Bond inference factor: rebuild bond meshes when changed.
   stops.push(
     watch(
-      () => settingsRef.value.bondFactor,
+      () => settingsRef.value.details.bondFactor,
       () => applyShowBonds(),
     ),
   );
@@ -151,7 +148,7 @@ export function bindViewerStageSettings(params: {
   // 显示坐标轴 / show axes
   stops.push(
     watch(
-      () => settingsRef.value.showAxes,
+      () => settingsRef.value.other.showAxes,
       () => applyShowAxes(),
       { immediate: true },
     ),
@@ -159,8 +156,8 @@ export function bindViewerStageSettings(params: {
 
   stops.push(
     watch(
-      () => settingsRef.value.modelLightIntensity,
-      v => setModelLightIntensity(Number.isFinite(v) ? v : DEFAULT_SETTINGS.modelLightIntensity),
+      () => settingsRef.value.other.modelLightIntensity,
+      v => setModelLightIntensity(Number.isFinite(v) ? v : DEFAULT_SETTINGS.other.modelLightIntensity),
       { immediate: true },
     ),
   );
@@ -169,24 +166,19 @@ export function bindViewerStageSettings(params: {
   stops.push(
     watch(
       [
-        () => settingsRef.value.autoRotate.enabled,
-        () => settingsRef.value.autoRotate.presetId,
-        () => settingsRef.value.autoRotate.speedDegPerSec,
-        () => settingsRef.value.autoRotate.pauseOnInteract,
-        () => settingsRef.value.autoRotate.resumeDelayMs,
+        () => settingsRef.value.rotation.enabled,
+        () => settingsRef.value.rotation.presetId,
+        () => settingsRef.value.rotation.speedDegPerSec,
+        () => settingsRef.value.rotation.pauseOnInteract,
+        () => settingsRef.value.rotation.resumeDelayMs,
       ],
       () => {
-        const a = settingsRef.value.autoRotate;
-        // Legacy: earlier versions allowed "presetId=off".
-        // Now ON/OFF is controlled solely by a.enabled.
-        const legacyOff = a.presetId === 'off';
-        const preset = getAutoRotatePreset(
-          legacyOff ? DEFAULT_AUTO_ROTATE_PRESET_ID : a.presetId,
-        );
+        const a = settingsRef.value.rotation;
+        const preset = getAutoRotatePreset(a.presetId);
         const sp = a.speedDegPerSec;
         const speedDegPerSec = Number.isFinite(sp) ? sp : preset.speedDegPerSec;
         setAutoRotateConfig({
-          enabled: !!a.enabled && !legacyOff,
+          enabled: !!a.enabled,
           axis: preset.axis,
           speedDegPerSec,
           pauseOnInteract: !!a.pauseOnInteract,
@@ -204,8 +196,8 @@ export function bindViewerStageSettings(params: {
   stops.push(
     watch(
       () => [
-        settingsRef.value.backgroundColor,
-        settingsRef.value.backgroundTransparent,
+        settingsRef.value.anim.backgroundColor,
+        settingsRef.value.anim.backgroundTransparent,
       ],
       () => applyBackgroundColor(),
     ),

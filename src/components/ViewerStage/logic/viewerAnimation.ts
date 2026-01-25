@@ -41,7 +41,7 @@ export function createViewerAnimationController(deps: {
 
     // If bonds were not refreshed during playback, refresh once when pausing
     if (wasPlaying && !isPlaying.value) {
-      const refreshOnPlay = deps.settingsRef.value.refreshBondsOnPlay ?? true;
+      const refreshOnPlay = deps.settingsRef.value.other.refreshBondsOnPlay ?? true;
       if (!refreshOnPlay) {
         setFrame(frameIndex.value);
       }
@@ -74,7 +74,7 @@ export function createViewerAnimationController(deps: {
     const clamped = Math.min(Math.max(0, idx), Math.max(0, n - 1));
     frameIndex.value = clamped;
 
-    const refreshBonds = !isPlaying.value || (deps.settingsRef.value.refreshBondsOnPlay ?? true);
+    const refreshBonds = !isPlaying.value || (deps.settingsRef.value.other.refreshBondsOnPlay ?? true);
 
     runtime.applyFrameByIndex(clamped, { refreshBonds });
 

@@ -9,7 +9,7 @@ import type {
   LammpsTypeMapItem,
   AtomTypeColorMapItem,
   OpenSettingsPayload,
-  LayerDisplaySettings,
+  DetailsSettingsGroup,
 } from '../../lib/viewer/settings';
 import type { FrameMeta } from '../../lib/structure/types';
 
@@ -54,8 +54,7 @@ import { createViewerAnimationController } from './logic/viewerAnimation';
 import { createSettingsSync } from './settingsSync';
 import { buildSettingsSnapshot, parseProjectZip } from '../../lib/viewer/projectPackage';
 import { flattenCategorizedSettings } from '../../lib/viewer/sessionTemplates';
-import { readApplyAllLayersFlags, writeApplyAllLayersFlags } from '../SettingsSider/applyAllStorage';
-import { normalizeSettings } from '../../lib/viewer/settingsStorage';
+import { writeApplyAllLayersFlags } from '../SettingsSider/applyAllStorage';
 import { computeMd5ForArrayBuffer } from '../../lib/file/md5';
 import { buildExportFilename } from '../../lib/file/filename';
 import { saveSessionToStorage, clearSessionStorage } from '../../lib/viewer/sessionStorage';
@@ -136,10 +135,10 @@ type ViewerStageBridgeApi = {
   resetAllLayersColorMapToDefaults: () => void;
 
   /** 当前激活图层的显示设置 */
-  activeLayerDisplay: Ref<LayerDisplaySettings | null>;
+  activeLayerDisplay: Ref<DetailsSettingsGroup | null>;
   /** 设置激活图层显示参数 */
   setActiveLayerDisplay: (
-    patch: Partial<LayerDisplaySettings>,
+    patch: Partial<DetailsSettingsGroup>,
     opts?: { applyToAll?: boolean },
   ) => void;
   /** 立即应用视角/视距相关设置 */
@@ -167,6 +166,18 @@ type ViewerStageBridgeApi = {
   cacheRemoteOnExport: Ref<boolean>;
   /** 切换远程模型缓存开关 */
   setCacheRemoteOnExport: (v: boolean) => void;
+  /** 获取动画状态（用于导出/恢复） */
+  getAnimState?: () => {
+    frameIndex: number;
+    playFps: number;
+    recordDelaySec: number;
+  };
+  /** 应用动画状态（用于导入/恢复） */
+  applyAnimState?: (state: {
+    frameIndex: number;
+    playFps: number;
+    recordDelaySec: number;
+  }) => void;
 };
 
 type ViewerStageExposedApi = {
@@ -244,10 +255,10 @@ type ViewerStageBindings = {
   resetAllLayersColorMapToDefaults: () => void;
 
   /** 当前激活图层显示设置 */
-  activeLayerDisplay: Ref<LayerDisplaySettings | null>;
+  activeLayerDisplay: Ref<DetailsSettingsGroup | null>;
   /** 设置激活图层显示参数 */
   setActiveLayerDisplay: (
-    patch: Partial<LayerDisplaySettings>,
+    patch: Partial<DetailsSettingsGroup>,
     opts?: { applyToAll?: boolean },
   ) => void;
   /** 立即应用视角/视距相关设置 */
@@ -392,7 +403,7 @@ export function useViewerStage(
       z: round2(wrapDeg(radToDeg(e.z))),
     };
 
-    const cur = settingsRef.value.rotationDeg;
+    const cur = settingsRef.value.view.rotationDeg;
     if (
       Math.abs(cur.x - next.x) < 1e-2
       && Math.abs(cur.y - next.y) < 1e-2
@@ -401,7 +412,7 @@ export function useViewerStage(
       return;
     }
 
-    settingsSync.patch({ rotationDeg: next });
+    settingsSync.patch({ view: { rotationDeg: next } });
   }
 
   function scheduleAutoRotateRotationSync(): void {
@@ -415,11 +426,11 @@ export function useViewerStage(
       if (!patchSettings) return;
       if (!stage) return;
 
-      const a = settingsRef.value.autoRotate;
+      const a = settingsRef.value.rotation;
       const preset = getAutoRotatePreset(a.presetId);
       const sp = a.speedDegPerSec;
       const speedDegPerSec = Number.isFinite(sp) ? sp : preset.speedDegPerSec;
-      const enabled = !!a.enabled && preset.id !== 'off' && Math.abs(speedDegPerSec) > 1e-8;
+      const enabled = !!a.enabled && Math.abs(speedDegPerSec) > 1e-8;
       const now = performance.now();
       const canRotate = enabled
         && (!a.pauseOnInteract || (!autoRotateInteracting && now >= autoRotateResumeAtMs));
@@ -460,7 +471,7 @@ export function useViewerStage(
     return (runtimeTick.value, runtime?.activeColorMapRows.value ?? []);
   });
 
-  const activeLayerDisplay = computed<LayerDisplaySettings | null>(() => {
+  const activeLayerDisplay = computed<DetailsSettingsGroup | null>(() => {
     return (runtimeTick.value, runtime?.activeDisplaySettings.value ?? null);
   });
 
@@ -501,7 +512,7 @@ export function useViewerStage(
     }
   }
   watch(
-    () => settingsRef.value.cacheRemoteOnExport,
+    () => settingsRef.value.files.cacheRemoteOnExport,
     (v) => {
       if (typeof v === 'boolean') {
         setCacheRemoteOnExportFlag(v);
@@ -546,6 +557,37 @@ export function useViewerStage(
     if (tasks.length > 0) await Promise.all(tasks);
   }
 
+  function getAnimStateSnapshot(): {
+    frameIndex: number;
+    playFps: number;
+    recordDelaySec: number;
+  } {
+    const frameIndex = Number.isFinite(anim.frameIndex.value)
+      ? Math.max(0, Math.floor(anim.frameIndex.value))
+      : 0;
+    const playFps = Number.isFinite(anim.fps.value)
+      ? Math.max(1, anim.fps.value)
+      : 6;
+    const recordDelaySec = Number.isFinite(recording.recordDelaySec.value)
+      ? Math.max(0, recording.recordDelaySec.value)
+      : 0;
+    return {
+      frameIndex,
+      playFps,
+      recordDelaySec,
+    };
+  }
+
+  function applyAnimState(state: {
+    frameIndex: number;
+    playFps: number;
+    recordDelaySec: number;
+  }): void {
+    anim.fps.value = Math.max(1, state.playFps);
+    recording.recordDelaySec.value = Math.max(0, state.recordDelaySec);
+    anim.setFrame(Math.max(0, Math.floor(state.frameIndex)));
+  }
+
   async function persistSessionSnapshot(): Promise<void> {
     if (!runtime) return;
 
@@ -566,19 +608,23 @@ export function useViewerStage(
       settingsRef.value,
       layerSnapshots,
       undefined,
-      readApplyAllLayersFlags(),
+      getAnimStateSnapshot(),
+      {
+        details: settingsRef.value.details.applyAllLayers ?? true,
+        colors: settingsRef.value.colors.applyAllLayers ?? true,
+      },
     );
     const sources = collectLayerSources();
     const curSettings = settingsRef.value;
     const sig = JSON.stringify({
       settings: {
-        atomScale: curSettings.atomScale,
-        bondFactor: curSettings.bondFactor,
-        bondRadius: curSettings.bondRadius,
-        rotationDeg: curSettings.rotationDeg,
-        dualViewDistance: curSettings.dualViewDistance,
+        atomScale: curSettings.details.atomScale,
+        bondFactor: curSettings.details.bondFactor,
+        bondRadius: curSettings.details.bondRadius,
+        rotationDeg: curSettings.view.rotationDeg,
+        dualViewDistance: curSettings.view.dualViewDistance,
       },
-      layers: layerSnapshots.map(s => `${s.source?.md5 ?? s.id}:${s.visible ? 1 : 0}:${s.details.atomScale}:${s.lammps.length}:${s.colors.length}`),
+      layers: layerSnapshots.map(s => `${s.source?.md5 ?? s.id}:${s.visible ? 1 : 0}:${s.details.atomScale}:${s.lammps.length}:${Object.keys(s.colors.data ?? {}).length}`),
       sources: sources.map(s => `${s.md5 ?? s.layerId}:${s.size ?? 0}:${s.cached ? 1 : 0}`),
     });
     if (sig === lastSessionSignature) return;
@@ -617,7 +663,7 @@ export function useViewerStage(
     patchSettings: settingsSync.patch,
     getSettings: () => settingsRef.value,
     t,
-    getRecordFps: () => settingsRef.value.frame_rate ?? 60,
+    getRecordFps: () => settingsRef.value.other.frame_rate ?? 60,
     getModelFileName: () => modelFileNameProvider(),
   });
 
@@ -816,33 +862,26 @@ export function useViewerStage(
 
     // 先还原设置
     const rawSettings = snapshot.settings as any;
-    if (rawSettings && typeof rawSettings === 'object') {
-      const colorsPayload = rawSettings?.colors;
-      writeApplyAllLayersFlags({
-        details: rawSettings?.details?.applyAllLayers,
-        colors: Array.isArray(colorsPayload)
-          ? undefined
-          : colorsPayload?.applyAllLayers,
-      });
+    if (!rawSettings || typeof rawSettings !== 'object') {
+      message.error(t('settings.importFailed'));
+      return;
     }
-    const isCategorized = rawSettings && typeof rawSettings === 'object'
-      && (
-        'files' in rawSettings
-        || 'rotation' in rawSettings
-        || 'view' in rawSettings
-        || 'details' in rawSettings
-        || 'colors' in rawSettings
-        || 'lammps' in rawSettings
-      );
-    const settingsPatched = isCategorized
-      ? flattenCategorizedSettings(rawSettings) as ViewerSettings
-      : normalizeSettings(rawSettings as ViewerSettings);
+    const settingsPatched = flattenCategorizedSettings(rawSettings as any) as ViewerSettings;
+    writeApplyAllLayersFlags({
+      details: settingsPatched.details.applyAllLayers ?? true,
+      colors: settingsPatched.colors.applyAllLayers ?? true,
+    });
+    const animState = {
+      frameIndex: Number(settingsPatched.anim.frameIndex ?? 0),
+      playFps: Number(settingsPatched.anim.playFps ?? 6),
+      recordDelaySec: Number(settingsPatched.anim.recordDelaySec ?? 0),
+    };
     if (patchSettings) {
       settingsSync.suspend(300);
       patchSettings(settingsPatched);
       // 同步主题到全局
-      if (settingsPatched.themeMode) {
-        setThemeMode(settingsPatched.themeMode as any);
+      if (settingsPatched.other.themeMode) {
+        setThemeMode(settingsPatched.other.themeMode as any);
       }
     }
 
@@ -912,6 +951,7 @@ export function useViewerStage(
     runtime.applyLayerSnapshots(layerSnaps);
     runtimeTick.value += 1;
     applyViewFromSettings(settingsPatched);
+    applyAnimState(animState);
     scheduleSessionSave('layers');
 
     const afterCount = runtime.layers.value.length;
@@ -1040,7 +1080,7 @@ export function useViewerStage(
   }
 
   function setActiveLayerDisplay(
-    patch: Partial<LayerDisplaySettings>,
+    patch: Partial<DetailsSettingsGroup>,
     opts?: { applyToAll?: boolean },
   ): void {
     if (!runtime) return;
@@ -1049,12 +1089,12 @@ export function useViewerStage(
     picking.updateSelectionVisuals();
 
     const next: Partial<ViewerSettings> = {};
-    if (patch.atomScale != null) next.atomScale = patch.atomScale;
-    if (patch.showBonds != null) next.showBonds = patch.showBonds;
-    if (patch.sphereSegments != null) next.sphereSegments = patch.sphereSegments;
-    if (patch.bondFactor != null) next.bondFactor = patch.bondFactor;
-    if (patch.bondRadius != null) next.bondRadius = patch.bondRadius;
-    if (patch.atomRoughness != null) next.atomRoughness = patch.atomRoughness;
+    if (patch.atomScale != null) next.details = { ...(next.details ?? {}), atomScale: patch.atomScale };
+    if (patch.showBonds != null) next.details = { ...(next.details ?? {}), showBonds: patch.showBonds };
+    if (patch.sphereSegments != null) next.details = { ...(next.details ?? {}), sphereSegments: patch.sphereSegments };
+    if (patch.bondFactor != null) next.details = { ...(next.details ?? {}), bondFactor: patch.bondFactor };
+    if (patch.bondRadius != null) next.details = { ...(next.details ?? {}), bondRadius: patch.bondRadius };
+    if (patch.atomRoughness != null) next.details = { ...(next.details ?? {}), atomRoughness: patch.atomRoughness };
     if (Object.keys(next).length > 0) settingsSync.patch(next);
     scheduleSessionSave('layers');
   }
@@ -1092,34 +1132,37 @@ export function useViewerStage(
     const next: ViewerSettings = {
       ...base,
       ...(overrides ?? {}),
-      rotationDeg: {
-        ...base.rotationDeg,
-        ...(overrides?.rotationDeg ?? {}),
+      view: {
+        ...base.view,
+        ...(overrides?.view ?? {}),
+        rotationDeg: overrides?.view?.rotationDeg
+          ? { ...base.view.rotationDeg, ...overrides.view.rotationDeg }
+          : base.view.rotationDeg,
       },
-      autoRotate: {
-        ...base.autoRotate,
-        ...(overrides?.autoRotate ?? {}),
+      rotation: {
+        ...base.rotation,
+        ...(overrides?.rotation ?? {}),
       },
     };
 
-    const presets = normalizeViewPresets(next.viewPresets);
+    const presets = normalizeViewPresets(next.view.viewPresets);
     stage.setViewPresets(presets);
 
-    const split = next.dualViewSplit;
+    const split = next.view.dualViewSplit;
     if (typeof split === 'number' && Number.isFinite(split)) {
       stage.setDualViewSplit(split);
     }
 
-    stage.setProjectionMode(!!next.orthographic);
+    stage.setProjectionMode(!!next.view.orthographic);
 
-    const r = next.rotationDeg;
+    const r = next.view.rotationDeg;
     stage.pivotGroup.rotation.set(
       THREE.MathUtils.degToRad(r.x),
       THREE.MathUtils.degToRad(r.y),
       THREE.MathUtils.degToRad(r.z),
     );
 
-    const dist = next.dualViewDistance;
+    const dist = next.view.dualViewDistance;
     if (typeof dist === 'number' && Number.isFinite(dist)) {
       stage.setDualViewDistance(dist);
       lastSyncedDist = dist;
@@ -1157,14 +1200,14 @@ export function useViewerStage(
 
     const controls = stage.getControls();
     const onControlsStart = () => {
-      if (!settingsRef.value.autoRotate.pauseOnInteract) return;
+      if (!settingsRef.value.rotation.pauseOnInteract) return;
       autoRotateInteracting = true;
       scheduleAutoRotateRotationSync();
     };
     const onControlsEnd = () => {
-      if (!settingsRef.value.autoRotate.pauseOnInteract) return;
+      if (!settingsRef.value.rotation.pauseOnInteract) return;
       autoRotateInteracting = false;
-      const delay = settingsRef.value.autoRotate.resumeDelayMs;
+      const delay = settingsRef.value.rotation.resumeDelayMs;
       autoRotateResumeAtMs = performance.now() + Math.max(0, Number(delay) || 0);
       scheduleAutoRotateRotationSync();
     };
@@ -1216,13 +1259,13 @@ export function useViewerStage(
 
     stopRotationWatch = watch(
       () => [
-        settingsRef.value.rotationDeg.x,
-        settingsRef.value.rotationDeg.y,
-        settingsRef.value.rotationDeg.z,
+        settingsRef.value.view.rotationDeg.x,
+        settingsRef.value.view.rotationDeg.y,
+        settingsRef.value.view.rotationDeg.z,
       ],
       () => {
         if (!stage) return;
-        const r = settingsRef.value.rotationDeg;
+        const r = settingsRef.value.view.rotationDeg;
         stage.pivotGroup.rotation.set(
           THREE.MathUtils.degToRad(r.x),
           THREE.MathUtils.degToRad(r.y),
@@ -1257,8 +1300,8 @@ export function useViewerStage(
           return;
         lastSyncedDist = dist;
 
-        if (Math.abs(dist - (settingsRef.value.dualViewDistance ?? dist)) > 1e-3) {
-          settingsSync.patch({ dualViewDistance: dist });
+        if (Math.abs(dist - (settingsRef.value.view.dualViewDistance ?? dist)) > 1e-3) {
+          settingsSync.patch({ view: { dualViewDistance: dist } });
         }
       };
 
@@ -1402,6 +1445,8 @@ export function useViewerStage(
     },
     cacheRemoteOnExport,
     setCacheRemoteOnExport: setCacheRemoteOnExportFlag,
+    getAnimState: getAnimStateSnapshot,
+    applyAnimState,
   };
 
   const exposedApi: ViewerStageExposedApi = {

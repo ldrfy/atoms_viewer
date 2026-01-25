@@ -2,120 +2,122 @@ import type { ViewerSettings } from './settings';
 import { DEFAULT_SETTINGS } from './settings';
 import type { ViewerSettingsCategorized } from './sessionTypes';
 
-export type CategorizedSettings = Partial<ViewerSettingsCategorized> & {
-  files?: {
-    exportPngScale: number;
-    exportPngTransparent: boolean;
-    cacheRemoteOnExport: boolean;
-  };
-  view?: ViewerSettingsCategorized['view'];
-  rotation?: ViewerSettingsCategorized['rotation'];
-  details?: ViewerSettingsCategorized['details'];
-  lammps?: ViewerSettingsCategorized['lammps'];
-  colors?: ViewerSettingsCategorized['colors'];
-  other?: Partial<ViewerSettingsCategorized['other']>;
-};
+export type CategorizedSettings = ViewerSettingsCategorized;
 
 export function buildCategorizedSettings(
   settings: ViewerSettings,
+  animState?: Partial<NonNullable<ViewerSettingsCategorized['anim']>>,
+  applyAllLayers?: Partial<{ details: boolean; colors: boolean }>,
 ): ViewerSettingsCategorized {
+  const nextAnim = {
+    ...settings.anim,
+    ...(animState ?? {}),
+  };
   return {
-    files: {
-      exportPngScale: settings.exportPngScale,
-      exportPngTransparent: settings.exportPngTransparent,
-      cacheRemoteOnExport: settings.cacheRemoteOnExport,
-    },
-    rotation: {
-      enabled: settings.autoRotate.enabled,
-      presetId: settings.autoRotate.presetId,
-      speedDegPerSec: settings.autoRotate.speedDegPerSec,
-      pauseOnInteract: settings.autoRotate.pauseOnInteract,
-      resumeDelayMs: settings.autoRotate.resumeDelayMs,
-    },
+    files: { ...settings.files },
+    rotation: { ...settings.rotation },
     view: {
-      viewPresets: settings.viewPresets ?? [],
-      dualViewSplit: Number(settings.dualViewSplit ?? DEFAULT_SETTINGS.dualViewSplit),
-      orthographic: settings.orthographic,
-      dualViewDistance: Number(settings.dualViewDistance ?? DEFAULT_SETTINGS.dualViewDistance),
-      rotationDeg: settings.rotationDeg,
-      initialDualViewDistance: Number(settings.initialDualViewDistance ?? DEFAULT_SETTINGS.initialDualViewDistance),
+      ...settings.view,
+      rotationDeg: { ...settings.view.rotationDeg },
+      viewPresets: settings.view.viewPresets ? [...settings.view.viewPresets] : [],
     },
-    lammps: (settings.lammpsTypeMap ?? []).map(r => ({ ...r })),
+    lammps: (settings.lammps ?? []).map(r => ({ ...r })),
     details: {
-      representation: settings.representation,
-      showBonds: settings.showBonds,
-      bondRadius: settings.bondRadius,
-      atomScale: settings.atomScale,
-      atomRoughness: settings.atomRoughness,
-      bondFactor: settings.bondFactor,
-      sphereSegments: settings.sphereSegments,
+      ...settings.details,
+      applyAllLayers: applyAllLayers?.details ?? settings.details.applyAllLayers,
     },
-    colors: (settings.colorMapTemplate ?? []).map(r => ({ ...r })),
-    other: {
-      themeMode: settings.themeMode,
-      themeReadabilityCheckOnOpen: settings.themeReadabilityCheckOnOpen,
-      visualStyle: settings.visualStyle,
-      modelLightIntensity: settings.modelLightIntensity,
-      showAxes: settings.showAxes,
-      autoRotateOnLoad: settings.autoRotateOnLoad,
-      refreshBondsOnPlay: settings.refreshBondsOnPlay,
-      frame_rate: settings.frame_rate,
-      backgroundColor: settings.backgroundColor,
-      backgroundColorMode: settings.backgroundColorMode,
-      backgroundTransparent: settings.backgroundTransparent,
+    colors: {
+      applyAllLayers: applyAllLayers?.colors ?? settings.colors.applyAllLayers,
+      data: { ...settings.colors.data },
     },
+    anim: {
+      ...nextAnim,
+    },
+    other: { ...settings.other },
   };
 }
 
 export function flattenCategorizedSettings(
-  categorized: CategorizedSettings,
+  categorized: CategorizedSettings | Partial<CategorizedSettings>,
 ): ViewerSettings {
-  const base: ViewerSettings = { ...DEFAULT_SETTINGS };
-  const apply = categorized || {};
+  const base: ViewerSettings = {
+    files: { ...DEFAULT_SETTINGS.files },
+    rotation: { ...DEFAULT_SETTINGS.rotation },
+    view: {
+      ...DEFAULT_SETTINGS.view,
+      rotationDeg: { ...DEFAULT_SETTINGS.view.rotationDeg },
+      viewPresets: DEFAULT_SETTINGS.view.viewPresets
+        ? [...DEFAULT_SETTINGS.view.viewPresets]
+        : [],
+    },
+    lammps: [...(DEFAULT_SETTINGS.lammps ?? [])],
+    details: { ...DEFAULT_SETTINGS.details },
+    colors: {
+      applyAllLayers: DEFAULT_SETTINGS.colors.applyAllLayers,
+      data: { ...DEFAULT_SETTINGS.colors.data },
+    },
+    anim: { ...DEFAULT_SETTINGS.anim },
+    other: { ...DEFAULT_SETTINGS.other },
+  };
+  const apply = categorized as Partial<CategorizedSettings>;
 
   if (apply.files) {
-    base.exportPngScale = apply.files.exportPngScale ?? base.exportPngScale;
-    base.exportPngTransparent = apply.files.exportPngTransparent ?? base.exportPngTransparent;
-    base.cacheRemoteOnExport = apply.files.cacheRemoteOnExport ?? base.cacheRemoteOnExport;
+    base.files = {
+      ...base.files,
+      ...apply.files,
+    };
   }
 
   if (apply.rotation) {
-    base.autoRotate = { ...base.autoRotate, ...apply.rotation };
+    base.rotation = {
+      ...base.rotation,
+      ...apply.rotation,
+    };
   }
 
   if (apply.view) {
-    base.rotationDeg = apply.view.rotationDeg ?? base.rotationDeg;
-    if (apply.view.orthographic !== undefined) base.orthographic = apply.view.orthographic;
-    if (apply.view.viewPresets) base.viewPresets = apply.view.viewPresets;
-    if (apply.view.dualViewDistance !== undefined) base.dualViewDistance = apply.view.dualViewDistance;
-    if (apply.view.initialDualViewDistance !== undefined) base.initialDualViewDistance = apply.view.initialDualViewDistance;
-    if (apply.view.dualViewSplit !== undefined) base.dualViewSplit = apply.view.dualViewSplit;
-  }
-
-  if (apply.details) {
-    base.representation = apply.details.representation ?? base.representation;
-    base.atomScale = apply.details.atomScale ?? base.atomScale;
-    base.sphereSegments = apply.details.sphereSegments ?? base.sphereSegments;
-    base.showBonds = apply.details.showBonds ?? base.showBonds;
-    base.bondFactor = apply.details.bondFactor ?? base.bondFactor;
-    base.bondRadius = apply.details.bondRadius ?? base.bondRadius;
-    base.atomRoughness = apply.details.atomRoughness ?? base.atomRoughness;
+    const nextRotation = apply.view.rotationDeg
+      ? { ...base.view.rotationDeg, ...apply.view.rotationDeg }
+      : base.view.rotationDeg;
+    base.view = {
+      ...base.view,
+      ...apply.view,
+      rotationDeg: nextRotation,
+      viewPresets: apply.view.viewPresets ?? base.view.viewPresets,
+    };
   }
 
   if (apply.lammps) {
-    base.lammpsTypeMap = apply.lammps.map(r => ({ ...r }));
+    base.lammps = apply.lammps.map(r => ({ ...r }));
   }
+
+  if (apply.details) {
+    base.details = {
+      ...base.details,
+      ...apply.details,
+    };
+  }
+
   if (apply.colors) {
-    const rows = Array.isArray(apply.colors)
-      ? apply.colors
-      : Array.isArray(apply.colors.rows)
-        ? apply.colors.rows
-        : [];
-    base.colorMapTemplate = rows.map(r => ({ ...r }));
+    base.colors = {
+      ...base.colors,
+      ...apply.colors,
+      data: apply.colors.data ? { ...base.colors.data, ...apply.colors.data } : base.colors.data,
+    };
+  }
+
+  if (apply.anim) {
+    base.anim = {
+      ...base.anim,
+      ...apply.anim,
+    };
   }
 
   if (apply.other) {
-    Object.assign(base, apply.other);
+    base.other = {
+      ...base.other,
+      ...apply.other,
+    };
   }
 
   return base;

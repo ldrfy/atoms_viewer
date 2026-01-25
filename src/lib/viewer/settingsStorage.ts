@@ -2,117 +2,48 @@ import {
   DEFAULT_SETTINGS,
   type ViewerSettings,
 } from './settings';
+import { flattenCategorizedSettings } from './sessionTemplates';
 
 // Local storage key for viewer settings. / 本地设置存储键名。
 export const SETTINGS_STORAGE_KEY = 'atomsViewer.settings.v1';
-// Storage schema version. / 本地设置存储版本号。
-export const SETTINGS_STORAGE_VERSION = 1;
-
-type StoredSettings = {
-  version: number;
-  data: ViewerSettings;
-};
-
 /**
  * Build a fresh default settings object (deep-ish copy).
  * 构建一份新的默认设置（避免引用共享）。
  */
 export function buildDefaultSettings(): ViewerSettings {
   return {
-    ...DEFAULT_SETTINGS,
-    rotationDeg: { ...DEFAULT_SETTINGS.rotationDeg },
-    autoRotate: { ...DEFAULT_SETTINGS.autoRotate },
-    lammpsTypeMap: [...(DEFAULT_SETTINGS.lammpsTypeMap ?? [])],
-    colorMapTemplate: [...(DEFAULT_SETTINGS.colorMapTemplate ?? [])],
-    viewPresets: DEFAULT_SETTINGS.viewPresets
-      ? [...DEFAULT_SETTINGS.viewPresets]
-      : undefined,
-  };
-}
-
-/**
- * Normalize incoming settings (merge with defaults, fill missing fields).
- * 归一化输入设置（合并默认值，补齐缺失字段）。
- */
-export function normalizeSettings(input: Partial<ViewerSettings> | null): ViewerSettings {
-  const base = buildDefaultSettings();
-  if (!input || typeof input !== 'object') return base;
-
-  const v = { ...(input as Partial<ViewerSettings> & { dualViewEnabled?: unknown }) };
-  if ('dualViewEnabled' in v) delete (v as { dualViewEnabled?: unknown }).dualViewEnabled;
-  const inferredBgMode = (() => {
-    if (typeof v.backgroundColorMode === 'string') return v.backgroundColorMode;
-    if (typeof v.backgroundColor === 'string') {
-      const c = v.backgroundColor.trim().toLowerCase();
-      if (c && c !== '#000000' && c !== '#ffffff') return 'custom';
-    }
-    return base.backgroundColorMode;
-  })();
-  return {
-    ...base,
-    ...v,
-    backgroundColorMode: inferredBgMode,
-    rotationDeg: { ...base.rotationDeg, ...(v.rotationDeg ?? {}) },
-    autoRotate: {
-      ...base.autoRotate,
-      ...(v.autoRotate ?? {}),
+    files: { ...DEFAULT_SETTINGS.files },
+    rotation: { ...DEFAULT_SETTINGS.rotation },
+    view: {
+      ...DEFAULT_SETTINGS.view,
+      rotationDeg: { ...DEFAULT_SETTINGS.view.rotationDeg },
+      viewPresets: DEFAULT_SETTINGS.view.viewPresets
+        ? [...DEFAULT_SETTINGS.view.viewPresets]
+        : [],
     },
-    lammpsTypeMap: Array.isArray(v.lammpsTypeMap)
-      ? v.lammpsTypeMap.map(r => ({ ...r }))
-      : base.lammpsTypeMap,
-    colorMapTemplate: Array.isArray(v.colorMapTemplate)
-      ? v.colorMapTemplate.map(r => ({ ...r }))
-      : base.colorMapTemplate,
-    viewPresets: Array.isArray(v.viewPresets)
-      ? (v.viewPresets as any)
-      : base.viewPresets,
-    representation: typeof v.representation === 'string'
-      ? v.representation as any
-      : base.representation,
-    exportPngScale: Number.isFinite(v.exportPngScale)
-      ? (v.exportPngScale as number)
-      : base.exportPngScale,
-    exportPngTransparent: typeof v.exportPngTransparent === 'boolean'
-      ? v.exportPngTransparent
-      : base.exportPngTransparent,
-    visualStyle: typeof v.visualStyle === 'string'
-      ? v.visualStyle as any
-      : base.visualStyle,
-    cacheRemoteOnExport: typeof v.cacheRemoteOnExport === 'boolean'
-      ? v.cacheRemoteOnExport
-      : base.cacheRemoteOnExport,
+    lammps: [...(DEFAULT_SETTINGS.lammps ?? [])],
+    details: { ...DEFAULT_SETTINGS.details },
+    colors: {
+      applyAllLayers: DEFAULT_SETTINGS.colors.applyAllLayers,
+      data: { ...DEFAULT_SETTINGS.colors.data },
+    },
+    anim: { ...DEFAULT_SETTINGS.anim },
+    other: { ...DEFAULT_SETTINGS.other },
   };
 }
 
-function migrateSettings(
-  raw: Partial<ViewerSettings> | null,
-): ViewerSettings {
-  return normalizeSettings(raw);
-}
-
 /**
- * Load settings from localStorage with migration fallback.
- * 从本地读取设置，必要时进行迁移与回退。
+ * Load settings from localStorage.
+ * 从本地读取设置。
  */
 export function loadSettingsFromStorage(): ViewerSettings {
   try {
     const raw = localStorage.getItem(SETTINGS_STORAGE_KEY);
     if (!raw) return buildDefaultSettings();
 
-    const parsed = JSON.parse(raw) as StoredSettings | Partial<ViewerSettings>;
-    const version
-      = typeof (parsed as StoredSettings).version === 'number'
-        ? (parsed as StoredSettings).version
-        : 0;
-    const data = (parsed as StoredSettings).data ?? parsed;
-
-    if (version < SETTINGS_STORAGE_VERSION) {
-      const migrated = migrateSettings(data as Partial<ViewerSettings>);
-      saveSettingsToStorage(migrated);
-      return migrated;
-    }
-
-    return normalizeSettings(data as Partial<ViewerSettings>);
+    const parsed = JSON.parse(raw) as ViewerSettings;
+    if (!parsed || typeof parsed !== 'object') return buildDefaultSettings();
+    return flattenCategorizedSettings(parsed as any);
   }
   catch {
     return buildDefaultSettings();
@@ -126,15 +57,23 @@ export function loadSettingsFromStorage(): ViewerSettings {
 export function saveSettingsToStorage(settings: ViewerSettings): void {
   try {
     const data: ViewerSettings = {
-      ...settings,
-      autoRotate: { ...settings.autoRotate },
-      rotationDeg: { ...settings.rotationDeg },
+      files: { ...settings.files },
+      rotation: { ...settings.rotation },
+      view: {
+        ...settings.view,
+        rotationDeg: { ...settings.view.rotationDeg },
+        viewPresets: settings.view.viewPresets ? [...settings.view.viewPresets] : [],
+      },
+      lammps: [...(settings.lammps ?? [])],
+      details: { ...settings.details },
+      colors: {
+        applyAllLayers: settings.colors.applyAllLayers,
+        data: { ...settings.colors.data },
+      },
+      anim: { ...settings.anim },
+      other: { ...settings.other },
     };
-    const payload: StoredSettings = {
-      version: SETTINGS_STORAGE_VERSION,
-      data,
-    };
-    localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(payload));
+    localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(data));
   }
   catch {
     // ignore storage failures

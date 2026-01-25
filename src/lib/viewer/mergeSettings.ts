@@ -4,8 +4,10 @@ import type { RotationDeg, ViewerSettings } from './settings';
  * Patch type that supports partial rotation fields.
  * 支持 rotationDeg 局部更新的补丁类型。
  */
-export type SettingsPatch = Omit<Partial<ViewerSettings>, 'rotationDeg'> & {
-  rotationDeg?: Partial<RotationDeg>;
+export type SettingsPatch = Partial<ViewerSettings> & {
+  view?: Partial<ViewerSettings['view']> & {
+    rotationDeg?: Partial<RotationDeg>;
+  };
 };
 
 /**
@@ -14,8 +16,21 @@ export type SettingsPatch = Omit<Partial<ViewerSettings>, 'rotationDeg'> & {
  */
 export function cloneSettings(v: ViewerSettings): ViewerSettings {
   return {
-    ...v,
-    rotationDeg: { ...v.rotationDeg },
+    files: { ...v.files },
+    rotation: { ...v.rotation },
+    view: {
+      ...v.view,
+      rotationDeg: { ...v.view.rotationDeg },
+      viewPresets: v.view.viewPresets ? [...v.view.viewPresets] : [],
+    },
+    lammps: [...(v.lammps ?? [])],
+    details: { ...v.details },
+    colors: {
+      applyAllLayers: v.colors.applyAllLayers,
+      data: { ...v.colors.data },
+    },
+    anim: { ...v.anim },
+    other: { ...v.other },
   };
 }
 
@@ -27,14 +42,31 @@ export function mergeSettings(
   base: ViewerSettings,
   patch: SettingsPatch,
 ): ViewerSettings {
-  return {
-    ...base,
-    ...patch,
-    rotationDeg: {
-      ...base.rotationDeg,
-      ...(patch.rotationDeg ?? {}),
-    },
-  };
+  const next = cloneSettings(base);
+  if (patch.files) next.files = { ...next.files, ...patch.files };
+  if (patch.rotation) next.rotation = { ...next.rotation, ...patch.rotation };
+  if (patch.view) {
+    next.view = {
+      ...next.view,
+      ...patch.view,
+      rotationDeg: patch.view.rotationDeg
+        ? { ...next.view.rotationDeg, ...patch.view.rotationDeg }
+        : next.view.rotationDeg,
+      viewPresets: patch.view.viewPresets ?? next.view.viewPresets,
+    };
+  }
+  if (patch.lammps) next.lammps = patch.lammps.map(r => ({ ...r }));
+  if (patch.details) next.details = { ...next.details, ...patch.details };
+  if (patch.colors) {
+    next.colors = {
+      ...next.colors,
+      ...patch.colors,
+      data: patch.colors.data ? { ...next.colors.data, ...patch.colors.data } : next.colors.data,
+    };
+  }
+  if (patch.anim) next.anim = { ...next.anim, ...patch.anim };
+  if (patch.other) next.other = { ...next.other, ...patch.other };
+  return next;
 }
 
 /**

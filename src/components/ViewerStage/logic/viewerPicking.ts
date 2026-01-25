@@ -213,8 +213,8 @@ export function createViewerPickingController(deps: RenderDeps) {
     const display = runtime?.activeDisplaySettings?.value;
     const baseBondRadius = Number.isFinite(display?.bondRadius)
       ? (display!.bondRadius as number)
-      : (Number.isFinite(deps.settingsRef.value.bondRadius)
-          ? deps.settingsRef.value.bondRadius
+      : (Number.isFinite(deps.settingsRef.value.details.bondRadius)
+          ? deps.settingsRef.value.details.bondRadius
           : 0.09);
     const lineRadius = Math.max(0.008, baseBondRadius * 1.1);
 
@@ -333,7 +333,7 @@ export function createViewerPickingController(deps: RenderDeps) {
     const canvas = stage.renderer.domElement;
     const rect = canvas.getBoundingClientRect();
 
-    const rawPresets = deps.settingsRef.value.viewPresets;
+    const rawPresets = deps.settingsRef.value.view.viewPresets;
     const presets
       = normalizeViewPresets(rawPresets).length > 0
         ? normalizeViewPresets(rawPresets)
@@ -346,7 +346,7 @@ export function createViewerPickingController(deps: RenderDeps) {
     let xPx = e.clientX - rect.left;
 
     if (isDual) {
-      const rRaw = deps.settingsRef.value.dualViewSplit;
+      const rRaw = deps.settingsRef.value.view.dualViewSplit;
       const r = typeof rRaw === 'number' && Number.isFinite(rRaw) ? rRaw : 0.5;
       const leftW = Math.max(1, rect.width * r);
       const rightW = Math.max(1, rect.width - leftW);
@@ -446,7 +446,7 @@ export function createViewerPickingController(deps: RenderDeps) {
     if (!force && now - lastRotSyncMs < MANUAL_ROTATION_SYNC_INTERVAL_MS) return;
 
     lastRotSyncMs = now;
-    deps.patchSettings({ rotationDeg: { ...dragRotationDeg } });
+    deps.patchSettings({ view: { rotationDeg: { ...dragRotationDeg } } });
     // 旋转结束或强制同步时，确保触发一次会话保存（防止快速刷新丢失角度）
     if (force) {
       deps.onRotationCommitted?.();
@@ -573,7 +573,7 @@ export function createViewerPickingController(deps: RenderDeps) {
           };
         }
         else {
-          const cur = deps.settingsRef.value.rotationDeg;
+          const cur = deps.settingsRef.value.view.rotationDeg;
           dragRotationDeg = { x: cur.x, y: cur.y, z: cur.z };
         }
       }

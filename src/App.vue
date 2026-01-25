@@ -57,7 +57,7 @@ import { viewerApiRef } from './lib/viewer/bridge';
 import { readStoredSessionMeta, loadSessionFromStorage } from './lib/viewer/sessionStorage';
 import type { SessionSnapshot, LayerSourceData } from './lib/viewer/sessionTypes';
 import { flattenCategorizedSettings } from './lib/viewer/sessionTemplates';
-import { normalizeSettings } from './lib/viewer/settingsStorage';
+import { writeApplyAllLayersFlags } from './components/SettingsSider/applyAllStorage';
 import { PANEL_KEYS } from './lib/viewer/panelKeys';
 import { VIEW_SETTINGS_SAVE_DELAY_MS } from './lib/viewer/constants';
 
@@ -84,7 +84,7 @@ function buildSettingsSignature(input: ViewerSettings): string {
 const settingsActiveKey = ref<string[]>([PANEL_KEYS.view]);
 
 const settings = ref<ViewerSettings>(loadSettingsFromStorage());
-setThemeMode(settings.value.themeMode ?? getThemeMode());
+setThemeMode(settings.value.other.themeMode ?? getThemeMode());
 let lastNonViewSignature = buildSettingsSignature(settings.value);
 const settingsOverrides = readSettingsOverridesFromUrl(settings.value);
 if (Object.keys(settingsOverrides).length > 0) {
@@ -284,11 +284,40 @@ async function maybePromptSessionRestore(): Promise<void> {
         if (!stored) throw new Error('missing session');
         const files = buildFilesFromSources(stored.sources ?? []);
         const rawSettings = stored.snapshot.settings as any;
-        const isCategorized = rawSettings && typeof rawSettings === 'object'
-          && ('files' in rawSettings || 'rotation' in rawSettings || 'view' in rawSettings);
-        settings.value = isCategorized
-          ? flattenCategorizedSettings(rawSettings)
-          : normalizeSettings(rawSettings as ViewerSettings);
+        const hasAllSettings = rawSettings && typeof rawSettings === 'object'
+          && (
+            'files' in rawSettings
+            && 'rotation' in rawSettings
+            && 'view' in rawSettings
+            && 'details' in rawSettings
+            && 'colors' in rawSettings
+            && 'lammps' in rawSettings
+            && 'other' in rawSettings
+            && 'anim' in rawSettings
+          );
+        if (!hasAllSettings) {
+          message.error(t('settings.importFailed'));
+          return;
+        }
+        const detailFlags = rawSettings.details as Record<string, unknown>;
+        const colorFlags = rawSettings.colors as Record<string, unknown>;
+        if (
+          typeof detailFlags?.applyAllLayers === 'boolean'
+          && typeof colorFlags?.applyAllLayers === 'boolean'
+          && typeof colorFlags?.data === 'object'
+        ) {
+          for (const key of Object.keys(colorFlags.data as Record<string, unknown>)) {
+            if (/\d/.test(key)) {
+              message.error(t('settings.importFailed'));
+              return;
+            }
+          }
+          writeApplyAllLayersFlags({
+            details: detailFlags.applyAllLayers,
+            colors: colorFlags.applyAllLayers,
+          });
+        }
+        settings.value = flattenCategorizedSettings(rawSettings);
         pendingRestore.value = { snapshot: stored.snapshot, files };
         page.value = 'viewer';
 

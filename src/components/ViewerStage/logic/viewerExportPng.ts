@@ -39,7 +39,7 @@ export function createPngExporter(deps: {
 
     try {
       stage.renderer.setClearColor(
-        new THREE.Color(deps.getSettings().backgroundColor),
+        new THREE.Color(deps.getSettings().anim.backgroundColor),
         transparent ? 0 : 1,
       );
 
@@ -79,13 +79,13 @@ export function createPngExporter(deps: {
       const target = controls.target;
 
       const presets = (() => {
-        const v = normalizeViewPresets(settings.viewPresets);
+        const v = normalizeViewPresets(settings.view.viewPresets);
         if (v.length > 0) return v;
         return [] as const;
       })();
 
       if (presets.length === 2) {
-        const split = settings.dualViewSplit ?? 0.5;
+        const split = settings.view.dualViewSplit ?? 0.5;
         const leftW = Math.floor(w * split);
         const rightW = Math.max(1, w - leftW);
 

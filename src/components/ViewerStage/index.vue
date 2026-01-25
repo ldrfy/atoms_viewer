@@ -123,13 +123,13 @@ onMounted(() => {
 const isLoading = stage.isLoading;
 
 const showDualViewDivider = computed(() => {
-  const presets = normalizeViewPresets(settingsRef.value.viewPresets);
+  const presets = normalizeViewPresets(settingsRef.value.view.viewPresets);
   return presets.length === 2;
 });
 
 const dualViewDividerStyle = computed(() => {
-  const raw = typeof settingsRef.value.dualViewSplit === 'number'
-    ? settingsRef.value.dualViewSplit
+  const raw = typeof settingsRef.value.view.dualViewSplit === 'number'
+    ? settingsRef.value.view.dualViewSplit
     : 0.5;
   const ratio = Math.min(0.9, Math.max(0.1, raw));
   return { left: `${ratio * 100}%` };
@@ -151,11 +151,11 @@ watch(
 );
 
 watch(
-  () => props.settings.backgroundColor,
+  () => props.settings.anim.backgroundColor,
   (color) => {
-    if (props.settings.backgroundTransparent) return;
+    if (props.settings.anim.backgroundTransparent) return;
     if (!color) return;
-    if (props.settings.backgroundColorMode !== 'custom') return;
+    if (props.settings.anim.backgroundColorMode !== 'custom') return;
     const preferred = getPreferredThemeForBg(color);
     if (!preferred || preferred === activeThemeMode.value) return;
     skipNextThemePrompt.value = true;
@@ -176,9 +176,9 @@ function maybePromptThemeMismatch(mode: string): void {
     skipNextThemePrompt.value = false;
     return;
   }
-  if (props.settings.backgroundTransparent) return;
+  if (props.settings.anim.backgroundTransparent) return;
   const currentMode = mode === 'system' ? activeThemeMode.value : mode;
-  const color = props.settings.backgroundColor;
+  const color = props.settings.anim.backgroundColor;
   if (!color) return;
   const preferred = getPreferredThemeForBg(color);
   if (!preferred || preferred === currentMode) return;
@@ -186,10 +186,10 @@ function maybePromptThemeMismatch(mode: string): void {
 }
 
 function maybePromptSevereMismatch(): void {
-  if (!props.settings.themeReadabilityCheckOnOpen) return;
+  if (!props.settings.other.themeReadabilityCheckOnOpen) return;
   const mode = activeThemeMode.value;
-  const color = props.settings.backgroundColor;
-  if (props.settings.backgroundTransparent) return;
+  const color = props.settings.anim.backgroundColor;
+  if (props.settings.anim.backgroundTransparent) return;
   if (!color) return;
   const L = getColorLuminance(color);
   if (L === null) return;

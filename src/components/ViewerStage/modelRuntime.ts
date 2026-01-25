@@ -4,10 +4,11 @@ import { ref, type Ref } from 'vue';
 
 import {
   DEFAULT_LAYER_DISPLAY,
+  buildColorTemplateRows,
   type ViewerSettings,
   type LammpsTypeMapItem,
   type AtomTypeColorMapItem,
-  type LayerDisplaySettings,
+  type DetailsSettingsGroup,
 } from '../../lib/viewer/settings';
 import type { Atom, FrameMeta, StructureModel } from '../../lib/structure/types';
 import { getElementColorHex } from '../../lib/structure/chem';
@@ -37,6 +38,8 @@ import {
 import {
   buildColorMapRecord,
   getAtomTypeColorKey,
+  buildCustomColorMapRecord,
+  parseColorMapRecord,
   syncColorMapRowsFromAtoms,
 } from './colorMap';
 import type {
@@ -45,9 +48,9 @@ import type {
 } from '../../lib/viewer/sessionTypes';
 
 function normalizeLayerDisplay(
-  patch: Partial<LayerDisplaySettings>,
-  base: LayerDisplaySettings,
-): LayerDisplaySettings {
+  patch: Partial<DetailsSettingsGroup>,
+  base: DetailsSettingsGroup,
+): DetailsSettingsGroup {
   const representation = patch.representation ?? base.representation;
   const atomScale = patch.atomScale ?? base.atomScale;
 
@@ -75,7 +78,7 @@ function normalizeLayerDisplay(
   };
 }
 
-const DEFAULT_LAYER_DISPLAY_LOCAL: LayerDisplaySettings = { ...DEFAULT_LAYER_DISPLAY };
+const DEFAULT_LAYER_DISPLAY_LOCAL: DetailsSettingsGroup = { ...DEFAULT_LAYER_DISPLAY };
 
 export type ModelLayerInfo = {
   id: string;
@@ -133,7 +136,7 @@ type LayerInternal = {
   /** Whether color map has been explicitly applied via "Refresh display". */
 
   /** Per-layer display settings (atom size, bonds, quality). */
-  display: LayerDisplaySettings;
+  display: DetailsSettingsGroup;
 
   // tmp
   baseCenter: THREE.Vector3; // keep at (0,0,0) so applyFrameAtomsToMeshes == shift by current mean
@@ -218,7 +221,7 @@ export type ModelRuntime = {
   activeTypeMapRows: Ref<LammpsTypeMapItem[]>;
   activeTypeMapApplied: Ref<boolean>;
   activeColorMapRows: Ref<AtomTypeColorMapItem[]>;
-  activeDisplaySettings: Ref<LayerDisplaySettings | null>;
+  activeDisplaySettings: Ref<DetailsSettingsGroup | null>;
 
   renderModel: (
     model: StructureModel,
@@ -281,7 +284,7 @@ export type ModelRuntime = {
   setLayerVisible: (id: string, visible: boolean) => void;
 
   setActiveLayerDisplaySettings: (
-    patch: Partial<LayerDisplaySettings>,
+    patch: Partial<DetailsSettingsGroup>,
     opts?: { applyToAll?: boolean },
   ) => void;
 
@@ -314,7 +317,7 @@ export function createModelRuntime(args: {
   const activeTypeMapRows = ref<LammpsTypeMapItem[]>([]);
   const activeTypeMapApplied = ref(false);
   const activeColorMapRows = ref<AtomTypeColorMapItem[]>([]);
-  const activeDisplaySettings = ref<LayerDisplaySettings | null>(null);
+  const activeDisplaySettings = ref<DetailsSettingsGroup | null>(null);
   const visibleCustomColors = ref(false);
 
   // Internal layer registry keyed by id (source of truth).
@@ -542,29 +545,21 @@ export function createModelRuntime(args: {
     return Math.min(1, Math.max(0, base));
   }
 
-  function getDisplayDefaults(): LayerDisplaySettings {
+  function getDisplayDefaults(): DetailsSettingsGroup {
     return normalizeLayerDisplay(
-      {
-        representation: getSettings().representation,
-        atomScale: getSettings().atomScale,
-        showBonds: getSettings().showBonds,
-        sphereSegments: getSettings().sphereSegments,
-        bondFactor: getSettings().bondFactor,
-        bondRadius: getSettings().bondRadius,
-        atomRoughness: getSettings().atomRoughness,
-      },
+      getSettings().details,
       DEFAULT_LAYER_DISPLAY_LOCAL,
     );
   }
 
-  function getLayerDisplay(layer: LayerInternal): LayerDisplaySettings {
+  function getLayerDisplay(layer: LayerInternal): DetailsSettingsGroup {
     if (!layer.display) {
       layer.display = getDisplayDefaults();
     }
     return layer.display;
   }
 
-  function getActiveDisplay(): LayerDisplaySettings | null {
+  function getActiveDisplay(): DetailsSettingsGroup | null {
     const a = getActiveLayer();
     return a ? getLayerDisplay(a) : null;
   }
@@ -968,7 +963,7 @@ export function createModelRuntime(args: {
     layer.hasAnyTypeId = typeInfo.typeIds.length > 0;
 
     if (layer.hasAnyTypeId) {
-      const templateRows = (getSettings().lammpsTypeMap ?? []) as any;
+      const templateRows = (getSettings().lammps ?? []) as any;
       const detected = expandTypeIdsContiguous(typeInfo.typeIds);
       layer.typeMapRows
         = (mergeTypeMap(templateRows, detected, typeInfo.defaults) as any) ?? [];
@@ -985,7 +980,7 @@ export function createModelRuntime(args: {
 
     // Initialize per-layer color mapping from (mapped) atoms.
     // If a template exists in settings, apply it as the base.
-    const colorTemplate = cloneColorRows(getSettings().colorMapTemplate ?? []);
+    const colorTemplate = buildColorTemplateRows(getSettings().colors.data);
     layer.colorMapRows = syncColorMapRowsFromAtoms(
       colorTemplate,
       mappedFirstAtoms,
@@ -1059,7 +1054,7 @@ export function createModelRuntime(args: {
       const baseRows = (
         active.typeMapRows && active.typeMapRows.length > 0
           ? active.typeMapRows
-          : getSettings().lammpsTypeMap ?? []
+          : getSettings().lammps ?? []
       ) as any;
       const detected = expandTypeIdsContiguous(typeInfo.typeIds);
       active.typeMapRows
@@ -1231,7 +1226,7 @@ export function createModelRuntime(args: {
       }
     }
 
-    if (getSettings().showAxes) updateAxesForAtoms(displayAtoms);
+    if (getSettings().other.showAxes) updateAxesForAtoms(displayAtoms);
 
     invalidate();
   }
@@ -1370,8 +1365,8 @@ export function createModelRuntime(args: {
   }
 
   function applyShowAxes(): void {
-    stage.axesGroup.visible = getSettings().showAxes;
-    if (!getSettings().showAxes) {
+    stage.axesGroup.visible = getSettings().other.showAxes;
+    if (!getSettings().other.showAxes) {
       axesHelper.visible = false;
       xLabel.visible = false;
       yLabel.visible = false;
@@ -1398,7 +1393,7 @@ export function createModelRuntime(args: {
     for (const l of layerMap.values()) {
       const layerDisplay = { ...getLayerDisplay(l) };
       const typeMap = (l.typeMapRows ?? []).map(r => ({ ...r }));
-      const colorMap = cloneColorRows(l.colorMapRows);
+      const colorMap = buildCustomColorMapRecord(l.colorMapRows);
       res.push({
         id: l.info.id,
         name: l.info.name,
@@ -1414,7 +1409,9 @@ export function createModelRuntime(args: {
         },
         details: layerDisplay,
         lammps: typeMap,
-        colors: colorMap,
+        colors: {
+          data: colorMap,
+        },
       });
     }
     return res;
@@ -1446,7 +1443,10 @@ export function createModelRuntime(args: {
     layer.typeMapRows = (snapTypeMap ?? []).map(r => ({ ...r }));
     layer.typeMapApplied = false;
 
-    const colorSource = snap.colors ?? [];
+    const legacyColors = Array.isArray((snap as any).colors)
+      ? (snap as any).colors as AtomTypeColorMapItem[]
+      : null;
+    const colorSource = legacyColors ?? parseColorMapRecord((snap as any).colors?.data);
     layer.colorMapRows = syncColorMapRowsFromAtoms(colorSource, mapped, layer.hasAnyTypeId);
 
     rebuildVisualsForLayer(layer, mapped);
@@ -1508,7 +1508,7 @@ export function createModelRuntime(args: {
   }
 
   function applyModelRotation(): void {
-    const r = getSettings().rotationDeg;
+    const r = getSettings().view.rotationDeg;
     stage.pivotGroup.rotation.set(
       THREE.MathUtils.degToRad(r.x),
       THREE.MathUtils.degToRad(r.y),
@@ -1518,8 +1518,8 @@ export function createModelRuntime(args: {
   }
 
   function applyBackgroundColor(): void {
-    const col = new THREE.Color(getSettings().backgroundColor);
-    const alpha = getSettings().backgroundTransparent ? 0 : 1;
+    const col = new THREE.Color(getSettings().anim.backgroundColor);
+    const alpha = getSettings().anim.backgroundTransparent ? 0 : 1;
     stage.renderer.setClearColor(col, alpha);
     invalidate();
   }
@@ -1549,7 +1549,7 @@ export function createModelRuntime(args: {
 
     // Type mapping can change element labels. Keep color rows in sync while preserving colors.
     // Prefer user color template rows so element-level custom colors are reused after remapping.
-    const colorTemplate = cloneColorRows(getSettings().colorMapTemplate ?? []);
+    const colorTemplate = buildColorTemplateRows(getSettings().colors.data);
     const colorBase = colorTemplate.length > 0
       ? [...colorTemplate, ...active.colorMapRows]
       : active.colorMapRows;
@@ -1589,7 +1589,7 @@ export function createModelRuntime(args: {
     },
   ): void {
     let anyChanged = false;
-    const baseRows = (opts?.templateRows ?? getSettings().lammpsTypeMap ?? []) as any;
+    const baseRows = (opts?.templateRows ?? getSettings().lammps ?? []) as any;
     const useAtomDefaults = opts?.useAtomDefaults !== false;
 
     for (const layer of layerMap.values()) {
@@ -1677,7 +1677,7 @@ export function createModelRuntime(args: {
   }
 
   function setActiveLayerDisplaySettings(
-    patch: Partial<LayerDisplaySettings>,
+    patch: Partial<DetailsSettingsGroup>,
     opts?: { applyToAll?: boolean },
   ): void {
     const active = getActiveLayer();

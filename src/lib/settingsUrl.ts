@@ -1,4 +1,5 @@
 import type { ViewerSettings } from './viewer/settings';
+import { PANEL_KEYS } from './viewer/panelKeys';
 
 function parseBoolean(raw: string): boolean | null {
   const lowered = raw.trim().toLowerCase();
@@ -24,22 +25,24 @@ export function readSettingsOverridesFromUrl(
   const overrides: Partial<ViewerSettings> = {};
 
   const jsonKeys = new Set<string>([
-    'rotationDeg',
-    'autoRotate',
-    'lammpsTypeMap',
-    'colorMapTemplate',
+    PANEL_KEYS.files,
+    PANEL_KEYS.rotation,
+    PANEL_KEYS.view,
+    PANEL_KEYS.lammps,
+    PANEL_KEYS.details,
+    PANEL_KEYS.colors,
+    PANEL_KEYS.other,
+    'anim',
   ]);
   const groupPrefixes = new Set<string>([
+    'files',
     'rotation',
     'view',
-    'details',
-    'display',
-    'layerDisplay',
-    'background',
-    'colors',
     'lammps',
+    'details',
+    'colors',
+    'anim',
     'other',
-    'files',
   ]);
 
   const entries: { key: string; values: string[] }[] = [];

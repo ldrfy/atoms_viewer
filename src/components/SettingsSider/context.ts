@@ -1,12 +1,9 @@
 import type { ComputedRef, InjectionKey } from 'vue';
 
 import type { ViewerSettings } from '../../lib/viewer/settings';
+import type { SettingsPatch } from '../../lib/viewer/mergeSettings';
 
-export type PatchSettingsFn = (
-  patch: Omit<Partial<ViewerSettings>, 'rotationDeg'> & {
-    rotationDeg?: Partial<ViewerSettings['rotationDeg']>;
-  },
-) => void;
+export type PatchSettingsFn = (patch: SettingsPatch) => void;
 
 /**
  * Keep this context intentionally minimal.

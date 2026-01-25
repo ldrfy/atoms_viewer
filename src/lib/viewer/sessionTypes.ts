@@ -1,12 +1,7 @@
 import type {
-  AtomTypeColorMapItem,
   LammpsTypeMapItem,
-  LayerDisplaySettings,
-  AutoRotateSettings,
+  DetailsSettingsGroup,
   ViewerSettings,
-  FileSettingsGroup,
-  DisplaySettingsGroup,
-  OtherSettingsGroup,
 } from './settings';
 
 export type LayerSourceInfo = {
@@ -25,9 +20,11 @@ export type LayerSnapshot = {
   visible: boolean;
   source?: LayerSourceInfo;
   /** Per-layer appearance */
-  details: LayerDisplaySettings;
+  details: DetailsSettingsGroup;
   /** Per-layer colors */
-  colors: AtomTypeColorMapItem[];
+  colors: {
+    data: Record<string, string>;
+  };
   /** Per-layer LAMMPS type mapping */
   lammps: LammpsTypeMapItem[];
 };
@@ -37,22 +34,7 @@ export type LayerSourceData = LayerSourceInfo & {
   buffer?: ArrayBuffer;
 };
 
-export type ViewerSettingsCategorized = {
-  files: FileSettingsGroup;
-  rotation: AutoRotateSettings;
-  view: DisplaySettingsGroup;
-  details: LayerDisplaySettings & {
-    applyAllLayers?: boolean;
-  };
-  lammps: LammpsTypeMapItem[];
-  colors:
-    | AtomTypeColorMapItem[]
-    | {
-      rows: AtomTypeColorMapItem[];
-      applyAllLayers?: boolean;
-    };
-  other: OtherSettingsGroup;
-};
+export type ViewerSettingsCategorized = ViewerSettings;
 
 export type SessionSnapshot = {
   app?: {

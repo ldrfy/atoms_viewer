@@ -6,7 +6,6 @@ const DB_VERSION = 1;
 const STORE_NAME = 'model-sources';
 
 type StoredSessionMeta = {
-  version: number;
   snapshot: SessionSnapshot;
   cachedMd5s: string[];
 };
@@ -137,7 +136,7 @@ export function readStoredSessionMeta(): StoredSessionMeta | null {
     if (!raw) return null;
     const parsed = JSON.parse(raw) as StoredSessionMeta;
     if (!parsed || typeof parsed !== 'object') return null;
-    if (parsed.version !== 1) return null;
+    if ('version' in parsed) return null;
     if (!parsed.snapshot || !parsed.snapshot.layers) return null;
     return parsed;
   }
@@ -155,7 +154,6 @@ export async function saveSessionToStorage(
   );
   const savedAt = snapshot.app?.savedAt ?? new Date().toISOString();
   const payload: StoredSessionMeta = {
-    version: 1,
     snapshot,
     cachedMd5s,
   };

@@ -1,6 +1,7 @@
 import type { ViewPreset } from './viewPresets';
 import type { ThemeMode } from '../../theme/mode';
 import type { AutoRotatePresetId } from './autoRotate';
+import { normalizeElementSymbol } from '../structure/chem';
 export type LammpsTypeMapItem = {
   typeId: number;
   element: string;
@@ -33,7 +34,7 @@ export type RotationDeg = {
   z: number;
 };
 
-export type AutoRotateSettings = {
+export type RotateSettingsGroup = {
   /** Enable auto rotation in the render loop. */
   enabled: boolean;
   /** Built-in preset id (UI maps it to an axis direction). */
@@ -56,73 +57,21 @@ export type RepresentationId
     | 'custom';
 
 /**
- * 扁平的 ViewerSettings，但字段顺序/分组与 Settings 面板一致：
- * files -> rotation -> view -> details -> lammps/colors -> other
+ * ViewerSettings 与导出设置结构一致：
+ * files -> rotation -> view -> lammps -> details -> colors -> anim -> other
  */
 export type ViewerSettings = {
-  // files
-  /** PNG 导出倍率 */
-  exportPngScale: number;
-  /** PNG 导出是否透明背景 */
-  exportPngTransparent: boolean;
-  /** 是否缓存远程模型用于导出/恢复 */
-  cacheRemoteOnExport: boolean;
-
-  // autoRotate
-  /** Auto rotation (around an arbitrary axis with a constant speed). */
-  autoRotate: AutoRotateSettings;
-  /** Auto-enable rotation on model load (system hint). */
-  autoRotateOnLoad: boolean;
-
-  // display (view/camera)
-  rotationDeg: RotationDeg;
-  orthographic: boolean;
-  resetViewSeq: number;
-  /** Multi-view presets (choose 1 => single view, choose 2 => dual view). */
-  viewPresets?: ViewPreset[];
-  dualViewDistance?: number;
-  initialDualViewDistance?: number;
-  dualViewSplit?: number;
-
-  // layerDisplay (per-layer defaults)
-  representation: RepresentationId;
-  atomScale: number;
-  /** Sphere geometry segments (quality vs performance). */
-  sphereSegments: number;
-  showBonds: boolean;
-  /** Bond cutoff factor used for bond inference: cutoff = (r_i + r_j) * bondFactor. */
-  bondFactor: number;
-  /** Bond cylinder radius (world units). */
-  bondRadius: number;
-  /** Material roughness for atom spheres. */
-  atomRoughness: number;
-
-  // lammps / colors defaults
-  lammpsTypeMap: LammpsTypeMapItem[];
-  /** Optional user-defined color map template (applied on new layer load). */
-  colorMapTemplate?: AtomTypeColorMapItem[];
-
-  // other
-  showAxes: boolean;
-  /** During multi-frame playback, refresh bond meshes each frame. */
-  refreshBondsOnPlay: boolean;
-  backgroundColor: string;
-  /** Auto background follows theme; custom background sticks to user color. */
-  backgroundColorMode?: 'auto' | 'custom';
-  backgroundTransparent?: boolean;
-  /** Check theme/background readability when entering viewer. */
-  themeReadabilityCheckOnOpen?: boolean;
-  /** Light intensity multiplier for model lighting. */
-  modelLightIntensity: number;
-  //   录制帧率
-  frame_rate: number;
-  /** UI theme mode */
-  themeMode: ThemeMode;
-  /** Visual style preset */
-  visualStyle: VisualStyleId;
+  files: FileSettingsGroup;
+  rotation: RotateSettingsGroup;
+  view: DisplaySettingsGroup;
+  lammps: LammpsSettingsGroup;
+  details: DetailsSettingsGroup;
+  colors: ColorsSettingsGroup;
+  anim: AnimSettingsGroup;
+  other: OtherSettingsGroup;
 };
 
-export type LayerDisplaySettings = {
+export type DetailsSettingsGroup = {
   representation: RepresentationId;
   atomScale: number;
   showBonds: boolean;
@@ -130,9 +79,10 @@ export type LayerDisplaySettings = {
   bondFactor: number;
   bondRadius: number;
   atomRoughness: number;
+  applyAllLayers?: boolean;
 };
 
-export const DEFAULT_LAYER_DISPLAY: LayerDisplaySettings = {
+export const DEFAULT_LAYER_DISPLAY: DetailsSettingsGroup = {
   representation: 'ballAndStick',
   atomScale: 1,
   showBonds: true,
@@ -142,18 +92,24 @@ export const DEFAULT_LAYER_DISPLAY: LayerDisplaySettings = {
   atomRoughness: 0.35,
 };
 
+export const DEFAULT_DETAILS: DetailsSettingsGroup = {
+  ...DEFAULT_LAYER_DISPLAY,
+  applyAllLayers: true,
+};
+
 // 分组默认值（与设置面板分类一致）
-export type FileSettingsGroup = Pick<
-  ViewerSettings,
-  'exportPngScale' | 'exportPngTransparent' | 'cacheRemoteOnExport'
->;
+export type FileSettingsGroup = {
+  exportPngScale: number;
+  exportPngTransparent: boolean;
+  cacheRemoteOnExport: boolean;
+};
 export const DEFAULT_FILES: FileSettingsGroup = {
   exportPngScale: 2,
   exportPngTransparent: true,
   cacheRemoteOnExport: true,
 };
 
-export const DEFAULT_AUTO_ROTATE: AutoRotateSettings = {
+export const DEFAULT_AUTO_ROTATE: RotateSettingsGroup = {
   enabled: false,
   presetId: 'diag',
   speedDegPerSec: 8,
@@ -183,26 +139,31 @@ export const DEFAULT_DISPLAY: DisplaySettingsGroup = {
 export const DEFAULT_TYPE_MAP: LammpsTypeMapItem[] = [];
 export const DEFAULT_COLOR_MAP: AtomTypeColorMapItem[] = [];
 
-export type OtherSettingsGroup = Pick<
-  ViewerSettings,
-  | 'showAxes'
-  | 'refreshBondsOnPlay'
-  | 'backgroundColor'
-  | 'backgroundColorMode'
-  | 'backgroundTransparent'
-  | 'themeReadabilityCheckOnOpen'
-  | 'modelLightIntensity'
-  | 'frame_rate'
-  | 'autoRotateOnLoad'
-  | 'themeMode'
-  | 'visualStyle'
->;
+export type ColorsSettingsGroup = {
+  applyAllLayers: boolean;
+  data: Record<string, string>;
+};
+export const DEFAULT_COLORS: ColorsSettingsGroup = {
+  applyAllLayers: true,
+  data: {},
+};
+
+export type LammpsSettingsGroup = LammpsTypeMapItem[];
+export const DEFAULT_LAMMPS: LammpsSettingsGroup = [];
+
+export type OtherSettingsGroup = {
+  showAxes: boolean;
+  refreshBondsOnPlay: boolean;
+  themeReadabilityCheckOnOpen?: boolean;
+  modelLightIntensity: number;
+  frame_rate: number;
+  autoRotateOnLoad: boolean;
+  themeMode: ThemeMode;
+  visualStyle: VisualStyleId;
+};
 export const DEFAULT_OTHER: OtherSettingsGroup = {
   showAxes: false,
   refreshBondsOnPlay: true,
-  backgroundColor: '#ffffff',
-  backgroundColorMode: 'custom' as ViewerSettings['backgroundColorMode'],
-  backgroundTransparent: true,
   themeReadabilityCheckOnOpen: true,
   modelLightIntensity: 1.5,
   frame_rate: 60,
@@ -211,53 +172,36 @@ export const DEFAULT_OTHER: OtherSettingsGroup = {
   visualStyle: 'default',
 };
 
+export type AnimSettingsGroup = {
+  backgroundColor: string;
+  backgroundColorMode: 'auto' | 'custom';
+  backgroundTransparent: boolean;
+  frameIndex: number;
+  playFps: number;
+  recordDelaySec: number;
+};
+export const DEFAULT_ANIM: AnimSettingsGroup = {
+  backgroundColor: '#ffffff',
+  backgroundColorMode: 'custom',
+  backgroundTransparent: true,
+  frameIndex: 0,
+  playFps: 6,
+  recordDelaySec: 0,
+};
+
 /**
  * Default viewer settings for a fresh session.
  * 初始默认设置（首次进入或清理后使用）。
  */
 export const DEFAULT_SETTINGS: ViewerSettings = {
-  // layer display defaults (mirrors layerDisplay section)
-  representation: DEFAULT_LAYER_DISPLAY.representation,
-  atomScale: DEFAULT_LAYER_DISPLAY.atomScale,
-  sphereSegments: DEFAULT_LAYER_DISPLAY.sphereSegments,
-  showBonds: DEFAULT_LAYER_DISPLAY.showBonds,
-  bondFactor: DEFAULT_LAYER_DISPLAY.bondFactor,
-  bondRadius: DEFAULT_LAYER_DISPLAY.bondRadius,
-  atomRoughness: DEFAULT_LAYER_DISPLAY.atomRoughness,
-
-  // files
-  exportPngScale: DEFAULT_FILES.exportPngScale,
-  exportPngTransparent: DEFAULT_FILES.exportPngTransparent,
-  cacheRemoteOnExport: DEFAULT_FILES.cacheRemoteOnExport,
-
-  // auto-rotate
-  autoRotate: { ...DEFAULT_AUTO_ROTATE },
-  autoRotateOnLoad: DEFAULT_OTHER.autoRotateOnLoad,
-
-  // display (view)
-  rotationDeg: DEFAULT_DISPLAY.rotationDeg,
-  orthographic: DEFAULT_DISPLAY.orthographic,
-  resetViewSeq: DEFAULT_DISPLAY.resetViewSeq ?? 0,
-  viewPresets: DEFAULT_DISPLAY.viewPresets,
-  dualViewDistance: DEFAULT_DISPLAY.dualViewDistance,
-  initialDualViewDistance: DEFAULT_DISPLAY.initialDualViewDistance,
-  dualViewSplit: DEFAULT_DISPLAY.dualViewSplit,
-
-  // defaults: colors & lammps
-  lammpsTypeMap: DEFAULT_TYPE_MAP,
-  colorMapTemplate: DEFAULT_COLOR_MAP,
-
-  // other
-  showAxes: DEFAULT_OTHER.showAxes,
-  refreshBondsOnPlay: DEFAULT_OTHER.refreshBondsOnPlay,
-  backgroundColor: DEFAULT_OTHER.backgroundColor,
-  backgroundColorMode: DEFAULT_OTHER.backgroundColorMode,
-  backgroundTransparent: DEFAULT_OTHER.backgroundTransparent,
-  themeReadabilityCheckOnOpen: DEFAULT_OTHER.themeReadabilityCheckOnOpen,
-  modelLightIntensity: DEFAULT_OTHER.modelLightIntensity,
-  frame_rate: DEFAULT_OTHER.frame_rate,
-  themeMode: DEFAULT_OTHER.themeMode,
-  visualStyle: DEFAULT_OTHER.visualStyle,
+  files: DEFAULT_FILES,
+  rotation: DEFAULT_AUTO_ROTATE,
+  view: DEFAULT_DISPLAY,
+  lammps: DEFAULT_LAMMPS,
+  details: DEFAULT_DETAILS,
+  colors: DEFAULT_COLORS,
+  anim: DEFAULT_ANIM,
+  other: DEFAULT_OTHER,
 };
 
 /**
@@ -293,6 +237,39 @@ export function hasUnknownElementMappingForTypeIds(
     if (isUnknownElement(r.element)) return true;
   }
   return false;
+}
+
+export function buildColorTemplateRows(
+  data: Record<string, string> | undefined,
+): AtomTypeColorMapItem[] {
+  const out: AtomTypeColorMapItem[] = [];
+  for (const [key, value] of Object.entries(data ?? {})) {
+    const element = normalizeElementSymbol(key) || '';
+    if (!element) continue;
+    const color = String(value ?? '').trim();
+    if (!color) continue;
+    out.push({
+      element,
+      color,
+      isCustom: true,
+    });
+  }
+  return out;
+}
+
+export function buildElementColorRecordFromRows(
+  rows: AtomTypeColorMapItem[] | undefined,
+): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const row of rows ?? []) {
+    if (!row.isCustom) continue;
+    const element = normalizeElementSymbol(row.element) || '';
+    if (!element) continue;
+    const color = String(row.color ?? '').trim();
+    if (!color) continue;
+    out[element] = color;
+  }
+  return out;
 }
 
 /**

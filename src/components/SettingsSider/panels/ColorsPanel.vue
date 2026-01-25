@@ -104,6 +104,7 @@ import { useI18n } from 'vue-i18n';
 import { viewerApiRef } from '../../../lib/viewer/bridge';
 import { useSettingsSiderContext } from '../useSettingsSiderContext';
 import type { AtomTypeColorMapItem } from '../../../lib/viewer/settings';
+import { buildElementColorRecordFromRows } from '../../../lib/viewer/settings';
 import { getElementColorHex } from '../../../lib/structure/chem';
 import { getVisualStylePreset } from '../../../lib/viewer/visualStyles';
 import { readApplyAllLayersFlags, writeApplyAllLayersFlags } from '../applyAllStorage';
@@ -116,13 +117,26 @@ const { patchSettings, hasAnyLayer, settings } = useSettingsSiderContext();
 const viewerApi = computed(() => viewerApiRef.value);
 const layerList = computed(() => viewerApi.value?.layers.value ?? []);
 const activeLayerId = computed(() => viewerApi.value?.activeLayerId.value ?? null);
-const applyToAllLayers = ref(readApplyAllLayersFlags().colors ?? true);
+const applyToAllLayers = ref(
+  settings.value.colors.applyAllLayers ?? readApplyAllLayersFlags().colors ?? true,
+);
 
 watch(
   applyToAllLayers,
   (v) => {
     writeApplyAllLayersFlags({ colors: v });
+    patchSettings({ colors: { applyAllLayers: v } });
   },
+);
+
+watch(
+  () => settings.value.colors.applyAllLayers,
+  (v) => {
+    if (typeof v !== 'boolean') return;
+    if (v === applyToAllLayers.value) return;
+    applyToAllLayers.value = v;
+  },
+  { immediate: true },
 );
 const activeLayerInfo = computed(() => {
   const id = activeLayerId.value;
@@ -144,7 +158,7 @@ function formatColorKey(row: AtomTypeColorMapItem): string {
 }
 
 function buildPresetColorMap(): Record<string, string> {
-  const preset = getVisualStylePreset(settings.value.visualStyle ?? 'default');
+  const preset = getVisualStylePreset(settings.value.other.visualStyle ?? 'default');
   const out: Record<string, string> = {};
   for (const r of preset.colorMapTemplate ?? []) {
     const key = getAtomTypeColorKey(r.element, r.typeId);
@@ -157,7 +171,7 @@ function buildPresetColorMap(): Record<string, string> {
 }
 
 function getBaseColorForRow(row: AtomTypeColorMapItem): string {
-  const styleId = settings.value.visualStyle ?? 'default';
+  const styleId = settings.value.other.visualStyle ?? 'default';
   if (styleId !== 'default') {
     const key = getAtomTypeColorKey(row.element, row.typeId);
     const preset = buildPresetColorMap();
@@ -240,18 +254,12 @@ function onColorPickerChange(idx: number, v: unknown): void {
 }
 
 function updateColorTemplate(rows: AtomTypeColorMapItem[]): void {
-  const styleId = settings.value.visualStyle ?? 'default';
   const allMatchBase = rows.every(r => !isRowCustom(r));
   if (allMatchBase) {
-    if (styleId === 'default') {
-      patchSettings({ colorMapTemplate: [] });
-      return;
-    }
-    const preset = getVisualStylePreset(styleId);
-    patchSettings({ colorMapTemplate: preset.colorMapTemplate.map(r => ({ ...r })) });
+    patchSettings({ colors: { data: {} } });
     return;
   }
-  patchSettings({ colorMapTemplate: rows.map(r => ({ ...r })) });
+  patchSettings({ colors: { data: buildElementColorRecordFromRows(rows) } });
 }
 
 let refreshTimer: number | null = null;

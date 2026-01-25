@@ -5,8 +5,7 @@
  * describe the *axis direction*.
  */
 export type AutoRotatePresetId
-  = | 'off'
-    | 'diag'
+  = | 'diag'
     | 'y'
     | 'x'
     | 'z'
@@ -24,12 +23,7 @@ export type AutoRotatePreset = {
   id: AutoRotatePresetId;
   /** Unit axis vector in world space. */
   axis: [number, number, number];
-  /**
-   * Default angular speed (degrees/sec).
-   *
-   * UI speed slider should override this; it is used only as a fallback for
-   * legacy settings or corrupted configs.
-   */
+  /** Default angular speed (degrees/sec). */
   speedDegPerSec: number;
 };
 
@@ -41,7 +35,6 @@ export type AutoRotatePreset = {
  * user preset storage.
  */
 export const AUTO_ROTATE_PRESETS: AutoRotatePreset[] = [
-  { id: 'off', axis: [0, 1, 0], speedDegPerSec: 0 },
   // Common “isometric-like” diagonal.
   { id: 'diag', axis: [1, 1, 0.3], speedDegPerSec: 12 },
   // Single-axis presets.
@@ -60,25 +53,13 @@ export const AUTO_ROTATE_PRESETS: AutoRotatePreset[] = [
 
 export const DEFAULT_AUTO_ROTATE_PRESET_ID: AutoRotatePresetId = 'diag';
 
-/** Legacy preset ids from earlier versions (speed-encoded IDs). */
-const LEGACY_PRESET_ALIAS: Record<string, AutoRotatePresetId> = {
-  diagSlow: 'diag',
-  diagMid: 'diag',
-  yMid: 'y',
-  xMid: 'x',
-  zMid: 'z',
-  spaceSlow: 'space',
-  fast: 'tilt',
-};
-
 /**
  * Type guard for auto-rotate preset id.
  * 自动旋转预设 id 的类型守卫。
  */
 export function isAutoRotatePresetId(x: unknown): x is AutoRotatePresetId {
   return (
-    x === 'off'
-    || x === 'diag'
+    x === 'diag'
     || x === 'y'
     || x === 'x'
     || x === 'z'
@@ -95,14 +76,7 @@ export function isAutoRotatePresetId(x: unknown): x is AutoRotatePresetId {
  * 将预设 id 解析为有效预设（带回退）。
  */
 export function getAutoRotatePreset(
-  id: unknown,
-  fallback: AutoRotatePresetId = DEFAULT_AUTO_ROTATE_PRESET_ID,
+  id: AutoRotatePresetId,
 ): AutoRotatePreset {
-  const raw = String(id ?? '').trim();
-  const aliased = LEGACY_PRESET_ALIAS[raw] ?? raw;
-  const pid = isAutoRotatePresetId(aliased) ? aliased : fallback;
-  return (
-    AUTO_ROTATE_PRESETS.find(p => p.id === pid)
-    ?? AUTO_ROTATE_PRESETS.find(p => p.id === fallback)!
-  );
+  return AUTO_ROTATE_PRESETS.find(p => p.id === id)!;
 }

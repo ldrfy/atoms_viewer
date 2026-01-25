@@ -124,3 +124,48 @@ export function buildColorMapRecord(
   }
   return out;
 }
+
+function parseAtomTypeColorKey(key: string): { element: string; typeId?: number } {
+  const trimmed = String(key ?? '').trim();
+  const match = trimmed.match(/^([A-Za-z]+)(\d+)?$/);
+  const elementRaw = match?.[1] ?? trimmed;
+  const typeIdRaw = match?.[2] ?? '';
+  const element = normalizeElementSymbol(elementRaw) || 'E';
+  const typeId = typeIdRaw ? Number.parseInt(typeIdRaw, 10) : undefined;
+  return {
+    element,
+    typeId: Number.isFinite(typeId) && (typeId as number) > 0 ? typeId : undefined,
+  };
+}
+
+export function buildCustomColorMapRecord(
+  rows: AtomTypeColorMapItem[] | undefined,
+): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const r of rows ?? []) {
+    if (!r.isCustom) continue;
+    const key = getAtomTypeColorKey(r.element, r.typeId);
+    const c = String(r.color ?? '').trim();
+    if (!c) continue;
+    out[key] = c;
+  }
+  return out;
+}
+
+export function parseColorMapRecord(
+  data: Record<string, string> | undefined,
+): AtomTypeColorMapItem[] {
+  const out: AtomTypeColorMapItem[] = [];
+  for (const [key, value] of Object.entries(data ?? {})) {
+    const color = String(value ?? '').trim();
+    if (!color) continue;
+    const { element, typeId } = parseAtomTypeColorKey(key);
+    out.push({
+      element,
+      typeId,
+      color,
+      isCustom: true,
+    });
+  }
+  return out;
+}

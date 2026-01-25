@@ -125,7 +125,6 @@ import { DownOutlined } from '@ant-design/icons-vue';
 import {
   AUTO_ROTATE_PRESETS,
   DEFAULT_AUTO_ROTATE_PRESET_ID,
-  getAutoRotatePreset,
   type AutoRotatePresetId,
 } from '../../../lib/viewer/autoRotate';
 import {
@@ -143,43 +142,24 @@ const { t } = useI18n();
 const { settings, patchSettings, hasAnyLayer } = useSettingsSiderContext();
 const derivedContext = inject(settingsSiderDerivedContextKey, null);
 
-function patchAutoRotate(patch: Partial<(typeof settings.value)['autoRotate']>): void {
+function patchAutoRotate(patch: Partial<(typeof settings.value)['rotation']>): void {
   patchSettings({
-    autoRotate: {
-      ...settings.value.autoRotate,
+    rotation: {
+      ...settings.value.rotation,
       ...patch,
     },
   });
 }
 
 const autoRotateEnabledModel = computed({
-  get: () => !!settings.value.autoRotate.enabled,
+  get: () => !!settings.value.rotation.enabled,
   set: (v: boolean) => {
-    const cur = settings.value.autoRotate;
-    // Legacy: earlier versions allowed a "presetId=off".
-    // Now ON/OFF is controlled solely by the enable switch.
-    if (v && (cur.presetId === 'off' || !cur.presetId)) {
-      patchAutoRotate({ enabled: true, presetId: DEFAULT_AUTO_ROTATE_PRESET_ID });
-      return;
-    }
-    if (!v && cur.presetId === 'off') {
-      patchAutoRotate({ enabled: false, presetId: DEFAULT_AUTO_ROTATE_PRESET_ID });
-      return;
-    }
     patchAutoRotate({ enabled: v });
   },
 });
 
-function normalizePresetId(raw: unknown): AutoRotatePresetId {
-  const s = String(raw ?? '').trim();
-  if (s === '' || s === 'off') return DEFAULT_AUTO_ROTATE_PRESET_ID;
-  const id = getAutoRotatePreset(s, DEFAULT_AUTO_ROTATE_PRESET_ID).id;
-  return (id === 'off' ? DEFAULT_AUTO_ROTATE_PRESET_ID : (id as AutoRotatePresetId));
-}
-
 const autoRotatePresetIdModel = computed({
-  // Normalize legacy preset ids to the current canonical id set.
-  get: () => normalizePresetId(settings.value.autoRotate.presetId),
+  get: () => settings.value.rotation.presetId,
   set: (v: string) => {
     const id = String(v);
     patchAutoRotate({ presetId: id as AutoRotatePresetId, enabled: true });
@@ -188,7 +168,7 @@ const autoRotatePresetIdModel = computed({
 
 const autoRotateSpeedModel = computed({
   get: () => {
-    return settings.value.autoRotate.speedDegPerSec;
+    return settings.value.rotation.speedDegPerSec;
   },
   set: (v: number) => {
     patchAutoRotate({ speedDegPerSec: v });
@@ -196,13 +176,13 @@ const autoRotateSpeedModel = computed({
 });
 
 const autoRotatePauseOnInteractModel = computed({
-  get: () => !!settings.value.autoRotate.pauseOnInteract,
+  get: () => !!settings.value.rotation.pauseOnInteract,
   set: (v: boolean) => patchAutoRotate({ pauseOnInteract: v }),
 });
 
 const autoRotateResumeDelayMsModel = computed({
   get: () => {
-    return settings.value.autoRotate.resumeDelayMs;
+    return settings.value.rotation.resumeDelayMs;
   },
   set: (v: number) => {
     patchAutoRotate({ resumeDelayMs: v });
@@ -210,18 +190,15 @@ const autoRotateResumeDelayMsModel = computed({
 });
 
 const autoRotatePresetOptions = computed(() => {
-  return AUTO_ROTATE_PRESETS
-    // "off" is legacy; enable switch controls ON/OFF.
-    .filter(p => p.id !== 'off')
-    .map((p) => {
-      const labelKey = `settings.panel.rotation.presets.${p.id}.name`;
-      const hintKey = `settings.panel.rotation.presets.${p.id}.hint`;
-      return {
-        id: p.id,
-        label: t(labelKey),
-        hint: t(hintKey),
-      };
-    });
+  return AUTO_ROTATE_PRESETS.map((p) => {
+    const labelKey = `settings.panel.rotation.presets.${p.id}.name`;
+    const hintKey = `settings.panel.rotation.presets.${p.id}.hint`;
+    return {
+      id: p.id,
+      label: t(labelKey),
+      hint: t(hintKey),
+    };
+  });
 });
 
 const currentAutoRotatePresetLabel = computed(() => {
@@ -242,8 +219,8 @@ function onAutoRotatePresetClick(info: any): void {
 
 const isAutoRotateDirty = computed(() => {
   if (derivedContext) return derivedContext.rotationDirty.value;
-  const cur = settings.value.autoRotate;
-  const def = DEFAULT_SETTINGS.autoRotate;
+  const cur = settings.value.rotation;
+  const def = DEFAULT_SETTINGS.rotation;
   return (
     !!cur.enabled !== !!def.enabled
     || cur.presetId !== def.presetId
@@ -254,6 +231,6 @@ const isAutoRotateDirty = computed(() => {
 });
 
 function resetAutoRotateSettings(): void {
-  patchAutoRotate({ ...DEFAULT_SETTINGS.autoRotate });
+  patchAutoRotate({ ...DEFAULT_SETTINGS.rotation });
 }
 </script>

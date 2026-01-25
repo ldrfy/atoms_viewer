@@ -103,7 +103,7 @@ export function createRecordingController(
   let selectConfirmCb: ((box: CropBox) => void) | null = null;
   let selectCancelCb: (() => void) | null = null;
   let recordBgRestore: Pick<
-    ViewerSettings,
+    ViewerSettings['anim'],
     'backgroundTransparent' | 'backgroundColor' | 'backgroundColorMode'
   > | null = null;
 
@@ -197,25 +197,29 @@ export function createRecordingController(
     if (!patchSettings || !args.getSettings) return;
     if (recordBgRestore) return;
     const settings = args.getSettings();
-    if (!settings.backgroundTransparent) return;
+    if (!settings.anim.backgroundTransparent) return;
     recordBgRestore = {
-      backgroundTransparent: settings.backgroundTransparent,
-      backgroundColor: settings.backgroundColor,
-      backgroundColorMode: settings.backgroundColorMode,
+      backgroundTransparent: settings.anim.backgroundTransparent,
+      backgroundColor: settings.anim.backgroundColor,
+      backgroundColorMode: settings.anim.backgroundColorMode,
     };
     patchSettings({
-      backgroundTransparent: false,
-      backgroundColor: getRecordBgColor(),
-      backgroundColorMode: 'custom',
+      anim: {
+        backgroundTransparent: false,
+        backgroundColor: getRecordBgColor(),
+        backgroundColorMode: 'custom',
+      },
     });
   };
 
   const restoreRecordBackground = (): void => {
     if (!recordBgRestore || !patchSettings) return;
     patchSettings({
-      backgroundTransparent: recordBgRestore.backgroundTransparent,
-      backgroundColor: recordBgRestore.backgroundColor,
-      backgroundColorMode: recordBgRestore.backgroundColorMode,
+      anim: {
+        backgroundTransparent: recordBgRestore.backgroundTransparent,
+        backgroundColor: recordBgRestore.backgroundColor,
+        backgroundColorMode: recordBgRestore.backgroundColorMode,
+      },
     });
     recordBgRestore = null;
   };

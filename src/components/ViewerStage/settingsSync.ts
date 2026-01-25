@@ -1,9 +1,10 @@
 import type { ViewerSettings } from '../../lib/viewer/settings';
+import type { SettingsPatch } from '../../lib/viewer/mergeSettings';
 
-export type PatchSettingsFn = (patch: Partial<ViewerSettings>) => void;
+export type PatchSettingsFn = (patch: SettingsPatch) => void;
 
 export type SettingsSync = {
-  patch: (patch: Partial<ViewerSettings>) => void;
+  patch: (patch: SettingsPatch) => void;
   suspend: (ms?: number) => void;
   isSuppressed: () => boolean;
 };
@@ -19,7 +20,7 @@ export function createSettingsSync(patchSettings?: PatchSettingsFn): SettingsSyn
     suppressUntil = Math.max(suppressUntil, performance.now() + ms);
   };
 
-  const patch = (patch: Partial<ViewerSettings>): void => {
+  const patch = (patch: SettingsPatch): void => {
     if (!patchSettings) return;
     if (isSuppressed()) return;
     patchSettings(patch);

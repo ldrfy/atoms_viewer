@@ -159,7 +159,7 @@ function removeLammpsRow(idx: number): void {
 
 function clearLammpsRows(): void {
   lammpsTypeMapModel.value = [];
-  patchSettings({ lammpsTypeMap: [] });
+  patchSettings({ lammps: [] });
 }
 
 function onLammpsTypeId(idx: number, v: unknown): void {

@@ -3,7 +3,7 @@ import type { Ref } from 'vue';
 import type {
   LammpsTypeMapItem,
   AtomTypeColorMapItem,
-  LayerDisplaySettings,
+  DetailsSettingsGroup,
   ViewerSettings,
 } from './settings';
 
@@ -92,10 +92,10 @@ export type ViewerPublicApi = {
   resetAllLayersColorMapToDefaults: () => void;
 
   /** Per-layer display settings (atom size / bond visibility / quality) for the active layer. */
-  activeLayerDisplay: Ref<LayerDisplaySettings | null>;
+  activeLayerDisplay: Ref<DetailsSettingsGroup | null>;
   /** Patch active-layer display settings; optionally apply to all layers. */
   setActiveLayerDisplay: (
-    patch: Partial<LayerDisplaySettings>,
+    patch: Partial<DetailsSettingsGroup>,
     opts?: { applyToAll?: boolean },
   ) => void;
   /** Snapshot current layers with metadata/settings (for export/session). */
@@ -119,6 +119,18 @@ export type ViewerPublicApi = {
   applyViewFromSettings: (overrides?: Partial<ViewerSettings>) => void;
   /** Temporarily suspend settings sync from controls/auto-rotation. */
   suspendSettingsSync: (ms?: number) => void;
+  /** Get animation-related state for export/restore. */
+  getAnimState?: () => {
+    frameIndex: number;
+    playFps: number;
+    recordDelaySec: number;
+  };
+  /** Apply animation-related state from import/session. */
+  applyAnimState?: (state: {
+    frameIndex: number;
+    playFps: number;
+    recordDelaySec: number;
+  }) => void;
 
   /** Whether any visible layer uses custom atom colors. */
   visibleCustomColors: Ref<boolean>;

@@ -12,6 +12,7 @@ import type {
 import {
   hasUnknownElementMappingForTypeIds,
   DEFAULT_LAYER_DISPLAY,
+  buildElementColorRecordFromRows,
 } from '../../../lib/viewer/settings';
 import { normalizeViewPresets } from '../../../lib/viewer/viewPresets';
 import { computeMd5ForArrayBuffer } from '../../../lib/file/md5';
@@ -122,7 +123,7 @@ export function createViewerLoader(deps: {
 
     const runtimeRows = ((runtime?.activeTypeMapRows.value ?? []) as LammpsTypeMapItem[])
       .map(r => ({ typeId: r.typeId, element: r.element }));
-    const settingsRows = ((getSettings().lammpsTypeMap ?? []) as LammpsTypeMapItem[])
+    const settingsRows = ((getSettings().lammps ?? []) as LammpsTypeMapItem[])
       .map(r => ({ typeId: r.typeId, element: r.element }));
     const baseRows = (reason === 'reparse'
       ? runtimeRows
@@ -189,7 +190,7 @@ export function createViewerLoader(deps: {
 
     const model = parseStructure(text, forcedName, {
       lammpsTypeToElement: buildLammpsTypeToElementMap(
-        (reason === 'load' ? [] : (getSettings().lammpsTypeMap ?? [])) as LammpsTypeMapItem[],
+        (reason === 'load' ? [] : (getSettings().lammps ?? [])) as LammpsTypeMapItem[],
       ),
       lammpsSortById: true,
     });
@@ -248,7 +249,7 @@ export function createViewerLoader(deps: {
     const cam = stage.getCamera();
     const controls = stage.getControls();
     const settings = getSettings();
-    const distFromSettings = settings.dualViewDistance;
+    const distFromSettings = settings.view.dualViewDistance;
     const distFromCamera = cam.position.distanceTo(controls.target);
     const dist = (typeof distFromSettings === 'number' && Number.isFinite(distFromSettings))
       ? distFromSettings
@@ -258,20 +259,25 @@ export function createViewerLoader(deps: {
 
     if (canPatch) {
       const patch: Partial<ViewerSettings> = {
-        initialDualViewDistance: distFromCamera,
+        view: {
+          initialDualViewDistance: distFromCamera,
+        },
       };
       if (!Number.isFinite(distFromSettings)) {
-        patch.dualViewDistance = dist;
+        patch.view = {
+          ...(patch.view ?? {}),
+          dualViewDistance: dist,
+        };
       }
       deps.patchSettings!(patch);
     }
 
-    let presets = normalizeViewPresets(getSettings().viewPresets);
+    let presets = normalizeViewPresets(getSettings().view.viewPresets);
     if (presets.length === 0) {
       const w = stage.host.getBoundingClientRect().width;
       presets = w >= 900 ? ['front', 'side'] : ['front'];
       if (canPatch)
-        deps.patchSettings!({ viewPresets: presets });
+        deps.patchSettings!({ view: { viewPresets: presets } });
     }
 
     stage.setViewPresets(presets);
@@ -338,7 +344,7 @@ export function createViewerLoader(deps: {
 
     if (deps.patchSettings) {
       deps.patchSettings({
-        lammpsTypeMap: cloneTypeMapRows(runtime.activeTypeMapRows.value),
+        lammps: cloneTypeMapRows(runtime.activeTypeMapRows.value),
       });
     }
   }
@@ -369,9 +375,10 @@ export function createViewerLoader(deps: {
       deps.isLoading.value = false;
     }
 
-    if (deps.patchSettings) {
+    if (deps.patchSettings && opts?.applyToAll) {
+      const rows = cloneColorMapRows(runtime.activeColorMapRows.value);
       deps.patchSettings({
-        colorMapTemplate: cloneColorMapRows(runtime.activeColorMapRows.value),
+        colors: { data: buildElementColorRecordFromRows(rows) },
       });
     }
   }
@@ -417,7 +424,7 @@ export function createViewerLoader(deps: {
     }
 
     const openKeys: PanelKey[] = [PANEL_KEYS.view];
-    if (deps.settingsRef.value.autoRotateOnLoad) {
+    if (deps.settingsRef.value.other.autoRotateOnLoad) {
       openKeys.push(PANEL_KEYS.rotation);
     }
     deps.requestOpenSettings?.({
@@ -455,12 +462,12 @@ export function createViewerLoader(deps: {
       syncViewPresetAndDistanceOnModelLoad();
 
       if (deps.patchSettings) {
-        const shouldAutoEnable = !!deps.settingsRef.value.autoRotateOnLoad;
-        const current = deps.settingsRef.value.autoRotate;
+        const shouldAutoEnable = !!deps.settingsRef.value.other.autoRotateOnLoad;
+        const current = deps.settingsRef.value.rotation;
         const enabled = !!current.enabled || shouldAutoEnable;
         const enabledBySystem = shouldAutoEnable && !current.enabled;
         deps.patchSettings({
-          autoRotate: {
+          rotation: {
             ...current,
             enabled,
           },

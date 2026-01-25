@@ -210,7 +210,7 @@ const viewPresetOptions = computed(() => [
 const viewPresetsModel = ref<ViewPreset[]>(['front']);
 
 function syncViewPresetsFromSettings(): void {
-  const cur = normalizeViewPresets(settings.value.viewPresets);
+  const cur = normalizeViewPresets(settings.value.view.viewPresets);
   if (cur.length > 0) {
     viewPresetsModel.value = cur;
     return;
@@ -219,7 +219,7 @@ function syncViewPresetsFromSettings(): void {
 }
 
 watch(
-  () => settings.value.viewPresets,
+  () => settings.value.view.viewPresets,
   () => syncViewPresetsFromSettings(),
   { immediate: true, deep: true },
 );
@@ -243,64 +243,66 @@ function onViewPresetsChange(nextRaw: any): void {
   while (merged.length > 2) merged.shift();
 
   viewPresetsModel.value = merged;
-  patchSettings({ viewPresets: merged });
+  patchSettings({ view: { viewPresets: merged } });
 }
 
 const dualViewDistanceModel = computed({
-  get: () => settings.value.dualViewDistance ?? 10,
-  set: (v: number) => patchSettings({ dualViewDistance: v }),
+  get: () => settings.value.view.dualViewDistance ?? 10,
+  set: (v: number) => patchSettings({ view: { dualViewDistance: v } }),
 });
 
 const dualViewDistanceMax = computed(() => {
-  const v = settings.value.dualViewDistance ?? 10;
+  const v = settings.value.view.dualViewDistance ?? 10;
   return Math.max(200, Math.ceil(v * 1.2));
 });
 // const dualViewDistanceMax = 500;
 
 const dualViewSplitPctModel = computed({
   get: () => {
-    const r = typeof settings.value.dualViewSplit === 'number' ? settings.value.dualViewSplit : 0.5;
+    const r = typeof settings.value.view.dualViewSplit === 'number'
+      ? settings.value.view.dualViewSplit
+      : 0.5;
     return Math.round(r * 100);
   },
   set: (pct: number) => {
-    patchSettings({ dualViewSplit: pct / 100 });
+    patchSettings({ view: { dualViewSplit: pct / 100 } });
   },
 });
 
 // Switch label is "perspective"; stored setting is `orthographic`.
 // UI "ON" means perspective, so invert.
 const orthographicModel = computed({
-  get: () => !settings.value.orthographic,
-  set: (v: boolean) => patchSettings({ orthographic: !v }),
+  get: () => !settings.value.view.orthographic,
+  set: (v: boolean) => patchSettings({ view: { orthographic: !v } }),
 });
 
 function resetDistance(): void {
-  const s = settings.value;
+  const s = settings.value.view;
   const d
     = typeof s.initialDualViewDistance === 'number' && Number.isFinite(s.initialDualViewDistance)
       ? s.initialDualViewDistance
       : typeof s.dualViewDistance === 'number' && Number.isFinite(s.dualViewDistance)
         ? s.dualViewDistance
         : 10;
-  patchSettings({ dualViewDistance: d });
+  patchSettings({ view: { dualViewDistance: d } });
 }
 
 const rotXModel = computed({
-  get: () => settings.value.rotationDeg.x,
-  set: (v: number) => patchSettings({ rotationDeg: { x: v } }),
+  get: () => settings.value.view.rotationDeg.x,
+  set: (v: number) => patchSettings({ view: { rotationDeg: { x: v } } }),
 });
 
 const rotYModel = computed({
-  get: () => settings.value.rotationDeg.y,
-  set: (v: number) => patchSettings({ rotationDeg: { y: v } }),
+  get: () => settings.value.view.rotationDeg.y,
+  set: (v: number) => patchSettings({ view: { rotationDeg: { y: v } } }),
 });
 
 const rotZModel = computed({
-  get: () => settings.value.rotationDeg.z,
-  set: (v: number) => patchSettings({ rotationDeg: { z: v } }),
+  get: () => settings.value.view.rotationDeg.z,
+  set: (v: number) => patchSettings({ view: { rotationDeg: { z: v } } }),
 });
 
 function resetPose(): void {
-  patchSettings({ rotationDeg: { x: 0, y: 0, z: 0 } });
+  patchSettings({ view: { rotationDeg: { x: 0, y: 0, z: 0 } } });
 }
 </script>

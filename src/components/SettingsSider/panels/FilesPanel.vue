@@ -174,12 +174,12 @@ import { useSettingsSiderControlContext } from '../useSettingsSiderControlContex
 import { PANEL_KEYS } from '../../../lib/viewer/panelKeys';
 import { DEFAULT_SETTINGS } from '../../../lib/viewer/settings';
 import { buildProjectZip, parseProjectZip } from '../../../lib/viewer/projectPackage';
-import { readApplyAllLayersFlags, writeApplyAllLayersFlags } from '../applyAllStorage';
 import { getLocale, setLocale, SUPPORT_LOCALES } from '../../../i18n';
 import type { StructureExportFormat } from '../../../lib/structure/export';
 import { buildSettingsExportJson, clearAllSettings, applyImportedSettings, parseSettingsImport } from '../../../lib/viewer/settingsActions';
 import { buildExportFilename } from '../../../lib/file/filename';
 import { setThemeMode } from '../../../theme/mode';
+import { readApplyAllLayersFlags, writeApplyAllLayersFlags } from '../applyAllStorage';
 
 const { t } = useI18n();
 const { hasAnyLayer, settings, patchSettings } = useSettingsSiderContext();
@@ -188,29 +188,29 @@ const { replaceSettings, notifyClearStorageUi } = useSettingsSiderControlContext
 const viewerApi = computed(() => viewerApiRef.value);
 const projectInputRef = ref<HTMLInputElement | null>(null);
 const settingsImportInputRef = ref<HTMLInputElement | null>(null);
-const DEFAULT_EXPORT_SCALE = DEFAULT_SETTINGS.exportPngScale;
-const DEFAULT_EXPORT_TRANSPARENT = DEFAULT_SETTINGS.exportPngTransparent;
-const DEFAULT_CACHE_REMOTE = DEFAULT_SETTINGS.cacheRemoteOnExport;
+const DEFAULT_EXPORT_SCALE = DEFAULT_SETTINGS.files.exportPngScale;
+const DEFAULT_EXPORT_TRANSPARENT = DEFAULT_SETTINGS.files.exportPngTransparent;
+const DEFAULT_CACHE_REMOTE = DEFAULT_SETTINGS.files.cacheRemoteOnExport;
 const DEFAULT_EXPORT_FORMAT: StructureExportFormat = 'xyz';
 
 const exportScale = computed<number>({
-  get: () => settings.value.exportPngScale ?? DEFAULT_EXPORT_SCALE,
+  get: () => settings.value.files.exportPngScale ?? DEFAULT_EXPORT_SCALE,
   set: (v) => {
-    patchSettings({ exportPngScale: v });
+    patchSettings({ files: { exportPngScale: v } });
   },
 });
 
 const exportTransparent = computed<boolean>({
-  get: () => settings.value.exportPngTransparent ?? DEFAULT_EXPORT_TRANSPARENT,
+  get: () => settings.value.files.exportPngTransparent ?? DEFAULT_EXPORT_TRANSPARENT,
   set: (v) => {
-    patchSettings({ exportPngTransparent: v });
+    patchSettings({ files: { exportPngTransparent: v } });
   },
 });
 
 const cacheRemoteModel = computed<boolean>({
-  get: () => settings.value.cacheRemoteOnExport ?? DEFAULT_CACHE_REMOTE,
+  get: () => settings.value.files.cacheRemoteOnExport ?? DEFAULT_CACHE_REMOTE,
   set: (v) => {
-    patchSettings({ cacheRemoteOnExport: !!v });
+    patchSettings({ files: { cacheRemoteOnExport: !!v } });
     viewerApi.value?.setCacheRemoteOnExport?.(!!v);
   },
 });
@@ -233,7 +233,7 @@ const isDirty = computed(() => {
 });
 
 watch(
-  () => settings.value.cacheRemoteOnExport,
+  () => settings.value.files.cacheRemoteOnExport,
   (v) => {
     if (v == null) return;
     viewerApi.value?.setCacheRemoteOnExport?.(!!v);
@@ -274,11 +274,14 @@ function onClearStorage(): void {
 
 async function onExportSettings(): Promise<void> {
   try {
-    const { json, fileStem } = await buildSettingsExportJson({
+  const { json, fileStem } = await buildSettingsExportJson({
       settings: settings.value,
       viewerApi: viewerApi.value,
       locale: getLocale(),
-      applyAllLayers: readApplyAllLayersFlags(),
+      applyAllLayers: {
+        details: readApplyAllLayersFlags().details ?? true,
+        colors: readApplyAllLayersFlags().colors ?? true,
+      },
     });
     const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -308,12 +311,10 @@ function onImportFile(e: Event): void {
     try {
       const raw = String(reader.result ?? '');
       const parsed = parseSettingsImport(raw);
-      if (parsed.applyAllLayers) {
-        writeApplyAllLayersFlags(parsed.applyAllLayers);
-      }
       const locale = parsed.locale && SUPPORT_LOCALES.includes(parsed.locale)
         ? parsed.locale
         : undefined;
+      writeApplyAllLayersFlags(parsed.applyAllLayers);
       await applyImportedSettings({
         parsed: { ...parsed, locale },
         viewerApi: viewerApi.value,
@@ -381,7 +382,11 @@ async function onExportProject(): Promise<void> {
       sources,
       modelFileName: api.parseInfo?.fileName ?? 'atoms-viewer',
       app: { locale: getLocale() },
-      applyAllLayers: readApplyAllLayersFlags(),
+      applyAllLayers: {
+        details: readApplyAllLayersFlags().details ?? true,
+        colors: readApplyAllLayersFlags().colors ?? true,
+      },
+      animState: api.getAnimState?.(),
     });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');

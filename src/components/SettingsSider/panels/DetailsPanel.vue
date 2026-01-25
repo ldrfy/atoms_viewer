@@ -204,7 +204,7 @@
 <script setup lang="ts">
 import { computed, inject, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { DEFAULT_LAYER_DISPLAY, type LayerDisplaySettings, type RepresentationId } from '../../../lib/viewer/settings';
+import { DEFAULT_LAYER_DISPLAY, type DetailsSettingsGroup, type RepresentationId } from '../../../lib/viewer/settings';
 import { viewerApiRef } from '../../../lib/viewer/bridge';
 import { useSettingsSiderContext } from '../useSettingsSiderContext';
 import { settingsSiderDerivedContextKey } from '../context';
@@ -223,7 +223,7 @@ import {
 } from '../../../lib/viewer/constants';
 
 const { t } = useI18n();
-const { hasAnyLayer, patchSettings } = useSettingsSiderContext();
+const { hasAnyLayer, patchSettings, settings } = useSettingsSiderContext();
 
 const viewerApi = computed(() => viewerApiRef.value);
 const layerList = computed(() => viewerApi.value?.layers.value ?? []);
@@ -234,16 +234,29 @@ const activeLayerInfo = computed(() => {
   return layerList.value.find(l => l.id === id) ?? null;
 });
 
-const applyToAllLayers = ref(readApplyAllLayersFlags().details ?? true);
+const applyToAllLayers = ref(
+  settings.value.details.applyAllLayers ?? readApplyAllLayersFlags().details ?? true,
+);
 
 watch(
   applyToAllLayers,
   (v) => {
     writeApplyAllLayersFlags({ details: v });
+    patchSettings({ details: { applyAllLayers: v } });
   },
 );
 
-const displayModel = computed<LayerDisplaySettings | null>(() => {
+watch(
+  () => settings.value.details.applyAllLayers,
+  (v) => {
+    if (typeof v !== 'boolean') return;
+    if (v === applyToAllLayers.value) return;
+    applyToAllLayers.value = v;
+  },
+  { immediate: true },
+);
+
+const displayModel = computed<DetailsSettingsGroup | null>(() => {
   return viewerApi.value?.activeLayerDisplay.value ?? null;
 });
 
@@ -251,7 +264,7 @@ const controlsDisabled = computed(
   () => !hasAnyLayer.value || !activeLayerInfo.value || !displayModel.value,
 );
 
-function patchDisplay(patch: Partial<LayerDisplaySettings>): void {
+function patchDisplay(patch: Partial<DetailsSettingsGroup>): void {
   const api = viewerApi.value;
   if (!api || !activeLayerInfo.value) return;
   api.setActiveLayerDisplay(patch, { applyToAll: applyToAllLayers.value });
@@ -259,13 +272,15 @@ function patchDisplay(patch: Partial<LayerDisplaySettings>): void {
   const cur = displayModel.value ?? DEFAULT_LAYER_DISPLAY;
   const next = { ...cur, ...patch };
   patchSettings({
-    representation: next.representation,
-    atomScale: next.atomScale,
-    showBonds: next.showBonds,
-    sphereSegments: next.sphereSegments,
-    bondFactor: next.bondFactor,
-    bondRadius: next.bondRadius,
-    atomRoughness: next.atomRoughness,
+    details: {
+      representation: next.representation,
+      atomScale: next.atomScale,
+      showBonds: next.showBonds,
+      sphereSegments: next.sphereSegments,
+      bondFactor: next.bondFactor,
+      bondRadius: next.bondRadius,
+      atomRoughness: next.atomRoughness,
+    },
   });
 }
 
@@ -301,7 +316,7 @@ const atomRoughnessModel = computed({
 
 const derivedContext = inject(settingsSiderDerivedContextKey, null);
 
-const REPRESENTATION_PRESETS: Record<RepresentationId, Partial<LayerDisplaySettings> | null> = {
+const REPRESENTATION_PRESETS: Record<RepresentationId, Partial<DetailsSettingsGroup> | null> = {
   ballAndStick: {
     representation: 'ballAndStick',
     showBonds: true,
@@ -349,11 +364,11 @@ const representationOptions = computed(() => ([
   { value: 'custom', label: t('settings.panel.details.repr.custom') },
 ] as { value: RepresentationId; label: string; disabled?: boolean }[]));
 
-function matchRepresentation(cur: LayerDisplaySettings | null): RepresentationId {
+function matchRepresentation(cur: DetailsSettingsGroup | null): RepresentationId {
   if (!cur) return 'custom';
   if (cur.representation) return cur.representation;
   const eq = (a: number, b: number) => Math.abs(a - b) < 1e-6;
-  const candidates = Object.entries(REPRESENTATION_PRESETS) as [RepresentationId, Partial<LayerDisplaySettings> | null][];
+  const candidates = Object.entries(REPRESENTATION_PRESETS) as [RepresentationId, Partial<DetailsSettingsGroup> | null][];
   for (const [key, preset] of candidates) {
     if (!preset) continue;
     if (preset.showBonds != null && cur.showBonds !== preset.showBonds) continue;

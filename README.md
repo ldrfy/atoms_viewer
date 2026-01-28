@@ -13,16 +13,16 @@
 
 </div>
 
-![start](readme/images/start.jpg)
+![start](https://raw.githubusercontent.com/ldrfy/atoms_viewer_docs/refs/heads/main/docs/site/public/img/en/start.jpg)
 
 ## 🚀 Get Started
 
 - Visit [Web: Ldr-Atoms-Viewer](https://ldrfy.github.io/atoms_viewer/)
-- Upload your own file (`lammps-data`, `lammps-dump`, `pdb`, `xyz`)
+- Upload your own model file (formats listed in [Multi-Format Support](#multi-format-support))
 
 ## Overview
 
-This project is a web-based atomic structure visualization tool. Upload an atomic coordinate file to automatically build a 3D structure, then finely tune the display (rotation angles, atom size, atom color, bond thickness, etc.). It supports one-click export of transparent, auto-cropped high-resolution PNG images and can record videos.
+LDR Atoms Viewer is a web-based atomic structure visualization tool. Upload atomic coordinate files to generate 3D structures, then fine-tune the display (rotation, atom size, atom color, bond thickness, etc.). It supports one-click export of transparent or colored, auto-cropped high-resolution PNGs, and can record animations.
 
 Built with a modern front-end stack, the experience is smooth and performance-focused.
 
@@ -36,9 +36,12 @@ Drag in multiple coordinate files to display multiple structures at once, and sh
 
 Models can auto-rotate around different symmetry axes. Record the rotation process or motion trajectory, with customizable recording regions and background colors.
 
-### PNG Export
+### File Export
 
-Choose transparent or colored backgrounds, adjust output resolution, and auto-crop to a tight content bounding box.
+- Image export: transparent or colored background, adjustable resolution, auto-cropped bounding box
+- Format conversion: export to formats such as `xyz` from supported inputs
+- Project package: bundle models plus all layer settings for sharing and restoring
+- Settings export: export layers, background, view, and camera distance in one file
 
 ### Smooth Performance & Multi-Device Support
 
@@ -46,11 +49,9 @@ Supports loading hundreds of thousands of atoms, and works on mobile and desktop
 
 ### Multi-Format Support
 
-Supports `lammps-data`, `lammps-dump`, `pdb`, `xyz`. Both `xyz` and `lammps-dump` support trajectory playback.
+Supported formats: `lammps-data`, `lammps-dump`, `pdb`, `mol`, `sdf`, `xyz`. Both `xyz` and `lammps-dump` support trajectory playback.
 
-### Model Sharing
-
-Load models directly via URL parameters and set some parameters. See [URL parameters](https://ldrfy.github.io/atoms_viewer_docs/api.html).
+Multiple model files can also be packaged into a single `zip` and dragged into the viewer for batch loading.
 
 ### Rich Customization
 

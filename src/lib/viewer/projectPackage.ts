@@ -1,28 +1,82 @@
 import JSZip from 'jszip';
 import { buildExportFilename } from '../file/filename';
 import { APP_BUILD_TIME, APP_VERSION } from '../appMeta';
-import { normalizeElementSymbol } from '../structure/chem';
 import type { ViewerSettings } from './settings';
+import { DEFAULT_DETAILS } from './settings';
 import type {
   LayerSnapshot,
   LayerSourceData,
+  LayerSortBy,
+  LayersSnapshot,
   SessionSnapshot,
   ViewerSettingsCategorized,
 } from './sessionTypes';
-import { buildCategorizedSettings } from './sessionTemplates';
+import { buildCategorizedSettings, pruneDefaultSettings } from './sessionTemplates';
 
 type ApplyAllLayersFlags = {
   details: boolean;
   colors: boolean;
 };
 
-function elementFromColorKey(key: string): string | null {
-  const trimmed = String(key ?? '').trim();
-  if (!trimmed) return null;
-  const match = trimmed.match(/^([A-Za-z]+)(\d+)?$/);
-  const raw = match?.[1] ?? trimmed;
-  const norm = normalizeElementSymbol(raw) || '';
-  return norm || null;
+function pruneLayerSnapshot(layer: LayerSnapshot): LayerSnapshot {
+  const out: LayerSnapshot = {};
+  if (layer.id) out.id = layer.id;
+
+  const name = String(layer.name ?? '').trim();
+  const fileName = String(layer.source?.fileName ?? '').trim();
+  if (name && name !== fileName) out.name = name;
+
+  if (layer.visible === false) out.visible = false;
+  if (Number.isFinite(layer.createdAtMs)) out.createdAtMs = Number(layer.createdAtMs);
+
+  if (layer.source && typeof layer.source === 'object') {
+    const src = layer.source;
+    const nextSource: LayerSnapshot['source'] = {};
+    if (src.md5) nextSource.md5 = src.md5;
+    if (Number.isFinite(src.size)) nextSource.size = src.size;
+    if (src.fileName) nextSource.fileName = src.fileName;
+    if (src.mime) nextSource.mime = src.mime;
+    if (src.type) nextSource.type = src.type;
+    if (src.url) nextSource.url = src.url;
+    if (src.cached != null) nextSource.cached = src.cached;
+    if (Object.keys(nextSource).length > 0) out.source = nextSource;
+  }
+
+  const details = (layer.details ?? {}) as Partial<ViewerSettings['details']>;
+  const nextDetails: Partial<ViewerSettings['details']> = {};
+  if (details.representation && details.representation !== DEFAULT_DETAILS.representation) {
+    nextDetails.representation = details.representation;
+  }
+  if (details.atomScale != null && details.atomScale !== DEFAULT_DETAILS.atomScale) {
+    nextDetails.atomScale = details.atomScale;
+  }
+  if (details.showBonds != null && details.showBonds !== DEFAULT_DETAILS.showBonds) {
+    nextDetails.showBonds = details.showBonds;
+  }
+  if (details.sphereSegments != null && details.sphereSegments !== DEFAULT_DETAILS.sphereSegments) {
+    nextDetails.sphereSegments = details.sphereSegments;
+  }
+  if (details.bondFactor != null && details.bondFactor !== DEFAULT_DETAILS.bondFactor) {
+    nextDetails.bondFactor = details.bondFactor;
+  }
+  if (details.bondRadius != null && details.bondRadius !== DEFAULT_DETAILS.bondRadius) {
+    nextDetails.bondRadius = details.bondRadius;
+  }
+  if (details.atomRoughness != null && details.atomRoughness !== DEFAULT_DETAILS.atomRoughness) {
+    nextDetails.atomRoughness = details.atomRoughness;
+  }
+  if (Object.keys(nextDetails).length > 0) out.details = nextDetails as LayerSnapshot['details'];
+
+  const lammps = (layer.lammps ?? []).map(r => ({ ...r }));
+  if (lammps.length > 0) out.lammps = lammps;
+
+  const colorData = layer.colors?.data ?? {};
+  const colorKeys = Object.keys(colorData);
+  if (colorKeys.length > 0) {
+    out.colors = { data: { ...colorData } };
+  }
+
+  return out;
 }
 
 export function buildSettingsSnapshot(
@@ -31,27 +85,26 @@ export function buildSettingsSnapshot(
   app?: SessionSnapshot['app'],
   animState?: Partial<NonNullable<ViewerSettingsCategorized['anim']>>,
   applyAllLayers?: Partial<ApplyAllLayersFlags>,
+  layersSortBy: LayerSortBy = 'name,ASC',
+  activeLayerId?: string | null,
 ): SessionSnapshot {
   const savedAt = new Date().toISOString();
   const categorized = buildCategorizedSettings(settings, animState, applyAllLayers);
-  if (Array.isArray(layers) && layers.length > 0) {
-    const merged = { ...categorized.colors.data };
-    for (const layer of layers) {
-      const data = layer.colors?.data ?? {};
-      for (const [key, color] of Object.entries(data)) {
-        const element = elementFromColorKey(key);
-        if (!element) continue;
-        if (merged[element]) continue;
-        const c = String(color ?? '').trim();
-        if (!c) continue;
-        merged[element] = c;
-      }
-    }
-    categorized.colors.data = merged;
+  const pruned = pruneDefaultSettings(categorized);
+  const layerData: Record<string, LayerSnapshot> = {};
+  for (const layer of layers ?? []) {
+    const id = layer.id ?? '';
+    if (!id) continue;
+    layerData[id] = pruneLayerSnapshot(layer);
   }
+  const layersSnapshot: LayersSnapshot = {
+    sortBy: layersSortBy,
+    activeId: activeLayerId ?? undefined,
+    data: layerData,
+  };
   return {
-    settings: categorized,
-    layers,
+    settings: pruned,
+    layers: layersSnapshot,
     app: {
       version: APP_VERSION,
       savedAt,
@@ -69,6 +122,8 @@ export async function buildProjectZip(params: {
   app?: SessionSnapshot['app'];
   animState?: Partial<NonNullable<ViewerSettingsCategorized['anim']>>;
   applyAllLayers?: Partial<ApplyAllLayersFlags>;
+  layersSortBy?: LayerSortBy;
+  activeLayerId?: string | null;
 }): Promise<{ blob: Blob; filename: string }> {
   const {
     settings,
@@ -78,9 +133,19 @@ export async function buildProjectZip(params: {
     app,
     animState,
     applyAllLayers,
+    layersSortBy,
+    activeLayerId,
   } = params;
   const zip = new JSZip();
-  const payload = buildSettingsSnapshot(settings, layers, app, animState, applyAllLayers);
+  const payload = buildSettingsSnapshot(
+    settings,
+    layers,
+    app,
+    animState,
+    applyAllLayers,
+    layersSortBy,
+    activeLayerId,
+  );
   zip.file('config.json', JSON.stringify(payload, null, 2));
 
   for (const src of sources) {

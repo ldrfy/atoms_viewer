@@ -126,6 +126,15 @@ watch(
   (v) => {
     writeApplyAllLayersFlags({ colors: v });
     patchSettings({ colors: { applyAllLayers: v } });
+    if (!v) return;
+    const api = viewerApi.value;
+    if (!api) return;
+    const rows = api.activeLayerColorMap?.value ?? [];
+    if (rows.length > 0) {
+      api.setAllLayersColorMap(rows);
+      patchSettings({ colors: { data: buildElementColorRecordFromRows(rows) } });
+      api.refreshColorMap({ applyToAll: true });
+    }
   },
 );
 

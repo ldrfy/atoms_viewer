@@ -87,7 +87,7 @@ import DetailsPanel from './panels/DetailsPanel.vue';
 import OtherPanel from './panels/OtherPanel.vue';
 import {
   DEFAULT_SETTINGS,
-  DEFAULT_LAYER_DISPLAY,
+  DEFAULT_DETAILS,
 } from '../../lib/viewer/settings';
 import { useSettingsSiderContext } from './useSettingsSiderContext';
 import { settingsSiderDirtyContextKey, settingsSiderDerivedContextKey } from './context';
@@ -150,19 +150,24 @@ const filesDirty = computed(() => {
 const layersDirty = computed(() => (viewerApi.value?.layers.value.length ?? 0) > 1);
 
 const detailsDirty = computed(() => {
-  const active = viewerApi.value?.activeLayerDisplay?.value;
-  const cur = active ?? settings.value.details;
+  const applyAll = settings.value.details.applyAllLayers
+    ?? DEFAULT_SETTINGS.details.applyAllLayers
+    ?? true;
+  const flagDirty = applyAll
+    !== (DEFAULT_SETTINGS.details.applyAllLayers ?? true);
+  const cur = viewerApi.value?.activeLayerDisplay?.value ?? settings.value.details;
   const styleBase = getVisualStylePreset(
     settings.value.other.visualStyle ?? DEFAULT_SETTINGS.other.visualStyle,
   ).display;
   return (
-    cur.representation !== DEFAULT_LAYER_DISPLAY.representation
+    cur.representation !== DEFAULT_DETAILS.representation
     || cur.atomScale !== styleBase.atomScale
-    || cur.showBonds !== DEFAULT_LAYER_DISPLAY.showBonds
-    || cur.sphereSegments !== DEFAULT_LAYER_DISPLAY.sphereSegments
+    || cur.showBonds !== DEFAULT_DETAILS.showBonds
+    || cur.sphereSegments !== DEFAULT_DETAILS.sphereSegments
     || cur.bondFactor !== styleBase.bondFactor
     || cur.bondRadius !== styleBase.bondRadius
     || cur.atomRoughness !== styleBase.atomRoughness
+    || flagDirty
   );
 });
 
@@ -226,9 +231,14 @@ function arraysEqual(a: unknown, b: unknown): boolean {
   return arrA.every((v, i) => v === arrB[i]);
 }
 
-function hasCustomColors(): boolean {
-  return Object.keys(settings.value.colors.data ?? {}).length > 0;
-}
+const colorsDirty = computed(() => {
+  const cur = settings.value.colors;
+  const applyAll = cur.applyAllLayers ?? DEFAULT_SETTINGS.colors.applyAllLayers ?? true;
+  const flagDirty = applyAll
+    !== (DEFAULT_SETTINGS.colors.applyAllLayers ?? true);
+  const layerDirty = (viewerApi.value?.activeLayerColorMap?.value ?? []).some(r => !!r.isCustom);
+  return flagDirty || layerDirty;
+});
 
 function hasCustomTypeMap(): boolean {
   const template = settings.value.lammps ?? [];
@@ -244,7 +254,7 @@ function isTypeMapApplied(): boolean {
 function isPanelDirty(key: string): boolean {
   if (key === PANEL_KEYS.files) return filesDirty.value;
   if (key === PANEL_KEYS.layers) return layersDirty.value;
-  if (key === PANEL_KEYS.colors) return hasCustomColors();
+  if (key === PANEL_KEYS.colors) return colorsDirty.value;
   if (key === PANEL_KEYS.lammps) return isTypeMapApplied() && hasCustomTypeMap();
   if (key === PANEL_KEYS.details) return detailsDirty.value;
   if (key === PANEL_KEYS.view) return viewDirty.value;

@@ -82,7 +82,7 @@ export type DetailsSettingsGroup = {
   applyAllLayers?: boolean;
 };
 
-export const DEFAULT_LAYER_DISPLAY: DetailsSettingsGroup = {
+export const DEFAULT_DETAILS: DetailsSettingsGroup = {
   representation: 'ballAndStick',
   atomScale: 1,
   showBonds: true,
@@ -90,10 +90,6 @@ export const DEFAULT_LAYER_DISPLAY: DetailsSettingsGroup = {
   bondFactor: 1.05,
   bondRadius: 0.1,
   atomRoughness: 0.35,
-};
-
-export const DEFAULT_DETAILS: DetailsSettingsGroup = {
-  ...DEFAULT_LAYER_DISPLAY,
   applyAllLayers: true,
 };
 

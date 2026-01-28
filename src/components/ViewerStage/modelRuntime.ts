@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { ref, type Ref } from 'vue';
 
 import {
-  DEFAULT_LAYER_DISPLAY,
+  DEFAULT_DETAILS,
   buildColorTemplateRows,
   type ViewerSettings,
   type LammpsTypeMapItem,
@@ -78,7 +78,7 @@ function normalizeLayerDisplay(
   };
 }
 
-const DEFAULT_LAYER_DISPLAY_LOCAL: DetailsSettingsGroup = { ...DEFAULT_LAYER_DISPLAY };
+const DEFAULT_DETAILS_LOCAL: DetailsSettingsGroup = { ...DEFAULT_DETAILS };
 
 export type ModelLayerInfo = {
   id: string;
@@ -229,6 +229,7 @@ export type ModelRuntime = {
       hidePreviousLayers?: boolean;
       sourceMeta?: LayerSourceInfo;
       skipAutoFit?: boolean;
+      forcedLayerId?: string;
     },
   ) => { frameCount: number; hasAnimation: boolean; layerId: string };
   replaceActiveLayerModel: (model: StructureModel) => {
@@ -541,14 +542,14 @@ export function createModelRuntime(args: {
   }
 
   function normalizeAtomRoughnessValue(raw: number | undefined): number {
-    const base = Number.isFinite(raw) ? raw as number : DEFAULT_LAYER_DISPLAY.atomRoughness;
+    const base = Number.isFinite(raw) ? raw as number : DEFAULT_DETAILS.atomRoughness;
     return Math.min(1, Math.max(0, base));
   }
 
   function getDisplayDefaults(): DetailsSettingsGroup {
     return normalizeLayerDisplay(
       getSettings().details,
-      DEFAULT_LAYER_DISPLAY_LOCAL,
+      DEFAULT_DETAILS_LOCAL,
     );
   }
 
@@ -900,7 +901,12 @@ export function createModelRuntime(args: {
 
   function renderModel(
     model: StructureModel,
-    opts?: { hidePreviousLayers?: boolean; sourceMeta?: LayerSourceInfo; skipAutoFit?: boolean },
+    opts?: {
+      hidePreviousLayers?: boolean;
+      sourceMeta?: LayerSourceInfo;
+      skipAutoFit?: boolean;
+      forcedLayerId?: string;
+    },
   ): { frameCount: number; hasAnimation: boolean; layerId: string } {
     // New model load: hide previous layers by default (layer-like behavior).
     // When loading multiple files at once, the caller can disable this per-file
@@ -908,7 +914,8 @@ export function createModelRuntime(args: {
     const hidePrev = opts?.hidePreviousLayers !== false;
     if (hidePrev) hideAllLayers();
 
-    const id = makeLayerId();
+    const preferredId = opts?.forcedLayerId;
+    const id = preferredId && !layerMap.has(preferredId) ? preferredId : makeLayerId();
     const name = safeLayerName(model.source?.filename);
 
     const group = new THREE.Group();
@@ -1398,6 +1405,7 @@ export function createModelRuntime(args: {
         id: l.info.id,
         name: l.info.name,
         visible: l.info.visible,
+        createdAtMs: l.info.createdAtMs,
         source: {
           md5: l.info.sourceMd5,
           size: l.info.sourceSize,
@@ -1421,13 +1429,16 @@ export function createModelRuntime(args: {
     layer: LayerInternal,
     snap: LayerSnapshot,
   ): void {
-    const baseDisplay = getDisplayDefaults();
+    const baseDisplay = DEFAULT_DETAILS_LOCAL;
     const snapDisplay = snap.details;
     const nextDisplay = normalizeLayerDisplay(snapDisplay ?? baseDisplay, baseDisplay);
     const prevDisplay = getLayerDisplay(layer);
     layer.display = nextDisplay;
 
     layer.info.visible = snap.visible ?? true;
+    if (Number.isFinite(snap.createdAtMs)) {
+      layer.info.createdAtMs = Number(snap.createdAtMs);
+    }
     layer.group.visible = layer.info.visible;
 
     const atoms = (layer.model.frames?.[layer.frameIndex]
@@ -1443,10 +1454,7 @@ export function createModelRuntime(args: {
     layer.typeMapRows = (snapTypeMap ?? []).map(r => ({ ...r }));
     layer.typeMapApplied = false;
 
-    const legacyColors = Array.isArray((snap as any).colors)
-      ? (snap as any).colors as AtomTypeColorMapItem[]
-      : null;
-    const colorSource = legacyColors ?? parseColorMapRecord((snap as any).colors?.data);
+    const colorSource = parseColorMapRecord((snap as any).colors?.data);
     layer.colorMapRows = syncColorMapRowsFromAtoms(colorSource, mapped, layer.hasAnyTypeId);
 
     rebuildVisualsForLayer(layer, mapped);

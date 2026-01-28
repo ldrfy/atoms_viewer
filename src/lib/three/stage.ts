@@ -83,8 +83,6 @@ export type ThreeStage = {
   /** Get current dual-view distance (effective; in ortho mapped from zoom). */
   getDualViewDistance: () => number;
 
-  /** Dual view (front+side): enable/disable */
-  setDualViewEnabled: (enabled: boolean) => void;
   /** Dual view camera distance (world units). For orthographic, mapped to zoom. */
   setDualViewDistance: (dist: number) => void;
   /** Dual view split ratio for left viewport (0..1). */
@@ -730,11 +728,6 @@ export function createThreeStage(params: {
     invalidate();
   };
 
-  const setDualViewEnabled = (enabled: boolean): void => {
-    // Backward-compat: old dual-view toggle means [front, side]
-    setViewPresets(enabled ? ['front', 'side'] : []);
-  };
-
   /**
  * Update dual-view camera distance (keeps settings in sync).
  * 更新双视图视距（同步设置并避免抖动回环）。
@@ -798,7 +791,6 @@ export function createThreeStage(params: {
 
     getDualViewDistance: () => dualViewDistance,
 
-    setDualViewEnabled,
     setDualViewDistance,
     setDualViewSplit,
 

@@ -4,10 +4,19 @@ import type { RotationDeg, ViewerSettings } from './settings';
  * Patch type that supports partial rotation fields.
  * 支持 rotationDeg 局部更新的补丁类型。
  */
-export type SettingsPatch = Partial<ViewerSettings> & {
-  view?: Partial<ViewerSettings['view']> & {
+export type SettingsPatch = {
+  files?: Partial<ViewerSettings['files']>;
+  rotation?: Partial<ViewerSettings['rotation']>;
+  view?: Omit<Partial<ViewerSettings['view']>, 'rotationDeg'> & {
     rotationDeg?: Partial<RotationDeg>;
   };
+  lammps?: ViewerSettings['lammps'];
+  details?: Partial<ViewerSettings['details']>;
+  colors?: Partial<ViewerSettings['colors']> & {
+    data?: Record<string, string>;
+  };
+  anim?: Partial<ViewerSettings['anim']>;
+  other?: Partial<ViewerSettings['other']>;
 };
 
 /**

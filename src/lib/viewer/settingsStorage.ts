@@ -2,7 +2,7 @@ import {
   DEFAULT_SETTINGS,
   type ViewerSettings,
 } from './settings';
-import { flattenCategorizedSettings } from './sessionTemplates';
+import { mergeCategorizedSettings } from './sessionTemplates';
 
 // Local storage key for viewer settings. / 本地设置存储键名。
 export const SETTINGS_STORAGE_KEY = 'atomsViewer.settings.v1';
@@ -43,7 +43,7 @@ export function loadSettingsFromStorage(): ViewerSettings {
 
     const parsed = JSON.parse(raw) as ViewerSettings;
     if (!parsed || typeof parsed !== 'object') return buildDefaultSettings();
-    return flattenCategorizedSettings(parsed as any);
+    return mergeCategorizedSettings(parsed as any);
   }
   catch {
     return buildDefaultSettings();

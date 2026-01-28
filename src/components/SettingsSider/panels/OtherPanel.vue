@@ -220,9 +220,11 @@ function applyVisualStyle(styleId: VisualStyleId): void {
       bondFactor: preset.display.bondFactor,
     },
     colors: {
-      data: isDefault ? {} : Object.fromEntries(
-        colorTemplate.map(r => [r.element, r.color]),
-      ),
+      data: isDefault
+        ? {}
+        : Object.fromEntries(
+          colorTemplate.map(r => [r.element, r.color]),
+        ),
     },
   });
   if (!api) return;

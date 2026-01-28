@@ -53,6 +53,7 @@ import { toRef, watch, onBeforeUnmount, computed, ref, onMounted } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useViewerStage } from './useViewerStage';
 import type { ViewerSettings, OpenSettingsPayload } from '../../lib/viewer/settings';
+import type { SettingsPatch } from '../../lib/viewer/mergeSettings';
 import { Modal, message } from 'ant-design-vue';
 import {
   setThemeMode,
@@ -94,7 +95,7 @@ watch(
   { immediate: true, deep: true, flush: 'sync' },
 );
 
-function patchSettings(patch: Partial<ViewerSettings>): void {
+function patchSettings(patch: SettingsPatch): void {
   const merged = settingsShadow.patch(patch);
   emit('update:settings', merged);
 }
@@ -160,6 +161,7 @@ watch(
     if (!preferred || preferred === activeThemeMode.value) return;
     skipNextThemePrompt.value = true;
     setThemeMode(preferred);
+    patchSettings({ other: { themeMode: preferred } });
   },
 );
 
@@ -216,6 +218,7 @@ function showThemeMismatchConfirm(preferred: 'light' | 'dark'): void {
     cancelText: t('viewer.theme.bgMismatchKeep'),
     onOk: () => {
       setThemeMode(preferred);
+      patchSettings({ other: { themeMode: preferred } });
     },
     onCancel: () => {
       message.info(t('viewer.theme.bgMismatchKeepTip'));

@@ -15,18 +15,27 @@ export type LayerSourceInfo = {
 };
 
 export type LayerSnapshot = {
-  id: string;
-  name: string;
-  visible: boolean;
+  id?: string;
+  name?: string;
+  visible?: boolean;
+  createdAtMs?: number;
   source?: LayerSourceInfo;
   /** Per-layer appearance */
-  details: DetailsSettingsGroup;
+  details?: DetailsSettingsGroup;
   /** Per-layer colors */
-  colors: {
-    data: Record<string, string>;
+  colors?: {
+    data?: Record<string, string>;
   };
   /** Per-layer LAMMPS type mapping */
-  lammps: LammpsTypeMapItem[];
+  lammps?: LammpsTypeMapItem[];
+};
+
+export type LayerSortBy = 'time,ASC' | 'time,DESC' | 'name,ASC' | 'name,DESC';
+
+export type LayersSnapshot = {
+  sortBy: LayerSortBy;
+  activeId?: string;
+  data: Record<string, LayerSnapshot>;
 };
 
 export type LayerSourceData = LayerSourceInfo & {
@@ -43,6 +52,6 @@ export type SessionSnapshot = {
     locale?: string;
     buildTime?: string;
   };
-  settings: ViewerSettingsCategorized | ViewerSettings;
-  layers: LayerSnapshot[];
+  settings: Partial<ViewerSettingsCategorized> | ViewerSettings;
+  layers: LayersSnapshot;
 };

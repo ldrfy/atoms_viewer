@@ -274,7 +274,7 @@ function onClearStorage(): void {
 
 async function onExportSettings(): Promise<void> {
   try {
-  const { json, fileStem } = await buildSettingsExportJson({
+    const { json, fileStem } = await buildSettingsExportJson({
       settings: settings.value,
       viewerApi: viewerApi.value,
       locale: getLocale(),
@@ -386,6 +386,8 @@ async function onExportProject(): Promise<void> {
         details: readApplyAllLayersFlags().details ?? true,
         colors: readApplyAllLayersFlags().colors ?? true,
       },
+      layersSortBy: api.layerSortBy?.value ?? 'name,ASC',
+      activeLayerId: api.activeLayerId?.value ?? null,
       animState: api.getAnimState?.(),
     });
     const url = URL.createObjectURL(blob);

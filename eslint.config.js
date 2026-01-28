@@ -70,6 +70,14 @@ export default [
     files: ['**/*.{ts,tsx,vue}'],
     rules: {
       '@typescript-eslint/no-explicit-any': 'off',
+      // 先启用未使用检测，方便清理无用变量/导出
+      'no-unused-vars': 'off',
+      '@typescript-eslint/no-unused-vars': ['error', {
+        argsIgnorePattern: '^_',
+        varsIgnorePattern: '^_',
+        caughtErrorsIgnorePattern: '^_',
+        ignoreRestSiblings: true,
+      }],
 
       // 允许空 catch（例如 requestData 在部分浏览器会抛异常，忽略即可）
       'no-empty': ['error', { allowEmptyCatch: true }],

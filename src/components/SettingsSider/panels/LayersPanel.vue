@@ -31,20 +31,20 @@
 
     <div v-else>
       <a-space :size="8" class="settings-full-width">
-        <a-button
+        <a-select
           size="small"
           :disabled="layerList.length < 2"
-          @click="onToggleTimeSort"
+          :value="sortValue"
+          @change="onSortChange"
         >
-          {{ timeSortLabel }}
-        </a-button>
-        <a-button
-          size="small"
-          :disabled="layerList.length < 2"
-          @click="onToggleNameSort"
-        >
-          {{ nameSortLabel }}
-        </a-button>
+          <a-select-option
+            v-for="opt in sortOptions"
+            :key="opt.value"
+            :value="opt.value"
+          >
+            {{ opt.label }}
+          </a-select-option>
+        </a-select>
         <a-button
           size="small"
           :disabled="layerList.length === 0"
@@ -116,7 +116,7 @@
 
 <script setup lang="ts">
 import { DeleteOutlined } from '@ant-design/icons-vue';
-import { computed, ref } from 'vue';
+import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { viewerApiRef } from '../../../lib/viewer/bridge';
 
@@ -127,13 +127,16 @@ const layerList = computed(() => viewerApi.value?.layers.value ?? []);
 const activeLayerId = computed(() => viewerApi.value?.activeLayerId.value ?? null);
 const allVisible = computed(() => layerList.value.length > 0 && layerList.value.every(l => l.visible));
 
-const timeSortDir = ref<'timeAsc' | 'timeDesc'>('timeAsc');
-const nameSortDir = ref<'nameAsc' | 'nameDesc'>('nameAsc');
-const timeSortLabel = computed(() => t(`settings.panel.layers.sort.${timeSortDir.value}`));
-const nameSortLabel = computed(() => t(`settings.panel.layers.sort.${nameSortDir.value}`));
 const toggleAllLabel = computed(() => (
   allVisible.value ? t('settings.panel.layers.hideAll') : t('settings.panel.layers.showAll')
 ));
+const sortValue = computed(() => viewerApi.value?.layerSortBy?.value ?? 'name,ASC');
+const sortOptions = computed(() => ([
+  { value: 'time,ASC', label: t('settings.panel.layers.sort.timeAsc') },
+  { value: 'time,DESC', label: t('settings.panel.layers.sort.timeDesc') },
+  { value: 'name,ASC', label: t('settings.panel.layers.sort.nameAsc') },
+  { value: 'name,DESC', label: t('settings.panel.layers.sort.nameDesc') },
+]));
 
 /**
  * Primary text shown for a layer.
@@ -193,15 +196,11 @@ function onToggleAllVisible(): void {
   viewerApi.value?.setAllLayersVisible(!allVisible.value);
 }
 
-function onToggleTimeSort(): void {
-  timeSortDir.value = timeSortDir.value === 'timeAsc' ? 'timeDesc' : 'timeAsc';
-  const direction = timeSortDir.value === 'timeDesc' ? 'desc' : 'asc';
-  viewerApi.value?.sortLayers({ by: 'time', direction });
-}
-
-function onToggleNameSort(): void {
-  nameSortDir.value = nameSortDir.value === 'nameAsc' ? 'nameDesc' : 'nameAsc';
-  const direction = nameSortDir.value === 'nameDesc' ? 'desc' : 'asc';
-  viewerApi.value?.sortLayers({ by: 'name', direction });
+function onSortChange(val: string): void {
+  const raw = String(val ?? 'name,ASC');
+  const [byRaw, dirRaw] = raw.split(',').map(v => v.trim().toLowerCase());
+  const by = byRaw === 'time' ? 'time' : 'name';
+  const direction = dirRaw === 'desc' ? 'desc' : 'asc';
+  viewerApi.value?.sortLayers({ by, direction });
 }
 </script>

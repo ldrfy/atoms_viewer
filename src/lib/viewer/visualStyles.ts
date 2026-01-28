@@ -1,5 +1,5 @@
 import type { AtomTypeColorMapItem, VisualStyleId } from './settings';
-import { DEFAULT_COLOR_MAP, DEFAULT_LAYER_DISPLAY, DEFAULT_OTHER } from './settings';
+import { DEFAULT_COLOR_MAP, DEFAULT_DETAILS, DEFAULT_OTHER } from './settings';
 
 export type VisualStylePreset = {
   id: VisualStyleId;
@@ -126,10 +126,10 @@ export const VISUAL_STYLE_PRESETS: Record<VisualStyleId, VisualStylePreset> = {
     labelKey: 'settings.panel.other.visualStyleDefault',
     colorMapTemplate: DEFAULT_COLOR_MAP,
     display: {
-      atomScale: DEFAULT_LAYER_DISPLAY.atomScale,
-      atomRoughness: DEFAULT_LAYER_DISPLAY.atomRoughness,
-      bondRadius: DEFAULT_LAYER_DISPLAY.bondRadius,
-      bondFactor: DEFAULT_LAYER_DISPLAY.bondFactor,
+      atomScale: DEFAULT_DETAILS.atomScale,
+      atomRoughness: DEFAULT_DETAILS.atomRoughness,
+      bondRadius: DEFAULT_DETAILS.bondRadius,
+      bondFactor: DEFAULT_DETAILS.bondFactor,
       modelLightIntensity: DEFAULT_OTHER.modelLightIntensity,
     },
   },
@@ -138,10 +138,10 @@ export const VISUAL_STYLE_PRESETS: Record<VisualStyleId, VisualStylePreset> = {
     labelKey: 'settings.panel.other.visualStyleJmol',
     colorMapTemplate: JMOL_COLOR_MAP,
     display: {
-      atomScale: DEFAULT_LAYER_DISPLAY.atomScale,
-      atomRoughness: DEFAULT_LAYER_DISPLAY.atomRoughness,
+      atomScale: DEFAULT_DETAILS.atomScale,
+      atomRoughness: DEFAULT_DETAILS.atomRoughness,
       bondRadius: 0.15,
-      bondFactor: DEFAULT_LAYER_DISPLAY.bondFactor,
+      bondFactor: DEFAULT_DETAILS.bondFactor,
       modelLightIntensity: DEFAULT_OTHER.modelLightIntensity,
     },
   },

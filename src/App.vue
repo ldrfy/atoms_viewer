@@ -56,7 +56,7 @@ import { readSettingsOverridesFromUrl } from './lib/settingsUrl';
 import { viewerApiRef } from './lib/viewer/bridge';
 import { readStoredSessionMeta, loadSessionFromStorage } from './lib/viewer/sessionStorage';
 import type { SessionSnapshot, LayerSourceData } from './lib/viewer/sessionTypes';
-import { flattenCategorizedSettings } from './lib/viewer/sessionTemplates';
+import { mergeCategorizedSettings } from './lib/viewer/sessionTemplates';
 import { writeApplyAllLayersFlags } from './components/SettingsSider/applyAllStorage';
 import { PANEL_KEYS } from './lib/viewer/panelKeys';
 import { VIEW_SETTINGS_SAVE_DELAY_MS } from './lib/viewer/constants';
@@ -230,11 +230,6 @@ function openWithFile(file: File): void {
 
 function openWithFiles(files: File[]): void {
   if (!files || files.length === 0) return;
-  // Single file keeps the legacy path; multi-file uses batch loading.
-  if (files.length === 1) {
-    openWithFile(files[0]!);
-    return;
-  }
   loadRequest.value = { kind: 'files', files };
   page.value = 'viewer';
 }
@@ -270,7 +265,13 @@ async function tryApplyPendingRestore(): Promise<void> {
 
 async function maybePromptSessionRestore(): Promise<void> {
   const meta = readStoredSessionMeta();
-  if (!meta || !meta.snapshot?.layers || meta.snapshot.layers.length === 0) return;
+  const layers = meta?.snapshot?.layers as any;
+  const layerCount = Array.isArray(layers)
+    ? layers.length
+    : layers && typeof layers === 'object' && typeof layers.data === 'object'
+      ? Object.keys(layers.data as Record<string, unknown>).length
+      : 0;
+  if (!meta || !layers || layerCount === 0) return;
   if (loadRequest.value) return;
   Modal.confirm({
     title: t('viewer.session.restoreTitle'),
@@ -284,18 +285,8 @@ async function maybePromptSessionRestore(): Promise<void> {
         if (!stored) throw new Error('missing session');
         const files = buildFilesFromSources(stored.sources ?? []);
         const rawSettings = stored.snapshot.settings as any;
-        const hasAllSettings = rawSettings && typeof rawSettings === 'object'
-          && (
-            'files' in rawSettings
-            && 'rotation' in rawSettings
-            && 'view' in rawSettings
-            && 'details' in rawSettings
-            && 'colors' in rawSettings
-            && 'lammps' in rawSettings
-            && 'other' in rawSettings
-            && 'anim' in rawSettings
-          );
-        if (!hasAllSettings) {
+        const hasSettings = rawSettings && typeof rawSettings === 'object';
+        if (!hasSettings) {
           message.error(t('settings.importFailed'));
           return;
         }
@@ -317,7 +308,7 @@ async function maybePromptSessionRestore(): Promise<void> {
             colors: colorFlags.applyAllLayers,
           });
         }
-        settings.value = flattenCategorizedSettings(rawSettings);
+        settings.value = mergeCategorizedSettings(rawSettings);
         pendingRestore.value = { snapshot: stored.snapshot, files };
         page.value = 'viewer';
 

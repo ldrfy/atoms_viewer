@@ -1,9 +1,8 @@
 import type { ViewerPublicApi } from './bridge';
 import type { ViewerSettings } from './settings';
 import { buildColorTemplateRows } from './settings';
-import type { LayerSnapshot } from './sessionTypes';
+import type { LayerSnapshot, LayersSnapshot, LayerSortBy } from './sessionTypes';
 import type { SupportLocale } from '../../i18n';
-import { PANEL_KEYS } from './panelKeys';
 
 import {
   buildDefaultSettings,
@@ -12,12 +11,12 @@ import {
 } from './settingsStorage';
 import { clearSessionStorage } from './sessionStorage';
 import { buildSettingsSnapshot } from './projectPackage';
-import { flattenCategorizedSettings } from './sessionTemplates';
+import { mergeCategorizedSettings } from './sessionTemplates';
 
 export type ParsedSettingsImport = {
   nextSettings: ViewerSettings;
   locale?: SupportLocale;
-  layers?: LayerSnapshot[];
+  layers?: LayersSnapshot;
   applyAllLayers: {
     details: boolean;
     colors: boolean;
@@ -28,6 +27,14 @@ export type ParsedSettingsImport = {
     recordDelaySec: number;
   };
 };
+
+function normalizeLayerSnapshots(
+  layers?: LayersSnapshot,
+): { sortBy: LayerSortBy; snaps: LayerSnapshot[] } {
+  const sortBy = layers?.sortBy ?? 'name,ASC';
+  const snaps = layers?.data ? Object.values(layers.data) : [];
+  return { sortBy, snaps };
+}
 
 export async function applyDefaultSettings(params: {
   currentSettings: ViewerSettings;
@@ -114,6 +121,7 @@ export async function buildSettingsExportJson(params: {
   const layerSnapshots: LayerSnapshot[] = viewerApi?.getLayerSnapshots
     ? await viewerApi.getLayerSnapshots()
     : [];
+  const layersSortBy = viewerApi?.layerSortBy?.value ?? 'name,ASC';
   const animState = viewerApi?.getAnimState ? viewerApi.getAnimState() : undefined;
   const payload = buildSettingsSnapshot(
     data,
@@ -121,6 +129,8 @@ export async function buildSettingsExportJson(params: {
     locale ? { locale } : undefined,
     animState,
     applyAllLayers,
+    layersSortBy,
+    viewerApi?.activeLayerId?.value ?? null,
   );
   const json = JSON.stringify(payload, null, 2);
   const fileStem = viewerApi?.parseInfo?.fileName ?? 'atoms-viewer';
@@ -133,16 +143,21 @@ export function parseSettingsImport(raw: string): ParsedSettingsImport {
   const topSettings = anyInput.settings as Record<string, any> | undefined;
   const app = anyInput.app as Record<string, unknown> | undefined;
   const locale = app?.locale as SupportLocale | undefined;
-  const layers = Array.isArray(anyInput.layers)
-    ? (anyInput.layers as LayerSnapshot[])
-    : undefined;
+  let layers: LayersSnapshot | undefined;
+  if (anyInput.layers && typeof anyInput.layers === 'object') {
+    const raw = anyInput.layers as Record<string, unknown>;
+    const data = (raw.data && typeof raw.data === 'object')
+      ? raw.data as Record<string, LayerSnapshot>
+      : undefined;
+    const sortBy = typeof raw.sortBy === 'string' ? raw.sortBy as LayerSortBy : 'name,ASC';
+    if (data) layers = { sortBy, data };
+  }
 
   if (!topSettings || typeof topSettings !== 'object') {
     throw new Error('Invalid settings format');
   }
 
   const categorized = topSettings as any;
-  const anim = categorized.anim as Record<string, unknown> | undefined;
   const details = categorized.details as Record<string, unknown> | undefined;
   const colors = categorized.colors as Record<string, unknown> | undefined;
   const applyAllLayers = {
@@ -169,7 +184,7 @@ export function parseSettingsImport(raw: string): ParsedSettingsImport {
     };
   }
 
-  const extractedSettings = flattenCategorizedSettings(categorized as any);
+  const extractedSettings = mergeCategorizedSettings(categorized as any);
   const animState = {
     frameIndex: Number(extractedSettings.anim.frameIndex ?? 0),
     playFps: Number(extractedSettings.anim.playFps ?? 6),
@@ -214,9 +229,13 @@ export async function applyImportedSettings(params: {
 
   await nextTick();
   viewerApi.applyViewFromSettings(nextSettings);
-  const hasLayerSnapshots = Array.isArray(layers) && layers.length > 0;
-  if (hasLayerSnapshots && viewerApi.applyLayerSnapshots) {
-    await viewerApi.applyLayerSnapshots(layers as LayerSnapshot[]);
+  const { sortBy, snaps } = normalizeLayerSnapshots(layers);
+  if (snaps.length > 0 && viewerApi.applyLayerSnapshots) {
+    await viewerApi.applyLayerSnapshots(snaps);
+    viewerApi.sortLayers?.({
+      by: sortBy.startsWith('time') ? 'time' : 'name',
+      direction: sortBy.endsWith('DESC') ? 'desc' : 'asc',
+    });
     viewerApi.applyAnimState?.(parsed.animState);
     return;
   }

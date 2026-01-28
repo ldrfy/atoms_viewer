@@ -6,6 +6,7 @@ import type {
   DetailsSettingsGroup,
   ViewerSettings,
 } from './settings';
+import type { LayerSortBy } from './sessionTypes';
 
 import type { ParseMode, ParseInfo } from '../structure/parse';
 import type { ModelLayerInfo } from '../../components/ViewerStage/modelRuntime';
@@ -62,6 +63,8 @@ export type ViewerPublicApi = {
   setAllLayersVisible: (visible: boolean) => void;
   /** Sort layer order for display. */
   sortLayers: (opts: { by: 'time' | 'name'; direction: 'asc' | 'desc' }) => void;
+  /** Current layer sort mode (persisted in session export). */
+  layerSortBy: Ref<LayerSortBy>;
   /** Remove a layer from the scene and internal state. */
   removeLayer: (id: string) => void;
 

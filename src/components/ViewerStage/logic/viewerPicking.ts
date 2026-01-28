@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import type { Ref } from 'vue';
 
 import type { ViewerSettings } from '../../../lib/viewer/settings';
+import type { SettingsPatch } from '../../../lib/viewer/mergeSettings';
 import { normalizeViewPresets } from '../../../lib/viewer/viewPresets';
 import { MANUAL_ROTATION_SYNC_INTERVAL_MS } from '../../../lib/viewer/constants';
 import { ATOMIC_SYMBOLS } from '../../../lib/structure/chem';
@@ -25,7 +26,7 @@ type RenderDeps = {
   getStage: () => ThreeStage | null;
   getRuntime: () => ModelRuntime | null;
 
-  patchSettings?: (patch: Partial<ViewerSettings>) => void;
+  patchSettings?: (patch: SettingsPatch) => void;
   onRotationCommitted?: () => void;
 
   inspectCtx: InspectCtx;

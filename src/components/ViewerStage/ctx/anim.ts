@@ -1,5 +1,6 @@
 import type { Ref } from 'vue';
 import type { ViewerSettings } from '../../../lib/viewer/settings';
+import type { SettingsPatch } from '../../../lib/viewer/mergeSettings';
 import type { FrameMeta } from '../../../lib/structure/types';
 import type { RecordingBindings } from '../recording';
 import type { MaybeRef } from './common';
@@ -29,7 +30,7 @@ export type AnimCtx = {
 
   // bg
   settings: MaybeRef<ViewerSettings>;
-  patchSettings: (patch: Partial<ViewerSettings>) => void;
+  patchSettings: (patch: SettingsPatch) => void;
 };
 
 export function createAnimCtx(args: {
@@ -50,7 +51,7 @@ export function createAnimCtx(args: {
 
   // bg
   settingsRef: Readonly<Ref<ViewerSettings>>;
-  patchSettings?: (patch: Partial<ViewerSettings>) => void;
+  patchSettings?: (patch: SettingsPatch) => void;
 }): AnimCtx {
   const patch = args.patchSettings ?? (() => void 0);
 

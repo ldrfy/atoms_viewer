@@ -11,7 +11,9 @@ import type {
   OpenSettingsPayload,
   DetailsSettingsGroup,
 } from '../../lib/viewer/settings';
+import type { LayerSortBy, LayersSnapshot, LayerSnapshot } from '../../lib/viewer/sessionTypes';
 import type { FrameMeta } from '../../lib/structure/types';
+import type { SettingsPatch } from '../../lib/viewer/mergeSettings';
 
 import { useI18n } from 'vue-i18n';
 
@@ -53,13 +55,14 @@ import { createViewerLoader } from './logic/viewerLoader';
 import { createViewerAnimationController } from './logic/viewerAnimation';
 import { createSettingsSync } from './settingsSync';
 import { buildSettingsSnapshot, parseProjectZip } from '../../lib/viewer/projectPackage';
-import { flattenCategorizedSettings } from '../../lib/viewer/sessionTemplates';
+import { mergeCategorizedSettings } from '../../lib/viewer/sessionTemplates';
 import { writeApplyAllLayersFlags } from '../SettingsSider/applyAllStorage';
 import { computeMd5ForArrayBuffer } from '../../lib/file/md5';
 import { buildExportFilename } from '../../lib/file/filename';
 import { saveSessionToStorage, clearSessionStorage } from '../../lib/viewer/sessionStorage';
 import { setThemeMode } from '../../theme/mode';
 import { exportStructureText, type StructureExportFormat } from '../../lib/structure/export';
+import { writeUrlListParam } from '../../lib/urlParams';
 
 /**
  * Template ref callback param type (works for DOM + component instance).
@@ -110,6 +113,8 @@ type ViewerStageBridgeApi = {
   setAllLayersVisible: (visible: boolean) => void;
   /** 排序图层显示顺序 */
   sortLayers: (opts: { by: 'time' | 'name'; direction: 'asc' | 'desc' }) => void;
+  /** 当前图层排序模式 */
+  layerSortBy: Ref<LayerSortBy>;
   /** 移除图层 */
   removeLayer: (id: string) => void;
 
@@ -341,7 +346,7 @@ type ViewerStageBindings = {
 
 export function useViewerStage(
   settingsRef: Readonly<Ref<ViewerSettings>>,
-  patchSettings?: (patch: Partial<ViewerSettings>) => void,
+  patchSettings?: (patch: SettingsPatch) => void,
   requestOpenSettings?: (payload?: OpenSettingsPayload) => void,
 ): ViewerStageBindings {
   const { t } = useI18n();
@@ -482,6 +487,7 @@ export function useViewerStage(
   // state
   const hasModel = ref(false);
   const isLoading = ref(false);
+  const layerSortBy = ref<LayerSortBy>('name,ASC');
 
   // inspect
   const inspectCtx = createInspectCtx();
@@ -613,6 +619,8 @@ export function useViewerStage(
         details: settingsRef.value.details.applyAllLayers ?? true,
         colors: settingsRef.value.colors.applyAllLayers ?? true,
       },
+      layerSortBy.value,
+      runtime?.activeLayerId.value ?? null,
     );
     const sources = collectLayerSources();
     const curSettings = settingsRef.value;
@@ -624,7 +632,12 @@ export function useViewerStage(
         rotationDeg: curSettings.view.rotationDeg,
         dualViewDistance: curSettings.view.dualViewDistance,
       },
-      layers: layerSnapshots.map(s => `${s.source?.md5 ?? s.id}:${s.visible ? 1 : 0}:${s.details.atomScale}:${s.lammps.length}:${Object.keys(s.colors.data ?? {}).length}`),
+      layers: layerSnapshots.map((s) => {
+        const atomScale = s.details?.atomScale ?? 0;
+        const lammpsCount = s.lammps?.length ?? 0;
+        const colorCount = Object.keys(s.colors?.data ?? {}).length;
+        return `${s.source?.md5 ?? s.id}:${s.visible ? 1 : 0}:${atomScale}:${lammpsCount}:${colorCount}`;
+      }),
       sources: sources.map(s => `${s.md5 ?? s.layerId}:${s.size ?? 0}:${s.cached ? 1 : 0}`),
     });
     if (sig === lastSessionSignature) return;
@@ -779,8 +792,9 @@ export function useViewerStage(
 
   async function loadFileWithSession(
     file: File,
-    opts?: { hidePreviousLayers?: boolean },
+    opts?: { hidePreviousLayers?: boolean; forcedLayerId?: string },
   ): Promise<void> {
+    writeUrlListParam('samples', []);
     const lower = file.name.toLowerCase();
     if (lower.endsWith('.zip')) {
       await loadFilesWithSession([file], 'api', opts);
@@ -793,8 +807,9 @@ export function useViewerStage(
   async function loadFilesWithSession(
     files: File[],
     _source?: 'drop' | 'picker' | 'api',
-    opts?: { hidePreviousLayers?: boolean },
+    opts?: { hidePreviousLayers?: boolean; forcedLayerId?: string },
   ): Promise<void> {
+    writeUrlListParam('samples', []);
     const zipFiles = files.filter(f => f.name.toLowerCase().endsWith('.zip'));
     const otherFiles = files.filter(f => !zipFiles.includes(f));
 
@@ -813,16 +828,18 @@ export function useViewerStage(
   async function loadUrlWithSession(
     url: string,
     fileName: string,
-    opts?: { hidePreviousLayers?: boolean },
+    opts?: { hidePreviousLayers?: boolean; forcedLayerId?: string },
   ): Promise<void> {
+    writeUrlListParam('samples', []);
     await loader.loadUrl(url, fileName, opts);
     scheduleSessionSave('layers');
   }
 
   async function loadUrlsWithSession(
-    items: { url: string; fileName: string }[],
+    items: { url: string; fileName: string; forcedLayerId?: string }[],
     opts?: { hidePreviousLayers?: boolean },
   ): Promise<void> {
+    writeUrlListParam('samples', []);
     await loader.loadUrls(items, opts);
     scheduleSessionSave('layers');
   }
@@ -854,7 +871,9 @@ export function useViewerStage(
     // 过滤掉配置文件，只保留模型文件
     const importFiles = (files ?? []).filter(f => f.name.toLowerCase() !== 'config.json');
     const hasFiles = importFiles.length > 0;
-    const layerSnaps = snapshot.layers ?? [];
+    const normalizedLayers = snapshot.layers as LayersSnapshot | undefined;
+    const activeLayerIdFromSnapshot = normalizedLayers?.activeId ?? null;
+    const { sortBy, snaps: layerSnaps } = sortLayerSnapshots(normalizedLayers);
     if (!hasFiles && layerSnaps.length === 0) {
       message.error(t('settings.importFailed'));
       return;
@@ -866,7 +885,7 @@ export function useViewerStage(
       message.error(t('settings.importFailed'));
       return;
     }
-    const settingsPatched = flattenCategorizedSettings(rawSettings as any) as ViewerSettings;
+    const settingsPatched = mergeCategorizedSettings(rawSettings as any) as ViewerSettings;
     writeApplyAllLayersFlags({
       details: settingsPatched.details.applyAllLayers ?? true,
       colors: settingsPatched.colors.applyAllLayers ?? true,
@@ -889,73 +908,58 @@ export function useViewerStage(
     runtime.clearModel();
     layerSourceStore.clear();
 
-    // 按 md5 匹配模型文件，匹配不到时按顺序 fallback
     const renameFile = (file: File, name?: string): File => {
       if (!name || name === file.name) return file;
-      try {
-        return new File([file], name, { type: file.type });
-      }
-      catch {
-        return file;
-      }
+      return new File([file], name, { type: file.type });
     };
 
     const filesByMd5 = new Map<string, File>();
-    const usedFiles = new Set<File>();
     for (const f of importFiles) {
       const md5 = guessMd5FromName(f.name);
       if (md5) filesByMd5.set(md5, f);
     }
 
-    let loadedLayers = 0;
     for (const layer of layerSnaps) {
-      let file: File | undefined;
       const md5 = layer.source?.md5?.toLowerCase();
-      if (md5 && filesByMd5.has(md5)) {
-        file = filesByMd5.get(md5);
-      }
-      else {
-        file = importFiles.find(f => !usedFiles.has(f));
-      }
-
+      const file = md5 ? filesByMd5.get(md5) : undefined;
       if (file) {
-        usedFiles.add(file);
         const fileWithName = renameFile(file, layer.source?.fileName ?? layer.name);
-        await loadFilesWithSession([fileWithName], 'api', { hidePreviousLayers: false });
-        loadedLayers += 1;
+        await loadFilesWithSession([fileWithName], 'api', {
+          hidePreviousLayers: false,
+          forcedLayerId: layer.id,
+        });
         continue;
       }
 
       const url = layer.source?.url;
       if (url) {
         await loadUrlsWithSession(
-          [{ url, fileName: layer.source?.fileName ?? layer.name ?? 'remote' }],
+          [{
+            url,
+            fileName: layer.source?.fileName ?? layer.name ?? 'remote',
+            forcedLayerId: layer.id,
+          }],
           { hidePreviousLayers: false },
         );
-        loadedLayers += 1;
       }
-    }
-
-    // 把余下的文件全部加载一遍（用户增加/顺序变化时仍然恢复）
-    const leftovers = importFiles.filter(f => !usedFiles.has(f));
-    if (leftovers.length > 0) {
-      await loadFilesWithSession(leftovers, 'api', { hidePreviousLayers: false });
-      loadedLayers += leftovers.length;
-    }
-    if (loadedLayers === 0 && importFiles.length > 0) {
-      await loadFilesWithSession(importFiles, 'api', { hidePreviousLayers: false });
-      loadedLayers = importFiles.length;
     }
 
     // 应用每层的外观/颜色/LAMMPS 设置，并恢复视角
     runtime.applyLayerSnapshots(layerSnaps);
+    if (activeLayerIdFromSnapshot) {
+      const target = runtime.layers.value.find(l => l.id === activeLayerIdFromSnapshot) ?? null;
+      if (target) runtime.setActiveLayer(target.id);
+    }
+    if (runtime.layers.value.length > 1) {
+      layerSortBy.value = sortBy;
+      runtime.sortLayers((a, b) => compareModelLayers(a, b, sortBy));
+    }
     runtimeTick.value += 1;
     applyViewFromSettings(settingsPatched);
     applyAnimState(animState);
     scheduleSessionSave('layers');
 
-    const afterCount = runtime.layers.value.length;
-    if (loadedLayers > 0 || afterCount > 0) {
+    if (runtime.layers.value.length > 0) {
       message.success(t('settings.importSuccess'));
     }
     else {
@@ -1018,27 +1022,80 @@ export function useViewerStage(
     scheduleSessionSave('layers');
   }
 
+  function parseLayerSort(
+    sortBy: LayerSortBy,
+  ): { by: 'time' | 'name'; direction: 'asc' | 'desc' } {
+    if (sortBy === 'time,DESC') return { by: 'time', direction: 'desc' };
+    if (sortBy === 'name,DESC') return { by: 'name', direction: 'desc' };
+    if (sortBy === 'time,ASC') return { by: 'time', direction: 'asc' };
+    return { by: 'name', direction: 'asc' };
+  }
+
+  function getLayerDisplayName(l: ModelLayerInfo): string {
+    const name = String(l?.name ?? '').trim();
+    const file = String(l?.sourceFileName ?? '').trim();
+    return (name || file || String(l?.id ?? '')).toLowerCase();
+  }
+
+  function compareModelLayers(
+    a: ModelLayerInfo,
+    b: ModelLayerInfo,
+    sortBy: LayerSortBy,
+  ): number {
+    const { by, direction } = parseLayerSort(sortBy);
+    const dir = direction === 'desc' ? -1 : 1;
+    if (by === 'time') {
+      const ta = Number.isFinite(a.createdAtMs) ? Number(a.createdAtMs) : 0;
+      const tb = Number.isFinite(b.createdAtMs) ? Number(b.createdAtMs) : 0;
+      if (ta === tb) return 0;
+      return ta < tb ? -dir : dir;
+    }
+    const na = getLayerDisplayName(a);
+    const nb = getLayerDisplayName(b);
+    if (na !== nb) return na < nb ? -dir : dir;
+    const ta = Number.isFinite(a.createdAtMs) ? Number(a.createdAtMs) : 0;
+    const tb = Number.isFinite(b.createdAtMs) ? Number(b.createdAtMs) : 0;
+    if (ta === tb) return 0;
+    return ta < tb ? -dir : dir;
+  }
+
+  function compareSnapshots(
+    a: LayerSnapshot,
+    b: LayerSnapshot,
+    sortBy: LayerSortBy,
+  ): number {
+    const { by, direction } = parseLayerSort(sortBy);
+    const dir = direction === 'desc' ? -1 : 1;
+    if (by === 'time') {
+      const ta = Number.isFinite(a.createdAtMs) ? Number(a.createdAtMs) : 0;
+      const tb = Number.isFinite(b.createdAtMs) ? Number(b.createdAtMs) : 0;
+      if (ta === tb) return 0;
+      return ta < tb ? -dir : dir;
+    }
+    const na = String(a?.name ?? a?.source?.fileName ?? a?.id ?? '').trim().toLowerCase();
+    const nb = String(b?.name ?? b?.source?.fileName ?? b?.id ?? '').trim().toLowerCase();
+    if (na !== nb) return na < nb ? -dir : dir;
+    const ta = Number.isFinite(a.createdAtMs) ? Number(a.createdAtMs) : 0;
+    const tb = Number.isFinite(b.createdAtMs) ? Number(b.createdAtMs) : 0;
+    if (ta === tb) return 0;
+    return ta < tb ? -dir : dir;
+  }
+
+  function sortLayerSnapshots(
+    layers: LayersSnapshot | undefined,
+  ): { sortBy: LayerSortBy; snaps: LayerSnapshot[] } {
+    const sortBy = layers?.sortBy ?? 'name,ASC';
+    const snaps = layers?.data ? Object.values(layers.data) : [];
+    if (snaps.length < 2) return { sortBy, snaps };
+    return { sortBy, snaps: [...snaps].sort((a, b) => compareSnapshots(a, b, sortBy)) };
+  }
+
   function sortLayers(opts: { by: 'time' | 'name'; direction: 'asc' | 'desc' }): void {
     if (!runtime) return;
-    const dir = opts.direction === 'desc' ? -1 : 1;
-    const by = opts.by;
-    const getName = (l: ModelLayerInfo): string => {
-      const name = String(l?.name ?? '').trim();
-      const file = String(l?.sourceFileName ?? '').trim();
-      return (name || file || String(l?.id ?? '')).toLowerCase();
-    };
-    runtime.sortLayers((a, b) => {
-      if (by === 'time') {
-        const ta = Number.isFinite(a.createdAtMs) ? Number(a.createdAtMs) : 0;
-        const tb = Number.isFinite(b.createdAtMs) ? Number(b.createdAtMs) : 0;
-        if (ta === tb) return 0;
-        return ta < tb ? -dir : dir;
-      }
-      const na = getName(a);
-      const nb = getName(b);
-      if (na === nb) return 0;
-      return na < nb ? -dir : dir;
-    });
+    const nextSortBy: LayerSortBy = `${opts.by},${opts.direction.toUpperCase()}` as LayerSortBy;
+    layerSortBy.value = nextSortBy;
+    runtime.sortLayers((a, b) => compareModelLayers(a, b, nextSortBy));
+    scheduleSessionSave('layers');
   }
 
   function setActiveLayerTypeMap(rows: LammpsTypeMapItem[]): void {
@@ -1088,14 +1145,20 @@ export function useViewerStage(
     syncUiFromRuntime();
     picking.updateSelectionVisuals();
 
-    const next: Partial<ViewerSettings> = {};
-    if (patch.atomScale != null) next.details = { ...(next.details ?? {}), atomScale: patch.atomScale };
-    if (patch.showBonds != null) next.details = { ...(next.details ?? {}), showBonds: patch.showBonds };
-    if (patch.sphereSegments != null) next.details = { ...(next.details ?? {}), sphereSegments: patch.sphereSegments };
-    if (patch.bondFactor != null) next.details = { ...(next.details ?? {}), bondFactor: patch.bondFactor };
-    if (patch.bondRadius != null) next.details = { ...(next.details ?? {}), bondRadius: patch.bondRadius };
-    if (patch.atomRoughness != null) next.details = { ...(next.details ?? {}), atomRoughness: patch.atomRoughness };
-    if (Object.keys(next).length > 0) settingsSync.patch(next);
+    const applyToAll = opts?.applyToAll ?? settingsRef.value.details.applyAllLayers ?? true;
+    if (applyToAll) {
+      const next: SettingsPatch = {};
+      if (patch.representation != null) {
+        next.details = { ...(next.details ?? {}), representation: patch.representation };
+      }
+      if (patch.atomScale != null) next.details = { ...(next.details ?? {}), atomScale: patch.atomScale };
+      if (patch.showBonds != null) next.details = { ...(next.details ?? {}), showBonds: patch.showBonds };
+      if (patch.sphereSegments != null) next.details = { ...(next.details ?? {}), sphereSegments: patch.sphereSegments };
+      if (patch.bondFactor != null) next.details = { ...(next.details ?? {}), bondFactor: patch.bondFactor };
+      if (patch.bondRadius != null) next.details = { ...(next.details ?? {}), bondRadius: patch.bondRadius };
+      if (patch.atomRoughness != null) next.details = { ...(next.details ?? {}), atomRoughness: patch.atomRoughness };
+      if (Object.keys(next).length > 0) settingsSync.patch(next);
+    }
     scheduleSessionSave('layers');
   }
 
@@ -1407,6 +1470,7 @@ export function useViewerStage(
     setLayerVisible,
     setAllLayersVisible,
     sortLayers,
+    layerSortBy,
     removeLayer,
 
     activeLayerTypeMap,

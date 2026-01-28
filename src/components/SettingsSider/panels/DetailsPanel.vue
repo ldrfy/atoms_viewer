@@ -204,7 +204,7 @@
 <script setup lang="ts">
 import { computed, inject, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { DEFAULT_LAYER_DISPLAY, type DetailsSettingsGroup, type RepresentationId } from '../../../lib/viewer/settings';
+import { DEFAULT_DETAILS, type DetailsSettingsGroup, type RepresentationId } from '../../../lib/viewer/settings';
 import { viewerApiRef } from '../../../lib/viewer/bridge';
 import { useSettingsSiderContext } from '../useSettingsSiderContext';
 import { settingsSiderDerivedContextKey } from '../context';
@@ -243,6 +243,22 @@ watch(
   (v) => {
     writeApplyAllLayersFlags({ details: v });
     patchSettings({ details: { applyAllLayers: v } });
+    if (!v) return;
+    const api = viewerApi.value;
+    const cur = displayModel.value;
+    if (!api || !cur) return;
+    api.setActiveLayerDisplay({ ...cur }, { applyToAll: true });
+    patchSettings({
+      details: {
+        representation: cur.representation,
+        atomScale: cur.atomScale,
+        showBonds: cur.showBonds,
+        sphereSegments: cur.sphereSegments,
+        bondFactor: cur.bondFactor,
+        bondRadius: cur.bondRadius,
+        atomRoughness: cur.atomRoughness,
+      },
+    });
   },
 );
 
@@ -269,7 +285,7 @@ function patchDisplay(patch: Partial<DetailsSettingsGroup>): void {
   if (!api || !activeLayerInfo.value) return;
   api.setActiveLayerDisplay(patch, { applyToAll: applyToAllLayers.value });
   if (!applyToAllLayers.value) return;
-  const cur = displayModel.value ?? DEFAULT_LAYER_DISPLAY;
+  const cur = displayModel.value ?? DEFAULT_DETAILS;
   const next = { ...cur, ...patch };
   patchSettings({
     details: {
@@ -310,7 +326,7 @@ const sphereSegmentsModel = computed({
 });
 
 const atomRoughnessModel = computed({
-  get: () => displayModel.value?.atomRoughness ?? DEFAULT_LAYER_DISPLAY.atomRoughness,
+  get: () => displayModel.value?.atomRoughness ?? DEFAULT_DETAILS.atomRoughness,
   set: (v: number) => patchDisplay({ atomRoughness: v }),
 });
 
@@ -320,9 +336,9 @@ const REPRESENTATION_PRESETS: Record<RepresentationId, Partial<DetailsSettingsGr
   ballAndStick: {
     representation: 'ballAndStick',
     showBonds: true,
-    atomScale: DEFAULT_LAYER_DISPLAY.atomScale,
-    bondRadius: DEFAULT_LAYER_DISPLAY.bondRadius,
-    sphereSegments: DEFAULT_LAYER_DISPLAY.sphereSegments,
+    atomScale: DEFAULT_DETAILS.atomScale,
+    bondRadius: DEFAULT_DETAILS.bondRadius,
+    sphereSegments: DEFAULT_DETAILS.sphereSegments,
   },
   stick: {
     representation: 'stick',
@@ -342,7 +358,7 @@ const REPRESENTATION_PRESETS: Record<RepresentationId, Partial<DetailsSettingsGr
     representation: 'spacefill',
     showBonds: false,
     atomScale: 3.6,
-    sphereSegments: DEFAULT_LAYER_DISPLAY.sphereSegments,
+    sphereSegments: DEFAULT_DETAILS.sphereSegments,
   },
   points: {
     representation: 'points',
@@ -391,27 +407,28 @@ const representationModel = computed<RepresentationId>({
 
 const detailsDirty = computed(() => {
   if (derivedContext) return derivedContext.detailsDirty.value;
-  const cur = displayModel.value ?? DEFAULT_LAYER_DISPLAY;
+  const cur = displayModel.value ?? DEFAULT_DETAILS;
   return (
-    cur.representation !== DEFAULT_LAYER_DISPLAY.representation
-    || cur.atomScale !== DEFAULT_LAYER_DISPLAY.atomScale
-    || cur.showBonds !== DEFAULT_LAYER_DISPLAY.showBonds
-    || cur.sphereSegments !== DEFAULT_LAYER_DISPLAY.sphereSegments
-    || cur.bondFactor !== DEFAULT_LAYER_DISPLAY.bondFactor
-    || cur.bondRadius !== DEFAULT_LAYER_DISPLAY.bondRadius
-    || cur.atomRoughness !== DEFAULT_LAYER_DISPLAY.atomRoughness
+    cur.representation !== DEFAULT_DETAILS.representation
+    || cur.atomScale !== DEFAULT_DETAILS.atomScale
+    || cur.showBonds !== DEFAULT_DETAILS.showBonds
+    || cur.sphereSegments !== DEFAULT_DETAILS.sphereSegments
+    || cur.bondFactor !== DEFAULT_DETAILS.bondFactor
+    || cur.bondRadius !== DEFAULT_DETAILS.bondRadius
+    || cur.atomRoughness !== DEFAULT_DETAILS.atomRoughness
   );
 });
 
 function onResetDisplay(): void {
+  applyToAllLayers.value = DEFAULT_DETAILS.applyAllLayers ?? true;
   patchDisplay({
-    representation: DEFAULT_LAYER_DISPLAY.representation,
-    atomScale: DEFAULT_LAYER_DISPLAY.atomScale,
-    showBonds: DEFAULT_LAYER_DISPLAY.showBonds,
-    sphereSegments: DEFAULT_LAYER_DISPLAY.sphereSegments,
-    bondFactor: DEFAULT_LAYER_DISPLAY.bondFactor,
-    bondRadius: DEFAULT_LAYER_DISPLAY.bondRadius,
-    atomRoughness: DEFAULT_LAYER_DISPLAY.atomRoughness,
+    representation: DEFAULT_DETAILS.representation,
+    atomScale: DEFAULT_DETAILS.atomScale,
+    showBonds: DEFAULT_DETAILS.showBonds,
+    sphereSegments: DEFAULT_DETAILS.sphereSegments,
+    bondFactor: DEFAULT_DETAILS.bondFactor,
+    bondRadius: DEFAULT_DETAILS.bondRadius,
+    atomRoughness: DEFAULT_DETAILS.atomRoughness,
   });
 }
 </script>

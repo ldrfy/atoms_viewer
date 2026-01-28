@@ -1,4 +1,3 @@
-import type { ViewerSettings } from '../../lib/viewer/settings';
 import type { SettingsPatch } from '../../lib/viewer/mergeSettings';
 
 export type PatchSettingsFn = (patch: SettingsPatch) => void;

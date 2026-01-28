@@ -9,9 +9,10 @@ import type {
   AtomTypeColorMapItem,
   OpenSettingsPayload,
 } from '../../../lib/viewer/settings';
+import type { SettingsPatch } from '../../../lib/viewer/mergeSettings';
 import {
   hasUnknownElementMappingForTypeIds,
-  DEFAULT_LAYER_DISPLAY,
+  DEFAULT_DETAILS,
   buildElementColorRecordFromRows,
 } from '../../../lib/viewer/settings';
 import { normalizeViewPresets } from '../../../lib/viewer/viewPresets';
@@ -47,7 +48,7 @@ export function createViewerLoader(deps: {
   getStage: () => ThreeStage | null;
   getRuntime: () => ModelRuntime | null;
 
-  patchSettings?: (patch: Partial<ViewerSettings>) => void;
+  patchSettings?: (patch: SettingsPatch) => void;
   requestOpenSettings?: (payload?: OpenSettingsPayload) => void;
 
   t: (key: string, args?: any) => string;
@@ -178,6 +179,7 @@ export function createViewerLoader(deps: {
       hidePreviousLayers?: boolean;
       sourceMeta?: LayerSourceInfo;
       skipAutoFit?: boolean;
+      forcedLayerId?: string;
     },
   ): { frameCount: number; hasAnimation: boolean; layerId: string } | null {
     const stage = deps.getStage();
@@ -202,6 +204,7 @@ export function createViewerLoader(deps: {
             hidePreviousLayers: opts?.hidePreviousLayers,
             sourceMeta: opts?.sourceMeta,
             skipAutoFit: opts?.skipAutoFit,
+            forcedLayerId: opts?.forcedLayerId,
           });
 
     applyAnimationInfo(
@@ -258,7 +261,7 @@ export function createViewerLoader(deps: {
     stage.setDualViewDistance(dist);
 
     if (canPatch) {
-      const patch: Partial<ViewerSettings> = {
+      const patch: SettingsPatch = {
         view: {
           initialDualViewDistance: distFromCamera,
         },
@@ -388,11 +391,11 @@ export function createViewerLoader(deps: {
     const cur = runtime?.activeDisplaySettings.value ?? null;
     if (!cur) return false;
     return (
-      cur.atomScale !== DEFAULT_LAYER_DISPLAY.atomScale
-      || cur.showBonds !== DEFAULT_LAYER_DISPLAY.showBonds
-      || cur.sphereSegments !== DEFAULT_LAYER_DISPLAY.sphereSegments
-      || cur.bondFactor !== DEFAULT_LAYER_DISPLAY.bondFactor
-      || cur.bondRadius !== DEFAULT_LAYER_DISPLAY.bondRadius
+      cur.atomScale !== DEFAULT_DETAILS.atomScale
+      || cur.showBonds !== DEFAULT_DETAILS.showBonds
+      || cur.sphereSegments !== DEFAULT_DETAILS.sphereSegments
+      || cur.bondFactor !== DEFAULT_DETAILS.bondFactor
+      || cur.bondRadius !== DEFAULT_DETAILS.bondRadius
     );
   }
 
@@ -445,7 +448,7 @@ export function createViewerLoader(deps: {
     t0: number,
     text: string,
     fileName: string,
-    opts?: { hidePreviousLayers?: boolean; sourceMeta?: LayerSourceInfo },
+    opts?: { hidePreviousLayers?: boolean; sourceMeta?: LayerSourceInfo; forcedLayerId?: string },
   ): Promise<string | null> {
     let info: { layerId: string } | null = null;
     try {
@@ -457,6 +460,7 @@ export function createViewerLoader(deps: {
       info = renderFromText(text, fileName, 'load', {
         hidePreviousLayers: opts?.hidePreviousLayers,
         sourceMeta: opts?.sourceMeta,
+        forcedLayerId: opts?.forcedLayerId,
       });
 
       syncViewPresetAndDistanceOnModelLoad();
@@ -506,7 +510,7 @@ export function createViewerLoader(deps: {
   async function loadUrl(
     url: string,
     fileName: string,
-    opts?: { hidePreviousLayers?: boolean },
+    opts?: { hidePreviousLayers?: boolean; forcedLayerId?: string },
   ): Promise<void> {
     if (deps.isLoading.value) return;
     await loadInit();
@@ -530,6 +534,7 @@ export function createViewerLoader(deps: {
     const layerId = await loadText(t0, text, fileName, {
       hidePreviousLayers: opts?.hidePreviousLayers ?? true,
       sourceMeta,
+      forcedLayerId: opts?.forcedLayerId,
     });
 
     if (layerId) {
@@ -542,7 +547,7 @@ export function createViewerLoader(deps: {
   }
 
   async function loadUrls(
-    items: { url: string; fileName: string }[],
+    items: { url: string; fileName: string; forcedLayerId?: string }[],
     opts?: { hidePreviousLayers?: boolean },
   ): Promise<void> {
     if (!deps.getStage() || !deps.getRuntime()) return;
@@ -583,6 +588,7 @@ export function createViewerLoader(deps: {
           const info = renderFromText(text, displayName, 'load', {
             hidePreviousLayers: opts?.hidePreviousLayers ?? okCount === 0,
             sourceMeta,
+            forcedLayerId: item.forcedLayerId,
           });
 
           okCount += 1;
@@ -644,7 +650,7 @@ export function createViewerLoader(deps: {
 
   async function loadFilesInternal(
     files: File[],
-    opts?: { hidePreviousLayers?: boolean },
+    opts?: { hidePreviousLayers?: boolean; forcedLayerId?: string },
   ): Promise<void> {
     if (!deps.getStage() || !deps.getRuntime()) return;
     if (deps.isLoading.value) return;
@@ -688,6 +694,7 @@ export function createViewerLoader(deps: {
             hidePreviousLayers: opts?.hidePreviousLayers ?? okCount === 0,
             sourceMeta,
             skipAutoFit: !allowAutoFit,
+            forcedLayerId: opts?.forcedLayerId,
           });
 
           okCount += 1;
@@ -749,14 +756,14 @@ export function createViewerLoader(deps: {
 
   async function loadFiles(
     files: File[],
-    opts?: { hidePreviousLayers?: boolean },
+    opts?: { hidePreviousLayers?: boolean; forcedLayerId?: string },
   ): Promise<void> {
     await loadFilesInternal(files, opts);
   }
 
   async function loadFile(
     file: File,
-    opts?: { hidePreviousLayers?: boolean },
+    opts?: { hidePreviousLayers?: boolean; forcedLayerId?: string },
   ): Promise<void> {
     await loadFilesInternal([file], opts);
   }

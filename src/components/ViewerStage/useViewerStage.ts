@@ -831,6 +831,12 @@ export function useViewerStage(
     opts?: { hidePreviousLayers?: boolean; forcedLayerId?: string },
   ): Promise<void> {
     writeUrlListParam('samples', []);
+    if (isZipUrl(url, fileName)) {
+      const zipFile = await fetchUrlAsFile(url, fileName);
+      await importProjectPackage(zipFile);
+      scheduleSessionSave('layers');
+      return;
+    }
     await loader.loadUrl(url, fileName, opts);
     scheduleSessionSave('layers');
   }
@@ -840,8 +846,41 @@ export function useViewerStage(
     opts?: { hidePreviousLayers?: boolean },
   ): Promise<void> {
     writeUrlListParam('samples', []);
-    await loader.loadUrls(items, opts);
-    scheduleSessionSave('layers');
+    const zipItems = items.filter(item => isZipUrl(item.url, item.fileName));
+    const otherItems = items.filter(item => !zipItems.includes(item));
+
+    for (const item of zipItems) {
+      const zipFile = await fetchUrlAsFile(item.url, item.fileName);
+      await importProjectPackage(zipFile);
+    }
+
+    if (otherItems.length > 0) {
+      const mergedOpts = zipItems.length > 0
+        ? { ...(opts ?? {}), hidePreviousLayers: false }
+        : opts;
+      await loader.loadUrls(otherItems, mergedOpts);
+    }
+
+    if (items.length > 0) {
+      scheduleSessionSave('layers');
+    }
+  }
+
+  function isZipUrl(url: string, fileName?: string): boolean {
+    const name = (fileName ?? '').toLowerCase();
+    if (name.endsWith('.zip')) return true;
+    const cleanUrl = url.split('?')[0].toLowerCase();
+    return cleanUrl.endsWith('.zip');
+  }
+
+  async function fetchUrlAsFile(url: string, fileName?: string): Promise<File> {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
+    const blob = await res.blob();
+    const urlName = url.split('?')[0].split('/').pop() || 'remote.zip';
+    let name = (fileName && fileName.trim()) || urlName;
+    if (!name.toLowerCase().endsWith('.zip')) name = `${name}.zip`;
+    return new File([blob], name, { type: blob.type || 'application/zip' });
   }
 
   function guessMd5FromName(name: string): string | null {

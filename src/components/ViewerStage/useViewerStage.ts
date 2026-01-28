@@ -6,11 +6,11 @@ import { message } from 'ant-design-vue';
 
 import type {
   ViewerSettings,
-  LammpsTypeMapItem,
-  AtomTypeColorMapItem,
+  LammpsTypeMapRecord,
   OpenSettingsPayload,
   DetailsSettingsGroup,
 } from '../../lib/viewer/settings';
+import { hasUnknownElementMappingForTypeIds } from '../../lib/viewer/settings';
 import type { LayerSortBy, LayersSnapshot, LayerSnapshot } from '../../lib/viewer/sessionTypes';
 import type { FrameMeta } from '../../lib/structure/types';
 import type { SettingsPatch } from '../../lib/viewer/mergeSettings';
@@ -32,6 +32,7 @@ import {
   type ModelRuntime,
   type ModelLayerInfo,
 } from './modelRuntime';
+import type { ColorMapRecord } from './colorMap';
 import { createLayerSourceStore } from './logic/sourceStore';
 
 import { createInspectCtx, type InspectCtx } from './ctx/inspect';
@@ -63,6 +64,7 @@ import { saveSessionToStorage, clearSessionStorage } from '../../lib/viewer/sess
 import { setThemeMode } from '../../theme/mode';
 import { exportStructureText, type StructureExportFormat } from '../../lib/structure/export';
 import { writeUrlListParam } from '../../lib/urlParams';
+import { PANEL_KEYS } from '../../lib/viewer/panelKeys';
 
 /**
  * Template ref callback param type (works for DOM + component instance).
@@ -119,23 +121,29 @@ type ViewerStageBridgeApi = {
   removeLayer: (id: string) => void;
 
   /** 当前激活图层的类型映射 */
-  activeLayerTypeMap: Ref<LammpsTypeMapItem[]>;
+  activeLayerTypeMap: Ref<LammpsTypeMapRecord>;
+  /** 当前激活图层的 typeId 列表 */
+  activeLayerTypeIds: Ref<number[]>;
   /** 当前激活图层类型映射是否已应用 */
   activeLayerTypeMapApplied: Ref<boolean>;
   /** 设置激活图层类型映射 */
-  setActiveLayerTypeMap: (rows: LammpsTypeMapItem[]) => void;
+  setActiveLayerTypeMap: (map: LammpsTypeMapRecord) => void;
+  /** 将当前映射应用到所有图层（仅匹配已有 typeId） */
+  applyTypeMapToAllLayers: (map: LammpsTypeMapRecord) => void;
   /** 重置所有图层类型映射为默认 */
   resetAllLayersTypeMapToDefaults: (opts?: {
-    templateRows?: LammpsTypeMapItem[];
+    templateMap?: LammpsTypeMapRecord;
     useAtomDefaults?: boolean;
   }) => void;
 
   /** 当前激活图层的颜色映射 */
-  activeLayerColorMap: Ref<AtomTypeColorMapItem[]>;
+  activeLayerColorMap: Ref<ColorMapRecord>;
+  /** 当前激活图层的颜色 key 顺序 */
+  activeLayerColorKeys: Ref<string[]>;
   /** 设置激活图层颜色映射 */
-  setActiveLayerColorMap: (rows: AtomTypeColorMapItem[]) => void;
+  setActiveLayerColorMap: (map: ColorMapRecord) => void;
   /** 设置所有图层颜色映射 */
-  setAllLayersColorMap: (rows: AtomTypeColorMapItem[]) => void;
+  setAllLayersColorMap: (map: ColorMapRecord) => void;
   /** 重置所有图层颜色映射为默认 */
   resetAllLayersColorMapToDefaults: () => void;
 
@@ -239,23 +247,29 @@ type ViewerStageBindings = {
   setLayerVisible: (id: string, visible: boolean) => void;
 
   /** 当前激活图层的类型映射 */
-  activeLayerTypeMap: Ref<LammpsTypeMapItem[]>;
+  activeLayerTypeMap: Ref<LammpsTypeMapRecord>;
+  /** 当前激活图层的 typeId 列表 */
+  activeLayerTypeIds: Ref<number[]>;
   /** 当前激活图层类型映射是否已应用 */
   activeLayerTypeMapApplied: Ref<boolean>;
   /** 设置激活图层类型映射 */
-  setActiveLayerTypeMap: (rows: LammpsTypeMapItem[]) => void;
+  setActiveLayerTypeMap: (map: LammpsTypeMapRecord) => void;
+  /** 将当前映射应用到所有图层（仅匹配已有 typeId） */
+  applyTypeMapToAllLayers: (map: LammpsTypeMapRecord) => void;
   /** 重置所有图层类型映射为默认 */
   resetAllLayersTypeMapToDefaults: (opts?: {
-    templateRows?: LammpsTypeMapItem[];
+    templateMap?: LammpsTypeMapRecord;
     useAtomDefaults?: boolean;
   }) => void;
 
   /** 当前激活图层的颜色映射 */
-  activeLayerColorMap: Ref<AtomTypeColorMapItem[]>;
+  activeLayerColorMap: Ref<ColorMapRecord>;
+  /** 当前激活图层的颜色 key 顺序 */
+  activeLayerColorKeys: Ref<string[]>;
   /** 设置激活图层颜色映射 */
-  setActiveLayerColorMap: (rows: AtomTypeColorMapItem[]) => void;
+  setActiveLayerColorMap: (map: ColorMapRecord) => void;
   /** 设置所有图层颜色映射 */
-  setAllLayersColorMap: (rows: AtomTypeColorMapItem[]) => void;
+  setAllLayersColorMap: (map: ColorMapRecord) => void;
   /** 重置所有图层颜色映射为默认 */
   resetAllLayersColorMapToDefaults: () => void;
 
@@ -464,16 +478,44 @@ export function useViewerStage(
     return (runtimeTick.value, runtime?.activeLayerId.value ?? null);
   });
 
-  const activeLayerTypeMap = computed<LammpsTypeMapItem[]>(() => {
-    return (runtimeTick.value, runtime?.activeTypeMapRows.value ?? []);
+  const activeLayerTypeMap = computed<LammpsTypeMapRecord>(() => {
+    return (runtimeTick.value, runtime?.activeTypeMap.value ?? {});
+  });
+
+  const activeLayerTypeIds = computed<number[]>(() => {
+    return (runtimeTick.value, runtime?.activeTypeIds.value ?? []);
   });
 
   const activeLayerTypeMapApplied = computed<boolean>(() => {
     return (runtimeTick.value, runtime?.activeTypeMapApplied.value ?? false);
   });
 
-  const activeLayerColorMap = computed<AtomTypeColorMapItem[]>(() => {
-    return (runtimeTick.value, runtime?.activeColorMapRows.value ?? []);
+  function openLammpsPanelIfNeeded(): void {
+    if (!runtime) return;
+    const id = runtime.activeLayerId.value;
+    const active = runtime.layers.value.find(l => l.id === id) ?? null;
+    if (!active?.hasTypeId) return;
+    const map = runtime.activeTypeMap.value ?? {};
+    const typeIds = runtime.activeTypeIds.value ?? [];
+    const hasUnknown = hasUnknownElementMappingForTypeIds(map, typeIds);
+    if (!hasUnknown && Object.keys(map).length > 0) return;
+    requestOpenSettings?.({
+      focusKeys: [PANEL_KEYS.lammps],
+      open: true,
+    });
+  }
+
+  watch(
+    () => activeLayerId.value,
+    () => openLammpsPanelIfNeeded(),
+  );
+
+  const activeLayerColorMap = computed<ColorMapRecord>(() => {
+    return (runtimeTick.value, runtime?.activeColorMap.value ?? {});
+  });
+
+  const activeLayerColorKeys = computed<string[]>(() => {
+    return (runtimeTick.value, runtime?.activeColorKeys.value ?? []);
   });
 
   const activeLayerDisplay = computed<DetailsSettingsGroup | null>(() => {
@@ -487,6 +529,8 @@ export function useViewerStage(
   // state
   const hasModel = ref(false);
   const isLoading = ref(false);
+  const externalLoadingCount = ref(0);
+  const uiLoading = computed(() => isLoading.value || externalLoadingCount.value > 0);
   const layerSortBy = ref<LayerSortBy>('name,ASC');
 
   // inspect
@@ -618,6 +662,7 @@ export function useViewerStage(
       {
         details: settingsRef.value.details.applyAllLayers ?? true,
         colors: settingsRef.value.colors.applyAllLayers ?? true,
+        lammps: settingsRef.value.lammps.applyAllLayers ?? false,
       },
       layerSortBy.value,
       runtime?.activeLayerId.value ?? null,
@@ -634,7 +679,7 @@ export function useViewerStage(
       },
       layers: layerSnapshots.map((s) => {
         const atomScale = s.details?.atomScale ?? 0;
-        const lammpsCount = s.lammps?.length ?? 0;
+        const lammpsCount = s.lammps?.data ? Object.keys(s.lammps.data).length : 0;
         const colorCount = Object.keys(s.colors?.data ?? {}).length;
         return `${s.source?.md5 ?? s.id}:${s.visible ? 1 : 0}:${atomScale}:${lammpsCount}:${colorCount}`;
       }),
@@ -790,86 +835,129 @@ export function useViewerStage(
     fileInputRef.value?.click();
   }
 
+  function clearSamplesParam(): void {
+    writeUrlListParam('samples', []);
+  }
+
+  function beginExternalLoading(): void {
+    externalLoadingCount.value += 1;
+  }
+
+  function endExternalLoading(): void {
+    externalLoadingCount.value = Math.max(0, externalLoadingCount.value - 1);
+  }
+
+  type LoadWithSessionOpts = {
+    hidePreviousLayers?: boolean;
+    forcedLayerId?: string;
+    suppressLammpsWarning?: boolean;
+  };
+
   async function loadFileWithSession(
     file: File,
-    opts?: { hidePreviousLayers?: boolean; forcedLayerId?: string },
+    opts?: LoadWithSessionOpts,
   ): Promise<void> {
-    writeUrlListParam('samples', []);
-    const lower = file.name.toLowerCase();
-    if (lower.endsWith('.zip')) {
-      await loadFilesWithSession([file], 'api', opts);
-      return;
+    clearSamplesParam();
+    beginExternalLoading();
+    try {
+      const lower = file.name.toLowerCase();
+      if (lower.endsWith('.zip')) {
+        await loadFilesWithSession([file], 'api', opts);
+        return;
+      }
+      await loader.loadFile(file, opts);
+      scheduleSessionSave('layers');
     }
-    await loader.loadFile(file, opts);
-    scheduleSessionSave('layers');
+    finally {
+      endExternalLoading();
+    }
   }
 
   async function loadFilesWithSession(
     files: File[],
     _source?: 'drop' | 'picker' | 'api',
-    opts?: { hidePreviousLayers?: boolean; forcedLayerId?: string },
+    opts?: LoadWithSessionOpts,
   ): Promise<void> {
-    writeUrlListParam('samples', []);
-    const zipFiles = files.filter(f => f.name.toLowerCase().endsWith('.zip'));
-    const otherFiles = files.filter(f => !zipFiles.includes(f));
+    clearSamplesParam();
+    beginExternalLoading();
+    try {
+      const zipFiles = files.filter(f => f.name.toLowerCase().endsWith('.zip'));
+      const otherFiles = files.filter(f => !zipFiles.includes(f));
 
-    for (const zip of zipFiles) {
-      await importProjectPackage(zip);
+      for (const zip of zipFiles) {
+        await importProjectPackage(zip);
+      }
+
+      if (otherFiles.length === 0) return;
+      const mergedOpts = zipFiles.length > 0
+        ? { ...(opts ?? {}), hidePreviousLayers: false }
+        : opts;
+      await loader.loadFiles(otherFiles, mergedOpts);
+      scheduleSessionSave('layers');
     }
-
-    if (otherFiles.length === 0) return;
-    const mergedOpts = zipFiles.length > 0
-      ? { ...(opts ?? {}), hidePreviousLayers: false }
-      : opts;
-    await loader.loadFiles(otherFiles, mergedOpts);
-    scheduleSessionSave('layers');
+    finally {
+      endExternalLoading();
+    }
   }
 
   async function loadUrlWithSession(
     url: string,
     fileName: string,
-    opts?: { hidePreviousLayers?: boolean; forcedLayerId?: string },
+    opts?: LoadWithSessionOpts,
   ): Promise<void> {
-    writeUrlListParam('samples', []);
-    if (isZipUrl(url, fileName)) {
-      const zipFile = await fetchUrlAsFile(url, fileName);
-      await importProjectPackage(zipFile);
+    clearSamplesParam();
+    beginExternalLoading();
+    try {
+      if (isZipUrl(url, fileName)) {
+        const zipFile = await fetchUrlAsFile(url, fileName);
+        await importProjectPackage(zipFile);
+        scheduleSessionSave('layers');
+        return;
+      }
+      await loader.loadUrl(url, fileName, opts);
       scheduleSessionSave('layers');
-      return;
     }
-    await loader.loadUrl(url, fileName, opts);
-    scheduleSessionSave('layers');
+    finally {
+      endExternalLoading();
+    }
   }
 
   async function loadUrlsWithSession(
     items: { url: string; fileName: string; forcedLayerId?: string }[],
-    opts?: { hidePreviousLayers?: boolean },
+    opts?: { hidePreviousLayers?: boolean; suppressLammpsWarning?: boolean },
   ): Promise<void> {
-    writeUrlListParam('samples', []);
-    const zipItems = items.filter(item => isZipUrl(item.url, item.fileName));
-    const otherItems = items.filter(item => !zipItems.includes(item));
+    clearSamplesParam();
+    if (!items || items.length === 0) return;
+    beginExternalLoading();
+    try {
+      const zipItems = items.filter(item => isZipUrl(item.url, item.fileName));
+      const otherItems = items.filter(item => !zipItems.includes(item));
 
-    for (const item of zipItems) {
-      const zipFile = await fetchUrlAsFile(item.url, item.fileName);
-      await importProjectPackage(zipFile);
+      if (zipItems.length > 0) {
+        for (const item of zipItems) {
+          const zipFile = await fetchUrlAsFile(item.url, item.fileName);
+          await importProjectPackage(zipFile);
+        }
+      }
+
+      if (otherItems.length > 0) {
+        const mergedOpts = zipItems.length > 0
+          ? { ...(opts ?? {}), hidePreviousLayers: false }
+          : opts;
+        await loader.loadUrls(otherItems, mergedOpts);
+      }
+    }
+    finally {
+      endExternalLoading();
     }
 
-    if (otherItems.length > 0) {
-      const mergedOpts = zipItems.length > 0
-        ? { ...(opts ?? {}), hidePreviousLayers: false }
-        : opts;
-      await loader.loadUrls(otherItems, mergedOpts);
-    }
-
-    if (items.length > 0) {
-      scheduleSessionSave('layers');
-    }
+    if (items.length > 0) scheduleSessionSave('layers');
   }
 
   function isZipUrl(url: string, fileName?: string): boolean {
     const name = (fileName ?? '').toLowerCase();
     if (name.endsWith('.zip')) return true;
-    const cleanUrl = url.split('?')[0].toLowerCase();
+    const cleanUrl = (url.split('?')[0] ?? '').toLowerCase();
     return cleanUrl.endsWith('.zip');
   }
 
@@ -877,7 +965,8 @@ export function useViewerStage(
     const res = await fetch(url);
     if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
     const blob = await res.blob();
-    const urlName = url.split('?')[0].split('/').pop() || 'remote.zip';
+    const urlBase = url.split('?')[0] ?? '';
+    const urlName = urlBase.split('/').pop() || 'remote.zip';
     let name = (fileName && fileName.trim()) || urlName;
     if (!name.toLowerCase().endsWith('.zip')) name = `${name}.zip`;
     return new File([blob], name, { type: blob.type || 'application/zip' });
@@ -899,6 +988,27 @@ export function useViewerStage(
     return !!runtime;
   }
 
+  function normalizeLayersSnapshot(
+    layers: unknown,
+  ): LayersSnapshot | undefined {
+    if (!layers) return undefined;
+    if (Array.isArray(layers)) {
+      const data: Record<string, LayerSnapshot> = {};
+      layers.forEach((snap, idx) => {
+        if (!snap || typeof snap !== 'object') return;
+        const raw = snap as LayerSnapshot;
+        const id = raw.id ?? `layer_${idx + 1}`;
+        data[id] = { ...raw, id };
+      });
+      return { sortBy: 'name,ASC', data };
+    }
+    if (typeof layers === 'object') {
+      const anyLayers = layers as LayersSnapshot;
+      if (anyLayers.data && typeof anyLayers.data === 'object') return anyLayers;
+    }
+    return undefined;
+  }
+
   async function applySessionSnapshot(
     snapshot: import('../../lib/viewer/sessionTypes').SessionSnapshot,
     files?: File[],
@@ -910,24 +1020,29 @@ export function useViewerStage(
     // 过滤掉配置文件，只保留模型文件
     const importFiles = (files ?? []).filter(f => f.name.toLowerCase() !== 'config.json');
     const hasFiles = importFiles.length > 0;
-    const normalizedLayers = snapshot.layers as LayersSnapshot | undefined;
+    const normalizedLayers = normalizeLayersSnapshot(snapshot.layers);
     const activeLayerIdFromSnapshot = normalizedLayers?.activeId ?? null;
     const { sortBy, snaps: layerSnaps } = sortLayerSnapshots(normalizedLayers);
-    if (!hasFiles && layerSnaps.length === 0) {
-      message.error(t('settings.importFailed'));
-      return;
-    }
-
     // 先还原设置
-    const rawSettings = snapshot.settings as any;
-    if (!rawSettings || typeof rawSettings !== 'object') {
-      message.error(t('settings.importFailed'));
-      return;
-    }
+    const rawSettings = (snapshot.settings && typeof snapshot.settings === 'object')
+      ? snapshot.settings as any
+      : {};
     const settingsPatched = mergeCategorizedSettings(rawSettings as any) as ViewerSettings;
+    const currentSettings = settingsRef.value;
+    // Keep current global details/colors/lammps; only restore other settings.
+    settingsPatched.details = { ...currentSettings.details };
+    settingsPatched.colors = {
+      applyAllLayers: currentSettings.colors.applyAllLayers,
+      data: { ...currentSettings.colors.data },
+    };
+    settingsPatched.lammps = {
+      applyAllLayers: currentSettings.lammps.applyAllLayers,
+      data: { ...(currentSettings.lammps.data ?? {}) },
+    };
     writeApplyAllLayersFlags({
-      details: settingsPatched.details.applyAllLayers ?? true,
-      colors: settingsPatched.colors.applyAllLayers ?? true,
+      details: currentSettings.details.applyAllLayers ?? true,
+      colors: currentSettings.colors.applyAllLayers ?? true,
+      lammps: currentSettings.lammps.applyAllLayers ?? false,
     });
     const animState = {
       frameIndex: Number(settingsPatched.anim.frameIndex ?? 0),
@@ -941,6 +1056,11 @@ export function useViewerStage(
       if (settingsPatched.other.themeMode) {
         setThemeMode(settingsPatched.other.themeMode as any);
       }
+    }
+
+    if (!hasFiles && layerSnaps.length === 0) {
+      message.success(t('settings.importSuccess'));
+      return;
     }
 
     inspectCtx.clear();
@@ -966,6 +1086,7 @@ export function useViewerStage(
         await loadFilesWithSession([fileWithName], 'api', {
           hidePreviousLayers: false,
           forcedLayerId: layer.id,
+          suppressLammpsWarning: true,
         });
         continue;
       }
@@ -978,13 +1099,23 @@ export function useViewerStage(
             fileName: layer.source?.fileName ?? layer.name ?? 'remote',
             forcedLayerId: layer.id,
           }],
-          { hidePreviousLayers: false },
+          { hidePreviousLayers: false, suppressLammpsWarning: true },
         );
       }
     }
 
     // 应用每层的外观/颜色/LAMMPS 设置，并恢复视角
     runtime.applyLayerSnapshots(layerSnaps);
+    const hasUnknownLammps = layerSnaps.some(s =>
+      Object.values(s.lammps?.data ?? {}).some(v => String(v ?? '').trim().toUpperCase() === 'E'),
+    );
+    if (hasUnknownLammps) {
+      requestOpenSettings?.({
+        focusKeys: [PANEL_KEYS.lammps],
+        open: true,
+      });
+      message.warning(t('viewer.lammps.mappingMissing'));
+    }
     if (activeLayerIdFromSnapshot) {
       const target = runtime.layers.value.find(l => l.id === activeLayerIdFromSnapshot) ?? null;
       if (target) runtime.setActiveLayer(target.id);
@@ -1002,7 +1133,7 @@ export function useViewerStage(
       message.success(t('settings.importSuccess'));
     }
     else {
-      message.error(t('settings.importFailed'));
+      message.success(t('settings.importSuccess'));
     }
   }
 
@@ -1050,6 +1181,9 @@ export function useViewerStage(
     runtime.setLayerVisible(id, visible);
     syncUiFromRuntime();
     inspectCtx.clear();
+    if (!visible && runtime.activeLayerId.value === id) {
+      anim.stopPlay();
+    }
     scheduleSessionSave('layers');
   }
 
@@ -1058,6 +1192,9 @@ export function useViewerStage(
     runtime.setAllLayersVisible(visible);
     syncUiFromRuntime();
     inspectCtx.clear();
+    if (!visible) {
+      anim.stopPlay();
+    }
     scheduleSessionSave('layers');
   }
 
@@ -1137,15 +1274,15 @@ export function useViewerStage(
     scheduleSessionSave('layers');
   }
 
-  function setActiveLayerTypeMap(rows: LammpsTypeMapItem[]): void {
+  function setActiveLayerTypeMap(map: LammpsTypeMapRecord): void {
     if (!runtime) return;
-    runtime.setActiveLayerTypeMapRows(rows);
+    runtime.setActiveLayerTypeMap(map);
     scheduleSessionSave('layers');
   }
 
   function resetAllLayersTypeMapToDefaults(
     opts?: {
-      templateRows?: LammpsTypeMapItem[];
+      templateMap?: LammpsTypeMapRecord;
       useAtomDefaults?: boolean;
     },
   ): void {
@@ -1156,15 +1293,23 @@ export function useViewerStage(
     scheduleSessionSave('layers');
   }
 
-  function setActiveLayerColorMap(rows: AtomTypeColorMapItem[]): void {
+  function applyTypeMapToAllLayers(map: LammpsTypeMapRecord): void {
     if (!runtime) return;
-    runtime.setActiveLayerColorMapRows(rows);
+    runtime.applyTypeMapToAllLayers(map);
+    syncUiFromRuntime();
+    inspectCtx.clear();
     scheduleSessionSave('layers');
   }
 
-  function setAllLayersColorMap(rows: AtomTypeColorMapItem[]): void {
+  function setActiveLayerColorMap(map: ColorMapRecord): void {
     if (!runtime) return;
-    runtime.setAllLayersColorMapRows(rows);
+    runtime.setActiveLayerColorMap(map);
+    scheduleSessionSave('layers');
+  }
+
+  function setAllLayersColorMap(map: ColorMapRecord): void {
+    if (!runtime) return;
+    runtime.setAllLayersColorMap(map);
     scheduleSessionSave('layers');
   }
 
@@ -1513,11 +1658,14 @@ export function useViewerStage(
     removeLayer,
 
     activeLayerTypeMap,
+    activeLayerTypeIds,
     activeLayerTypeMapApplied,
     setActiveLayerTypeMap,
+    applyTypeMapToAllLayers,
     resetAllLayersTypeMapToDefaults,
 
     activeLayerColorMap,
+    activeLayerColorKeys,
     setActiveLayerColorMap,
     setAllLayersColorMap,
     resetAllLayersColorMapToDefaults,
@@ -1577,11 +1725,14 @@ export function useViewerStage(
     setLayerVisible,
 
     activeLayerTypeMap,
+    activeLayerTypeIds,
     activeLayerTypeMapApplied,
     setActiveLayerTypeMap,
+    applyTypeMapToAllLayers,
     resetAllLayersTypeMapToDefaults,
 
     activeLayerColorMap,
+    activeLayerColorKeys,
     setActiveLayerColorMap,
     setAllLayersColorMap,
     resetAllLayersColorMapToDefaults,
@@ -1614,7 +1765,7 @@ export function useViewerStage(
     fileInputRef,
     isDragging,
     hasModel,
-    isLoading,
+    isLoading: uiLoading,
 
     openFilePicker,
 

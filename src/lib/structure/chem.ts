@@ -1,4 +1,4 @@
-export const ATOMIC_SYMBOLS = [
+export const ATOMIC_SYMBOL_LIST = [
   'E',
   'H',
   'He',
@@ -105,7 +105,7 @@ export const ATOMIC_SYMBOLS = [
   'Lr',
 ] as const;
 
-const ATOMIC_COLORS_HEX = [
+const ATOMIC_COLORS_HEX_LIST = [
   '#FFFFFF',
   '#FAF0E6',
   '#F0E68C',
@@ -212,7 +212,7 @@ const ATOMIC_COLORS_HEX = [
   '#ff6666',
 ] as const;
 
-const COVALENT_RADII_ANG = [
+const COVALENT_RADII_ANG_LIST = [
   0.2, 0.41, 0.41, 1.28, 0.96, 0.84, 0.76, 0.71, 0.66, 0.57, 0.58, 1.66, 1.41,
   1.21, 1.11, 1.07, 1.05, 1.02, 1.06, 2.03, 1.76, 1.7, 1.6, 1.53, 1.39, 1.39,
   1.32, 1.26, 1.24, 1.32, 1.22, 1.22, 1.2, 1.19, 1.2, 1.2, 1.16, 2.2, 1.95, 1.9,
@@ -223,8 +223,12 @@ const COVALENT_RADII_ANG = [
   1.9, 1.87, 1.8, 1.69, 1.6, 1.6, 1.6, 1.6, 1.6, 1.6, 1.6,
 ] as const;
 
-const SYMBOL_TO_Z = new Map<string, number>(
-  ATOMIC_SYMBOLS.map((s, i) => [s.toLowerCase(), i]),
+export const ATOMIC_COLORS_HEX: Record<string, string> = Object.fromEntries(
+  ATOMIC_SYMBOL_LIST.map((s, i) => [s, ATOMIC_COLORS_HEX_LIST[i] ?? '#CCCCCC']),
+);
+
+export const COVALENT_RADII_ANG: Record<string, number> = Object.fromEntries(
+  ATOMIC_SYMBOL_LIST.map((s, i) => [s, COVALENT_RADII_ANG_LIST[i] ?? 1.6]),
 );
 
 function canonicalizeSymbol(raw: string): string {
@@ -234,15 +238,15 @@ function canonicalizeSymbol(raw: string): string {
   // 1) 如果整列就是纯数字：按原子序数处理（例如 "6"）
   if (/^\d+$/.test(trimmed)) {
     const z = Number(trimmed);
-    if (Number.isInteger(z) && z >= 0 && z < ATOMIC_SYMBOLS.length) {
-      const sym = ATOMIC_SYMBOLS[z];
+    if (Number.isInteger(z) && z >= 0 && z < ATOMIC_SYMBOL_LIST.length) {
+      const sym = ATOMIC_SYMBOL_LIST[z];
       if (sym) return sym; // 兼容 noUncheckedIndexedAccess
     }
     return 'E';
   }
 
-  // 2) 否则允许像 "C1" / "Si2"：去掉尾部数字
-  const noTailDigits = trimmed.replace(/[0-9]+$/g, '');
+  // 2) 否则允许像 "C1" / "C.1" / "Si2"：去掉尾部数字（可带点）
+  const noTailDigits = trimmed.replace(/[.0-9]+$/g, '');
   if (!noTailDigits) return 'E';
 
   // 3) 标准化大小写：Si / si / SI
@@ -255,21 +259,12 @@ function canonicalizeSymbol(raw: string): string {
 }
 
 /**
- * Resolve atomic number (Z) from element symbol; unknown => 0.
- * 根据元素符号获取原子序数；未知返回 0。
- */
-export function getAtomicNumber(raw: string): number {
-  const sym = canonicalizeSymbol(raw);
-  return SYMBOL_TO_Z.get(sym.toLowerCase()) ?? 0; // 0 => E
-}
-
-/**
  * Get default element color hex (fallback to gray).
  * 获取元素默认颜色（失败回退为灰色）。
  */
 export function getElementColorHex(raw: string): string {
-  const z = getAtomicNumber(raw);
-  return ATOMIC_COLORS_HEX[z] ?? '#CCCCCC';
+  const sym = canonicalizeSymbol(raw);
+  return ATOMIC_COLORS_HEX[sym] ?? '#CCCCCC';
 }
 
 /**
@@ -277,8 +272,8 @@ export function getElementColorHex(raw: string): string {
  * 获取共价半径（Å），失败回退 1.6 Å。
  */
 export function getCovalentRadiusAng(raw: string): number {
-  const z = getAtomicNumber(raw);
-  return COVALENT_RADII_ANG[z] ?? 1.6;
+  const sym = canonicalizeSymbol(raw);
+  return COVALENT_RADII_ANG[sym] ?? 1.6;
 }
 
 /**

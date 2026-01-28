@@ -169,14 +169,15 @@ watch(
   },
 );
 const loadRequest = ref<LoadRequest | null>(null);
+const restoreInFlight = ref(false);
 function fileNameWithMd5(src: LayerSourceData, idx: number): string {
-  if (src.fileName) return src.fileName;
   const ext = (() => {
     const name = src.fileName ?? '';
     const i = name.lastIndexOf('.');
     return i >= 0 ? name.slice(i) : '.bin';
   })();
   if (src.md5) return `${src.md5}${ext}`;
+  if (src.fileName) return src.fileName;
   return `model-${idx + 1}${ext}`;
 }
 function buildFilesFromSources(sources: LayerSourceData[]): File[] {
@@ -252,7 +253,9 @@ function goHome(): void {
 async function tryApplyPendingRestore(): Promise<void> {
   const payload = pendingRestore.value;
   const api = viewerApiRef.value;
+  if (restoreInFlight.value) return;
   if (!payload || !api?.applySessionSnapshot) return;
+  restoreInFlight.value = true;
   try {
     await api.applySessionSnapshot(payload.snapshot as SessionSnapshot, payload.files);
     pendingRestore.value = null;
@@ -260,6 +263,9 @@ async function tryApplyPendingRestore(): Promise<void> {
   catch (err) {
     console.error(err);
     message.error(t('common.error'));
+  }
+  finally {
+    restoreInFlight.value = false;
   }
 }
 
@@ -284,30 +290,23 @@ async function maybePromptSessionRestore(): Promise<void> {
         const stored = await loadSessionFromStorage();
         if (!stored) throw new Error('missing session');
         const files = buildFilesFromSources(stored.sources ?? []);
-        const rawSettings = stored.snapshot.settings as any;
-        const hasSettings = rawSettings && typeof rawSettings === 'object';
-        if (!hasSettings) {
-          message.error(t('settings.importFailed'));
-          return;
-        }
-        const detailFlags = rawSettings.details as Record<string, unknown>;
-        const colorFlags = rawSettings.colors as Record<string, unknown>;
-        if (
-          typeof detailFlags?.applyAllLayers === 'boolean'
-          && typeof colorFlags?.applyAllLayers === 'boolean'
-          && typeof colorFlags?.data === 'object'
-        ) {
-          for (const key of Object.keys(colorFlags.data as Record<string, unknown>)) {
-            if (/\d/.test(key)) {
-              message.error(t('settings.importFailed'));
-              return;
-            }
-          }
-          writeApplyAllLayersFlags({
-            details: detailFlags.applyAllLayers,
-            colors: colorFlags.applyAllLayers,
-          });
-        }
+        const rawSettings = (stored.snapshot.settings && typeof stored.snapshot.settings === 'object')
+          ? stored.snapshot.settings as any
+          : {};
+        const detailFlags = rawSettings.details as Record<string, unknown> | undefined;
+        const colorFlags = rawSettings.colors as Record<string, unknown> | undefined;
+        const lammpsFlags = rawSettings.lammps as Record<string, unknown> | undefined;
+        writeApplyAllLayersFlags({
+          details: typeof detailFlags?.applyAllLayers === 'boolean'
+            ? detailFlags.applyAllLayers
+            : undefined,
+          colors: typeof colorFlags?.applyAllLayers === 'boolean'
+            ? colorFlags.applyAllLayers
+            : undefined,
+          lammps: typeof lammpsFlags?.applyAllLayers === 'boolean'
+            ? lammpsFlags.applyAllLayers
+            : undefined,
+        });
         settings.value = mergeCategorizedSettings(rawSettings);
         pendingRestore.value = { snapshot: stored.snapshot, files };
         page.value = 'viewer';
@@ -336,12 +335,19 @@ function onOpenSettings(payload?: OpenSettingsPayload): void {
 
   // 只要给了 focusKey，就切换折叠面板
   // Switch collapse panel when focusKey is provided
+  const currentKeys = Array.isArray(settingsActiveKey.value)
+    ? settingsActiveKey.value.map(k => String(k))
+    : [];
   if (payload?.focusKeys && payload.focusKeys.length > 0) {
-    settingsActiveKey.value = payload.focusKeys.map(k => String(k));
+    const next = new Set(currentKeys);
+    payload.focusKeys.forEach(k => next.add(String(k)));
+    settingsActiveKey.value = Array.from(next);
     return;
   }
   if (payload?.focusKey) {
-    settingsActiveKey.value = [payload.focusKey];
+    const next = new Set(currentKeys);
+    next.add(String(payload.focusKey));
+    settingsActiveKey.value = Array.from(next);
   }
 }
 </script>

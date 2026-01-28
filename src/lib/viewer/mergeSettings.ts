@@ -10,7 +10,7 @@ export type SettingsPatch = {
   view?: Omit<Partial<ViewerSettings['view']>, 'rotationDeg'> & {
     rotationDeg?: Partial<RotationDeg>;
   };
-  lammps?: ViewerSettings['lammps'];
+  lammps?: Partial<ViewerSettings['lammps']>;
   details?: Partial<ViewerSettings['details']>;
   colors?: Partial<ViewerSettings['colors']> & {
     data?: Record<string, string>;
@@ -20,8 +20,8 @@ export type SettingsPatch = {
 };
 
 /**
- * Shallow clone with nested rotation copy.
- * 浅拷贝并额外复制 rotationDeg。
+ * Clone settings with nested arrays/objects copied as needed.
+ * 复制设置：必要的嵌套对象与数组会被深拷贝。
  */
 export function cloneSettings(v: ViewerSettings): ViewerSettings {
   return {
@@ -32,12 +32,9 @@ export function cloneSettings(v: ViewerSettings): ViewerSettings {
       rotationDeg: { ...v.view.rotationDeg },
       viewPresets: v.view.viewPresets ? [...v.view.viewPresets] : [],
     },
-    lammps: [...(v.lammps ?? [])],
+    lammps: { ...v.lammps, data: { ...(v.lammps.data ?? {}) } },
     details: { ...v.details },
-    colors: {
-      applyAllLayers: v.colors.applyAllLayers,
-      data: { ...v.colors.data },
-    },
+    colors: { ...v.colors, data: { ...v.colors.data } },
     anim: { ...v.anim },
     other: { ...v.other },
   };
@@ -64,13 +61,19 @@ export function mergeSettings(
       viewPresets: patch.view.viewPresets ?? next.view.viewPresets,
     };
   }
-  if (patch.lammps) next.lammps = patch.lammps.map(r => ({ ...r }));
+  if (patch.lammps) {
+    next.lammps = {
+      ...next.lammps,
+      ...patch.lammps,
+      data: patch.lammps.data ? { ...patch.lammps.data } : next.lammps.data,
+    };
+  }
   if (patch.details) next.details = { ...next.details, ...patch.details };
   if (patch.colors) {
     next.colors = {
       ...next.colors,
       ...patch.colors,
-      data: patch.colors.data ? { ...next.colors.data, ...patch.colors.data } : next.colors.data,
+      data: patch.colors.data ? { ...patch.colors.data } : next.colors.data,
     };
   }
   if (patch.anim) next.anim = { ...next.anim, ...patch.anim };

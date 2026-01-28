@@ -16,6 +16,7 @@ import { buildCategorizedSettings, pruneDefaultSettings } from './sessionTemplat
 type ApplyAllLayersFlags = {
   details: boolean;
   colors: boolean;
+  lammps: boolean;
 };
 
 function pruneLayerSnapshot(layer: LayerSnapshot): LayerSnapshot {
@@ -67,8 +68,8 @@ function pruneLayerSnapshot(layer: LayerSnapshot): LayerSnapshot {
   }
   if (Object.keys(nextDetails).length > 0) out.details = nextDetails as LayerSnapshot['details'];
 
-  const lammps = (layer.lammps ?? []).map(r => ({ ...r }));
-  if (lammps.length > 0) out.lammps = lammps;
+  const lammps = layer.lammps?.data ?? {};
+  if (lammps && Object.keys(lammps).length > 0) out.lammps = { data: { ...lammps } };
 
   const colorData = layer.colors?.data ?? {};
   const colorKeys = Object.keys(colorData);
@@ -87,10 +88,38 @@ export function buildSettingsSnapshot(
   applyAllLayers?: Partial<ApplyAllLayersFlags>,
   layersSortBy: LayerSortBy = 'name,ASC',
   activeLayerId?: string | null,
+  compact: boolean = true,
 ): SessionSnapshot {
   const savedAt = new Date().toISOString();
-  const categorized = buildCategorizedSettings(settings, animState, applyAllLayers);
-  const pruned = pruneDefaultSettings(categorized);
+  const activeSnap = layers?.find(l => (l.id ?? '') === (activeLayerId ?? '')) ?? layers?.[0];
+  const fallbackColors = (() => {
+    if (Object.keys(settings.colors.data ?? {}).length > 0) return settings.colors.data;
+    const data = activeSnap?.colors?.data ?? {};
+    const out: Record<string, string> = {};
+    for (const [key, value] of Object.entries(data)) {
+      const [elementRaw = ''] = String(key ?? '').split('.', 2);
+      const el = elementRaw.trim();
+      if (!el || el in out) continue;
+      const c = String(value ?? '').trim();
+      if (!c) continue;
+      out[el] = c;
+    }
+    return out;
+  })();
+  const fallbackLammps = (() => {
+    if (Object.keys(settings.lammps.data ?? {}).length > 0) return settings.lammps.data;
+    return activeSnap?.lammps?.data ?? {};
+  })();
+  const categorized = buildCategorizedSettings(
+    {
+      ...settings,
+      colors: { ...settings.colors, data: fallbackColors },
+      lammps: { ...settings.lammps, data: fallbackLammps },
+    },
+    animState,
+    applyAllLayers,
+  );
+  const pruned = compact ? pruneDefaultSettings(categorized) : categorized;
   const layerData: Record<string, LayerSnapshot> = {};
   for (const layer of layers ?? []) {
     const id = layer.id ?? '';
@@ -161,7 +190,11 @@ export async function buildProjectZip(params: {
     zip.file(path, src.buffer);
   }
 
-  const blob = await zip.generateAsync({ type: 'blob' });
+  const blob = await zip.generateAsync({
+    type: 'blob',
+    compression: 'DEFLATE',
+    compressionOptions: { level: 6 },
+  });
   const filename = buildExportFilename({
     modelFileName: modelFileName ?? 'atoms-viewer',
     ext: 'zip',

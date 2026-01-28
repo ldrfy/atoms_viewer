@@ -4,15 +4,16 @@ import { ref, type Ref } from 'vue';
 
 import {
   DEFAULT_DETAILS,
-  buildColorTemplateRows,
+  lammpsRecordToRows,
+  lammpsRowsToRecord,
   type ViewerSettings,
-  type LammpsTypeMapItem,
-  type AtomTypeColorMapItem,
+  type LammpsTypeMapRecord,
   type DetailsSettingsGroup,
 } from '../../lib/viewer/settings';
 import type { Atom, FrameMeta, StructureModel } from '../../lib/structure/types';
-import { getElementColorHex } from '../../lib/structure/chem';
+import { getElementColorHex, normalizeElementSymbol } from '../../lib/structure/chem';
 import { unwrapAtomsPeriodic } from '../../lib/structure/bonds';
+import { getVisualStylePreset } from '../../lib/viewer/visualStyles';
 
 import type { ThreeStage } from '../../lib/three/stage';
 import { makeTextLabel } from '../../lib/three/labels2d';
@@ -36,11 +37,14 @@ import {
 } from './typeMap';
 
 import {
+  buildColorMapFromAtoms,
+  buildColorMapKeysFromAtoms,
   buildColorMapRecord,
   getAtomTypeColorKey,
   buildCustomColorMapRecord,
+  parseColorMapKey,
   parseColorMapRecord,
-  syncColorMapRowsFromAtoms,
+  type ColorMapRecord,
 } from './colorMap';
 import type {
   LayerSnapshot,
@@ -86,6 +90,7 @@ export type ModelLayerInfo = {
   visible: boolean;
   atomCount: number;
   frameCount: number;
+  hasTypeId: boolean;
   sourceFormat?: string;
   sourceFileName?: string;
   /** Optional file hash (md5) to track per-layer settings across reloads. */
@@ -126,14 +131,17 @@ type LayerInternal = {
   // LAMMPS
   hasAnyTypeId: boolean;
 
-  /** Per-layer LAMMPS typeId->element mapping rows (NOT global). */
-  typeMapRows: LammpsTypeMapItem[];
+  /** Per-layer LAMMPS typeId->element mapping (NOT global). */
+  typeMap: LammpsTypeMapRecord;
+  /** Detected typeId list for this layer (sorted). */
+  typeIds: number[];
   /** Whether type map has been explicitly applied via "Refresh display". */
   typeMapApplied: boolean;
 
-  /** Per-layer atom type color mapping rows (active layer editable in Settings). */
-  colorMapRows: AtomTypeColorMapItem[];
-  /** Whether color map has been explicitly applied via "Refresh display". */
+  /** Per-layer atom type color mapping. */
+  colorMap: ColorMapRecord;
+  /** Stable order of color keys for UI. */
+  colorKeys: string[];
 
   /** Per-layer display settings (atom size, bonds, quality). */
   display: DetailsSettingsGroup;
@@ -218,9 +226,11 @@ function makeCenteredAtomsView(atoms: Atom[], center: THREE.Vector3): Atom[] {
 export type ModelRuntime = {
   layers: Ref<ModelLayerInfo[]>;
   activeLayerId: Ref<string | null>;
-  activeTypeMapRows: Ref<LammpsTypeMapItem[]>;
+  activeTypeMap: Ref<LammpsTypeMapRecord>;
+  activeTypeIds: Ref<number[]>;
   activeTypeMapApplied: Ref<boolean>;
-  activeColorMapRows: Ref<AtomTypeColorMapItem[]>;
+  activeColorMap: Ref<ColorMapRecord>;
+  activeColorKeys: Ref<string[]>;
   activeDisplaySettings: Ref<DetailsSettingsGroup | null>;
 
   renderModel: (
@@ -269,14 +279,15 @@ export type ModelRuntime = {
     snaps: LayerSnapshot[],
   ) => void;
 
-  setActiveLayerTypeMapRows: (rows: LammpsTypeMapItem[]) => void;
+  setActiveLayerTypeMap: (map: LammpsTypeMapRecord) => void;
+  applyTypeMapToAllLayers: (templateMap: LammpsTypeMapRecord) => void;
   resetAllLayersTypeMapToDefaults: (opts?: {
-    templateRows?: LammpsTypeMapItem[];
+    templateMap?: LammpsTypeMapRecord;
     useAtomDefaults?: boolean;
   }) => void;
 
-  setActiveLayerColorMapRows: (rows: AtomTypeColorMapItem[]) => void;
-  setAllLayersColorMapRows: (rows: AtomTypeColorMapItem[]) => void;
+  setActiveLayerColorMap: (map: ColorMapRecord) => void;
+  setAllLayersColorMap: (map: ColorMapRecord) => void;
   resetAllLayersColorMapToDefaults: () => void;
 
   removeLayer: (id: string) => void;
@@ -315,9 +326,11 @@ export function createModelRuntime(args: {
 
   const layers = ref<ModelLayerInfo[]>([]);
   const activeLayerId = ref<string | null>(null);
-  const activeTypeMapRows = ref<LammpsTypeMapItem[]>([]);
+  const activeTypeMap = ref<LammpsTypeMapRecord>({});
+  const activeTypeIds = ref<number[]>([]);
   const activeTypeMapApplied = ref(false);
-  const activeColorMapRows = ref<AtomTypeColorMapItem[]>([]);
+  const activeColorMap = ref<ColorMapRecord>({});
+  const activeColorKeys = ref<string[]>([]);
   const activeDisplaySettings = ref<DetailsSettingsGroup | null>(null);
   const visibleCustomColors = ref(false);
 
@@ -407,14 +420,34 @@ export function createModelRuntime(args: {
   }
 
   function recomputeVisibleCustomColors(): void {
+    const base = buildStyleBaseColorMap();
     for (const l of layerMap.values()) {
       if (!l.info.visible) continue;
-      if (l.colorMapRows?.some(r => r.isCustom)) {
+      if (hasCustomColors(l.colorMap ?? {}, base)) {
         visibleCustomColors.value = true;
         return;
       }
     }
     visibleCustomColors.value = false;
+  }
+
+  function buildStyleBaseColorMap(): Record<string, string> {
+    const styleId = getSettings().other.visualStyle ?? 'default';
+    if (styleId === 'default') return {};
+    return { ...(getVisualStylePreset(styleId).colorMapTemplate ?? {}) };
+  }
+
+  function hasCustomColors(
+    map: ColorMapRecord,
+    baseByElement: Record<string, string>,
+  ): boolean {
+    for (const [key, value] of Object.entries(map ?? {})) {
+      const { element } = parseColorMapKey(key);
+      const base = baseByElement[element] ?? getElementColorHex(element);
+      const cur = String(value ?? '').trim().toUpperCase();
+      if (cur && cur !== String(base).trim().toUpperCase()) return true;
+    }
+    return false;
   }
 
   function tickCameraClipping(force = false): void {
@@ -577,13 +610,15 @@ export function createModelRuntime(args: {
 
   function syncActiveTypeMap(): void {
     const a = getActiveLayer();
-    activeTypeMapRows.value = (a?.typeMapRows ?? []) as LammpsTypeMapItem[];
+    activeTypeMap.value = { ...(a?.typeMap ?? {}) };
+    activeTypeIds.value = [...(a?.typeIds ?? [])];
     activeTypeMapApplied.value = !!a?.typeMapApplied;
   }
 
   function syncActiveColorMap(): void {
     const a = getActiveLayer();
-    activeColorMapRows.value = (a?.colorMapRows ?? []) as AtomTypeColorMapItem[];
+    activeColorMap.value = { ...(a?.colorMap ?? {}) };
+    activeColorKeys.value = [...(a?.colorKeys ?? [])];
   }
 
   function syncActiveDisplay(): void {
@@ -592,16 +627,11 @@ export function createModelRuntime(args: {
   }
 
   function expandTypeIdsContiguous(typeIdsRaw: number[]): number[] {
-    if (!typeIdsRaw || typeIdsRaw.length === 0) return [];
-    const maxId = typeIdsRaw[typeIdsRaw.length - 1] ?? 0;
-    if (Number.isFinite(maxId) && maxId > 0 && maxId <= 2000) {
-      return Array.from({ length: maxId }, (_, i) => i + 1);
-    }
-    return typeIdsRaw;
+    return typeIdsRaw ?? [];
   }
 
   function mapAtomsByTypeMap(layer: LayerInternal, atoms0: Atom[]): Atom[] {
-    const rows = (layer.typeMapRows ?? []) as any;
+    const rows = lammpsRecordToRows(layer.typeMap);
     const hasRows = Array.isArray(rows) && rows.length > 0;
     if (layer.hasAnyTypeId && hasRows) return remapAtomsByTypeId(atoms0, rows);
     return atoms0;
@@ -732,9 +762,9 @@ export function createModelRuntime(args: {
     // In practice, relying on InstancedMesh instanceColor has proven fragile across
     // builds/drivers when users refresh the color map or type map. To guarantee that
     // atom colors always follow the Settings (and match bond updates), group atoms by
-    // the type-aware color key (e.g. "C1", "O2") and use a uniform material color per mesh.
+    // the type-aware color key (e.g. "C.1", "O.2") and use a uniform material color per mesh.
     const getGroupKey = preferTypeId ? getColorKey : undefined;
-    const colorMap = buildColorMapRecord(layer.colorMapRows);
+    const colorMap = buildColorMapRecord(layer.colorMap);
 
     // atoms
     layer.atomMeshes = buildAtomMeshesByElement({
@@ -936,6 +966,7 @@ export function createModelRuntime(args: {
         visible: true,
         atomCount: model.atoms.length,
         frameCount,
+        hasTypeId: false,
         sourceFormat: model.source?.format,
         sourceFileName: srcMeta?.fileName ?? model.source?.filename,
         sourceMd5: srcMeta?.md5,
@@ -958,9 +989,11 @@ export function createModelRuntime(args: {
       currentMappedAtoms: null,
       mappedFrameIndex: -1,
       hasAnyTypeId: false,
-      typeMapRows: [],
+      typeMap: {},
+      typeIds: [],
       typeMapApplied: false,
-      colorMapRows: [],
+      colorMap: {},
+      colorKeys: [],
       display: getDisplayDefaults(),
       baseCenter: new THREE.Vector3(0, 0, 0),
     };
@@ -968,15 +1001,19 @@ export function createModelRuntime(args: {
     // detect LAMMPS typeId
     const typeInfo = collectTypeIdsAndElementDefaultsFromAtoms(firstAtoms);
     layer.hasAnyTypeId = typeInfo.typeIds.length > 0;
+    layer.info.hasTypeId = layer.hasAnyTypeId;
 
     if (layer.hasAnyTypeId) {
-      const templateRows = (getSettings().lammps ?? []) as any;
+      const templateRows = lammpsRecordToRows(getSettings().lammps.data);
       const detected = expandTypeIdsContiguous(typeInfo.typeIds);
-      layer.typeMapRows
+      const mergedRows
         = (mergeTypeMap(templateRows, detected, typeInfo.defaults) as any) ?? [];
+      layer.typeMap = lammpsRowsToRecord(mergedRows);
+      layer.typeIds = [...detected];
     }
     else {
-      layer.typeMapRows = [];
+      layer.typeMap = {};
+      layer.typeIds = [];
     }
     layer.typeMapApplied = false;
 
@@ -986,22 +1023,12 @@ export function createModelRuntime(args: {
     layer.mappedFrameIndex = 0;
 
     // Initialize per-layer color mapping from (mapped) atoms.
-    // If a template exists in settings, apply it as the base.
-    const colorTemplate = buildColorTemplateRows(getSettings().colors.data);
-    layer.colorMapRows = syncColorMapRowsFromAtoms(
-      colorTemplate,
+    layer.colorMap = buildColorMapFromAtoms(
+      getSettings().colors.data,
       mappedFirstAtoms,
       layer.hasAnyTypeId,
     );
-
-    // If the cached template contains custom colors, keep their flags.
-    if (colorTemplate.some(r => r.isCustom)) {
-      layer.colorMapRows = layer.colorMapRows.map((row) => {
-        const key = getAtomTypeColorKey(row.element, row.typeId);
-        const tpl = colorTemplate.find(t => getAtomTypeColorKey(t.element, t.typeId) === key);
-        return tpl ? { ...row, isCustom: !!tpl.isCustom } : row;
-      });
-    }
+    layer.colorKeys = buildColorMapKeysFromAtoms(mappedFirstAtoms, layer.hasAnyTypeId);
 
     // Store a model whose frame[0] uses mapped atoms for rendering (keep raw for reparse logic elsewhere)
     // We do not mutate the original model; we only render with mapped atoms.
@@ -1059,16 +1086,19 @@ export function createModelRuntime(args: {
 
     if (active.hasAnyTypeId) {
       const baseRows = (
-        active.typeMapRows && active.typeMapRows.length > 0
-          ? active.typeMapRows
-          : getSettings().lammps ?? []
+        active.typeMap && Object.keys(active.typeMap).length > 0
+          ? lammpsRecordToRows(active.typeMap)
+          : lammpsRecordToRows(getSettings().lammps.data)
       ) as any;
       const detected = expandTypeIdsContiguous(typeInfo.typeIds);
-      active.typeMapRows
+      const mergedRows
         = (mergeTypeMap(baseRows, detected, typeInfo.defaults) as any) ?? [];
+      active.typeMap = lammpsRowsToRecord(mergedRows);
+      active.typeIds = [...detected];
     }
     else {
-      active.typeMapRows = [];
+      active.typeMap = {};
+      active.typeIds = [];
     }
     active.typeMapApplied = false;
 
@@ -1081,11 +1111,12 @@ export function createModelRuntime(args: {
     active.mappedFrameIndex = 0;
 
     // Keep (and sync) per-layer color mapping; preserve previous colors when possible.
-    active.colorMapRows = syncColorMapRowsFromAtoms(
-      active.colorMapRows,
+    active.colorMap = buildColorMapFromAtoms(
+      active.colorMap,
       mappedFirstAtoms,
       active.hasAnyTypeId,
     );
+    active.colorKeys = buildColorMapKeysFromAtoms(mappedFirstAtoms, active.hasAnyTypeId);
 
     rebuildVisualsForLayer(active, mappedFirstAtoms);
 
@@ -1122,8 +1153,11 @@ export function createModelRuntime(args: {
 
     layers.value = [];
     activeLayerId.value = null;
-    activeTypeMapRows.value = [];
-    activeColorMapRows.value = [];
+    activeTypeMap.value = {};
+    activeTypeIds.value = [];
+    activeTypeMapApplied.value = false;
+    activeColorMap.value = {};
+    activeColorKeys.value = [];
     activeDisplaySettings.value = null;
     visibleCustomColors.value = false;
 
@@ -1281,7 +1315,7 @@ export function createModelRuntime(args: {
       preferTypeId
         ? getAtomTypeColorKey(a.element, a.typeId)
         : getAtomTypeColorKey(a.element);
-    const colorMap = buildColorMapRecord(layer.colorMapRows);
+    const colorMap = buildColorMapRecord(layer.colorMap);
 
     const bf = display.bondFactor;
     const res = buildBondMeshesBicolor({
@@ -1336,7 +1370,7 @@ export function createModelRuntime(args: {
           preferTypeId
             ? getAtomTypeColorKey(a.element, a.typeId)
             : getAtomTypeColorKey(a.element);
-        const colorMap = buildColorMapRecord(l.colorMapRows);
+        const colorMap = buildColorMapRecord(l.colorMap);
 
         const res = buildBondMeshesBicolor({
           atoms: centeredAtoms,
@@ -1397,10 +1431,11 @@ export function createModelRuntime(args: {
 
   function getLayerSnapshots(): LayerSnapshot[] {
     const res: LayerSnapshot[] = [];
+    const base = buildStyleBaseColorMap();
     for (const l of layerMap.values()) {
       const layerDisplay = { ...getLayerDisplay(l) };
-      const typeMap = (l.typeMapRows ?? []).map(r => ({ ...r }));
-      const colorMap = buildCustomColorMapRecord(l.colorMapRows);
+      const typeMap = { ...(l.typeMap ?? {}) };
+      const colorMap = buildCustomColorMapRecord(l.colorMap, base);
       res.push({
         id: l.info.id,
         name: l.info.name,
@@ -1416,7 +1451,7 @@ export function createModelRuntime(args: {
           cached: l.info.sourceCached,
         },
         details: layerDisplay,
-        lammps: typeMap,
+        lammps: { data: typeMap },
         colors: {
           data: colorMap,
         },
@@ -1441,6 +1476,13 @@ export function createModelRuntime(args: {
     }
     layer.group.visible = layer.info.visible;
 
+    layer.typeMap = { ...(snap.lammps?.data ?? {}) };
+    const detected = collectTypeIdsAndElementDefaultsFromAtoms(
+      (layer.model.frames?.[layer.frameIndex] ?? layer.model.atoms) as Atom[],
+    ).typeIds;
+    layer.typeIds = [...detected];
+    layer.typeMapApplied = Object.keys(layer.typeMap ?? {}).length > 0;
+
     const atoms = (layer.model.frames?.[layer.frameIndex]
       ?? layer.model.atoms) as Atom[];
     layer.currentFrameAtoms = atoms;
@@ -1450,12 +1492,9 @@ export function createModelRuntime(args: {
     layer.currentMappedAtoms = mapped;
     layer.mappedFrameIndex = layer.frameIndex;
 
-    const snapTypeMap = snap.lammps ?? [];
-    layer.typeMapRows = (snapTypeMap ?? []).map(r => ({ ...r }));
-    layer.typeMapApplied = false;
-
     const colorSource = parseColorMapRecord((snap as any).colors?.data);
-    layer.colorMapRows = syncColorMapRowsFromAtoms(colorSource, mapped, layer.hasAnyTypeId);
+    layer.colorMap = buildColorMapFromAtoms(colorSource, mapped, layer.hasAnyTypeId);
+    layer.colorKeys = buildColorMapKeysFromAtoms(mapped, layer.hasAnyTypeId);
 
     rebuildVisualsForLayer(layer, mapped);
 
@@ -1555,19 +1594,16 @@ export function createModelRuntime(args: {
     active.currentMappedAtoms = mapped;
     active.mappedFrameIndex = active.frameIndex;
 
-    // Type mapping can change element labels. Keep color rows in sync while preserving colors.
-    // Prefer user color template rows so element-level custom colors are reused after remapping.
-    const colorTemplate = buildColorTemplateRows(getSettings().colors.data);
-    const colorBase = colorTemplate.length > 0
-      ? [...colorTemplate, ...active.colorMapRows]
-      : active.colorMapRows;
-    active.colorMapRows = syncColorMapRowsFromAtoms(
-      colorBase,
+    // Type mapping can change element labels. Keep color map in sync while preserving colors.
+    active.colorMap = buildColorMapFromAtoms(
+      active.colorMap,
       mapped,
       active.hasAnyTypeId,
     );
+    active.colorKeys = buildColorMapKeysFromAtoms(mapped, active.hasAnyTypeId);
     active.typeMapApplied = true;
-    activeColorMapRows.value = (active.colorMapRows ?? []) as any;
+    activeColorMap.value = { ...(active.colorMap ?? {}) };
+    activeColorKeys.value = [...(active.colorKeys ?? [])];
     activeTypeMapApplied.value = true;
     recomputeVisibleCustomColors();
 
@@ -1581,23 +1617,24 @@ export function createModelRuntime(args: {
     invalidate();
   }
 
-  function setActiveLayerTypeMapRows(rows: LammpsTypeMapItem[]): void {
+  function setActiveLayerTypeMap(map: LammpsTypeMapRecord): void {
     const active = getActiveLayer();
     if (!active) return;
-    active.typeMapRows = (rows ?? []) as any;
-    activeTypeMapRows.value = (active.typeMapRows ?? []) as any;
+    active.typeMap = { ...(map ?? {}) };
+    activeTypeMap.value = { ...(active.typeMap ?? {}) };
     active.typeMapApplied = false;
     activeTypeMapApplied.value = false;
+    activeLayerId.value = active.info.id;
   }
 
   function resetAllLayersTypeMapToDefaults(
     opts?: {
-      templateRows?: LammpsTypeMapItem[];
+      templateMap?: LammpsTypeMapRecord;
       useAtomDefaults?: boolean;
     },
   ): void {
     let anyChanged = false;
-    const baseRows = (opts?.templateRows ?? getSettings().lammps ?? []) as any;
+    const baseRows = lammpsRecordToRows(opts?.templateMap ?? getSettings().lammps.data);
     const useAtomDefaults = opts?.useAtomDefaults !== false;
 
     for (const layer of layerMap.values()) {
@@ -1613,21 +1650,20 @@ export function createModelRuntime(args: {
         = collectTypeIdsAndElementDefaultsFromAtoms(atoms);
       const defaultsSafe = useAtomDefaults ? defaults : {};
       const detectedTypeIds = expandTypeIdsContiguous(detectedTypeIdsRaw);
-      const mergedRows = mergeTypeMap(baseRows, detectedTypeIds, defaultsSafe) as
-        | LammpsTypeMapItem[]
-        | undefined;
-
-      layer.typeMapRows = (mergedRows ?? []) as any;
+      const mergedRows = mergeTypeMap(baseRows, detectedTypeIds, defaultsSafe) as any;
+      layer.typeMap = lammpsRowsToRecord(mergedRows ?? []);
+      layer.typeIds = [...detectedTypeIds];
 
       const mapped = mapAtomsByTypeMap(layer, atoms);
       layer.currentMappedAtoms = mapped;
       layer.mappedFrameIndex = layer.frameIndex;
 
-      layer.colorMapRows = syncColorMapRowsFromAtoms(
-        layer.colorMapRows,
+      layer.colorMap = buildColorMapFromAtoms(
+        layer.colorMap,
         mapped,
         layer.hasAnyTypeId,
       );
+      layer.colorKeys = buildColorMapKeysFromAtoms(mapped, layer.hasAnyTypeId);
 
       rebuildVisualsForLayer(layer, mapped);
       anyChanged = true;
@@ -1645,31 +1681,107 @@ export function createModelRuntime(args: {
     invalidate();
   }
 
-  function cloneColorRows(rows: AtomTypeColorMapItem[]): AtomTypeColorMapItem[] {
-    return (rows ?? []).map(r => ({ ...r }));
+  function applyTypeMapToAllLayers(
+    templateMap: LammpsTypeMapRecord,
+  ): void {
+    const baseMap = templateMap ?? {};
+
+    let anyChanged = false;
+    for (const layer of layerMap.values()) {
+      if (!layer.hasAnyTypeId) continue;
+
+      const atoms = (layer.model.frames?.[layer.frameIndex]
+        ?? layer.model.atoms) as Atom[];
+      layer.currentFrameAtoms = atoms;
+      layer.currentMappedAtoms = null;
+      layer.mappedFrameIndex = -1;
+
+      const { typeIds: detectedTypeIds, defaults }
+        = collectTypeIdsAndElementDefaultsFromAtoms(atoms);
+
+      const nextMap: LammpsTypeMapRecord = {};
+      for (const tid0 of detectedTypeIds) {
+        const tid = Math.max(1, Math.floor(tid0));
+        if (!Number.isFinite(tid) || tid <= 0) continue;
+
+        const tplEl = normalizeElementSymbol(String(baseMap[String(tid)] ?? '')) || '';
+        if (tplEl && tplEl !== 'E') {
+          nextMap[String(tid)] = tplEl;
+          continue;
+        }
+
+        const existing = normalizeElementSymbol(String(layer.typeMap[String(tid)] ?? '')) || '';
+        if (existing && existing !== 'E') {
+          nextMap[String(tid)] = existing;
+          continue;
+        }
+
+        const def = normalizeElementSymbol(defaults[tid] ?? '') || '';
+        nextMap[String(tid)] = def && def !== 'E' ? def : 'E';
+      }
+
+      layer.typeMap = nextMap;
+      layer.typeIds = [...detectedTypeIds];
+      layer.typeMapApplied = Object.keys(nextMap).length > 0;
+
+      const mapped = mapAtomsByTypeMap(layer, atoms);
+      layer.currentMappedAtoms = mapped;
+      layer.mappedFrameIndex = layer.frameIndex;
+
+      layer.colorMap = buildColorMapFromAtoms(
+        layer.colorMap,
+        mapped,
+        layer.hasAnyTypeId,
+      );
+      layer.colorKeys = buildColorMapKeysFromAtoms(mapped, layer.hasAnyTypeId);
+
+      rebuildVisualsForLayer(layer, mapped);
+      anyChanged = true;
+    }
+
+    if (!anyChanged) return;
+
+    syncActiveTypeMap();
+    syncActiveColorMap();
+    syncActiveDisplay();
+    recomputeVisibleCustomColors();
+    recomputeVisibleClipRadius();
+    tickCameraClipping(true);
+    invalidate();
   }
 
-  function setActiveLayerColorMapRows(rows: AtomTypeColorMapItem[]): void {
+  function cloneColorMap(map: ColorMapRecord | undefined): ColorMapRecord {
+    return { ...(map ?? {}) };
+  }
+
+  function setActiveLayerColorMap(map: ColorMapRecord): void {
     const active = getActiveLayer();
     if (!active) return;
-    active.colorMapRows = cloneColorRows(rows ?? []);
-    activeColorMapRows.value = (active.colorMapRows ?? []) as any;
+    active.colorMap = cloneColorMap(map);
+    active.colorKeys = buildColorMapKeysFromAtoms(
+      getMappedAtomsForCurrentFrame(active),
+      active.hasAnyTypeId,
+    );
+    activeColorMap.value = cloneColorMap(active.colorMap);
+    activeColorKeys.value = [...active.colorKeys];
     recomputeVisibleCustomColors();
   }
 
-  function setAllLayersColorMapRows(rows: AtomTypeColorMapItem[]): void {
-    const rowsSafe = cloneColorRows(rows ?? []);
+  function setAllLayersColorMap(map: ColorMapRecord): void {
+    const mapSafe = cloneColorMap(map);
     for (const l of layerMap.values()) {
       const mapped = getMappedAtomsForCurrentFrame(l);
-      l.colorMapRows = syncColorMapRowsFromAtoms(
-        rowsSafe,
+      l.colorMap = buildColorMapFromAtoms(
+        mapSafe,
         mapped,
         l.hasAnyTypeId,
       );
+      l.colorKeys = buildColorMapKeysFromAtoms(mapped, l.hasAnyTypeId);
     }
     const active = getActiveLayer();
     if (active) {
-      activeColorMapRows.value = (active.colorMapRows ?? []) as any;
+      activeColorMap.value = cloneColorMap(active.colorMap);
+      activeColorKeys.value = [...active.colorKeys];
     }
     recomputeVisibleCustomColors();
   }
@@ -1677,7 +1789,8 @@ export function createModelRuntime(args: {
   function resetAllLayersColorMapToDefaults(): void {
     for (const l of layerMap.values()) {
       const mapped = getMappedAtomsForCurrentFrame(l);
-      l.colorMapRows = syncColorMapRowsFromAtoms([], mapped, l.hasAnyTypeId);
+      l.colorMap = buildColorMapFromAtoms({}, mapped, l.hasAnyTypeId);
+      l.colorKeys = buildColorMapKeysFromAtoms(mapped, l.hasAnyTypeId);
     }
     syncActiveColorMap();
     recomputeVisibleCustomColors();
@@ -1795,7 +1908,7 @@ export function createModelRuntime(args: {
     if (!layers || layers.length === 0) return;
 
     for (const layer of layers) {
-      const map = buildColorMapRecord(layer.colorMapRows);
+      const map = buildColorMapRecord(layer.colorMap);
       const display = getLayerDisplay(layer);
       const roughness = normalizeAtomRoughnessValue(display.atomRoughness);
 
@@ -1899,9 +2012,11 @@ export function createModelRuntime(args: {
   return {
     layers,
     activeLayerId,
-    activeTypeMapRows,
+    activeTypeMap,
+    activeTypeIds,
     activeTypeMapApplied,
-    activeColorMapRows,
+    activeColorMap,
+    activeColorKeys,
     activeDisplaySettings,
 
     renderModel,
@@ -1929,10 +2044,11 @@ export function createModelRuntime(args: {
     onTypeMapChanged,
     onColorMapChanged,
     applyLayerSnapshots,
-    setActiveLayerTypeMapRows,
+    setActiveLayerTypeMap,
+    applyTypeMapToAllLayers,
     resetAllLayersTypeMapToDefaults,
-    setActiveLayerColorMapRows,
-    setAllLayersColorMapRows,
+    setActiveLayerColorMap,
+    setAllLayersColorMap,
     resetAllLayersColorMapToDefaults,
     setActiveLayerDisplaySettings,
     removeLayer,

@@ -35,29 +35,29 @@
     </a-form-item>
 
     <a-form-item :label="t('settings.panel.colors.mapLabel')" class="settings-gap-top-md">
-      <template v-if="colorMapModel.length === 0">
+      <template v-if="colorKeys.length === 0">
         <a-alert type="info" show-icon :message="t('settings.panel.colors.empty')" />
       </template>
 
       <template v-else>
         <div
-          v-for="(row, idx) in colorMapModel"
-          :key="`${row.element}-${row.typeId ?? 0}-${idx}`"
+          v-for="(key, idx) in colorKeys"
+          :key="`${key}-${idx}`"
           class="settings-gap-bottom-sm"
         >
           <a-row :gutter="8" align="middle" class="settings-color-map-row">
             <a-col :span="7">
-              <a-tag>{{ formatColorKey(row) }}</a-tag>
+              <a-tag>{{ key }}</a-tag>
             </a-col>
 
             <a-col :span="3">
-              <a-tooltip v-if="isRowCustom(row)" :title="t('settings.panel.colors.resetTooltip')">
+              <a-tooltip v-if="isKeyCustom(key)" :title="t('settings.panel.colors.resetTooltip')">
                 <a-button
                   type="text"
                   size="small"
                   :aria-label="t('settings.panel.colors.reset')"
                   :title="t('settings.panel.colors.resetTooltip')"
-                  @click="onResetColor(idx)"
+                  @click="onResetColor(key)"
                 >
                   <ReloadOutlined />
                 </a-button>
@@ -68,20 +68,20 @@
               <input
                 class="color-picker"
                 type="color"
-                :value="colorPickerValue(row.color)"
-                :aria-label="t('settings.panel.colors.colorPickerLabel', { key: formatColorKey(row) })"
-                :title="t('settings.panel.colors.colorPickerLabel', { key: formatColorKey(row) })"
-                @input="onColorPickerChange(idx, ($event as any).target?.value)"
+                :value="colorPickerValue(colorMap[key] ?? '')"
+                :aria-label="t('settings.panel.colors.colorPickerLabel', { key })"
+                :title="t('settings.panel.colors.colorPickerLabel', { key })"
+                @input="onColorPickerChange(key, ($event as any).target?.value)"
               >
             </a-col>
 
             <a-col :span="10">
               <a-input
-                :value="row.color"
+                :value="colorMap[key] ?? ''"
                 :placeholder="t('settings.panel.colors.hexPlaceholder')"
                 :aria-label="t('settings.panel.colors.hexPlaceholder')"
                 :title="t('settings.panel.colors.hexPlaceholder')"
-                @change="onColorHexChange(idx, ($event as any).target?.value)"
+                @change="onColorHexChange(key, ($event as any).target?.value)"
               />
             </a-col>
           </a-row>
@@ -103,13 +103,12 @@ import { useI18n } from 'vue-i18n';
 
 import { viewerApiRef } from '../../../lib/viewer/bridge';
 import { useSettingsSiderContext } from '../useSettingsSiderContext';
-import type { AtomTypeColorMapItem } from '../../../lib/viewer/settings';
-import { buildElementColorRecordFromRows } from '../../../lib/viewer/settings';
+import { buildElementColorRecordFromMap, parseColorMapKey } from '../../ViewerStage/colorMap';
 import { getElementColorHex } from '../../../lib/structure/chem';
 import { getVisualStylePreset } from '../../../lib/viewer/visualStyles';
 import { readApplyAllLayersFlags, writeApplyAllLayersFlags } from '../applyAllStorage';
 
-import { getAtomTypeColorKey } from '../../ViewerStage/colorMap';
+import type { ColorMapRecord } from '../../ViewerStage/colorMap';
 
 const { t } = useI18n();
 const { patchSettings, hasAnyLayer, settings } = useSettingsSiderContext();
@@ -117,6 +116,8 @@ const { patchSettings, hasAnyLayer, settings } = useSettingsSiderContext();
 const viewerApi = computed(() => viewerApiRef.value);
 const layerList = computed(() => viewerApi.value?.layers.value ?? []);
 const activeLayerId = computed(() => viewerApi.value?.activeLayerId.value ?? null);
+const colorKeys = computed(() => viewerApi.value?.activeLayerColorKeys.value ?? []);
+const colorMap = computed(() => viewerApi.value?.activeLayerColorMap.value ?? {});
 const applyToAllLayers = ref(
   settings.value.colors.applyAllLayers ?? readApplyAllLayersFlags().colors ?? true,
 );
@@ -129,10 +130,13 @@ watch(
     if (!v) return;
     const api = viewerApi.value;
     if (!api) return;
-    const rows = api.activeLayerColorMap?.value ?? [];
-    if (rows.length > 0) {
-      api.setAllLayersColorMap(rows);
-      patchSettings({ colors: { data: buildElementColorRecordFromRows(rows) } });
+    const map = api.activeLayerColorMap?.value ?? {};
+    const keys = api.activeLayerColorKeys?.value ?? [];
+    if (keys.length > 0) {
+      api.setAllLayersColorMap(map);
+      patchSettings({
+        colors: { data: buildElementColorRecordFromMap(map, buildElementBaseColorMap(keys)) },
+      });
       api.refreshColorMap({ applyToAll: true });
     }
   },
@@ -153,8 +157,8 @@ const activeLayerInfo = computed(() => {
   return layerList.value.find(l => l.id === id) ?? null;
 });
 
-const colorMapModel = computed<AtomTypeColorMapItem[]>({
-  get: () => (viewerApi.value?.activeLayerColorMap.value as (AtomTypeColorMapItem[] | undefined)) ?? [],
+const colorMapModel = computed<ColorMapRecord>({
+  get: () => colorMap.value,
   set: (v) => {
     if (!viewerApi.value) return;
     if (applyToAllLayers.value) viewerApi.value.setAllLayersColorMap(v);
@@ -162,36 +166,29 @@ const colorMapModel = computed<AtomTypeColorMapItem[]>({
   },
 });
 
-function formatColorKey(row: AtomTypeColorMapItem): string {
-  return getAtomTypeColorKey(row.element, row.typeId);
-}
-
-function buildPresetColorMap(): Record<string, string> {
-  const preset = getVisualStylePreset(settings.value.other.visualStyle ?? 'default');
+function buildElementBaseColorMap(keys: string[]): Record<string, string> {
   const out: Record<string, string> = {};
-  for (const r of preset.colorMapTemplate ?? []) {
-    const key = getAtomTypeColorKey(r.element, r.typeId);
-    if (!key) continue;
-    const c = String(r.color ?? '').trim().toUpperCase();
-    if (!c) continue;
-    out[key] = c;
+  for (const key of keys) {
+    const { element } = parseColorMapKey(key);
+    if (!element || element in out) continue;
+    out[element] = getBaseColorForKey(key);
   }
   return out;
 }
 
-function getBaseColorForRow(row: AtomTypeColorMapItem): string {
+function getBaseColorForKey(key: string): string {
   const styleId = settings.value.other.visualStyle ?? 'default';
+  const { element } = parseColorMapKey(key);
   if (styleId !== 'default') {
-    const key = getAtomTypeColorKey(row.element, row.typeId);
-    const preset = buildPresetColorMap();
-    return preset[key] ?? getElementColorHex(row.element ?? 'E');
+    const preset = getVisualStylePreset(styleId);
+    return preset.colorMapTemplate[element] ?? getElementColorHex(element);
   }
-  return getElementColorHex(row.element ?? 'E');
+  return getElementColorHex(element);
 }
 
-function isRowCustom(row: AtomTypeColorMapItem): boolean {
-  const base = getBaseColorForRow(row);
-  const cur = String(row.color ?? '').trim().toUpperCase();
+function isKeyCustom(key: string, map?: ColorMapRecord): boolean {
+  const base = getBaseColorForKey(key);
+  const cur = String((map ?? colorMap.value)[key] ?? '').trim().toUpperCase();
   return cur !== String(base).trim().toUpperCase();
 }
 
@@ -209,66 +206,46 @@ function colorPickerValue(color: unknown): string {
   return normalizeHexColor(color) ?? '#FFFFFF';
 }
 
-function patchColorAt(idx: number, colorHex: string): void {
-  const rows = colorMapModel.value;
-  if (!rows || idx < 0 || idx >= rows.length) return;
-  const nextRows = rows.map((r, i) =>
-    i === idx
-      ? {
-        ...r,
-        color: colorHex,
-        // Mark as user-customized so future LAMMPS remapping won't overwrite it.
-        isCustom: true,
-      }
-      : r,
-  );
-  colorMapModel.value = nextRows;
-  updateColorTemplate(nextRows);
+function patchColorAt(key: string, colorHex: string): void {
+  if (!key) return;
+  const next = { ...colorMapModel.value, [key]: colorHex };
+  colorMapModel.value = next;
+  updateColorTemplate(next);
   scheduleRefreshColorMap();
 }
 
-function onResetColor(idx: number): void {
-  const rows = colorMapModel.value;
-  if (!rows || idx < 0 || idx >= rows.length) return;
-  const row = rows[idx];
-  const def = getBaseColorForRow(row ?? { element: 'E' } as AtomTypeColorMapItem);
-  const nextRows = rows.map((r, i) =>
-    i === idx
-      ? {
-        ...r,
-        color: def,
-        // Reset to built-in color; treat it as NOT customized.
-        isCustom: false,
-      }
-      : r,
-  );
-  colorMapModel.value = nextRows;
-  updateColorTemplate(nextRows);
+function onResetColor(key: string): void {
+  const def = getBaseColorForKey(key);
+  const next = { ...colorMapModel.value, [key]: def };
+  colorMapModel.value = next;
+  updateColorTemplate(next);
   scheduleRefreshColorMap();
 }
 
-function onColorHexChange(idx: number, v: unknown): void {
+function onColorHexChange(key: string, v: unknown): void {
   const hex = normalizeHexColor(v);
   if (!hex) {
     message.error(t('settings.panel.colors.invalidHex'));
     return;
   }
-  patchColorAt(idx, hex);
+  patchColorAt(key, hex);
 }
 
-function onColorPickerChange(idx: number, v: unknown): void {
+function onColorPickerChange(key: string, v: unknown): void {
   const hex = normalizeHexColor(v);
   if (!hex) return;
-  patchColorAt(idx, hex);
+  patchColorAt(key, hex);
 }
 
-function updateColorTemplate(rows: AtomTypeColorMapItem[]): void {
-  const allMatchBase = rows.every(r => !isRowCustom(r));
+function updateColorTemplate(map: ColorMapRecord): void {
+  const allMatchBase = colorKeys.value.every(k => !isKeyCustom(k, map));
   if (allMatchBase) {
     patchSettings({ colors: { data: {} } });
     return;
   }
-  patchSettings({ colors: { data: buildElementColorRecordFromRows(rows) } });
+  patchSettings({
+    colors: { data: buildElementColorRecordFromMap(map, buildElementBaseColorMap(colorKeys.value)) },
+  });
 }
 
 let refreshTimer: number | null = null;

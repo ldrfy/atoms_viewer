@@ -18,6 +18,17 @@
       </a-typography-text>
     </a-space>
 
+    <a-row justify="space-between" align="middle" class="settings-gap-top-sm">
+      <a-col>
+        <a-typography-text type="secondary">
+          {{ t('settings.panel.lammps.applyAll') }}
+        </a-typography-text>
+      </a-col>
+      <a-col>
+        <a-switch v-model:checked="applyAllLayersModel" />
+      </a-col>
+    </a-row>
+
     <a-form-item :label="t('settings.panel.lammps.mapLabel')" class="settings-gap-top-md">
       <div
         v-for="(row, idx) in lammpsTypeMapModel"
@@ -25,20 +36,13 @@
         class="settings-gap-bottom-sm"
       >
         <a-row :gutter="8" align="middle">
-          <a-col :span="8">
-            <a-input-number
-              :aria-label="t('settings.panel.lammps.typePlaceholder')"
-              :title="t('settings.panel.lammps.typePlaceholder')"
-              :min="1"
-              :step="1"
-              :value="row.typeId"
-              class="settings-full-width"
-              :placeholder="t('settings.panel.lammps.typePlaceholder')"
-              @change="onLammpsTypeId(idx, $event)"
-            />
+          <a-col :span="6">
+            <a-tag class="settings-lammps-type">
+              {{ row.typeId }}
+            </a-tag>
           </a-col>
 
-          <a-col :span="10">
+          <a-col :span="18">
             <a-select
               show-search
               :aria-label="t('settings.panel.lammps.elementPlaceholder')"
@@ -51,37 +55,31 @@
               @change="onLammpsElementChange(idx, $event)"
             />
           </a-col>
-
-          <a-col :span="6">
-            <a-button danger block @click="removeLammpsRow(idx)">
-              {{ t('common.delete') }}
-            </a-button>
-          </a-col>
         </a-row>
       </div>
 
-      <a-row :gutter="8">
-        <a-col :span="12">
-          <a-button block @click="addLammpsRow">
-            {{ t('settings.panel.lammps.addMapping') }}
-          </a-button>
-        </a-col>
-        <a-col :span="12">
-          <a-button block @click="clearLammpsRows">
-            {{ t('settings.panel.lammps.clear') }}
-          </a-button>
-        </a-col>
-      </a-row>
-
       <div class="settings-gap-top-sm">
-        <a-button
-          block
-          type="primary"
-          :disabled="!hasAnyLayer"
-          @click="onRefreshTypeMap"
-        >
-          {{ t('settings.panel.lammps.refresh') }}
-        </a-button>
+        <a-row :gutter="8">
+          <a-col :span="12">
+            <a-button
+              block
+              type="primary"
+              :disabled="!hasAnyLayer"
+              @click="onApplyTypeMap"
+            >
+              {{ t('settings.panel.lammps.apply') }}
+            </a-button>
+          </a-col>
+          <a-col :span="12">
+            <a-button
+              block
+              :disabled="!hasAnyLayer || !hasUndo"
+              @click="onUndoTypeMap"
+            >
+              {{ t('settings.panel.lammps.undo') }}
+            </a-button>
+          </a-col>
+        </a-row>
       </div>
 
       <a-typography-text type="secondary" class="settings-text-secondary-tight">
@@ -92,17 +90,23 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import { viewerApiRef } from '../../../lib/viewer/bridge';
 import { useSettingsSiderContext } from '../useSettingsSiderContext';
-import { ATOMIC_SYMBOLS, normalizeElementSymbol } from '../../../lib/structure/chem';
+import { ATOMIC_SYMBOL_LIST, normalizeElementSymbol } from '../../../lib/structure/chem';
+import { readApplyAllLayersFlags, writeApplyAllLayersFlags } from '../applyAllStorage';
+import {
+  lammpsRecordToRows,
+  lammpsRowsToRecord,
+  type LammpsTypeMapRecord,
+} from '../../../lib/viewer/settings';
 
-type LammpsTypeMapItem = { typeId: number; element: string };
+type LammpsTypeMapRow = { typeId: number; element: string };
 
 const { t } = useI18n();
-const { patchSettings, hasAnyLayer } = useSettingsSiderContext();
+const { patchSettings, hasAnyLayer, settings } = useSettingsSiderContext();
 
 const viewerApi = computed(() => viewerApiRef.value);
 const layerList = computed(() => viewerApi.value?.layers.value ?? []);
@@ -113,13 +117,24 @@ const activeLayerInfo = computed(() => {
   return layerList.value.find(l => l.id === id) ?? null;
 });
 
-const lammpsTypeMapModel = computed<LammpsTypeMapItem[]>({
-  get: () => (viewerApi.value?.activeLayerTypeMap.value as (LammpsTypeMapItem[] | undefined)) ?? [],
-  set: v => viewerApi.value?.setActiveLayerTypeMap(v),
+const activeLayerTypeIds = computed(() => viewerApi.value?.activeLayerTypeIds.value ?? []);
+
+const lammpsTypeMapModel = computed<LammpsTypeMapRow[]>({
+  get: () => {
+    const map = viewerApi.value?.activeLayerTypeMap.value ?? {};
+    return (activeLayerTypeIds.value ?? []).map(tid => ({
+      typeId: tid,
+      element: normalizeElementSymbol(map[String(tid)] ?? '') || 'E',
+    }));
+  },
+  set: (rows) => {
+    const map = lammpsRowsToRecord(rows);
+    viewerApi.value?.setActiveLayerTypeMap(map);
+  },
 });
 
 const atomicOptions = computed(() =>
-  ATOMIC_SYMBOLS.map((symRaw) => {
+  ATOMIC_SYMBOL_LIST.map((symRaw) => {
     const sym = normalizeElementSymbol(symRaw) || 'E';
     return { value: sym, label: sym === 'E' ? 'E (Unknown)' : sym };
   }),
@@ -136,38 +151,38 @@ function filterAtomicOption(
   return value.includes(q) || label.includes(q);
 }
 
-function toInt(v: unknown, fallback: number): number {
-  const n = typeof v === 'number' ? v : Number.parseFloat(String(v ?? ''));
-  if (!Number.isFinite(n)) return fallback;
-  return Math.max(1, Math.floor(n));
-}
-
 function toElement(v: unknown): string {
   return normalizeElementSymbol(String(v ?? '')) || 'E';
 }
 
-function addLammpsRow(): void {
-  const used = new Set(lammpsTypeMapModel.value.map(r => toInt((r as any).typeId, 1)));
-  let next = 1;
-  while (used.has(next)) next += 1;
-  lammpsTypeMapModel.value = [...lammpsTypeMapModel.value, { typeId: next, element: 'E' }];
-}
+const lastApplied = ref<LammpsTypeMapRecord | null>(null);
+const hasUndo = computed(() => Object.keys(lastApplied.value ?? {}).length > 0);
 
-function removeLammpsRow(idx: number): void {
-  lammpsTypeMapModel.value = lammpsTypeMapModel.value.filter((_, i) => i !== idx);
-}
+watch(
+  () => activeLayerId.value,
+  () => {
+    lastApplied.value = { ...(viewerApi.value?.activeLayerTypeMap.value ?? {}) };
+  },
+  { immediate: true },
+);
 
-function clearLammpsRows(): void {
-  lammpsTypeMapModel.value = [];
-  patchSettings({ lammps: [] });
-}
-
-function onLammpsTypeId(idx: number, v: unknown): void {
-  const typeId = toInt(v, 1);
-  lammpsTypeMapModel.value = lammpsTypeMapModel.value.map((row, i) =>
-    i === idx ? { ...row, typeId } : row,
-  );
-}
+const applyAllLayersModel = computed<boolean>({
+  get: () => settings.value.lammps.applyAllLayers
+    ?? readApplyAllLayersFlags().lammps
+    ?? false,
+  set: (v: boolean) => {
+    patchSettings({ lammps: { applyAllLayers: v } });
+    writeApplyAllLayersFlags({
+      ...readApplyAllLayersFlags(),
+      lammps: v,
+    });
+    if (v) {
+      const map = lammpsRowsToRecord(lammpsTypeMapModel.value);
+      patchSettings({ lammps: { data: map } });
+      viewerApi.value?.applyTypeMapToAllLayers?.(map);
+    }
+  },
+});
 
 function onLammpsElementChange(idx: number, v: unknown): void {
   const element = toElement(v);
@@ -176,7 +191,30 @@ function onLammpsElementChange(idx: number, v: unknown): void {
   );
 }
 
-function onRefreshTypeMap(): void {
-  viewerApi.value?.refreshTypeMap();
+function onApplyTypeMap(): void {
+  const map = lammpsRowsToRecord(lammpsTypeMapModel.value);
+  lastApplied.value = { ...map };
+  patchSettings({ lammps: { data: map } });
+  if (applyAllLayersModel.value) {
+    viewerApi.value?.applyTypeMapToAllLayers?.(map);
+  }
+  else {
+    viewerApi.value?.setActiveLayerTypeMap?.(map);
+    viewerApi.value?.refreshTypeMap?.();
+  }
+}
+
+function onUndoTypeMap(): void {
+  if (!lastApplied.value) return;
+  const map = { ...lastApplied.value };
+  lammpsTypeMapModel.value = lammpsRecordToRows(map);
+  patchSettings({ lammps: { data: map } });
+  if (applyAllLayersModel.value) {
+    viewerApi.value?.applyTypeMapToAllLayers?.(map);
+  }
+  else {
+    viewerApi.value?.setActiveLayerTypeMap?.(map);
+    viewerApi.value?.refreshTypeMap?.();
+  }
 }
 </script>

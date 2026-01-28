@@ -1,18 +1,19 @@
 import type { Atom } from '../../lib/structure/types';
-import { getAtomicNumber, getElementColorHex, normalizeElementSymbol } from '../../lib/structure/chem';
-import type { AtomTypeColorMapItem } from '../../lib/viewer/settings';
+import { getElementColorHex, normalizeElementSymbol } from '../../lib/structure/chem';
+
+export type ColorMapRecord = Record<string, string>;
 
 /**
  * Create a stable "color key" for an atom.
  *
  * - Generic formats: use element only, e.g. "C".
- * - LAMMPS: one element can map to multiple typeIds; use "C1", "C2", ...
+ * - LAMMPS: one element can map to multiple typeIds; use "C.1", "C.2", ...
  */
 
 export function getAtomTypeColorKey(element: string, typeId?: number): string {
   const el = normalizeElementSymbol(element) || 'E';
   const tid = typeof typeId === 'number' && Number.isFinite(typeId) ? Math.floor(typeId) : undefined;
-  return tid && tid > 0 ? `${el}${tid}` : el;
+  return tid && tid > 0 ? `${el}.${tid}` : el;
 }
 
 type WantedKey = { element: string; typeId?: number };
@@ -45,91 +46,86 @@ export function collectWantedColorKeysFromAtoms(
 
   const out: WantedKey[] = Array.from(set)
     .map(el => ({ element: el }))
-    .sort((a, b) => {
-      const za = getAtomicNumber(a.element);
-      const zb = getAtomicNumber(b.element);
-      if (za !== zb) return za - zb;
-      return a.element.localeCompare(b.element);
-    });
+    .sort((a, b) => a.element.localeCompare(b.element));
   return out;
 }
 
-export function syncColorMapRowsFromAtoms(
-  existing: AtomTypeColorMapItem[] | undefined,
+export function buildColorMapKeysFromAtoms(
   atoms: Atom[],
   preferTypeId: boolean,
-): AtomTypeColorMapItem[] {
-  // Ensure the editable rows match the atoms present in the layer.
-  // This is called on initial load and when LAMMPS type→element map changes.
-  const old = Array.isArray(existing) ? existing : [];
+): string[] {
   const wanted = collectWantedColorKeysFromAtoms(atoms, preferTypeId);
+  return wanted.map(w =>
+    getAtomTypeColorKey(w.element, preferTypeId ? w.typeId : undefined),
+  );
+}
 
-  const out: AtomTypeColorMapItem[] = [];
-  for (const w of wanted) {
-    const el = normalizeElementSymbol(w.element) || 'E';
-
-    let prev: AtomTypeColorMapItem | undefined;
-    if (preferTypeId && w.typeId != null) {
-      prev = old.find(r => (r as any).typeId === w.typeId);
-    }
-    else {
-      prev = old.find(r => (normalizeElementSymbol(r.element) || 'E') === el);
-    }
-
-    const prevEl = prev ? (normalizeElementSymbol(prev.element) || 'E') : null;
-    const elementChanged = prev != null && prevEl !== el;
-
-    // Reuse any existing custom color for the same element, regardless of typeId.
-    const elementCustom = old.find(
-      r => (normalizeElementSymbol(r.element) || 'E') === el && r.isCustom,
-    );
-
-    let isCustom = false;
-    let nextColor = getElementColorHex(el);
-
-    if (!prev || elementChanged) {
-      if (elementCustom?.color) {
-        isCustom = true;
-        nextColor = elementCustom.color;
-      }
-    }
-    else if (prev?.isCustom) {
-      isCustom = true;
-      nextColor = prev.color ?? getElementColorHex(el);
-    }
-    else {
-      nextColor = prev?.color ?? getElementColorHex(el);
-    }
-
-    out.push({
-      element: el,
-      typeId: w.typeId,
-      color: nextColor,
-      isCustom,
-    });
+export function buildColorMapFromAtoms(
+  existing: ColorMapRecord | undefined,
+  atoms: Atom[],
+  preferTypeId: boolean,
+): ColorMapRecord {
+  const data = existing ?? {};
+  const keys = buildColorMapKeysFromAtoms(atoms, preferTypeId);
+  const out: ColorMapRecord = {};
+  for (const key of keys) {
+    const { element } = parseAtomTypeColorKey(key);
+    const color = data[key] ?? data[element] ?? getElementColorHex(element);
+    if (!color) continue;
+    out[key] = color;
   }
   return out;
 }
 
+export function syncColorMapRecordFromAtoms(
+  existing: ColorMapRecord | undefined,
+  atoms: Atom[],
+  preferTypeId: boolean,
+): ColorMapRecord {
+  return buildColorMapFromAtoms(existing, atoms, preferTypeId);
+}
+
 export function buildColorMapRecord(
-  rows: AtomTypeColorMapItem[] | undefined,
-): Record<string, string> {
-  // Convert user-facing rows into a dictionary used by the renderer.
-  const out: Record<string, string> = {};
-  for (const r of rows ?? []) {
-    const key = getAtomTypeColorKey(r.element, r.typeId);
-    const c = String(r.color ?? '').trim();
+  rows: ColorMapRecord | undefined,
+): ColorMapRecord {
+  const out: ColorMapRecord = {};
+  for (const [key, value] of Object.entries(rows ?? {})) {
+    const c = String(value ?? '').trim();
     if (!c) continue;
     out[key] = c;
   }
   return out;
 }
 
+export function buildElementColorRecordFromMap(
+  map: ColorMapRecord | undefined,
+  baseByElement?: Record<string, string>,
+): ColorMapRecord {
+  const out: ColorMapRecord = {};
+  const data = map ?? {};
+  for (const [key, value] of Object.entries(data)) {
+    const color = String(value ?? '').trim();
+    if (!color) continue;
+    const { element, typeId } = parseAtomTypeColorKey(key);
+    if (!element) continue;
+    if (baseByElement) {
+      const base = String(baseByElement[element] ?? '').trim();
+      if (base && base.toUpperCase() === color.toUpperCase()) continue;
+    }
+    if (typeId == null && !(element in out)) {
+      out[element] = color;
+      continue;
+    }
+    if (!(element in out)) {
+      out[element] = color;
+    }
+  }
+  return out;
+}
+
 function parseAtomTypeColorKey(key: string): { element: string; typeId?: number } {
   const trimmed = String(key ?? '').trim();
-  const match = trimmed.match(/^([A-Za-z]+)(\d+)?$/);
-  const elementRaw = match?.[1] ?? trimmed;
-  const typeIdRaw = match?.[2] ?? '';
+  const [elementRaw = '', typeIdRaw] = trimmed.split('.', 2);
   const element = normalizeElementSymbol(elementRaw) || 'E';
   const typeId = typeIdRaw ? Number.parseInt(typeIdRaw, 10) : undefined;
   return {
@@ -138,15 +134,22 @@ function parseAtomTypeColorKey(key: string): { element: string; typeId?: number 
   };
 }
 
+export function parseColorMapKey(key: string): { element: string; typeId?: number } {
+  return parseAtomTypeColorKey(key);
+}
+
 export function buildCustomColorMapRecord(
-  rows: AtomTypeColorMapItem[] | undefined,
-): Record<string, string> {
-  const out: Record<string, string> = {};
-  for (const r of rows ?? []) {
-    if (!r.isCustom) continue;
-    const key = getAtomTypeColorKey(r.element, r.typeId);
-    const c = String(r.color ?? '').trim();
+  rows: ColorMapRecord | undefined,
+  baseByElement: Record<string, string>,
+): ColorMapRecord {
+  const out: ColorMapRecord = {};
+  const record = buildColorMapRecord(rows);
+  for (const [key, value] of Object.entries(record)) {
+    const c = String(value ?? '').trim();
     if (!c) continue;
+    const { element } = parseAtomTypeColorKey(key);
+    const base = String(baseByElement[element] ?? getElementColorHex(element)).trim();
+    if (base && base.toUpperCase() === c.toUpperCase()) continue;
     out[key] = c;
   }
   return out;
@@ -154,18 +157,6 @@ export function buildCustomColorMapRecord(
 
 export function parseColorMapRecord(
   data: Record<string, string> | undefined,
-): AtomTypeColorMapItem[] {
-  const out: AtomTypeColorMapItem[] = [];
-  for (const [key, value] of Object.entries(data ?? {})) {
-    const color = String(value ?? '').trim();
-    if (!color) continue;
-    const { element, typeId } = parseAtomTypeColorKey(key);
-    out.push({
-      element,
-      typeId,
-      color,
-      isCustom: true,
-    });
-  }
-  return out;
+): ColorMapRecord {
+  return buildColorMapRecord(data);
 }

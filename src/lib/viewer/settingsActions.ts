@@ -1,6 +1,5 @@
 import type { ViewerPublicApi } from './bridge';
 import type { ViewerSettings } from './settings';
-import { buildColorTemplateRows } from './settings';
 import type { LayerSnapshot, LayersSnapshot, LayerSortBy } from './sessionTypes';
 import type { SupportLocale } from '../../i18n';
 
@@ -20,6 +19,7 @@ export type ParsedSettingsImport = {
   applyAllLayers: {
     details: boolean;
     colors: boolean;
+    lammps: boolean;
   };
   animState: {
     frameIndex: number;
@@ -85,7 +85,7 @@ export async function applyDefaultSettings(params: {
   );
 
   viewerApi.resetAllLayersTypeMapToDefaults({
-    templateRows: [...(defaults.lammps ?? [])],
+    templateMap: defaults.lammps.data,
     useAtomDefaults: false,
   });
   viewerApi.resetAllLayersColorMapToDefaults();
@@ -114,9 +114,11 @@ export async function buildSettingsExportJson(params: {
   applyAllLayers: {
     details: boolean;
     colors: boolean;
+    lammps: boolean;
   };
+  fullSettings?: boolean;
 }): Promise<{ json: string; fileStem: string }> {
-  const { settings, viewerApi, locale, applyAllLayers } = params;
+  const { settings, viewerApi, locale, applyAllLayers, fullSettings } = params;
   const data = settings;
   const layerSnapshots: LayerSnapshot[] = viewerApi?.getLayerSnapshots
     ? await viewerApi.getLayerSnapshots()
@@ -131,6 +133,7 @@ export async function buildSettingsExportJson(params: {
     applyAllLayers,
     layersSortBy,
     viewerApi?.activeLayerId?.value ?? null,
+    !fullSettings,
   );
   const json = JSON.stringify(payload, null, 2);
   const fileStem = viewerApi?.parseInfo?.fileName ?? 'atoms-viewer';
@@ -163,6 +166,9 @@ export function parseSettingsImport(raw: string): ParsedSettingsImport {
   const applyAllLayers = {
     details: typeof details?.applyAllLayers === 'boolean' ? details.applyAllLayers : true,
     colors: typeof colors?.applyAllLayers === 'boolean' ? colors.applyAllLayers : true,
+    lammps: typeof (categorized.lammps as any)?.applyAllLayers === 'boolean'
+      ? (categorized.lammps as any).applyAllLayers
+      : false,
   };
 
   const normalizedColors: Record<string, string> = {};
@@ -181,6 +187,13 @@ export function parseSettingsImport(raw: string): ParsedSettingsImport {
     categorized.colors = {
       applyAllLayers: applyAllLayers.colors,
       data: normalizedColors,
+    };
+  }
+  if (categorized.lammps && typeof categorized.lammps === 'object') {
+    const raw = categorized.lammps as any;
+    categorized.lammps = {
+      applyAllLayers: applyAllLayers.lammps,
+      data: (raw.data && typeof raw.data === 'object') ? raw.data : {},
     };
   }
 
@@ -251,17 +264,16 @@ export async function applyImportedSettings(params: {
     },
     { applyToAll: true },
   );
-  const colorRows = buildColorTemplateRows(nextSettings.colors.data);
   if (parsed.applyAllLayers.colors) {
-    viewerApi.setAllLayersColorMap(colorRows);
+    viewerApi.setAllLayersColorMap(nextSettings.colors.data);
     viewerApi.refreshColorMap({ applyToAll: true });
   }
   else {
-    viewerApi.setActiveLayerColorMap(colorRows);
+    viewerApi.setActiveLayerColorMap(nextSettings.colors.data);
     viewerApi.refreshColorMap({ applyToAll: false });
   }
   viewerApi.resetAllLayersTypeMapToDefaults({
-    templateRows: [...(nextSettings.lammps ?? [])],
+    templateMap: nextSettings.lammps.data,
     useAtomDefaults: false,
   });
   viewerApi.applyAnimState?.(parsed.animState);

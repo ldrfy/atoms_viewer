@@ -7,7 +7,7 @@ export type CategorizedSettings = ViewerSettingsCategorized;
 export function buildCategorizedSettings(
   settings: ViewerSettings,
   animState?: Partial<NonNullable<ViewerSettingsCategorized['anim']>>,
-  applyAllLayers?: Partial<{ details: boolean; colors: boolean }>,
+  applyAllLayers?: Partial<{ details: boolean; colors: boolean; lammps: boolean }>,
 ): ViewerSettingsCategorized {
   const nextAnim = {
     ...settings.anim,
@@ -21,7 +21,10 @@ export function buildCategorizedSettings(
       rotationDeg: { ...settings.view.rotationDeg },
       viewPresets: settings.view.viewPresets ? [...settings.view.viewPresets] : [],
     },
-    lammps: (settings.lammps ?? []).map(r => ({ ...r })),
+    lammps: {
+      applyAllLayers: applyAllLayers?.lammps ?? settings.lammps.applyAllLayers,
+      data: { ...(settings.lammps.data ?? {}) },
+    },
     details: {
       ...settings.details,
       applyAllLayers: applyAllLayers?.details ?? settings.details.applyAllLayers,
@@ -50,7 +53,10 @@ export function mergeCategorizedSettings(
         ? [...DEFAULT_SETTINGS.view.viewPresets]
         : [],
     },
-    lammps: [...(DEFAULT_SETTINGS.lammps ?? [])],
+    lammps: {
+      applyAllLayers: DEFAULT_SETTINGS.lammps.applyAllLayers,
+      data: { ...(DEFAULT_SETTINGS.lammps.data ?? {}) },
+    },
     details: { ...DEFAULT_SETTINGS.details },
     colors: {
       applyAllLayers: DEFAULT_SETTINGS.colors.applyAllLayers,
@@ -88,7 +94,11 @@ export function mergeCategorizedSettings(
   }
 
   if (apply.lammps) {
-    base.lammps = apply.lammps.map(r => ({ ...r }));
+    base.lammps = {
+      ...base.lammps,
+      ...apply.lammps,
+      data: apply.lammps.data ? { ...apply.lammps.data } : base.lammps.data,
+    };
   }
 
   if (apply.details) {
@@ -136,12 +146,14 @@ function arraysEqual<T>(a: T[] | undefined, b: T[] | undefined): boolean {
 
 function lammpsEqual(a: CategorizedSettings['lammps'], b: CategorizedSettings['lammps']): boolean {
   if (a === b) return true;
-  const aa = a ?? [];
-  const bb = b ?? [];
-  if (aa.length !== bb.length) return false;
-  for (let i = 0; i < aa.length; i += 1) {
-    if (aa[i]?.typeId !== bb[i]?.typeId) return false;
-    if (aa[i]?.element !== bb[i]?.element) return false;
+  const aa = a?.data ?? {};
+  const bb = b?.data ?? {};
+  if ((a?.applyAllLayers ?? false) !== (b?.applyAllLayers ?? false)) return false;
+  const aKeys = Object.keys(aa);
+  const bKeys = Object.keys(bb);
+  if (aKeys.length !== bKeys.length) return false;
+  for (const k of aKeys) {
+    if (aa[k] !== bb[k]) return false;
   }
   return true;
 }
@@ -187,7 +199,10 @@ export function pruneDefaultSettings(
   if (Object.keys(view).length > 0) out.view = view as ViewerSettingsCategorized['view'];
 
   if (!lammpsEqual(input.lammps, d.lammps)) {
-    out.lammps = (input.lammps ?? []).map(r => ({ ...r }));
+    out.lammps = {
+      applyAllLayers: input.lammps.applyAllLayers,
+      data: { ...(input.lammps.data ?? {}) },
+    };
   }
 
   const details: Partial<ViewerSettingsCategorized['details']> = {};
@@ -231,7 +246,6 @@ export function pruneDefaultSettings(
   if (input.other.visualStyle !== d.other.visualStyle) other.visualStyle = input.other.visualStyle;
   if (input.other.modelLightIntensity !== d.other.modelLightIntensity) other.modelLightIntensity = input.other.modelLightIntensity;
   if (input.other.showAxes !== d.other.showAxes) other.showAxes = input.other.showAxes;
-  if (input.other.autoRotateOnLoad !== d.other.autoRotateOnLoad) other.autoRotateOnLoad = input.other.autoRotateOnLoad;
   if (input.other.refreshBondsOnPlay !== d.other.refreshBondsOnPlay) other.refreshBondsOnPlay = input.other.refreshBondsOnPlay;
   if (input.other.frame_rate !== d.other.frame_rate) other.frame_rate = input.other.frame_rate;
   if (Object.keys(other).length > 0) out.other = other as ViewerSettingsCategorized['other'];

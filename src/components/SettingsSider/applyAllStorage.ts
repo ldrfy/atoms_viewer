@@ -1,10 +1,12 @@
 export type ApplyAllLayersFlags = {
   details?: boolean;
   colors?: boolean;
+  lammps?: boolean;
 };
 
 const APPLY_ALL_DETAILS_KEY = 'settings.details.applyAllLayers';
 const APPLY_ALL_COLORS_KEY = 'settings.colors.applyAllLayers';
+const APPLY_ALL_LAMMPS_KEY = 'settings.lammps.applyAllLayers';
 
 function readFlag(key: string): boolean | undefined {
   try {
@@ -32,10 +34,12 @@ export function readApplyAllLayersFlags(): ApplyAllLayersFlags {
   return {
     details: readFlag(APPLY_ALL_DETAILS_KEY),
     colors: readFlag(APPLY_ALL_COLORS_KEY),
+    lammps: readFlag(APPLY_ALL_LAMMPS_KEY),
   };
 }
 
 export function writeApplyAllLayersFlags(flags: ApplyAllLayersFlags): void {
   writeFlag(APPLY_ALL_DETAILS_KEY, flags.details);
   writeFlag(APPLY_ALL_COLORS_KEY, flags.colors);
+  writeFlag(APPLY_ALL_LAMMPS_KEY, flags.lammps);
 }

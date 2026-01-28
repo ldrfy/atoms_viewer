@@ -1,5 +1,5 @@
 import type {
-  LammpsTypeMapItem,
+  LammpsTypeMapRecord,
   DetailsSettingsGroup,
   ViewerSettings,
 } from './settings';
@@ -27,7 +27,9 @@ export type LayerSnapshot = {
     data?: Record<string, string>;
   };
   /** Per-layer LAMMPS type mapping */
-  lammps?: LammpsTypeMapItem[];
+  lammps?: {
+    data?: LammpsTypeMapRecord;
+  };
 };
 
 export type LayerSortBy = 'time,ASC' | 'time,DESC' | 'name,ASC' | 'name,DESC';

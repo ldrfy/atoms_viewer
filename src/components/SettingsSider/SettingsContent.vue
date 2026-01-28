@@ -1,61 +1,76 @@
 <template>
-  <div class="settings-header">
-    <!-- Mobile only: grab handle -->
-    <div
-      v-if="showGrab"
-      class="settings-grab"
-      aria-label="resize"
-      :title="t('common.resize')"
-      role="button"
-      tabindex="0"
-      @pointerdown.stop.prevent="onResizeStart"
-    >
-      <div class="settings-grab-bar" />
+  <div class="settings-content">
+    <div class="settings-header">
+      <!-- Mobile only: grab handle -->
+      <div
+        v-if="showGrab"
+        class="settings-grab"
+        aria-label="resize"
+        :title="t('common.resize')"
+        role="button"
+        tabindex="0"
+        @pointerdown.stop.prevent="onResizeStart"
+      >
+        <div class="settings-grab-bar" />
+      </div>
+
+      <div class="settings-header-row">
+        <a-typography-text strong>
+          {{ t('settings.title') }}
+        </a-typography-text>
+
+        <a-button
+          type="text"
+          size="small"
+          aria-label="close"
+          :title="t('common.close')"
+          @click="emit('close')"
+        >
+          <CloseOutlined />
+        </a-button>
+      </div>
     </div>
 
-    <div class="settings-header-row">
-      <a-typography-text strong>
-        {{ t('settings.title') }}
-      </a-typography-text>
-
-      <a-button
-        type="text"
-        size="small"
-        aria-label="close"
-        :title="t('common.close')"
-        @click="emit('close')"
+    <div class="settings-body">
+      <a-collapse
+        v-model:active-key="activeKeyProxy"
+        ghost
+        class="settings-collapse"
+        expand-icon-position="end"
       >
-        <CloseOutlined />
-      </a-button>
+        <a-collapse-panel
+          v-for="p in panels"
+          :key="p.key"
+        >
+          <template #header>
+            <span class="settings-panel-header">
+              <component :is="p.icon" class="settings-panel-icon" />
+              <a-typography-text strong>
+                {{ t(p.headerKey) }}
+              </a-typography-text>
+              <span v-if="isPanelDirty(p.key)" class="settings-panel-dirty" aria-hidden="true" />
+            </span>
+          </template>
+          <component :is="p.comp" />
+        </a-collapse-panel>
+      </a-collapse>
+
+      <div class="settings-clear-storage settings-gap-top-md">
+        <a-button
+          block
+          danger
+          @click="onClearStorage"
+        >
+          {{ t('settings.clearStorage') }}
+        </a-button>
+        <a-typography-text type="secondary" class="settings-text-secondary">
+          {{ t('settings.clearStorageHint') }}
+        </a-typography-text>
+      </div>
     </div>
-  </div>
 
-  <div class="settings-body">
-    <a-collapse
-      v-model:active-key="activeKeyProxy"
-      ghost
-      class="settings-collapse"
-      expand-icon-position="end"
-    >
-      <a-collapse-panel
-        v-for="p in panels"
-        :key="p.key"
-      >
-        <template #header>
-          <span class="settings-panel-header">
-            <component :is="p.icon" class="settings-panel-icon" />
-            <a-typography-text strong>
-              {{ t(p.headerKey) }}
-            </a-typography-text>
-            <span v-if="isPanelDirty(p.key)" class="settings-panel-dirty" aria-hidden="true" />
-          </span>
-        </template>
-        <component :is="p.comp" />
-      </a-collapse-panel>
-    </a-collapse>
-
-    <div class="settings-build-info">
-      <a-typography-text type="secondary" class="settings-text-secondary">
+    <div class="settings-footer">
+      <a-typography-text type="secondary" class="settings-text-secondary settings-build-text">
         {{ t('settings.buildTime') }} {{ buildTimeText }}
       </a-typography-text>
     </div>
@@ -63,7 +78,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, provide, reactive, watch } from 'vue';
+import { computed, provide, reactive, watch, nextTick } from 'vue';
 import { useI18n } from 'vue-i18n';
 import {
   AppstoreOutlined,
@@ -76,6 +91,7 @@ import {
   SwapOutlined,
   SyncOutlined,
 } from '@ant-design/icons-vue';
+import { Modal } from 'ant-design-vue';
 
 import FilesPanel from './panels/FilesPanel.vue';
 import LayersPanel from './panels/LayersPanel.vue';
@@ -90,13 +106,17 @@ import {
   DEFAULT_DETAILS,
 } from '../../lib/viewer/settings';
 import { useSettingsSiderContext } from './useSettingsSiderContext';
+import { useSettingsSiderControlContext } from './useSettingsSiderControlContext';
 import { settingsSiderDirtyContextKey, settingsSiderDerivedContextKey } from './context';
 import { viewerApiRef } from '../../lib/viewer/bridge';
+import { parseColorMapKey } from '../ViewerStage/colorMap';
 import { APP_BUILD_TIME } from '../../lib/appMeta';
 import { isLammpsDumpFormat } from '../../lib/structure/parsers/lammpsDump';
 import { isLammpsDataFormat } from '../../lib/structure/parsers/lammpsData';
+import { getElementColorHex } from '../../lib/structure/chem';
 import { getVisualStylePreset } from '../../lib/viewer/visualStyles';
 import { PANEL_KEYS, PANEL_HEADER_KEYS } from '../../lib/viewer/panelKeys';
+import { clearAllSettings } from '../../lib/viewer/settingsActions';
 
 const props = withDefaults(
   defineProps<{
@@ -116,6 +136,7 @@ const emit = defineEmits<{
 
 const { t, locale } = useI18n();
 const { settings } = useSettingsSiderContext();
+const { replaceSettings, notifyClearStorageUi } = useSettingsSiderControlContext();
 
 const viewerApi = computed(() => viewerApiRef.value);
 const layerList = computed(() => viewerApi.value?.layers.value ?? []);
@@ -206,7 +227,6 @@ const otherDirty = computed(() => {
     settings.value.other.showAxes !== DEFAULT_SETTINGS.other.showAxes
     || settings.value.other.refreshBondsOnPlay !== DEFAULT_SETTINGS.other.refreshBondsOnPlay
     || settings.value.other.frame_rate !== DEFAULT_SETTINGS.other.frame_rate
-    || settings.value.other.autoRotateOnLoad !== DEFAULT_SETTINGS.other.autoRotateOnLoad
     || settings.value.other.themeMode !== DEFAULT_SETTINGS.other.themeMode
     || settings.value.other.visualStyle !== DEFAULT_SETTINGS.other.visualStyle
     || settings.value.other.modelLightIntensity !== styleBase.modelLightIntensity
@@ -236,15 +256,31 @@ const colorsDirty = computed(() => {
   const applyAll = cur.applyAllLayers ?? DEFAULT_SETTINGS.colors.applyAllLayers ?? true;
   const flagDirty = applyAll
     !== (DEFAULT_SETTINGS.colors.applyAllLayers ?? true);
-  const layerDirty = (viewerApi.value?.activeLayerColorMap?.value ?? []).some(r => !!r.isCustom);
-  return flagDirty || layerDirty;
+  const visualStyle = settings.value.other.visualStyle ?? DEFAULT_SETTINGS.other.visualStyle;
+  const expected = visualStyle === 'default'
+    ? {}
+    : { ...getVisualStylePreset(visualStyle).colorMapTemplate };
+  const dataDirty = Object.keys(cur.data ?? {}).length > 0;
+  const layerRecord = viewerApi.value?.activeLayerColorMap?.value ?? {};
+  let layerDirty = false;
+  for (const [key, value] of Object.entries(layerRecord)) {
+    const { element } = parseColorMapKey(key);
+    if (!element) continue;
+    const base = expected[element] ?? getElementColorHex(element);
+    const curColor = String(value ?? '').trim().toUpperCase();
+    if (curColor && curColor !== String(base).trim().toUpperCase()) {
+      layerDirty = true;
+      break;
+    }
+  }
+  return flagDirty || dataDirty || layerDirty;
 });
 
 function hasCustomTypeMap(): boolean {
-  const template = settings.value.lammps ?? [];
-  const rows = viewerApi.value?.activeLayerTypeMap?.value ?? [];
-  const all = [...template, ...rows];
-  return all.some(r => (r.element ?? '').toString().trim().toUpperCase() !== 'E');
+  const template = settings.value.lammps.data ?? {};
+  const map = viewerApi.value?.activeLayerTypeMap?.value ?? {};
+  const merged = { ...template, ...map };
+  return Object.values(merged).some(v => String(v ?? '').trim().toUpperCase() !== 'E');
 }
 
 function isTypeMapApplied(): boolean {
@@ -316,6 +352,25 @@ watch(
 
 function onResizeStart(ev: PointerEvent): void {
   emit('resize-start', ev);
+}
+
+function onClearStorage(): void {
+  Modal.confirm({
+    title: t('settings.clearStorageConfirmTitle'),
+    content: t('settings.clearStorageConfirmBody'),
+    centered: true,
+    okText: t('common.confirm'),
+    cancelText: t('common.cancel'),
+    onOk: async () => {
+      await clearAllSettings({
+        currentSettings: settings.value,
+        viewerApi: viewerApi.value,
+        replaceSettings,
+        nextTick,
+        onAfterClear: notifyClearStorageUi,
+      });
+    },
+  });
 }
 
 </script>

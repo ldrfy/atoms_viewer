@@ -21,7 +21,10 @@ export function buildDefaultSettings(): ViewerSettings {
         ? [...DEFAULT_SETTINGS.view.viewPresets]
         : [],
     },
-    lammps: [...(DEFAULT_SETTINGS.lammps ?? [])],
+    lammps: {
+      applyAllLayers: DEFAULT_SETTINGS.lammps.applyAllLayers,
+      data: { ...(DEFAULT_SETTINGS.lammps.data ?? {}) },
+    },
     details: { ...DEFAULT_SETTINGS.details },
     colors: {
       applyAllLayers: DEFAULT_SETTINGS.colors.applyAllLayers,
@@ -43,7 +46,8 @@ export function loadSettingsFromStorage(): ViewerSettings {
 
     const parsed = JSON.parse(raw) as ViewerSettings;
     if (!parsed || typeof parsed !== 'object') return buildDefaultSettings();
-    return mergeCategorizedSettings(parsed as any);
+    const next = mergeCategorizedSettings(parsed as any);
+    return next;
   }
   catch {
     return buildDefaultSettings();
@@ -51,8 +55,8 @@ export function loadSettingsFromStorage(): ViewerSettings {
 }
 
 /**
- * Save settings to localStorage (system auto-rotate is never persisted).
- * 保存设置到本地（系统自动启用旋转不会持久化）。
+ * Save settings to localStorage.
+ * 保存设置到本地。
  */
 export function saveSettingsToStorage(settings: ViewerSettings): void {
   try {
@@ -64,7 +68,10 @@ export function saveSettingsToStorage(settings: ViewerSettings): void {
         rotationDeg: { ...settings.view.rotationDeg },
         viewPresets: settings.view.viewPresets ? [...settings.view.viewPresets] : [],
       },
-      lammps: [...(settings.lammps ?? [])],
+      lammps: {
+        applyAllLayers: settings.lammps.applyAllLayers,
+        data: { ...(settings.lammps.data ?? {}) },
+      },
       details: { ...settings.details },
       colors: {
         applyAllLayers: settings.colors.applyAllLayers,

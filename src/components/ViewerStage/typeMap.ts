@@ -36,11 +36,15 @@ export function mergeTypeMap(
   defaults?: Record<number, string>,
 ): LammpsTypeMapRow[] {
   const base = normalizeTypeMapRows(existing);
+  const detectedSet = new Set(
+    (detected ?? []).map(t => Math.max(1, Math.floor(t))).filter(t => Number.isFinite(t) && t > 0),
+  );
 
   // 用 Map 便于升级/插入
   const map = new Map<number, LammpsTypeMapRow>();
   for (const r of base) {
     const tid = Math.max(1, Math.floor(r.typeId));
+    if (detectedSet.size > 0 && !detectedSet.has(tid)) continue;
     map.set(tid, { typeId: tid, element: r.element });
   }
 

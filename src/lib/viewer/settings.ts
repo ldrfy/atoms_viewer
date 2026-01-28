@@ -2,31 +2,7 @@ import type { ViewPreset } from './viewPresets';
 import type { ThemeMode } from '../../theme/mode';
 import type { AutoRotatePresetId } from './autoRotate';
 import { normalizeElementSymbol } from '../structure/chem';
-export type LammpsTypeMapItem = {
-  typeId: number;
-  element: string;
-};
-
-/**
- * Per-layer atom color mapping entry.
- *
- * - Common formats: element only (e.g. "C")
- * - LAMMPS with typeId mapping: element + typeId (e.g. "C1", "C2")
- */
-export type AtomTypeColorMapItem = {
-  element: string;
-  /** Optional; present when the source provides typeId (LAMMPS, etc.). */
-  typeId?: number;
-  /** Hex color string, e.g. "#RRGGBB". */
-  color: string;
-  /**
-   * Whether the color has been explicitly customized by the user.
-   *
-   * If false/undefined, the row is treated as "auto" and will follow built-in
-   * element colors when the LAMMPS type→element mapping changes.
-   */
-  isCustom?: boolean;
-};
+export type LammpsTypeMapRecord = Record<string, string>;
 
 export type RotationDeg = {
   x: number;
@@ -132,8 +108,8 @@ export const DEFAULT_DISPLAY: DisplaySettingsGroup = {
   dualViewSplit: 0.5,
 };
 
-export const DEFAULT_TYPE_MAP: LammpsTypeMapItem[] = [];
-export const DEFAULT_COLOR_MAP: AtomTypeColorMapItem[] = [];
+export const DEFAULT_TYPE_MAP: LammpsTypeMapRecord = {};
+export const DEFAULT_COLOR_MAP: Record<string, string> = {};
 
 export type ColorsSettingsGroup = {
   applyAllLayers: boolean;
@@ -144,8 +120,14 @@ export const DEFAULT_COLORS: ColorsSettingsGroup = {
   data: {},
 };
 
-export type LammpsSettingsGroup = LammpsTypeMapItem[];
-export const DEFAULT_LAMMPS: LammpsSettingsGroup = [];
+export type LammpsSettingsGroup = {
+  applyAllLayers: boolean;
+  data: LammpsTypeMapRecord;
+};
+export const DEFAULT_LAMMPS: LammpsSettingsGroup = {
+  applyAllLayers: false,
+  data: {},
+};
 
 export type OtherSettingsGroup = {
   showAxes: boolean;
@@ -153,7 +135,6 @@ export type OtherSettingsGroup = {
   themeReadabilityCheckOnOpen?: boolean;
   modelLightIntensity: number;
   frame_rate: number;
-  autoRotateOnLoad: boolean;
   themeMode: ThemeMode;
   visualStyle: VisualStyleId;
 };
@@ -163,7 +144,6 @@ export const DEFAULT_OTHER: OtherSettingsGroup = {
   themeReadabilityCheckOnOpen: true,
   modelLightIntensity: 1.5,
   frame_rate: 60,
-  autoRotateOnLoad: true,
   themeMode: 'system',
   visualStyle: 'default',
 };
@@ -200,6 +180,36 @@ export const DEFAULT_SETTINGS: ViewerSettings = {
   other: DEFAULT_OTHER,
 };
 
+type LammpsTypeMapRow = { typeId: number; element: string };
+
+export function lammpsRecordToRows(
+  data?: LammpsTypeMapRecord,
+): LammpsTypeMapRow[] {
+  if (!data || typeof data !== 'object') return [];
+  const rows: LammpsTypeMapRow[] = [];
+  for (const [key, val] of Object.entries(data)) {
+    const tid = Math.max(1, Math.floor(Number.parseFloat(String(key))));
+    if (!Number.isFinite(tid)) continue;
+    const el = normalizeElementSymbol(String(val ?? '')) || 'E';
+    rows.push({ typeId: tid, element: el });
+  }
+  rows.sort((a, b) => a.typeId - b.typeId);
+  return rows;
+}
+
+export function lammpsRowsToRecord(
+  rows?: LammpsTypeMapRow[],
+): LammpsTypeMapRecord {
+  const out: LammpsTypeMapRecord = {};
+  for (const row of rows ?? []) {
+    const tid = Math.max(1, Math.floor(row.typeId));
+    if (!Number.isFinite(tid)) continue;
+    const el = normalizeElementSymbol(String(row.element ?? '')) || 'E';
+    out[String(tid)] = el;
+  }
+  return out;
+}
+
 /**
  * 判断元素映射是否为未知占位符（E）
  *
@@ -222,50 +232,18 @@ function isUnknownElement(element: string | undefined | null): boolean {
  *   boolean: true 表示存在未完成映射（需要用户补全）
  */
 export function hasUnknownElementMappingForTypeIds(
-  rows: LammpsTypeMapItem[],
+  map: LammpsTypeMapRecord,
   typeIds: number[],
 ): boolean {
   if (typeIds.length === 0) return false;
-
-  const set = new Set<number>(typeIds);
-  for (const r of rows) {
-    if (!set.has(r.typeId)) continue;
-    if (isUnknownElement(r.element)) return true;
+  const source = map ?? {};
+  for (const tid0 of typeIds) {
+    const tid = Math.max(1, Math.floor(tid0));
+    if (!Number.isFinite(tid)) continue;
+    const val = source[String(tid)];
+    if (isUnknownElement(val) || val == null) return true;
   }
   return false;
-}
-
-export function buildColorTemplateRows(
-  data: Record<string, string> | undefined,
-): AtomTypeColorMapItem[] {
-  const out: AtomTypeColorMapItem[] = [];
-  for (const [key, value] of Object.entries(data ?? {})) {
-    const element = normalizeElementSymbol(key) || '';
-    if (!element) continue;
-    const color = String(value ?? '').trim();
-    if (!color) continue;
-    out.push({
-      element,
-      color,
-      isCustom: true,
-    });
-  }
-  return out;
-}
-
-export function buildElementColorRecordFromRows(
-  rows: AtomTypeColorMapItem[] | undefined,
-): Record<string, string> {
-  const out: Record<string, string> = {};
-  for (const row of rows ?? []) {
-    if (!row.isCustom) continue;
-    const element = normalizeElementSymbol(row.element) || '';
-    if (!element) continue;
-    const color = String(row.color ?? '').trim();
-    if (!color) continue;
-    out[element] = color;
-  }
-  return out;
 }
 
 /**

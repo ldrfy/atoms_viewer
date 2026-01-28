@@ -123,9 +123,6 @@
 
                             <div class="atom-meta">
                               <a-typography-text type="secondary">
-                                Z={{ item.atomicNumber }}
-                              </a-typography-text>
-                              <a-typography-text type="secondary">
                                 idx={{ item.atomIndex + 1 }}
                               </a-typography-text>
                               <a-typography-text v-if="item.id != null" type="secondary">

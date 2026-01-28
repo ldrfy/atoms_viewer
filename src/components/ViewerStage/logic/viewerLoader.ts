@@ -5,16 +5,19 @@ import { message } from 'ant-design-vue';
 
 import type {
   ViewerSettings,
-  LammpsTypeMapItem,
-  AtomTypeColorMapItem,
+  LammpsTypeMapRecord,
   OpenSettingsPayload,
 } from '../../../lib/viewer/settings';
 import type { SettingsPatch } from '../../../lib/viewer/mergeSettings';
 import {
   hasUnknownElementMappingForTypeIds,
   DEFAULT_DETAILS,
-  buildElementColorRecordFromRows,
+  lammpsRecordToRows,
+  lammpsRowsToRecord,
 } from '../../../lib/viewer/settings';
+import { getElementColorHex, normalizeElementSymbol } from '../../../lib/structure/chem';
+import { getVisualStylePreset } from '../../../lib/viewer/visualStyles';
+import { buildElementColorRecordFromMap, type ColorMapRecord } from '../colorMap';
 import { normalizeViewPresets } from '../../../lib/viewer/viewPresets';
 import { computeMd5ForArrayBuffer } from '../../../lib/file/md5';
 import type { LayerSourceInfo } from '../../../lib/viewer/sessionTypes';
@@ -27,8 +30,6 @@ import {
   buildLammpsTypeToElementMap,
   collectTypeIdsAndElementDefaultsFromAtoms,
   mergeTypeMap,
-  normalizeTypeMapRows,
-  typeMapEquals,
 } from '../typeMap';
 import { PANEL_KEYS, type PanelKey } from '../../../lib/viewer/panelKeys';
 
@@ -119,12 +120,15 @@ export function createViewerLoader(deps: {
   function handleLammpsTypeMapAndSettings(
     model: StructureModel,
     reason: RenderReason,
+    opts?: { suppressWarning?: boolean },
   ): void {
     const runtime = deps.getRuntime();
 
-    const runtimeRows = ((runtime?.activeTypeMapRows.value ?? []) as LammpsTypeMapItem[])
+    const runtimeMap = (runtime?.activeTypeMap.value ?? {}) as LammpsTypeMapRecord;
+    const settingsMap = getSettings().lammps.data ?? {};
+    const runtimeRows = lammpsRecordToRows(runtimeMap)
       .map(r => ({ typeId: r.typeId, element: r.element }));
-    const settingsRows = ((getSettings().lammps ?? []) as LammpsTypeMapItem[])
+    const settingsRows = lammpsRecordToRows(settingsMap)
       .map(r => ({ typeId: r.typeId, element: r.element }));
     const baseRows = (reason === 'reparse'
       ? runtimeRows
@@ -137,36 +141,22 @@ export function createViewerLoader(deps: {
     const { typeIds: detectedTypeIdsRaw, defaults }
       = collectTypeIdsAndElementDefaultsFromAtoms(atoms0);
 
-    let detectedTypeIds = detectedTypeIdsRaw;
-    if (detectedTypeIdsRaw.length > 0) {
-      const maxId = detectedTypeIdsRaw[detectedTypeIdsRaw.length - 1] ?? 0;
-      if (Number.isFinite(maxId) && maxId > 0 && maxId <= 2000) {
-        detectedTypeIds = Array.from({ length: maxId }, (_, i) => i + 1);
-      }
-    }
+    const detectedTypeIds = detectedTypeIdsRaw;
 
-    const mergedRows = mergeTypeMap(baseRows, detectedTypeIds, defaults) as
-      | LammpsTypeMapItem[]
-      | undefined;
-
-    const typeMapAdded = !typeMapEquals(
-      normalizeTypeMapRows(baseRows),
-      normalizeTypeMapRows(mergedRows ?? []),
-    );
+    const mergedRows = mergeTypeMap(baseRows, detectedTypeIds, defaults) as any;
+    const mergedMap = lammpsRowsToRecord(mergedRows ?? []);
 
     const hasUnknownForThisDump = hasUnknownElementMappingForTypeIds(
-      (mergedRows ?? []) as any,
+      mergedMap,
       detectedTypeIds,
     );
-
-    const usedCachedMapping = reason === 'load' && settingsRows.length > 0;
-    lastLoadNeedsLammpsFocus = typeMapAdded || hasUnknownForThisDump || usedCachedMapping;
+    lastLoadNeedsLammpsFocus = opts?.suppressWarning ? false : hasUnknownForThisDump;
 
     if (runtime && mergedRows) {
-      runtime.setActiveLayerTypeMapRows(mergedRows);
+      runtime.setActiveLayerTypeMap(mergedMap);
     }
 
-    if (hasUnknownForThisDump) {
+    if (hasUnknownForThisDump && !opts?.suppressWarning) {
       message.warning(deps.t('viewer.lammps.mappingMissing'));
     }
   }
@@ -180,6 +170,7 @@ export function createViewerLoader(deps: {
       sourceMeta?: LayerSourceInfo;
       skipAutoFit?: boolean;
       forcedLayerId?: string;
+      suppressLammpsWarning?: boolean;
     },
   ): { frameCount: number; hasAnimation: boolean; layerId: string } | null {
     const stage = deps.getStage();
@@ -192,7 +183,7 @@ export function createViewerLoader(deps: {
 
     const model = parseStructure(text, forcedName, {
       lammpsTypeToElement: buildLammpsTypeToElementMap(
-        (reason === 'load' ? [] : (getSettings().lammps ?? [])) as LammpsTypeMapItem[],
+        reason === 'load' ? [] : lammpsRecordToRows(getSettings().lammps.data),
       ),
       lammpsSortById: true,
     });
@@ -227,7 +218,9 @@ export function createViewerLoader(deps: {
         || detectedTypeIds.length > 0;
 
     if (isLmp) {
-      handleLammpsTypeMapAndSettings(model, reason);
+      handleLammpsTypeMapAndSettings(model, reason, {
+        suppressWarning: opts?.suppressLammpsWarning,
+      });
     }
     else {
       lastLoadNeedsLammpsFocus = false;
@@ -305,14 +298,12 @@ export function createViewerLoader(deps: {
     }
   }
 
-  function cloneTypeMapRows(rows: LammpsTypeMapItem[] | undefined): LammpsTypeMapItem[] {
-    return (rows ?? []).map(r => ({ ...r }));
+  function cloneTypeMap(map: LammpsTypeMapRecord | undefined): LammpsTypeMapRecord {
+    return { ...(map ?? {}) };
   }
 
-  function cloneColorMapRows(
-    rows: AtomTypeColorMapItem[] | undefined,
-  ): AtomTypeColorMapItem[] {
-    return (rows ?? []).map(r => ({ ...r }));
+  function cloneColorMap(map: ColorMapRecord | undefined): ColorMapRecord {
+    return { ...(map ?? {}) };
   }
 
   async function refreshTypeMap(): Promise<void> {
@@ -347,7 +338,7 @@ export function createViewerLoader(deps: {
 
     if (deps.patchSettings) {
       deps.patchSettings({
-        lammps: cloneTypeMapRows(runtime.activeTypeMapRows.value),
+        lammps: { data: cloneTypeMap(runtime.activeTypeMap.value) },
       });
     }
   }
@@ -379,9 +370,9 @@ export function createViewerLoader(deps: {
     }
 
     if (deps.patchSettings && opts?.applyToAll) {
-      const rows = cloneColorMapRows(runtime.activeColorMapRows.value);
+      const map = cloneColorMap(runtime.activeColorMap.value);
       deps.patchSettings({
-        colors: { data: buildElementColorRecordFromRows(rows) },
+        colors: { data: buildElementColorRecordFromMap(map, buildBaseColorMap(map)) },
       });
     }
   }
@@ -403,7 +394,7 @@ export function createViewerLoader(deps: {
     const runtime = deps.getRuntime();
     if (!deps.requestOpenSettings) return;
     const layerCount = runtime?.layers.value.length ?? 0;
-    const wantsColors = (runtime?.activeColorMapRows.value ?? []).some(r => r.isCustom);
+    const wantsColors = hasCustomColors(runtime?.activeColorMap.value ?? {});
     const wantsLayers = layerCount > 1;
     const wantsLammps = lastLoadIsLammps || lastLoadNeedsLammpsFocus;
     const wantsLayerDisplay = isLayerDisplayModified();
@@ -427,13 +418,36 @@ export function createViewerLoader(deps: {
     }
 
     const openKeys: PanelKey[] = [PANEL_KEYS.view];
-    if (deps.settingsRef.value.other.autoRotateOnLoad) {
-      openKeys.push(PANEL_KEYS.rotation);
-    }
     deps.requestOpenSettings?.({
       focusKeys: openKeys,
       open: true,
     });
+  }
+
+  function buildBaseColorMap(map: ColorMapRecord): Record<string, string> {
+    const styleId = deps.settingsRef.value.other.visualStyle ?? 'default';
+    const preset = styleId === 'default' ? null : getVisualStylePreset(styleId);
+    const baseByElement = preset ? (preset.colorMapTemplate ?? {}) : {};
+    const out: Record<string, string> = {};
+    for (const key of Object.keys(map ?? {})) {
+      const [elementRaw = ''] = String(key ?? '').split('.', 2);
+      const el = normalizeElementSymbol(elementRaw) || '';
+      if (!el || el in out) continue;
+      out[el] = baseByElement[el] ?? getElementColorHex(el);
+    }
+    return out;
+  }
+
+  function hasCustomColors(map: ColorMapRecord): boolean {
+    const base = buildBaseColorMap(map);
+    for (const [key, value] of Object.entries(map ?? {})) {
+      const [elementRaw = ''] = String(key ?? '').split('.', 2);
+      const el = normalizeElementSymbol(elementRaw) || 'E';
+      const baseColor = base[el] ?? getElementColorHex(el);
+      const cur = String(value ?? '').trim().toUpperCase();
+      if (cur && cur !== String(baseColor).trim().toUpperCase()) return true;
+    }
+    return false;
   }
 
   async function loadInit(): Promise<void> {
@@ -448,7 +462,12 @@ export function createViewerLoader(deps: {
     t0: number,
     text: string,
     fileName: string,
-    opts?: { hidePreviousLayers?: boolean; sourceMeta?: LayerSourceInfo; forcedLayerId?: string },
+    opts?: {
+      hidePreviousLayers?: boolean;
+      sourceMeta?: LayerSourceInfo;
+      forcedLayerId?: string;
+      suppressLammpsWarning?: boolean;
+    },
   ): Promise<string | null> {
     let info: { layerId: string } | null = null;
     try {
@@ -461,28 +480,10 @@ export function createViewerLoader(deps: {
         hidePreviousLayers: opts?.hidePreviousLayers,
         sourceMeta: opts?.sourceMeta,
         forcedLayerId: opts?.forcedLayerId,
+        suppressLammpsWarning: opts?.suppressLammpsWarning,
       });
 
       syncViewPresetAndDistanceOnModelLoad();
-
-      if (deps.patchSettings) {
-        const shouldAutoEnable = !!deps.settingsRef.value.other.autoRotateOnLoad;
-        const current = deps.settingsRef.value.rotation;
-        const enabled = !!current.enabled || shouldAutoEnable;
-        const enabledBySystem = shouldAutoEnable && !current.enabled;
-        deps.patchSettings({
-          rotation: {
-            ...current,
-            enabled,
-          },
-        });
-        if (enabledBySystem) {
-          message.info(
-            deps.t?.('viewer.autoRotate.enabledHint')
-            ?? '已开启自动旋转，可在设置-自动旋转-启用中关闭。',
-          );
-        }
-      }
 
       focusSettingsToLayersOrLammps();
 
@@ -510,7 +511,7 @@ export function createViewerLoader(deps: {
   async function loadUrl(
     url: string,
     fileName: string,
-    opts?: { hidePreviousLayers?: boolean; forcedLayerId?: string },
+    opts?: { hidePreviousLayers?: boolean; forcedLayerId?: string; suppressLammpsWarning?: boolean },
   ): Promise<void> {
     if (deps.isLoading.value) return;
     await loadInit();
@@ -535,6 +536,7 @@ export function createViewerLoader(deps: {
       hidePreviousLayers: opts?.hidePreviousLayers ?? true,
       sourceMeta,
       forcedLayerId: opts?.forcedLayerId,
+      suppressLammpsWarning: opts?.suppressLammpsWarning,
     });
 
     if (layerId) {
@@ -548,7 +550,7 @@ export function createViewerLoader(deps: {
 
   async function loadUrls(
     items: { url: string; fileName: string; forcedLayerId?: string }[],
-    opts?: { hidePreviousLayers?: boolean },
+    opts?: { hidePreviousLayers?: boolean; suppressLammpsWarning?: boolean },
   ): Promise<void> {
     if (!deps.getStage() || !deps.getRuntime()) return;
     if (deps.isLoading.value) return;
@@ -589,6 +591,7 @@ export function createViewerLoader(deps: {
             hidePreviousLayers: opts?.hidePreviousLayers ?? okCount === 0,
             sourceMeta,
             forcedLayerId: item.forcedLayerId,
+            suppressLammpsWarning: opts?.suppressLammpsWarning,
           });
 
           okCount += 1;
@@ -650,7 +653,7 @@ export function createViewerLoader(deps: {
 
   async function loadFilesInternal(
     files: File[],
-    opts?: { hidePreviousLayers?: boolean; forcedLayerId?: string },
+    opts?: { hidePreviousLayers?: boolean; forcedLayerId?: string; suppressLammpsWarning?: boolean },
   ): Promise<void> {
     if (!deps.getStage() || !deps.getRuntime()) return;
     if (deps.isLoading.value) return;
@@ -695,6 +698,7 @@ export function createViewerLoader(deps: {
             sourceMeta,
             skipAutoFit: !allowAutoFit,
             forcedLayerId: opts?.forcedLayerId,
+            suppressLammpsWarning: opts?.suppressLammpsWarning,
           });
 
           okCount += 1;
@@ -756,14 +760,14 @@ export function createViewerLoader(deps: {
 
   async function loadFiles(
     files: File[],
-    opts?: { hidePreviousLayers?: boolean; forcedLayerId?: string },
+    opts?: { hidePreviousLayers?: boolean; forcedLayerId?: string; suppressLammpsWarning?: boolean },
   ): Promise<void> {
     await loadFilesInternal(files, opts);
   }
 
   async function loadFile(
     file: File,
-    opts?: { hidePreviousLayers?: boolean; forcedLayerId?: string },
+    opts?: { hidePreviousLayers?: boolean; forcedLayerId?: string; suppressLammpsWarning?: boolean },
   ): Promise<void> {
     await loadFilesInternal([file], opts);
   }

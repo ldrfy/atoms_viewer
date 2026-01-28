@@ -1,11 +1,11 @@
 import { shallowRef } from 'vue';
 import type { Ref } from 'vue';
 import type {
-  LammpsTypeMapItem,
-  AtomTypeColorMapItem,
+  LammpsTypeMapRecord,
   DetailsSettingsGroup,
   ViewerSettings,
 } from './settings';
+import type { ColorMapRecord } from '../../components/ViewerStage/colorMap';
 import type { LayerSortBy } from './sessionTypes';
 
 import type { ParseMode, ParseInfo } from '../structure/parse';
@@ -68,29 +68,35 @@ export type ViewerPublicApi = {
   /** Remove a layer from the scene and internal state. */
   removeLayer: (id: string) => void;
 
-  /** LAMMPS typeId→element mapping rows for the active layer (editable in Settings). */
-  activeLayerTypeMap: Ref<LammpsTypeMapItem[]>;
+  /** LAMMPS typeId→element mapping for the active layer (editable in Settings). */
+  activeLayerTypeMap: Ref<LammpsTypeMapRecord>;
+  /** Active layer LAMMPS typeId list (sorted). */
+  activeLayerTypeIds: Ref<number[]>;
   /** Whether the active layer's type map has been applied via refresh. */
   activeLayerTypeMapApplied: Ref<boolean>;
   /** Replace the entire active-layer type map. */
-  setActiveLayerTypeMap: (rows: LammpsTypeMapItem[]) => void;
-  /** Reset all layers' type map rows to defaults (based on current atoms). */
+  setActiveLayerTypeMap: (map: LammpsTypeMapRecord) => void;
+  /** Apply a template mapping to all layers (only existing typeIds). */
+  applyTypeMapToAllLayers: (map: LammpsTypeMapRecord) => void;
+  /** Reset all layers' type map to defaults (based on current atoms). */
   resetAllLayersTypeMapToDefaults: (opts?: {
-    templateRows?: LammpsTypeMapItem[];
+    templateMap?: LammpsTypeMapRecord;
     useAtomDefaults?: boolean;
   }) => void;
 
   /**
    * Per-layer atom colors for the active layer.
    * Keying rules:
-   * - Generic formats: { element: 'C', color: '#RRGGBB' }
-   * - LAMMPS: { element: 'C', typeId: 1, color: '#RRGGBB' } -> colorKey "C1"
+   * - Generic: "C"
+   * - LAMMPS: "C.1", "C.2"
    */
-  activeLayerColorMap: Ref<AtomTypeColorMapItem[]>;
+  activeLayerColorMap: Ref<ColorMapRecord>;
+  /** Active layer color key order (for UI). */
+  activeLayerColorKeys: Ref<string[]>;
   /** Replace the entire active-layer color map. */
-  setActiveLayerColorMap: (rows: AtomTypeColorMapItem[]) => void;
-  /** Replace all layers' color maps at once (duplicate rows per layer). */
-  setAllLayersColorMap: (rows: AtomTypeColorMapItem[]) => void;
+  setActiveLayerColorMap: (map: ColorMapRecord) => void;
+  /** Replace all layers' color maps at once (duplicate keys per layer). */
+  setAllLayersColorMap: (map: ColorMapRecord) => void;
   /** Reset all layers' color maps to default element colors. */
   resetAllLayersColorMapToDefaults: () => void;
 

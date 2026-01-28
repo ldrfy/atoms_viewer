@@ -89,6 +89,11 @@
     border-radius: 14px 0 0 14px !important;
 }
 
+/* Mobile sheet should only round top corners */
+.settings-drawer.settings-sheet {
+    border-radius: 14px 14px 0 0 !important;
+}
+
 /* Ensure Ant internal wrappers don't paint opaque layers over our blur */
 .settings-drawer .ant-drawer-wrapper-body,
 .settings-drawer .ant-drawer-body {
@@ -153,6 +158,13 @@
     /* match Ant Drawer look/feel */
     -webkit-overflow-scrolling: touch;
     border-radius: 14px 0 0 14px !important;
+}
+
+.settings-content {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
 }
 
 /* Desktop slide motion (no mask, no body scroll lock, no layout shift) */
@@ -312,6 +324,10 @@
     word-break: break-all;
 }
 
+.layers-help {
+    padding: 0 4px;
+}
+
 .settings-divider {
     margin: 8px 0;
 }
@@ -339,9 +355,40 @@
     margin-top: 6px;
 }
 
+.settings-footer {
+    flex: 0 0 auto;
+    padding: 12px;
+}
+
+.settings-build-text {
+    text-align: center;
+    font-size: 11px;
+    margin-top: 0;
+}
+
 .settings-text-secondary-tight {
     display: block;
     margin-top: 8px;
+}
+
+.settings-lammps-type {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 24px;
+    min-height: 24px;
+    padding: 0 10px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: var(--color-text);
+    font-variant-numeric: tabular-nums;
+}
+
+.settings-lammps-type.ant-tag {
+    margin: 0;
+    line-height: 22px;
+    font-size: 12px;
 }
 
 .settings-text-secondary-compact {
@@ -350,6 +397,8 @@
 
 /* Settings panel scrollbars (soft, theme-aware) */
 .settings-body {
+    flex: 1 1 auto;
+    min-height: 0;
     scrollbar-width: thin;
     scrollbar-color: rgba(120, 120, 120, 0.35) transparent;
 }

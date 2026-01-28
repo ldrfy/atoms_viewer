@@ -219,12 +219,15 @@
                 "header": "LAMMPS Map",
                 "alert": "When a LAMMPS dump or LAMMPS data file provides only numeric types, specify the element symbol for each type here to ensure correct color/radius, bond inference, and stable rendering.",
                 "currentLayer": "Current layer",
+                "applyAll": "Apply to all layers",
                 "mapLabel": "type id → element symbol (searchable)",
                 "typePlaceholder": "type",
                 "elementPlaceholder": "Element (e.g., C / O / Fe)",
                 "addMapping": "Add mapping",
-                "refresh": "Refresh view",
+                "apply": "Apply",
+                "undo": "Undo",
                 "clear": "Clear",
+                "clearConfirm": "Clear all mappings?",
                 "hint": "Recommended dump fields: id, type, x y z. If per-frame ordering is not fixed, the parser will sort by id to avoid animation jitter."
             },
             "files": {
@@ -237,10 +240,13 @@
                     "button": "Export as PNG",
                     "transparent": "Transparent background",
                     "selectButton": "Select Range Export",
-                    "hint": "Scale multiplies the render resolution.",
-                    "formatButton": "Export structure file",
-                    "formatHint": "Export the current model to another format (current frame). Not verified; please validate correctness.",
-                    "formatSuccess": "Structure file exported"
+                    "hint": "Scale multiplies the render resolution."
+                },
+                "format": {
+                    "header": "Format Conversion",
+                    "button": "Export",
+                    "hint": "Export the current model to another format (current frame). Not verified; please validate correctness.",
+                    "success": "Format conversion exported"
                 },
                 "project": {
                     "header": "Project package",
@@ -249,8 +255,9 @@
                     "cacheRemote": "Cache remote models for export/restore",
                     "hint": "ZIP contains config.json; uncached remote models will be re-fetched via URL."
                 },
-                "parse": {
-                    "header": "Parse info"
+                "config": {
+                    "header": "Settings Backup",
+                    "exportFull": "Export full settings (include defaults)"
                 }
             },
             "layers": {
@@ -276,7 +283,6 @@
                 "axes": "Axes",
                 "recordFps": "Recording FPS",
                 "recordFpsHint": "Target recording frame rate; commonly 30 / 60.",
-                "autoRotateOnLoad": "Auto rotate after loading models",
                 "themeReadabilityCheckOnOpen": "Check theme readability when opening viewer",
                 "modelLightIntensity": "Model light intensity",
                 "atomRoughness": "Atom material roughness",
@@ -297,7 +303,7 @@
                 "invalidHex": "Invalid color format. Please use #RRGGBB or #RGB.",
                 "reset": "Reset",
                 "resetTooltip": "Reset to the built-in default color of this element.",
-                "hint": "Tip: If the active layer has typeId (e.g. LAMMPS), colors are keyed as element+typeId (C1, C2, ...); otherwise they are keyed by element.",
+                "hint": "Tip: If the active layer has typeId (e.g. LAMMPS), colors are keyed as element+typeId (C.1, C.2, ...); otherwise they are keyed by element.",
                 "empty": "No editable atom types in the active layer."
             },
             "details": {

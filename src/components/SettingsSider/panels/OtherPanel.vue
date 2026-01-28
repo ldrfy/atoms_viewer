@@ -66,19 +66,6 @@
 
     <a-form-item>
       <a-row justify="space-between" align="middle">
-        <a-col>{{ t('settings.panel.other.autoRotateOnLoad') }}</a-col>
-        <a-col>
-          <a-switch
-            v-model:checked="autoRotateOnLoadModel"
-            :aria-label="t('settings.panel.other.autoRotateOnLoad')"
-            :title="t('settings.panel.other.autoRotateOnLoad')"
-          />
-        </a-col>
-      </a-row>
-    </a-form-item>
-
-    <a-form-item>
-      <a-row justify="space-between" align="middle">
         <a-col>{{ t('settings.panel.other.refreshBondsOnPlay') }}</a-col>
         <a-col>
           <a-switch
@@ -158,23 +145,6 @@ const refreshBondsOnPlayModel = computed({
   set: (v: boolean) => patchSettings({ other: { refreshBondsOnPlay: v } }),
 });
 
-const autoRotateOnLoadModel = computed({
-  get: () => settings.value.other.autoRotateOnLoad ?? true,
-  set: (v: boolean) => {
-    if (!v) {
-      patchSettings({
-        other: { autoRotateOnLoad: false },
-        rotation: {
-          ...settings.value.rotation,
-          enabled: false,
-        },
-      });
-      return;
-    }
-    patchSettings({ other: { autoRotateOnLoad: true } });
-  },
-});
-
 const recordFpsModel = computed({
   get: () => settings.value.other.frame_rate ?? 60,
   set: (v: number) => { patchSettings({ other: { frame_rate: v } }); },
@@ -209,8 +179,8 @@ function applyVisualStyle(styleId: VisualStyleId): void {
   const api = viewerApi.value;
   const isDefault = styleId === 'default';
   const colorTemplate = isDefault
-    ? []
-    : preset.colorMapTemplate.map(r => ({ ...r, isCustom: true }));
+    ? {}
+    : { ...preset.colorMapTemplate };
   patchSettings({
     other: { visualStyle: styleId, modelLightIntensity: preset.display.modelLightIntensity },
     details: {
@@ -220,11 +190,7 @@ function applyVisualStyle(styleId: VisualStyleId): void {
       bondFactor: preset.display.bondFactor,
     },
     colors: {
-      data: isDefault
-        ? {}
-        : Object.fromEntries(
-          colorTemplate.map(r => [r.element, r.color]),
-        ),
+      data: {},
     },
   });
   if (!api) return;
@@ -267,7 +233,6 @@ const isOtherDirty = computed(() => {
   return (
     settings.value.other.showAxes !== DEFAULT_SETTINGS.other.showAxes
     || settings.value.other.refreshBondsOnPlay !== DEFAULT_SETTINGS.other.refreshBondsOnPlay
-    || settings.value.other.autoRotateOnLoad !== DEFAULT_SETTINGS.other.autoRotateOnLoad
     || settings.value.other.frame_rate !== DEFAULT_SETTINGS.other.frame_rate
     || settings.value.other.modelLightIntensity !== styleBase.modelLightIntensity
     || settings.value.other.themeMode !== DEFAULT_SETTINGS.other.themeMode

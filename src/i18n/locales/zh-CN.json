@@ -219,12 +219,15 @@
                 "header": "LAMMPS映射",
                 "alert": "当 LAMMPS dump 以及 LAMMPS data 只提供 type（数字）时，需要在这里指定 type 对应元素符号，用于颜色/半径/键推断与稳定显示。",
                 "currentLayer": "当前图层",
+                "applyAll": "同时修改所有图层",
                 "mapLabel": "type id → 元素符号（支持搜索）",
                 "typePlaceholder": "type",
                 "elementPlaceholder": "元素（如 C / O / Fe）",
                 "addMapping": "添加映射",
-                "refresh": "刷新显示",
+                "apply": "应用",
+                "undo": "撤销",
                 "clear": "清空",
+                "clearConfirm": "确定清空所有映射吗？",
                 "hint": "建议 dump 输出包含 id、type、x y z。若每帧顺序不固定，解析端会按 id 排序以保证动画不抖动。"
             },
             "files": {
@@ -237,10 +240,13 @@
                     "button": "导出为 PNG",
                     "selectButton": "选择范围导出",
                     "transparent": "透明背景",
-                    "hint": "scale 会按倍率放大渲染分辨率。",
-                    "formatButton": "导出结构文件",
-                    "formatHint": "可将当前模型导出为其他格式（当前帧）。未验证，请自行判断正确与否。",
-                    "formatSuccess": "结构文件已导出"
+                    "hint": "scale 会按倍率放大渲染分辨率。"
+                },
+                "format": {
+                    "header": "格式转换",
+                    "button": "导出",
+                    "hint": "可将当前模型导出为其他格式（当前帧）。未验证，请自行判断正确与否。",
+                    "success": "格式转换已导出"
                 },
                 "project": {
                     "header": "模型打包",
@@ -249,8 +255,9 @@
                     "cacheRemote": "缓存远程模型用于导出/恢复",
                     "hint": "压缩包会包含 config.json；未缓存的远程模型将按 URL 重新下载。用于复现当前状态与导出图片效果。"
                 },
-                "parse": {
-                    "header": "解析信息"
+                "config": {
+                    "header": "设置备份",
+                    "exportFull": "导出完整设置（包含默认值）"
                 }
             },
             "layers": {
@@ -276,7 +283,6 @@
                 "recordFps": "录制帧率 (fps)",
                 "recordFpsHint": "录制输出的目标帧率；常用 30 / 60。",
                 "refreshBondsOnPlay": "播放时原子连接每帧刷新",
-                "autoRotateOnLoad": "载入模型后自动旋转",
                 "themeReadabilityCheckOnOpen": "打开模型时检查主题可读性",
                 "modelLightIntensity": "模型灯光亮度",
                 "atomRoughness": "原子球材质粗糙度",
@@ -297,7 +303,7 @@
                 "invalidHex": "颜色格式无效，请输入 #RRGGBB 或 #RGB。",
                 "reset": "恢复默认",
                 "resetTooltip": "恢复为该元素的内置默认颜色。",
-                "hint": "提示：若该图层存在 typeId（如 LAMMPS），将按元素+typeId 显示为 C1、C2…；否则按元素显示。",
+                "hint": "提示：若该图层存在 typeId（如 LAMMPS），将按元素+typeId 显示为 C.1、C.2…；否则按元素显示。",
                 "empty": "当前图层暂无可编辑的原子类型。"
             },
             "details": {

@@ -6,7 +6,6 @@ import type { ViewerSettings } from '../../../lib/viewer/settings';
 import type { SettingsPatch } from '../../../lib/viewer/mergeSettings';
 import { normalizeViewPresets } from '../../../lib/viewer/viewPresets';
 import { MANUAL_ROTATION_SYNC_INTERVAL_MS } from '../../../lib/viewer/constants';
-import { ATOMIC_SYMBOLS } from '../../../lib/structure/chem';
 import type { Atom } from '../../../lib/structure/types';
 import type { AnyCamera } from '../../../lib/three/camera';
 
@@ -16,7 +15,6 @@ import type { ModelRuntime } from '../modelRuntime';
 import {
   computeDistance,
   computeAngleDeg,
-  atomicNumberFromSymbol,
   type SelectedAtom,
   type InspectCtx,
 } from '../ctx/inspect';
@@ -275,7 +273,6 @@ export function createViewerPickingController(deps: RenderDeps) {
       layerId,
       atomIndex,
       element,
-      atomicNumber: atomicNumberFromSymbol(element, ATOMIC_SYMBOLS),
       id: atom.id,
       typeId: atom.typeId,
       position: [atom.position[0], atom.position[1], atom.position[2]],

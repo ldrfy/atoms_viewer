@@ -123,15 +123,17 @@
       </a-collapse>
 
       <a-space direction="vertical" class="drawer-links">
-        <a-typography-text class="plain-click" @click="openGithub">
-          <GithubOutlined />
-          <span class="drawer-link-text">GitHub</span>
-        </a-typography-text>
+        <a-space class="drawer-links-row" :size="16">
+          <a-typography-text class="plain-click" @click="openGithub">
+            <GithubOutlined />
+            <span class="drawer-link-text">GitHub</span>
+          </a-typography-text>
 
-        <a-typography-text class="plain-click" @click="openDocs">
-          <QuestionCircleOutlined />
-          <span class="drawer-link-text">{{ t('viewer.links.docs') }}</span>
-        </a-typography-text>
+          <a-typography-text class="plain-click" @click="openDocs">
+            <QuestionCircleOutlined />
+            <span class="drawer-link-text">{{ t('viewer.links.docs') }}</span>
+          </a-typography-text>
+        </a-space>
 
         <a-typography-text class="plain-click" @click="openSettings">
           <SettingOutlined />
@@ -334,6 +336,11 @@ function onClickBrand(): void {
 
 .drawer-links {
     width: 100%;
+}
+
+.drawer-links-row {
+    width: 100%;
+    justify-content: center;
 }
 
 .drawer-link-text {

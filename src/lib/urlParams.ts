@@ -4,16 +4,11 @@ export function readUrlListParam(name: string): string[] {
   const raw = params.getAll(name);
   if (raw.length === 0) return [];
 
-  const urls: string[] = [];
-  for (const entry of raw) {
-    if (!entry) continue;
-    for (const part of entry.split(',')) {
-      const cleaned = part.trim();
-      if (cleaned) urls.push(cleaned);
-    }
-  }
-
-  return urls;
+  return raw
+    .filter(Boolean)
+    .flatMap(entry => entry.split(','))
+    .map(part => part.trim())
+    .filter(Boolean);
 }
 
 export function writeUrlListParam(name: string, urls: string[]): void {
@@ -22,19 +17,19 @@ export function writeUrlListParam(name: string, urls: string[]): void {
   const params = new URLSearchParams(url.search);
   const retained = Array.from(params.entries()).filter(([key]) => key !== name);
 
-  const nextValues = urls
-    .map((entry) => {
-      let trimmed = entry.trim();
-      if (!trimmed) return '';
-      if (/%[0-9A-Fa-f]{2}/.test(trimmed)) {
-        try {
-          trimmed = decodeURIComponent(trimmed);
-        }
-        catch {}
+  const normalizeEntry = (entry: string): string => {
+    let trimmed = entry.trim();
+    if (!trimmed) return '';
+    if (/%[0-9A-Fa-f]{2}/.test(trimmed)) {
+      try {
+        trimmed = decodeURIComponent(trimmed);
       }
-      return trimmed;
-    })
-    .filter(Boolean);
+      catch {}
+    }
+    return trimmed;
+  };
+
+  const nextValues = urls.map(normalizeEntry).filter(Boolean);
 
   const encodeQueryValue = (value: string): string =>
     encodeURI(value).replace(/[?#&=]/g, ch => encodeURIComponent(ch));

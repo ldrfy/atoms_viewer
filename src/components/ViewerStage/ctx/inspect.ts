@@ -5,7 +5,6 @@ export type SelectedAtom = {
   layerId: string;
   atomIndex: number;
   element: string;
-  atomicNumber: number;
   id?: number;
   typeId?: number;
   position: [number, number, number]; // raw position
@@ -69,9 +68,4 @@ export function computeAngleDeg(a: Atom, b: Atom, c: Atom): number {
   const denom = Math.max(1e-12, na * nc);
   const cos = Math.min(1, Math.max(-1, dot / denom));
   return (Math.acos(cos) * 180) / Math.PI;
-}
-
-export function atomicNumberFromSymbol(symbol: string, atomicSymbols: readonly string[]): number {
-  const idx = atomicSymbols.indexOf(symbol as any);
-  return idx >= 0 ? idx : 0;
 }

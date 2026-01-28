@@ -52,7 +52,7 @@
       </a-typography-text>
     </a-form-item>
 
-    <a-form-item :label="t('settings.panel.files.export.formatButton')">
+    <a-form-item :label="t('settings.panel.files.format.header')">
       <div>
         <a-row :gutter="8" align="middle">
           <a-col :span="12">
@@ -65,26 +65,32 @@
           <a-col :span="12">
             <a-button
               block
+              type="primary"
               :disabled="!hasAnyLayer"
               @click="onExportStructure"
             >
-              {{ t('settings.panel.files.export.formatButton') }}
+              {{ t('settings.panel.files.format.button') }}
             </a-button>
           </a-col>
         </a-row>
         <a-typography-text type="secondary" class="settings-text-secondary">
-          {{ t('settings.panel.files.export.formatHint') }}
+          {{ t('settings.panel.files.format.hint') }}
         </a-typography-text>
       </div>
     </a-form-item>
 
     <a-form-item :label="t('settings.panel.files.project.header')">
-      <a-row :gutter="8" align="middle">
+      <a-checkbox v-model:checked="cacheRemoteModel">
+        {{ t('settings.panel.files.project.cacheRemote') }}
+      </a-checkbox>
+
+      <a-row :gutter="8" align="middle" class="settings-gap-top-sm">
         <a-col :span="12">
           <a-button
             type="primary"
             block
-            :disabled="!hasAnyLayer"
+            :loading="exportingProject"
+            :disabled="!hasAnyLayer || exportingProject"
             @click="onExportProject"
           >
             {{ t('settings.panel.files.project.export') }}
@@ -94,21 +100,6 @@
           <a-button block @click="onImportProject">
             {{ t('settings.panel.files.project.import') }}
           </a-button>
-        </a-col>
-      </a-row>
-
-      <a-row justify="space-between" align="middle" class="settings-gap-top-sm">
-        <a-col>
-          <a-typography-text type="secondary">
-            {{ t('settings.panel.files.project.cacheRemote') }}
-          </a-typography-text>
-        </a-col>
-        <a-col>
-          <a-switch
-            v-model:checked="cacheRemoteModel"
-            :aria-label="t('settings.panel.files.project.cacheRemote')"
-            :title="t('settings.panel.files.project.cacheRemote')"
-          />
         </a-col>
       </a-row>
 
@@ -126,10 +117,18 @@
       >
     </a-form-item>
 
-    <a-form-item :label="t('settings.title')">
-      <a-row :gutter="8">
+    <a-form-item :label="t('settings.panel.files.config.header')">
+      <a-checkbox v-model:checked="exportFullSettings">
+        {{ t('settings.panel.files.config.exportFull') }}
+      </a-checkbox>
+
+      <a-row :gutter="8" class="settings-gap-top-sm">
         <a-col :span="12">
-          <a-button block @click="onExportSettings">
+          <a-button
+            type="primary"
+            block
+            @click="onExportSettings"
+          >
             {{ t('settings.exportSettings') }}
           </a-button>
         </a-col>
@@ -139,17 +138,6 @@
           </a-button>
         </a-col>
       </a-row>
-      <a-button
-        block
-        danger
-        class="settings-gap-top-sm"
-        @click="onClearStorage"
-      >
-        {{ t('settings.clearStorage') }}
-      </a-button>
-      <a-typography-text type="secondary" class="settings-text-secondary">
-        {{ t('settings.clearStorageHint') }}
-      </a-typography-text>
       <input
         ref="settingsImportInputRef"
         class="settings-import-input"
@@ -165,7 +153,7 @@
 <script setup lang="ts">
 import { computed, inject, nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { message, Modal } from 'ant-design-vue';
+import { message } from 'ant-design-vue';
 
 import { viewerApiRef } from '../../../lib/viewer/bridge';
 import { settingsSiderDirtyContextKey } from '../context';
@@ -176,14 +164,14 @@ import { DEFAULT_SETTINGS } from '../../../lib/viewer/settings';
 import { buildProjectZip, parseProjectZip } from '../../../lib/viewer/projectPackage';
 import { getLocale, setLocale, SUPPORT_LOCALES } from '../../../i18n';
 import type { StructureExportFormat } from '../../../lib/structure/export';
-import { buildSettingsExportJson, clearAllSettings, applyImportedSettings, parseSettingsImport } from '../../../lib/viewer/settingsActions';
+import { buildSettingsExportJson, applyImportedSettings, parseSettingsImport } from '../../../lib/viewer/settingsActions';
 import { buildExportFilename } from '../../../lib/file/filename';
 import { setThemeMode } from '../../../theme/mode';
 import { readApplyAllLayersFlags, writeApplyAllLayersFlags } from '../applyAllStorage';
 
 const { t } = useI18n();
 const { hasAnyLayer, settings, patchSettings } = useSettingsSiderContext();
-const { replaceSettings, notifyClearStorageUi } = useSettingsSiderControlContext();
+const { replaceSettings } = useSettingsSiderControlContext();
 
 const viewerApi = computed(() => viewerApiRef.value);
 const projectInputRef = ref<HTMLInputElement | null>(null);
@@ -216,6 +204,8 @@ const cacheRemoteModel = computed<boolean>({
 });
 
 const exportFormatModel = ref<StructureExportFormat>(DEFAULT_EXPORT_FORMAT);
+const exportingProject = ref(false);
+const exportFullSettings = ref(false);
 const exportFormatOptions = computed(() => ([
   { label: 'XYZ', value: 'xyz' },
   { label: 'PDB', value: 'pdb' },
@@ -253,25 +243,6 @@ onBeforeUnmount(() => {
   dirtyContext?.setPanelDirty(PANEL_KEYS.files, false);
 });
 
-function onClearStorage(): void {
-  Modal.confirm({
-    title: t('settings.clearStorageConfirmTitle'),
-    content: t('settings.clearStorageConfirmBody'),
-    centered: true,
-    okText: t('common.confirm'),
-    cancelText: t('common.cancel'),
-    onOk: async () => {
-      await clearAllSettings({
-        currentSettings: settings.value,
-        viewerApi: viewerApi.value,
-        replaceSettings,
-        nextTick,
-        onAfterClear: notifyClearStorageUi,
-      });
-    },
-  });
-}
-
 async function onExportSettings(): Promise<void> {
   try {
     const { json, fileStem } = await buildSettingsExportJson({
@@ -281,7 +252,9 @@ async function onExportSettings(): Promise<void> {
       applyAllLayers: {
         details: readApplyAllLayersFlags().details ?? true,
         colors: readApplyAllLayersFlags().colors ?? true,
+        lammps: readApplyAllLayersFlags().lammps ?? false,
       },
+      fullSettings: exportFullSettings.value,
     });
     const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -362,7 +335,7 @@ async function onExportStructure(): Promise<void> {
     a.download = filename;
     a.click();
     URL.revokeObjectURL(url);
-    message.success(t('settings.panel.files.export.formatSuccess'));
+    message.success(t('settings.panel.files.format.success'));
   }
   catch (err) {
     console.error(err);
@@ -371,9 +344,11 @@ async function onExportStructure(): Promise<void> {
 }
 
 async function onExportProject(): Promise<void> {
+  if (exportingProject.value) return;
   try {
     const api = viewerApi.value;
     if (!api) return;
+    exportingProject.value = true;
     const snaps = api.getLayerSnapshots ? await api.getLayerSnapshots() : [];
     const sources = api.getLayerSources ? await api.getLayerSources() : [];
     const { blob, filename } = await buildProjectZip({
@@ -385,6 +360,7 @@ async function onExportProject(): Promise<void> {
       applyAllLayers: {
         details: readApplyAllLayersFlags().details ?? true,
         colors: readApplyAllLayersFlags().colors ?? true,
+        lammps: readApplyAllLayersFlags().lammps ?? false,
       },
       layersSortBy: api.layerSortBy?.value ?? 'name,ASC',
       activeLayerId: api.activeLayerId?.value ?? null,
@@ -401,6 +377,9 @@ async function onExportProject(): Promise<void> {
   catch (err) {
     console.error(err);
     message.error(t('common.error'));
+  }
+  finally {
+    exportingProject.value = false;
   }
 }
 

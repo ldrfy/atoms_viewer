@@ -2,17 +2,16 @@
   <a-space direction="vertical" :size="8" class="settings-full-width">
     <!-- 文件选择放在“模型图层”最上方 -->
     <div>
-      <a-button
-        type="primary"
-        block
-        :disabled="!viewerApi"
-        @click="onOpenFile"
-      >
-        {{ t('settings.panel.files.openFile') }}
-      </a-button>
-      <a-typography-text type="secondary" class="settings-text-secondary">
-        {{ t('settings.panel.files.openFileHint') }}
-      </a-typography-text>
+      <a-tooltip :title="t('settings.panel.files.openFileHint')">
+        <a-button
+          type="primary"
+          block
+
+          @click="onOpenFile"
+        >
+          {{ t('settings.panel.files.openFile') }}
+        </a-button>
+      </a-tooltip>
     </div>
 
     <a-alert
@@ -29,7 +28,7 @@
       :message="t('settings.panel.layers.empty')"
     />
 
-    <div v-else>
+    <div v-else class="settings-gap-top-sm">
       <a-space :size="8" class="settings-full-width">
         <a-select
           size="small"
@@ -52,6 +51,16 @@
         >
           {{ toggleAllLabel }}
         </a-button>
+        <a-tooltip :title="t('settings.panel.layers.hint')">
+          <a-button
+            type="text"
+            size="small"
+            class="layers-help"
+            :aria-label="t('settings.panel.layers.hint')"
+          >
+            <QuestionCircleOutlined />
+          </a-button>
+        </a-tooltip>
       </a-space>
       <a-divider class="settings-divider" />
 
@@ -107,15 +116,11 @@
         </div>
       </div>
     </div>
-
-    <a-typography-text type="secondary" class="settings-block">
-      {{ t('settings.panel.layers.hint') }}
-    </a-typography-text>
   </a-space>
 </template>
 
 <script setup lang="ts">
-import { DeleteOutlined } from '@ant-design/icons-vue';
+import { DeleteOutlined, QuestionCircleOutlined } from '@ant-design/icons-vue';
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { viewerApiRef } from '../../../lib/viewer/bridge';

@@ -79,6 +79,11 @@ export function createViewerPickingController(deps: RenderDeps) {
   const lineP1 = new THREE.Vector3();
   const lineP2 = new THREE.Vector3();
   const highlightColor = new THREE.Color();
+  const pickCamPos = new THREE.Vector3();
+  const pickCamUp = new THREE.Vector3();
+  const pickCamQuat = new THREE.Quaternion();
+  const pickTarget = new THREE.Vector3();
+  const pickOffset = new THREE.Vector3();
 
   function wrapDeg180(deg: number): number {
     let x = ((((deg + 180) % 360) + 360) % 360) - 180;
@@ -427,6 +432,7 @@ export function createViewerPickingController(deps: RenderDeps) {
     let pickCamera: AnyCamera = stage.getCamera();
     let viewportW = rect.width;
     let xPx = e.clientX - rect.left;
+    let side: 'left' | 'right' | 'single' = 'single';
 
     if (isDual) {
       const rRaw = deps.settingsRef.value.view.dualViewSplit;
@@ -436,12 +442,14 @@ export function createViewerPickingController(deps: RenderDeps) {
 
       if (xPx <= leftW) {
         viewportW = leftW;
+        side = 'left';
       }
       else {
         const aux = stage.getAuxCamera();
         if (aux) pickCamera = aux;
         viewportW = rightW;
         xPx = xPx - leftW;
+        side = 'right';
       }
     }
 
@@ -449,7 +457,36 @@ export function createViewerPickingController(deps: RenderDeps) {
     const y = -(((e.clientY - rect.top) / Math.max(1, rect.height)) * 2 - 1);
     ndc.set(x, y);
 
-    raycaster.setFromCamera(ndc, pickCamera);
+    const view = deps.settingsRef.value.view;
+    if (side === 'left') {
+      pickOffset.set(view.panOffsetLeft?.x ?? 0, view.panOffsetLeft?.y ?? 0, view.panOffsetLeft?.z ?? 0);
+    }
+    else if (side === 'right') {
+      pickOffset.set(view.panOffsetRight?.x ?? 0, view.panOffsetRight?.y ?? 0, view.panOffsetRight?.z ?? 0);
+    }
+    else {
+      pickOffset.set(view.panOffset?.x ?? 0, view.panOffset?.y ?? 0, view.panOffset?.z ?? 0);
+    }
+
+    if (pickOffset.lengthSq() > 1e-12) {
+      pickCamPos.copy(pickCamera.position);
+      pickCamUp.copy(pickCamera.up);
+      pickCamQuat.copy(pickCamera.quaternion);
+      pickTarget.copy(stage.getControls().target).add(pickOffset);
+
+      pickCamera.position.add(pickOffset);
+      pickCamera.lookAt(pickTarget);
+      pickCamera.updateMatrixWorld(true);
+      raycaster.setFromCamera(ndc, pickCamera);
+
+      pickCamera.position.copy(pickCamPos);
+      pickCamera.quaternion.copy(pickCamQuat);
+      pickCamera.up.copy(pickCamUp);
+      pickCamera.updateMatrixWorld(true);
+    }
+    else {
+      raycaster.setFromCamera(ndc, pickCamera);
+    }
 
     const meshes = runtime.getVisibleAtomMeshes();
     const hit = raycaster.intersectObjects(meshes, false)[0];

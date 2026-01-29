@@ -248,6 +248,9 @@ export function pruneDefaultSettings(
   if (input.other.showAxes !== d.other.showAxes) other.showAxes = input.other.showAxes;
   if (input.other.refreshBondsOnPlay !== d.other.refreshBondsOnPlay) other.refreshBondsOnPlay = input.other.refreshBondsOnPlay;
   if (input.other.frame_rate !== d.other.frame_rate) other.frame_rate = input.other.frame_rate;
+  if (input.other.selectionHighlightColor !== d.other.selectionHighlightColor) {
+    other.selectionHighlightColor = input.other.selectionHighlightColor;
+  }
   if (Object.keys(other).length > 0) out.other = other as ViewerSettingsCategorized['other'];
 
   return out;

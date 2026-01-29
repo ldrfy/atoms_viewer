@@ -285,6 +285,8 @@
                 "recordFpsHint": "Target recording frame rate; commonly 30 / 60.",
                 "themeReadabilityCheckOnOpen": "Check theme readability when opening viewer",
                 "modelLightIntensity": "Model light intensity",
+                "selectionColor": "Selection highlight color",
+                "selectionColorHint": "Used for selection halos, lines, and fill.",
                 "atomRoughness": "Atom material roughness",
                 "visualStyle": "Visual style",
                 "visualStyleDefault": "Default",

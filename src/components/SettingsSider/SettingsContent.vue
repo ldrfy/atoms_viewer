@@ -231,6 +231,7 @@ const otherDirty = computed(() => {
     || settings.value.other.themeMode !== DEFAULT_SETTINGS.other.themeMode
     || settings.value.other.visualStyle !== DEFAULT_SETTINGS.other.visualStyle
     || settings.value.other.modelLightIntensity !== styleBase.modelLightIntensity
+    || settings.value.other.selectionHighlightColor !== DEFAULT_SETTINGS.other.selectionHighlightColor
     || (settings.value.other.themeReadabilityCheckOnOpen ?? true)
       !== (DEFAULT_SETTINGS.other.themeReadabilityCheckOnOpen ?? true)
   );

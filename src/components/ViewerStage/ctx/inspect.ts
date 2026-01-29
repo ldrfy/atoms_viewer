@@ -26,7 +26,7 @@ export type InspectCtx = {
 
 export function createInspectCtx(): InspectCtx {
   const enabled = ref(true);
-  const measureMode = ref(false);
+  const measureMode = ref(true);
   const selected = ref<SelectedAtom[]>([]);
   const measure = ref<MeasureInfo>({});
 

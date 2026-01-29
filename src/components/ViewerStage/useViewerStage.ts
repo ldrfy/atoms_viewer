@@ -738,6 +738,13 @@ export function useViewerStage(
     setActiveLayer: (id: string) => setActiveLayer(id),
   });
 
+  watch(
+    () => settingsRef.value.other.selectionHighlightColor,
+    () => {
+      picking.updateSelectionVisuals();
+    },
+  );
+
   // animation
   const anim = createViewerAnimationController({
     getRuntime: () => runtime,

@@ -137,6 +137,7 @@ export type OtherSettingsGroup = {
   frame_rate: number;
   themeMode: ThemeMode;
   visualStyle: VisualStyleId;
+  selectionHighlightColor: string;
 };
 export const DEFAULT_OTHER: OtherSettingsGroup = {
   showAxes: false,
@@ -146,6 +147,7 @@ export const DEFAULT_OTHER: OtherSettingsGroup = {
   frame_rate: 60,
   themeMode: 'system',
   visualStyle: 'default',
+  selectionHighlightColor: '#ffd400',
 };
 
 export type AnimSettingsGroup = {

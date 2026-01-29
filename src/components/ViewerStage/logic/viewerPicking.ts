@@ -53,11 +53,17 @@ export function createViewerPickingController(deps: RenderDeps) {
   // selection visuals (reused meshes for highlight/measure lines).
   // 选中高亮与测量线共用几何体，避免频繁创建对象。
   let selectionGroup: THREE.Group | null = null;
-  let markerMeshes: THREE.Mesh[] = [];
-  let line12: THREE.Mesh | null = null;
-  let line23: THREE.Mesh | null = null;
+  let markerMesh: THREE.InstancedMesh | null = null;
+  let markerCapacity = 0;
+  let markerGeometry: THREE.SphereGeometry | null = null;
+  let markerMaterial: THREE.MeshBasicMaterial | null = null;
+  let lineMesh: THREE.InstancedMesh | null = null;
+  let lineCapacity = 0;
   let lineGeometry: THREE.CylinderGeometry | null = null;
   let lineMaterial: THREE.MeshBasicMaterial | null = null;
+  let fillMesh: THREE.Mesh | null = null;
+  let fillGeometry: THREE.BufferGeometry | null = null;
+  let fillMaterial: THREE.MeshBasicMaterial | null = null;
 
   let selectionVisuals: Array<{
     mesh: THREE.InstancedMesh;
@@ -65,6 +71,8 @@ export function createViewerPickingController(deps: RenderDeps) {
   }> = [];
   const tmpMat = new THREE.Matrix4();
   const tmpPos = new THREE.Vector3();
+  const tmpScale = new THREE.Vector3();
+  const tmpQuat = new THREE.Quaternion();
   const lineUp = new THREE.Vector3(0, 1, 0);
   const lineDir = new THREE.Vector3();
   const lineQuat = new THREE.Quaternion();
@@ -72,6 +80,7 @@ export function createViewerPickingController(deps: RenderDeps) {
   const lineCenter = new THREE.Vector3();
   const lineP1 = new THREE.Vector3();
   const lineP2 = new THREE.Vector3();
+  const highlightColor = new THREE.Color();
 
   function wrapDeg180(deg: number): number {
     let x = ((((deg + 180) % 360) + 360) % 360) - 180;
@@ -116,25 +125,27 @@ export function createViewerPickingController(deps: RenderDeps) {
     selectionGroup.name = 'atom-selection';
     stage.modelGroup.add(selectionGroup);
 
-    const geo = new THREE.SphereGeometry(1, 18, 18);
-    const mat = new THREE.MeshBasicMaterial({
+    markerGeometry = new THREE.SphereGeometry(1, 18, 18);
+    markerMaterial = new THREE.MeshBasicMaterial({
       color: new THREE.Color(0xffd400),
       transparent: true,
       opacity: 0.35,
       depthWrite: false,
     });
-    mat.polygonOffset = true;
-    mat.polygonOffsetFactor = -2;
-    mat.polygonOffsetUnits = -2;
+    markerMaterial.polygonOffset = true;
+    markerMaterial.polygonOffsetFactor = -2;
+    markerMaterial.polygonOffsetUnits = -2;
 
-    markerMeshes = Array.from({ length: 3 }).map(() => {
-      const m = new THREE.Mesh(geo, mat);
-      m.visible = false;
-      m.renderOrder = 10;
-      m.frustumCulled = false;
-      return m;
-    });
-    for (const m of markerMeshes) selectionGroup.add(m);
+    markerCapacity = 8;
+    markerMesh = new THREE.InstancedMesh(
+      markerGeometry,
+      markerMaterial,
+      markerCapacity,
+    );
+    markerMesh.visible = false;
+    markerMesh.renderOrder = 10;
+    markerMesh.frustumCulled = false;
+    selectionGroup.add(markerMesh);
 
     lineGeometry = new THREE.CylinderGeometry(1, 1, 1, 12, 1, false);
     lineMaterial = new THREE.MeshBasicMaterial({
@@ -144,19 +155,30 @@ export function createViewerPickingController(deps: RenderDeps) {
       depthTest: true,
       depthWrite: false,
     });
+    lineCapacity = 8;
+    lineMesh = new THREE.InstancedMesh(
+      lineGeometry,
+      lineMaterial,
+      lineCapacity,
+    );
+    lineMesh.visible = false;
+    lineMesh.renderOrder = 9;
+    lineMesh.frustumCulled = false;
+    selectionGroup.add(lineMesh);
 
-    const makeLine = (): THREE.Mesh => {
-      const ln = new THREE.Mesh(lineGeometry!, lineMaterial!);
-      ln.visible = false;
-      ln.renderOrder = 9;
-      ln.frustumCulled = false;
-      return ln;
-    };
-
-    line12 = makeLine();
-    line23 = makeLine();
-    selectionGroup.add(line12);
-    selectionGroup.add(line23);
+    fillGeometry = new THREE.BufferGeometry();
+    fillMaterial = new THREE.MeshBasicMaterial({
+      color: new THREE.Color(0xffd400),
+      transparent: true,
+      opacity: 0.18,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+    });
+    fillMesh = new THREE.Mesh(fillGeometry, fillMaterial);
+    fillMesh.visible = false;
+    fillMesh.renderOrder = 8;
+    fillMesh.frustumCulled = false;
+    selectionGroup.add(fillMesh);
   }
 
   function updateSelectionVisuals(): void {
@@ -166,22 +188,55 @@ export function createViewerPickingController(deps: RenderDeps) {
     const requestRedraw = () => stage.invalidate();
 
     ensureSelectionVisuals();
-    if (!selectionGroup || markerMeshes.length === 0) return;
+    if (!selectionGroup || !markerMesh || !lineMesh || !fillMesh) return;
 
     stage.modelGroup.updateMatrixWorld(true);
 
     const sel = deps.inspectCtx.selected.value;
-    for (const m of markerMeshes) m.visible = false;
-    if (line12) line12.visible = false;
-    if (line23) line23.visible = false;
+    const rawColor = deps.settingsRef.value.other.selectionHighlightColor ?? '#ffd400';
+    try {
+      highlightColor.set(rawColor);
+    }
+    catch {
+      highlightColor.set('#ffd400');
+    }
+    if (markerMaterial) markerMaterial.color.copy(highlightColor);
+    if (lineMaterial) lineMaterial.color.copy(highlightColor);
+    if (fillMaterial) fillMaterial.color.copy(highlightColor);
+
+    markerMesh.visible = false;
+    lineMesh.visible = false;
+    fillMesh.visible = false;
 
     if (sel.length === 0 || selectionVisuals.length === 0) {
+      markerMesh.count = 0;
+      markerMesh.instanceMatrix.needsUpdate = true;
+      lineMesh.count = 0;
+      lineMesh.instanceMatrix.needsUpdate = true;
       requestRedraw();
       return;
     }
 
     const pts: THREE.Vector3[] = [];
-    for (let i = 0; i < Math.min(3, sel.length); i += 1) {
+    const count = Math.min(sel.length, selectionVisuals.length);
+    if (count > markerCapacity) {
+      markerCapacity = Math.max(count, markerCapacity * 2);
+      if (markerMesh) selectionGroup.remove(markerMesh);
+      markerMesh = new THREE.InstancedMesh(
+        markerGeometry!,
+        markerMaterial!,
+        markerCapacity,
+      );
+      markerMesh.renderOrder = 10;
+      markerMesh.frustumCulled = false;
+      selectionGroup.add(markerMesh);
+    }
+
+    markerMesh.count = count;
+    markerMesh.visible = count > 0;
+    tmpQuat.identity();
+
+    for (let i = 0; i < count; i += 1) {
       const v = selectionVisuals[i];
       if (!v) continue;
 
@@ -201,12 +256,13 @@ export function createViewerPickingController(deps: RenderDeps) {
       const r = Math.max(0.05, rParam ?? rBound ?? 0.3);
       const haloR = r * 1.25;
 
-      markerMeshes[i]!.scale.setScalar(haloR);
-      markerMeshes[i]!.position.copy(tmpPos);
-      markerMeshes[i]!.visible = true;
+      tmpScale.setScalar(haloR);
+      tmpMat.compose(tmpPos, tmpQuat, tmpScale);
+      markerMesh.setMatrixAt(i, tmpMat);
 
       pts.push(tmpPos.clone());
     }
+    markerMesh.instanceMatrix.needsUpdate = true;
 
     const runtime = deps.getRuntime();
     const display = runtime?.activeDisplaySettings?.value;
@@ -215,9 +271,9 @@ export function createViewerPickingController(deps: RenderDeps) {
       : (Number.isFinite(deps.settingsRef.value.details.bondRadius)
           ? deps.settingsRef.value.details.bondRadius
           : 0.09);
-    const lineRadius = Math.max(0.008, baseBondRadius * 1.1);
+    const lineRadius = Math.max(0.008, baseBondRadius * 1.5);
 
-    const updateLine = (mesh: THREE.Mesh, a: THREE.Vector3, b: THREE.Vector3) => {
+    const updateLine = (mesh: THREE.InstancedMesh, idx: number, a: THREE.Vector3, b: THREE.Vector3) => {
       lineP1.copy(a);
       lineP2.copy(b);
 
@@ -225,7 +281,9 @@ export function createViewerPickingController(deps: RenderDeps) {
       lineDir.subVectors(lineP2, lineP1);
       const len = lineDir.length();
       if (len < 1.0e-7) {
-        mesh.visible = false;
+        tmpScale.set(0, 0, 0);
+        tmpMat.compose(lineCenter, tmpQuat, tmpScale);
+        mesh.setMatrixAt(idx, tmpMat);
         return;
       }
 
@@ -233,17 +291,60 @@ export function createViewerPickingController(deps: RenderDeps) {
       lineQuat.setFromUnitVectors(lineUp, lineDir);
       lineScale.set(lineRadius, len, lineRadius);
 
-      mesh.position.copy(lineCenter);
-      mesh.quaternion.copy(lineQuat);
-      mesh.scale.copy(lineScale);
-      mesh.visible = true;
+      tmpMat.compose(lineCenter, lineQuat, lineScale);
+      mesh.setMatrixAt(idx, tmpMat);
     };
 
-    if (pts.length >= 2 && line12) {
-      updateLine(line12, pts[0]!, pts[1]!);
+    const segments = Math.max(0, pts.length - 1);
+    if (segments > lineCapacity) {
+      lineCapacity = Math.max(segments, lineCapacity * 2);
+      if (lineMesh) selectionGroup.remove(lineMesh);
+      lineMesh = new THREE.InstancedMesh(
+        lineGeometry!,
+        lineMaterial!,
+        lineCapacity,
+      );
+      lineMesh.renderOrder = 9;
+      lineMesh.frustumCulled = false;
+      selectionGroup.add(lineMesh);
     }
-    if (pts.length >= 3 && line23) {
-      updateLine(line23, pts[1]!, pts[2]!);
+
+    lineMesh.count = segments;
+    lineMesh.visible = segments > 0;
+    for (let i = 0; i < segments; i += 1) {
+      updateLine(lineMesh, i, pts[i]!, pts[i + 1]!);
+    }
+    lineMesh.instanceMatrix.needsUpdate = true;
+
+    if (pts.length >= 3) {
+      const triCount = pts.length - 2;
+      const positions = new Float32Array(triCount * 9);
+      const p0 = pts[0]!;
+      for (let i = 0; i < triCount; i += 1) {
+        const p1 = pts[i + 1]!;
+        const p2 = pts[i + 2]!;
+        const base = i * 9;
+        positions[base] = p0.x;
+        positions[base + 1] = p0.y;
+        positions[base + 2] = p0.z;
+        positions[base + 3] = p1.x;
+        positions[base + 4] = p1.y;
+        positions[base + 5] = p1.z;
+        positions[base + 6] = p2.x;
+        positions[base + 7] = p2.y;
+        positions[base + 8] = p2.z;
+      }
+
+      const nextGeometry = new THREE.BufferGeometry();
+      nextGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+      nextGeometry.computeVertexNormals();
+      fillGeometry?.dispose();
+      fillGeometry = nextGeometry;
+      fillMesh.geometry = nextGeometry;
+      fillMesh.visible = true;
+    }
+    else {
+      fillMesh.visible = false;
     }
 
     requestRedraw();
@@ -285,32 +386,13 @@ export function createViewerPickingController(deps: RenderDeps) {
     const sel = [...deps.inspectCtx.selected.value];
     const visuals = [...selectionVisuals];
 
-    const existsIdx = sel.findIndex(
-      x => x.layerId === layerId && x.atomIndex === atomIndex,
-    );
-    if (existsIdx >= 0) {
-      if (additive) {
-        sel.splice(existsIdx, 1);
-        visuals.splice(existsIdx, 1);
-      }
-      else {
-        sel.splice(0, sel.length, picked);
-        visuals.splice(0, visuals.length, { mesh, instanceId });
-      }
+    if (!additive) {
+      sel.splice(0, sel.length, picked);
+      visuals.splice(0, visuals.length, { mesh, instanceId });
     }
     else {
-      if (!additive) {
-        sel.splice(0, sel.length, picked);
-        visuals.splice(0, visuals.length, { mesh, instanceId });
-      }
-      else {
-        if (sel.length >= 3) {
-          sel.splice(0, 1);
-          visuals.splice(0, 1);
-        }
-        sel.push(picked);
-        visuals.push({ mesh, instanceId });
-      }
+      sel.push(picked);
+      visuals.push({ mesh, instanceId });
     }
 
     deps.inspectCtx.selected.value = sel;

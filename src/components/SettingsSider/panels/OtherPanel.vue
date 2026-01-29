@@ -55,6 +55,33 @@
       </a-row>
     </a-form-item>
 
+    <a-form-item :label="t('settings.panel.other.selectionColor')">
+      <a-row :gutter="8" align="middle">
+        <a-col :span="6">
+          <input
+            class="color-picker"
+            type="color"
+            :value="colorPickerValue(selectionHighlightColorModel)"
+            :aria-label="t('settings.panel.other.selectionColor')"
+            :title="t('settings.panel.other.selectionColor')"
+            @input="onSelectionColorPickerChange(($event as any).target?.value)"
+          >
+        </a-col>
+        <a-col :span="18">
+          <a-input
+            :value="selectionHighlightColorModel"
+            :placeholder="t('settings.panel.colors.hexPlaceholder')"
+            :aria-label="t('settings.panel.colors.hexPlaceholder')"
+            :title="t('settings.panel.colors.hexPlaceholder')"
+            @change="onSelectionColorHexChange(($event as any).target?.value)"
+          />
+        </a-col>
+      </a-row>
+      <a-typography-text type="secondary" class="settings-text-secondary">
+        {{ t('settings.panel.other.selectionColorHint') }}
+      </a-typography-text>
+    </a-form-item>
+
     <a-form-item>
       <a-row justify="space-between" align="middle">
         <a-col>{{ t('settings.panel.other.axes') }}</a-col>
@@ -116,6 +143,7 @@
 <script setup lang="ts">
 import { computed, inject } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { message } from 'ant-design-vue';
 
 import { useSettingsSiderContext } from '../useSettingsSiderContext';
 import {
@@ -158,6 +186,11 @@ const themeReadabilityCheckOnOpenModel = computed({
 const modelLightIntensityModel = computed({
   get: () => settings.value.other.modelLightIntensity ?? DEFAULT_SETTINGS.other.modelLightIntensity,
   set: (v: number) => patchSettings({ other: { modelLightIntensity: v } }),
+});
+
+const selectionHighlightColorModel = computed({
+  get: () => settings.value.other.selectionHighlightColor ?? DEFAULT_SETTINGS.other.selectionHighlightColor,
+  set: (v: string) => patchSettings({ other: { selectionHighlightColor: v } }),
 });
 
 const themeModeModel = computed<ThemeMode>({
@@ -237,10 +270,37 @@ const isOtherDirty = computed(() => {
     || settings.value.other.modelLightIntensity !== styleBase.modelLightIntensity
     || settings.value.other.themeMode !== DEFAULT_SETTINGS.other.themeMode
     || settings.value.other.visualStyle !== DEFAULT_SETTINGS.other.visualStyle
+    || settings.value.other.selectionHighlightColor !== DEFAULT_SETTINGS.other.selectionHighlightColor
     || (settings.value.other.themeReadabilityCheckOnOpen ?? true)
       !== (DEFAULT_SETTINGS.other.themeReadabilityCheckOnOpen ?? true)
   );
 });
+
+function normalizeHexColor(v: unknown): string | null {
+  if (v == null) return null;
+  const s = String(v).trim();
+  if (/^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(s)) return s;
+  return null;
+}
+
+function colorPickerValue(v: string): string {
+  return normalizeHexColor(v) ?? DEFAULT_SETTINGS.other.selectionHighlightColor;
+}
+
+function onSelectionColorPickerChange(v: unknown): void {
+  const next = normalizeHexColor(v);
+  if (!next) return;
+  selectionHighlightColorModel.value = next;
+}
+
+function onSelectionColorHexChange(v: unknown): void {
+  const next = normalizeHexColor(v);
+  if (!next) {
+    message.error(t('settings.panel.colors.invalidHex'));
+    return;
+  }
+  selectionHighlightColorModel.value = next;
+}
 
 function resetOtherSettings(): void {
   patchSettings({

@@ -16,9 +16,28 @@
     <div
       v-if="showDualViewDivider"
       class="dual-view-divider"
+      :class="{ dragging: isDraggingDivider }"
       :style="dualViewDividerStyle"
       aria-hidden="true"
+      role="separator"
+      aria-orientation="vertical"
+      @pointerdown.prevent="onDividerPointerDown"
     />
+    <div v-if="showDualViewDivider" class="dual-view-divider__hit" @pointerdown.prevent="onDividerPointerDown" />
+    <div v-if="showDualViewDivider" class="dual-view-divider__label" :style="dualViewLabelStyle">
+      {{ dualViewPercentLabel }}
+    </div>
+    <a-button
+      v-if="showDualViewDivider"
+      size="small"
+      class="dual-view-divider__snap"
+      :style="dualViewSnapStyle"
+      :title="t('viewer.view.snapSplit')"
+      :aria-label="t('viewer.view.snapSplit')"
+      @click="onSnapSplit"
+    >
+      {{ t('viewer.view.snapSplit') }}
+    </a-button>
 
     <!-- 原子信息/测量面板（点击原子后显示） -->
     <AtomInspectorOverlay :ctx="stage.inspectCtx" />
@@ -123,6 +142,7 @@ const activeThemeMode = computed<'light' | 'dark'>(() =>
 );
 const skipNextThemePrompt = ref(false);
 const allowThemePrompt = ref(false);
+const isDraggingDivider = ref(false);
 
 onMounted(() => {
   allowThemePrompt.value = true;
@@ -144,8 +164,62 @@ const dualViewDividerStyle = computed(() => {
     ? settingsRef.value.view.dualViewSplit
     : 0.5;
   const ratio = Math.min(0.9, Math.max(0.1, raw));
-  return { left: `${ratio * 100}%` };
+  return {
+    'left': `${ratio * 100}%`,
+    '--dual-view-divider-x': `${ratio * 100}%`,
+  } as Record<string, string>;
 });
+
+const dualViewLabelStyle = computed(() => ({ left: dualViewDividerStyle.value.left }));
+const dualViewSnapStyle = computed(() => ({ left: dualViewDividerStyle.value.left }));
+
+const dualViewPercentLabel = computed(() => {
+  const raw = typeof settingsRef.value.view.dualViewSplit === 'number'
+    ? settingsRef.value.view.dualViewSplit
+    : 0.5;
+  const ratio = Math.min(0.9, Math.max(0.1, raw));
+  const left = Math.round(ratio * 100);
+  return `${left}% / ${100 - left}%`;
+});
+
+function clampSplit(v: number): number {
+  return Math.min(0.9, Math.max(0.1, v));
+}
+
+function updateSplitFromPointer(e: PointerEvent): void {
+  const host = stage.canvasHostRef.value;
+  if (!host) return;
+  const rect = host.getBoundingClientRect();
+  if (rect.width <= 0) return;
+  const x = e.clientX - rect.left;
+  const ratio = clampSplit(x / rect.width);
+  patchSettings({ view: { dualViewSplit: ratio } });
+}
+
+function onDividerPointerDown(e: PointerEvent): void {
+  if (!showDualViewDivider.value) return;
+  isDraggingDivider.value = true;
+  updateSplitFromPointer(e);
+
+  const onMove = (ev: PointerEvent) => {
+    if (!isDraggingDivider.value) return;
+    updateSplitFromPointer(ev);
+  };
+  const onUp = () => {
+    isDraggingDivider.value = false;
+    window.removeEventListener('pointermove', onMove);
+    window.removeEventListener('pointerup', onUp);
+    window.removeEventListener('pointercancel', onUp);
+  };
+
+  window.addEventListener('pointermove', onMove, { passive: true });
+  window.addEventListener('pointerup', onUp, { passive: true });
+  window.addEventListener('pointercancel', onUp, { passive: true });
+}
+
+function onSnapSplit(): void {
+  patchSettings({ view: { dualViewSplit: 0.5 } });
+}
 
 // ✅ 映射集中在 useViewerStage.ts：index.vue 不再重复写
 setViewerApi(stage.bridgeApi);
@@ -154,6 +228,7 @@ defineExpose(stage.exposedApi);
 
 onBeforeUnmount(() => {
   setViewerApi(null);
+  isDraggingDivider.value = false;
 });
 
 watch(
@@ -263,9 +338,51 @@ function showThemeMismatchConfirm(preferred: 'light' | 'dark'): void {
     width: 0;
     border-left: 1px dashed rgba(255, 255, 255, 0.75);
     opacity: 0.8;
-    pointer-events: none;
+    pointer-events: auto;
     z-index: 12;
     mix-blend-mode: difference;
+    cursor: col-resize;
+}
+
+.dual-view-divider.dragging {
+    opacity: 1;
+}
+
+.dual-view-divider__hit {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 10px;
+    left: calc(var(--dual-view-divider-x, 50%) - 5px);
+    transform: translateX(0);
+    pointer-events: auto;
+    cursor: col-resize;
+    z-index: 11;
+}
+
+.dual-view-divider__label {
+    position: absolute;
+    top: 10px;
+    transform: translateX(-50%);
+    font-size: 12px;
+    padding: 2px 6px;
+    border-radius: 6px;
+    background: rgba(0, 0, 0, 0.55);
+    color: #fff;
+    pointer-events: none;
+    z-index: 13;
+}
+
+:root[data-theme="dark"] .dual-view-divider__label {
+    background: rgba(255, 255, 255, 0.18);
+    color: #fff;
+}
+
+.dual-view-divider__snap {
+    position: absolute;
+    top: 34px;
+    transform: translateX(-50%);
+    z-index: 13;
 }
 
 .loading-overlay {

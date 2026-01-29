@@ -15,38 +15,6 @@
       </a-typography-text>
     </a-form-item>
 
-    <a-form-item
-      v-if="viewPresetsModel.length === 2"
-      :label="t('settings.panel.view.dualViewSplit')"
-    >
-      <a-row :gutter="8" align="middle">
-        <a-col :flex="1">
-          <a-slider
-            v-model:value="dualViewSplitPctModel"
-            :min="DUAL_VIEW_SPLIT_MIN_PCT"
-            :max="DUAL_VIEW_SPLIT_MAX_PCT"
-            :step="1"
-            :disabled="!hasAnyLayer"
-          />
-        </a-col>
-        <a-col class="settings-col-compact">
-          <a-input-number
-            v-model:value="dualViewSplitPctModel"
-            :aria-label="t('settings.panel.view.dualViewSplit')"
-            :title="t('settings.panel.view.dualViewSplit')"
-            :min="DUAL_VIEW_SPLIT_MIN_PCT"
-            :max="DUAL_VIEW_SPLIT_MAX_PCT"
-            :step="1"
-            :disabled="!hasAnyLayer"
-            class="settings-full-width"
-          />
-        </a-col>
-      </a-row>
-      <a-typography-text type="secondary" class="settings-text-secondary">
-        {{ t('settings.panel.view.dualViewSplitHint') }}
-      </a-typography-text>
-    </a-form-item>
-
     <a-form-item>
       <a-row justify="space-between" align="middle">
         <a-col>{{ t('settings.panel.view.perspective') }}</a-col>
@@ -190,10 +158,6 @@ import { computed, ref, watch } from 'vue';
 import { message } from 'ant-design-vue';
 import { useI18n } from 'vue-i18n';
 import { normalizeViewPresets, type ViewPreset } from '../../../lib/viewer/viewPresets';
-import {
-  DUAL_VIEW_SPLIT_MIN_PCT,
-  DUAL_VIEW_SPLIT_MAX_PCT,
-} from '../../../lib/viewer/constants';
 import { DUAL_VIEW_DISTANCE_MIN } from '../../../lib/viewer/constants';
 import { useSettingsSiderContext } from '../useSettingsSiderContext';
 
@@ -256,18 +220,6 @@ const dualViewDistanceMax = computed(() => {
   return Math.max(200, Math.ceil(v * 1.2));
 });
 // const dualViewDistanceMax = 500;
-
-const dualViewSplitPctModel = computed({
-  get: () => {
-    const r = typeof settings.value.view.dualViewSplit === 'number'
-      ? settings.value.view.dualViewSplit
-      : 0.5;
-    return Math.round(r * 100);
-  },
-  set: (pct: number) => {
-    patchSettings({ view: { dualViewSplit: pct / 100 } });
-  },
-});
 
 // Switch label is "perspective"; stored setting is `orthographic`.
 // UI "ON" means perspective, so invert.

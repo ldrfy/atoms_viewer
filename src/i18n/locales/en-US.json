@@ -132,6 +132,9 @@
         "settings": {
             "modifiedHint": "Detected modified settings for the current model. Relevant panels are now open."
         },
+        "view": {
+            "snapSplit": "Snap 50%"
+        },
         "autoRotate": {
             "enabledHint": "Auto-rotation enabled. Temporary off: Settings → Auto-rotate → Enable; permanent off: Settings → Other → Auto rotate after loading models.",
             "disabledHint": "Related panels are open; auto-rotate has been stopped."

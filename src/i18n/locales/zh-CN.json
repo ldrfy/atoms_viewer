@@ -132,6 +132,9 @@
         "settings": {
             "modifiedHint": "检测到当前模型存在修改过的设置，已打开相关面板。"
         },
+        "view": {
+            "snapSplit": "吸附 50%"
+        },
         "autoRotate": {
             "enabledHint": "自动旋转已开启。临时关闭：设置-自动旋转-启用；永久关闭：设置-其他设置-载入模型后自动旋转。",
             "disabledHint": "检测到相关设置已展开，已停止自动旋转。"

@@ -13,7 +13,7 @@
 
 </div>
 
-![start](https://raw.githubusercontent.com/ldrfy/atoms_viewer_docs/refs/heads/main/docs/site/public/img/en/start.jpg)
+![start](https://raw.githubusercontent.com/ldrfy/atoms_viewer_docs/refs/tags/v1.0.0/docs/site/public/img/en/start.jpg)
 
 ## 🚀 Get Started
 

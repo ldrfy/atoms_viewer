@@ -104,6 +104,7 @@ import OtherPanel from './panels/OtherPanel.vue';
 import {
   DEFAULT_SETTINGS,
   DEFAULT_DETAILS,
+  hasUnknownElementMappingForTypeIds,
 } from '../../lib/viewer/settings';
 import { useSettingsSiderContext } from './useSettingsSiderContext';
 import { useSettingsSiderControlContext } from './useSettingsSiderControlContext';
@@ -277,10 +278,9 @@ const colorsDirty = computed(() => {
 });
 
 function hasCustomTypeMap(): boolean {
-  const template = settings.value.lammps.data ?? {};
   const map = viewerApi.value?.activeLayerTypeMap?.value ?? {};
-  const merged = { ...template, ...map };
-  return Object.values(merged).some(v => String(v ?? '').trim().toUpperCase() !== 'E');
+  const typeIds = viewerApi.value?.activeLayerTypeIds?.value ?? [];
+  return hasUnknownElementMappingForTypeIds(map, typeIds);
 }
 
 function isTypeMapApplied(): boolean {
@@ -291,7 +291,7 @@ function isPanelDirty(key: string): boolean {
   if (key === PANEL_KEYS.files) return filesDirty.value;
   if (key === PANEL_KEYS.layers) return layersDirty.value;
   if (key === PANEL_KEYS.colors) return colorsDirty.value;
-  if (key === PANEL_KEYS.lammps) return isTypeMapApplied() && hasCustomTypeMap();
+  if (key === PANEL_KEYS.lammps) return !isTypeMapApplied() || hasCustomTypeMap();
   if (key === PANEL_KEYS.details) return detailsDirty.value;
   if (key === PANEL_KEYS.view) return viewDirty.value;
   if (key === PANEL_KEYS.rotation) return rotationDirty.value;

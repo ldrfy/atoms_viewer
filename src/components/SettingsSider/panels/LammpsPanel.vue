@@ -31,23 +31,23 @@
 
     <a-form-item :label="t('settings.panel.lammps.mapLabel')" class="settings-gap-top-md">
       <div
-        v-for="(row, idx) in lammpsTypeMapModel"
-        :key="`${row.typeId}-${idx}`"
+        v-for="(typeId, idx) in activeLayerTypeIds"
+        :key="`${typeId}-${idx}`"
         class="settings-gap-bottom-sm"
       >
-        <a-row :gutter="8" align="middle">
-          <a-col :span="6">
+        <a-row align="middle" :gutter="8">
+          <a-col :span="4">
             <a-tag class="settings-lammps-type">
-              {{ row.typeId }}
+              {{ typeId }}
             </a-tag>
           </a-col>
 
-          <a-col :span="18">
+          <a-col :span="20">
             <a-select
               show-search
               :aria-label="t('settings.panel.lammps.elementPlaceholder')"
               :title="t('settings.panel.lammps.elementPlaceholder')"
-              :value="row.element"
+              :value="draftMap[String(typeId)] || 'E'"
               class="settings-full-width"
               :placeholder="t('settings.panel.lammps.elementPlaceholder')"
               :options="atomicOptions"
@@ -97,13 +97,7 @@ import { viewerApiRef } from '../../../lib/viewer/bridge';
 import { useSettingsSiderContext } from '../useSettingsSiderContext';
 import { ATOMIC_SYMBOL_LIST, normalizeElementSymbol } from '../../../lib/structure/chem';
 import { readApplyAllLayersFlags, writeApplyAllLayersFlags } from '../applyAllStorage';
-import {
-  lammpsRecordToRows,
-  lammpsRowsToRecord,
-  type LammpsTypeMapRecord,
-} from '../../../lib/viewer/settings';
-
-type LammpsTypeMapRow = { typeId: number; element: string };
+import type { LammpsTypeMapRecord } from '../../../lib/viewer/settings';
 
 const { t } = useI18n();
 const { patchSettings, hasAnyLayer, settings } = useSettingsSiderContext();
@@ -119,19 +113,7 @@ const activeLayerInfo = computed(() => {
 
 const activeLayerTypeIds = computed(() => viewerApi.value?.activeLayerTypeIds.value ?? []);
 
-const lammpsTypeMapModel = computed<LammpsTypeMapRow[]>({
-  get: () => {
-    const map = viewerApi.value?.activeLayerTypeMap.value ?? {};
-    return (activeLayerTypeIds.value ?? []).map(tid => ({
-      typeId: tid,
-      element: normalizeElementSymbol(map[String(tid)] ?? '') || 'E',
-    }));
-  },
-  set: (rows) => {
-    const map = lammpsRowsToRecord(rows);
-    viewerApi.value?.setActiveLayerTypeMap(map);
-  },
-});
+const draftMap = ref<LammpsTypeMapRecord>({});
 
 const atomicOptions = computed(() =>
   ATOMIC_SYMBOL_LIST.map((symRaw) => {
@@ -159,9 +141,11 @@ const lastApplied = ref<LammpsTypeMapRecord | null>(null);
 const hasUndo = computed(() => Object.keys(lastApplied.value ?? {}).length > 0);
 
 watch(
-  () => activeLayerId.value,
+  () => [activeLayerId.value, activeLayerTypeIds.value, viewerApi.value?.activeLayerTypeMapApplied?.value],
   () => {
-    lastApplied.value = { ...(viewerApi.value?.activeLayerTypeMap.value ?? {}) };
+    const map = viewerApi.value?.activeLayerTypeMap.value ?? {};
+    lastApplied.value = { ...map };
+    draftMap.value = { ...map };
   },
   { immediate: true },
 );
@@ -176,25 +160,21 @@ const applyAllLayersModel = computed<boolean>({
       ...readApplyAllLayersFlags(),
       lammps: v,
     });
-    if (v) {
-      const map = lammpsRowsToRecord(lammpsTypeMapModel.value);
-      patchSettings({ lammps: { data: map } });
-      viewerApi.value?.applyTypeMapToAllLayers?.(map);
-    }
   },
 });
 
 function onLammpsElementChange(idx: number, v: unknown): void {
   const element = toElement(v);
-  lammpsTypeMapModel.value = lammpsTypeMapModel.value.map((row, i) =>
-    i === idx ? { ...row, element } : row,
-  );
+  const typeIds = activeLayerTypeIds.value ?? [];
+  const tid = typeIds[idx];
+  if (!tid) return;
+  draftMap.value = { ...draftMap.value, [String(tid)]: element };
 }
 
 function onApplyTypeMap(): void {
-  const map = lammpsRowsToRecord(lammpsTypeMapModel.value);
+  const map = { ...draftMap.value };
   lastApplied.value = { ...map };
-  patchSettings({ lammps: { data: map } });
+  patchSettings({ lammps: { data: { ...map } } });
   if (applyAllLayersModel.value) {
     viewerApi.value?.applyTypeMapToAllLayers?.(map);
   }
@@ -207,8 +187,8 @@ function onApplyTypeMap(): void {
 function onUndoTypeMap(): void {
   if (!lastApplied.value) return;
   const map = { ...lastApplied.value };
-  lammpsTypeMapModel.value = lammpsRecordToRows(map);
-  patchSettings({ lammps: { data: map } });
+  draftMap.value = { ...map };
+  patchSettings({ lammps: { data: { ...map } } });
   if (applyAllLayersModel.value) {
     viewerApi.value?.applyTypeMapToAllLayers?.(map);
   }

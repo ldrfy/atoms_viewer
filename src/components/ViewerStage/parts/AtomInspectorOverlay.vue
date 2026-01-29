@@ -122,6 +122,9 @@
                             </a-typography-text>
 
                             <div class="atom-meta">
+                              <a-typography-text v-if="item.layerName || item.layerId" type="secondary">
+                                layer={{ item.layerName || item.layerId }}
+                              </a-typography-text>
                               <a-typography-text type="secondary">
                                 idx={{ item.atomIndex + 1 }}
                               </a-typography-text>

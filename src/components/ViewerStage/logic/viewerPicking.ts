@@ -31,8 +31,6 @@ type RenderDeps = {
 
   isSelectingRecordArea: Ref<boolean>;
 
-  getActiveLayerId: () => string | null;
-  setActiveLayer: (id: string) => void;
 };
 
 export function createViewerPickingController(deps: RenderDeps) {
@@ -114,6 +112,14 @@ export function createViewerPickingController(deps: RenderDeps) {
     }
 
     deps.inspectCtx.measure.value = m;
+  }
+
+  function getLayerLabel(layerId: string): string {
+    const runtime = deps.getRuntime();
+    const info = runtime?.layers.value.find(l => l.id === layerId) ?? null;
+    const name = String(info?.name ?? '').trim();
+    const file = String(info?.sourceFileName ?? '').trim();
+    return name || file || layerId;
   }
 
   function ensureSelectionVisuals(): void {
@@ -372,16 +378,13 @@ export function createViewerPickingController(deps: RenderDeps) {
 
     const picked: SelectedAtom = {
       layerId,
+      layerName: getLayerLabel(layerId),
       atomIndex,
       element,
       id: atom.id,
       typeId: atom.typeId,
       position: [atom.position[0], atom.position[1], atom.position[2]],
     };
-
-    if (deps.getActiveLayerId() && deps.getActiveLayerId() !== layerId) {
-      deps.setActiveLayer(layerId);
-    }
 
     const sel = [...deps.inspectCtx.selected.value];
     const visuals = [...selectionVisuals];
@@ -468,11 +471,7 @@ export function createViewerPickingController(deps: RenderDeps) {
     const layerId = (mesh.userData as any).layerId as string | undefined;
     if (!layerId) return;
 
-    if (deps.getActiveLayerId() !== layerId) {
-      deps.setActiveLayer(layerId);
-    }
-
-    const atoms = runtime.getActiveAtoms();
+    const atoms = runtime.getAtomsForLayer(layerId);
     if (!atoms) return;
 
     const atom = atoms[atomIndex];

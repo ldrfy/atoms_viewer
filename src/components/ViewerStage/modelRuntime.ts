@@ -254,6 +254,7 @@ export type ModelRuntime = {
   getFrameIndex: () => number;
   applyFrameByIndex: (idx: number, opts?: { refreshBonds?: boolean }) => void;
   getActiveAtoms: () => Atom[] | null;
+  getAtomsForLayer: (id: string) => Atom[] | null;
   getFrameMetaForLayer: (id: string | null, frameIndex?: number) => FrameMeta | null;
 
   applyAtomScale: () => void;
@@ -1210,22 +1211,31 @@ export function createModelRuntime(args: {
   function getActiveAtoms(): Atom[] | null {
     const active = getActiveLayer();
     if (!active) return null;
+    return getAtomsForLayerInternal(active);
+  }
 
-    const frames = active.model.frames;
+  function getAtomsForLayerInternal(layer: LayerInternal): Atom[] | null {
+    const frames = layer.model.frames;
     const frameAtoms = (frames && frames.length > 0)
-      ? (frames[Math.min(Math.max(0, active.frameIndex), frames.length - 1)] ?? null)
-      : active.model.atoms;
+      ? (frames[Math.min(Math.max(0, layer.frameIndex), frames.length - 1)] ?? null)
+      : layer.model.atoms;
     if (!frameAtoms) return null;
 
     // Keep the runtime's "current frame" pointers consistent even if callers
     // query atoms without going through applyFrameByIndex.
-    if (active.currentFrameAtoms !== frameAtoms || active.mappedFrameIndex !== active.frameIndex) {
-      active.currentFrameAtoms = frameAtoms;
-      active.currentMappedAtoms = null;
-      active.mappedFrameIndex = -1;
+    if (layer.currentFrameAtoms !== frameAtoms || layer.mappedFrameIndex !== layer.frameIndex) {
+      layer.currentFrameAtoms = frameAtoms;
+      layer.currentMappedAtoms = null;
+      layer.mappedFrameIndex = -1;
     }
 
-    return getMappedAtomsForCurrentFrame(active);
+    return getMappedAtomsForCurrentFrame(layer);
+  }
+
+  function getAtomsForLayer(id: string): Atom[] | null {
+    const layer = layerMap.get(id);
+    if (!layer) return null;
+    return getAtomsForLayerInternal(layer);
   }
 
   function applyFrameByIndex(idx: number, opts?: { refreshBonds?: boolean }): void {
@@ -2028,6 +2038,7 @@ export function createModelRuntime(args: {
     getFrameIndex,
     applyFrameByIndex,
     getActiveAtoms,
+    getAtomsForLayer,
     getFrameMetaForLayer,
 
     applyAtomScale,

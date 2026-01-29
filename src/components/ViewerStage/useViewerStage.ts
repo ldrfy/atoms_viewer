@@ -734,8 +734,6 @@ export function useViewerStage(
     onRotationCommitted: () => scheduleSessionSave('settings'),
     inspectCtx,
     isSelectingRecordArea: recording.isSelectingRecordArea,
-    getActiveLayerId: () => activeLayerId.value,
-    setActiveLayer: (id: string) => setActiveLayer(id),
   });
 
   watch(

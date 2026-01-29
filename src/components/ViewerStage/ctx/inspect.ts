@@ -3,6 +3,7 @@ import type { Atom } from '../../../lib/structure/types';
 
 export type SelectedAtom = {
   layerId: string;
+  layerName?: string;
   atomIndex: number;
   element: string;
   id?: number;

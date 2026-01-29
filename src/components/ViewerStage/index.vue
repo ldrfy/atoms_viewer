@@ -36,7 +36,7 @@
       :aria-label="t('viewer.view.snapSplit')"
       @click="onSnapSplit"
     >
-      {{ t('viewer.view.snapSplit') }}
+      50
     </a-button>
 
     <!-- 原子信息/测量面板（点击原子后显示） -->

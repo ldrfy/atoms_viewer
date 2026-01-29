@@ -546,6 +546,11 @@ export function useViewerStage(
 
   // inspect
   const inspectCtx = createInspectCtx();
+  const originalInspectClear = inspectCtx.clear;
+  inspectCtx.clear = () => {
+    originalInspectClear();
+    settingsSync.patch({ inspectSelection: [] });
+  };
   const suppressSelectionSync = ref(false);
   const lastSelectionSig = ref('');
 

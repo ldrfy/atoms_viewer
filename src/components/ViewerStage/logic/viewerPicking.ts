@@ -528,7 +528,6 @@ export function createViewerPickingController(deps: RenderDeps) {
     const meshes = runtime.getVisibleAtomMeshes();
     const hit = raycaster.intersectObjects(meshes, false)[0];
     if (!hit) {
-      deps.inspectCtx.clear();
       return;
     }
 

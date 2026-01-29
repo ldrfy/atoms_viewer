@@ -20,6 +20,10 @@ export function buildCategorizedSettings(
       ...settings.view,
       rotationDeg: { ...settings.view.rotationDeg },
       viewPresets: settings.view.viewPresets ? [...settings.view.viewPresets] : [],
+      panOffset: { ...settings.view.panOffset },
+      panOffsetLeft: { ...settings.view.panOffsetLeft },
+      panOffsetRight: { ...settings.view.panOffsetRight },
+      panStepScale: settings.view.panStepScale,
     },
     lammps: {
       applyAllLayers: applyAllLayers?.lammps ?? settings.lammps.applyAllLayers,
@@ -52,6 +56,10 @@ export function mergeCategorizedSettings(
       viewPresets: DEFAULT_SETTINGS.view.viewPresets
         ? [...DEFAULT_SETTINGS.view.viewPresets]
         : [],
+      panOffset: { ...DEFAULT_SETTINGS.view.panOffset },
+      panOffsetLeft: { ...DEFAULT_SETTINGS.view.panOffsetLeft },
+      panOffsetRight: { ...DEFAULT_SETTINGS.view.panOffsetRight },
+      panStepScale: DEFAULT_SETTINGS.view.panStepScale,
     },
     lammps: {
       applyAllLayers: DEFAULT_SETTINGS.lammps.applyAllLayers,
@@ -196,6 +204,28 @@ export function pruneDefaultSettings(
     view.initialDualViewDistance = input.view.initialDualViewDistance;
   }
   if (input.view.dualViewSplit !== d.view.dualViewSplit) view.dualViewSplit = input.view.dualViewSplit;
+  if (input.view.panStepScale !== d.view.panStepScale) view.panStepScale = input.view.panStepScale;
+  if (
+    input.view.panOffset.x !== d.view.panOffset.x
+    || input.view.panOffset.y !== d.view.panOffset.y
+    || input.view.panOffset.z !== d.view.panOffset.z
+  ) {
+    view.panOffset = { ...input.view.panOffset };
+  }
+  if (
+    input.view.panOffsetLeft.x !== d.view.panOffsetLeft.x
+    || input.view.panOffsetLeft.y !== d.view.panOffsetLeft.y
+    || input.view.panOffsetLeft.z !== d.view.panOffsetLeft.z
+  ) {
+    view.panOffsetLeft = { ...input.view.panOffsetLeft };
+  }
+  if (
+    input.view.panOffsetRight.x !== d.view.panOffsetRight.x
+    || input.view.panOffsetRight.y !== d.view.panOffsetRight.y
+    || input.view.panOffsetRight.z !== d.view.panOffsetRight.z
+  ) {
+    view.panOffsetRight = { ...input.view.panOffsetRight };
+  }
   if (Object.keys(view).length > 0) out.view = view as ViewerSettingsCategorized['view'];
 
   if (!lammpsEqual(input.lammps, d.lammps)) {

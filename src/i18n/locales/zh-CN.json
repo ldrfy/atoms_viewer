@@ -117,6 +117,18 @@
             "angle": "夹角",
             "orderHint": "按选择顺序计算：∠(1–2–3)，顶点为第 2 个点。"
         },
+        "pan": {
+            "up": "上移",
+            "down": "下移",
+            "left": "左移",
+            "right": "右移",
+            "center": "复位到中心",
+            "step": "步长",
+            "target": "目标",
+            "sideLeft": "左侧",
+            "sideRight": "右侧",
+            "sideSingle": "单视图"
+        },
         "settings": {
             "modifiedHint": "检测到当前模型存在修改过的设置，已打开相关面板。"
         },

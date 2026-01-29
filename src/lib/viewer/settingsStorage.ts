@@ -20,6 +20,10 @@ export function buildDefaultSettings(): ViewerSettings {
       viewPresets: DEFAULT_SETTINGS.view.viewPresets
         ? [...DEFAULT_SETTINGS.view.viewPresets]
         : [],
+      panOffset: { ...DEFAULT_SETTINGS.view.panOffset },
+      panOffsetLeft: { ...DEFAULT_SETTINGS.view.panOffsetLeft },
+      panOffsetRight: { ...DEFAULT_SETTINGS.view.panOffsetRight },
+      panStepScale: DEFAULT_SETTINGS.view.panStepScale,
     },
     lammps: {
       applyAllLayers: DEFAULT_SETTINGS.lammps.applyAllLayers,
@@ -67,6 +71,10 @@ export function saveSettingsToStorage(settings: ViewerSettings): void {
         ...settings.view,
         rotationDeg: { ...settings.view.rotationDeg },
         viewPresets: settings.view.viewPresets ? [...settings.view.viewPresets] : [],
+        panOffset: { ...settings.view.panOffset },
+        panOffsetLeft: { ...settings.view.panOffsetLeft },
+        panOffsetRight: { ...settings.view.panOffsetRight },
+        panStepScale: settings.view.panStepScale,
       },
       lammps: {
         applyAllLayers: settings.lammps.applyAllLayers,

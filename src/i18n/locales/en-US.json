@@ -117,6 +117,18 @@
             "angle": "Angle",
             "orderHint": "Computed in selection order: ∠(1–2–3) with point 2 as the vertex."
         },
+        "pan": {
+            "up": "Pan up",
+            "down": "Pan down",
+            "left": "Pan left",
+            "right": "Pan right",
+            "center": "Reset to center",
+            "step": "Step",
+            "target": "Target",
+            "sideLeft": "Left",
+            "sideRight": "Right",
+            "sideSingle": "Single"
+        },
         "settings": {
             "modifiedHint": "Detected modified settings for the current model. Relevant panels are now open."
         },

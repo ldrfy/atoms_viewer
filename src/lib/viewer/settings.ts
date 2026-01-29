@@ -97,6 +97,10 @@ export type DisplaySettingsGroup = {
   dualViewDistance: number;
   initialDualViewDistance: number;
   dualViewSplit: number;
+  panOffset: { x: number; y: number; z: number };
+  panOffsetLeft: { x: number; y: number; z: number };
+  panOffsetRight: { x: number; y: number; z: number };
+  panStepScale: number;
 };
 export const DEFAULT_DISPLAY: DisplaySettingsGroup = {
   rotationDeg: { x: 0, y: 0, z: 0 } as RotationDeg,
@@ -106,6 +110,10 @@ export const DEFAULT_DISPLAY: DisplaySettingsGroup = {
   dualViewDistance: 10,
   initialDualViewDistance: 10,
   dualViewSplit: 0.5,
+  panOffset: { x: 0, y: 0, z: 0 },
+  panOffsetLeft: { x: 0, y: 0, z: 0 },
+  panOffsetRight: { x: 0, y: 0, z: 0 },
+  panStepScale: 1,
 };
 
 export const DEFAULT_TYPE_MAP: LammpsTypeMapRecord = {};

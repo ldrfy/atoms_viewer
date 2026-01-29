@@ -43,6 +43,16 @@
     <!-- 动画 + 录制控制条 -->
     <AnimBar :ctx="stage.animCtx" :parse-ctx="stage.parseCtx" />
 
+    <!-- 模型平移控制（上下左右） -->
+    <ModelPanPad
+      v-if="stage.hasModel"
+      :on-pan="stage.panModel"
+      :on-reset="stage.resetPan"
+      :pan-step-scale="stage.panStepScale.value"
+      :on-step-scale-change="stage.setPanStepScale"
+      :target-side="stage.panTargetSide.value"
+    />
+
     <!-- 录制中：显示裁剪虚线框（不影响操作） -->
     <RecordCropDash :ctx="stage.cropDashCtx" />
   </div>
@@ -70,6 +80,7 @@ import RecordSelectOverlay from './parts/RecordSelectOverlay.vue';
 import AtomInspectorOverlay from './parts/AtomInspectorOverlay.vue';
 import AnimBar from './parts/AnimBar.vue';
 import RecordCropDash from './parts/RecordCropDash.vue';
+import ModelPanPad from './parts/ModelPanPad.vue';
 
 const props = defineProps<{ settings: ViewerSettings }>();
 const settingsRef = toRef(props, 'settings');

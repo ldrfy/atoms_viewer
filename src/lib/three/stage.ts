@@ -88,6 +88,13 @@ export type ThreeStage = {
   /** Dual view split ratio for left viewport (0..1). */
   setDualViewSplit: (ratio: number) => void;
 
+  /** Set per-view pan offsets (world space). */
+  setPanOffsets: (opts: {
+    single?: { x: number; y: number; z: number };
+    left?: { x: number; y: number; z: number };
+    right?: { x: number; y: number; z: number };
+  }) => void;
+
   /** Configure auto rotation (arbitrary axis + constant speed). */
   setAutoRotateConfig: (cfg: {
     enabled: boolean;
@@ -156,6 +163,15 @@ export function createThreeStage(params: {
   let dualViewSplit = 0.5; // left viewport ratio
 
   let auxCamera: AnyCamera | null = null;
+
+  // --- pan offsets (world space) ---
+  const panOffsetSingle = new THREE.Vector3();
+  const panOffsetLeft = new THREE.Vector3();
+  const panOffsetRight = new THREE.Vector3();
+  const panTmpPos = new THREE.Vector3();
+  const panTmpUp = new THREE.Vector3();
+  const panTmpQuat = new THREE.Quaternion();
+  const panTmpTarget = new THREE.Vector3();
 
   // --- renderer / 渲染器 ---
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
@@ -491,10 +507,37 @@ export function createThreeStage(params: {
     // Keep dual-view distance in sync (used by the distance slider and ortho mapping).
     onControlsChange();
 
+    const withPanOffset = (
+      cam: AnyCamera,
+      offset: THREE.Vector3,
+      renderFn: () => void,
+    ): void => {
+      if (offset.lengthSq() < 1e-12) {
+        renderFn();
+        return;
+      }
+      panTmpPos.copy(cam.position);
+      panTmpUp.copy(cam.up);
+      panTmpQuat.copy(cam.quaternion);
+      panTmpTarget.copy(controls.target).add(offset);
+
+      cam.position.add(offset);
+      cam.lookAt(panTmpTarget);
+      cam.updateMatrixWorld(true);
+      renderFn();
+
+      cam.position.copy(panTmpPos);
+      cam.quaternion.copy(panTmpQuat);
+      cam.up.copy(panTmpUp);
+      cam.updateMatrixWorld(true);
+    };
+
     if (viewPresets.length !== 2) {
       renderer.setScissorTest(false);
-      renderer.render(scene, camera);
-      labelRenderer?.render(scene, camera);
+      withPanOffset(camera, panOffsetSingle, () => {
+        renderer.render(scene, camera);
+        labelRenderer?.render(scene, camera);
+      });
       return;
     }
 
@@ -517,20 +560,26 @@ export function createThreeStage(params: {
     // Left: main camera
     renderer.setViewport(0, 0, leftW, h);
     renderer.setScissor(0, 0, leftW, h);
-    renderer.render(scene, camera);
+    withPanOffset(camera, panOffsetLeft, () => {
+      renderer.render(scene, camera);
+      // Labels: render only for the left view.
+      labelRenderer?.render(scene, camera);
+    });
 
     // Right: aux camera
     if (auxCamera) {
+      const rightCamera = auxCamera;
       renderer.setViewport(leftW, 0, rightW, h);
       renderer.setScissor(leftW, 0, rightW, h);
-      renderer.render(scene, auxCamera);
+      withPanOffset(rightCamera, panOffsetRight, () => {
+        renderer.render(scene, rightCamera);
+      });
     }
 
     renderer.setScissorTest(false);
     renderer.autoClear = prevAutoClear;
 
-    // Labels: render only for the left view.
-    labelRenderer?.render(scene, camera);
+    // Labels handled in left view render.
   }
 
   function frame(): void {
@@ -760,6 +809,17 @@ export function createThreeStage(params: {
     invalidate();
   };
 
+  const setPanOffsets = (opts: {
+    single?: { x: number; y: number; z: number };
+    left?: { x: number; y: number; z: number };
+    right?: { x: number; y: number; z: number };
+  }): void => {
+    if (opts.single) panOffsetSingle.set(opts.single.x, opts.single.y, opts.single.z);
+    if (opts.left) panOffsetLeft.set(opts.left.x, opts.left.y, opts.left.z);
+    if (opts.right) panOffsetRight.set(opts.right.x, opts.right.y, opts.right.z);
+    invalidate();
+  };
+
   return {
     host,
     scene,
@@ -793,6 +853,7 @@ export function createThreeStage(params: {
 
     setDualViewDistance,
     setDualViewSplit,
+    setPanOffsets,
 
     setAutoRotateConfig,
     setModelLightIntensity,

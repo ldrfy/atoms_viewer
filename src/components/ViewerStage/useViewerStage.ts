@@ -1,6 +1,6 @@
 // src/components/ViewerStage/useViewerStage.ts
 import { onBeforeUnmount, onMounted, ref, computed, watch } from 'vue';
-import type { Ref, ComponentPublicInstance } from 'vue';
+import type { Ref, ComponentPublicInstance, ComputedRef } from 'vue';
 import * as THREE from 'three';
 import { message } from 'ant-design-vue';
 
@@ -282,6 +282,16 @@ type ViewerStageBindings = {
   ) => void;
   /** 立即应用视角/视距相关设置 */
   applyViewFromSettings: (overrides?: Partial<ViewerSettings>) => void;
+  /** 平移模型（屏幕方向） */
+  panModel: (dir: 'left' | 'right' | 'up' | 'down') => void;
+  /** 当前平移目标视图 */
+  panTargetSide: Ref<'left' | 'right' | 'single'>;
+  /** 复位模型平移 */
+  resetPan: () => void;
+  /** 平移步长倍率 */
+  panStepScale: ComputedRef<number>;
+  /** 设置平移步长倍率 */
+  setPanStepScale: (v: number) => void;
 
   /** 移除图层 */
   removeLayer: (id: string) => void;
@@ -1420,9 +1430,134 @@ export function useViewerStage(
       lastSyncedDist = dist;
     }
 
+    stage.setPanOffsets({
+      single: next.view.panOffset ?? { x: 0, y: 0, z: 0 },
+      left: next.view.panOffsetLeft ?? { x: 0, y: 0, z: 0 },
+      right: next.view.panOffsetRight ?? { x: 0, y: 0, z: 0 },
+    });
+
     stage.getControls().update();
     stage.invalidate();
   }
+
+  const panTmpCam = new THREE.Vector3();
+  const panTmpMove = new THREE.Vector3();
+  const panTmpRight = new THREE.Vector3();
+  const panTmpUp = new THREE.Vector3();
+  const panTargetSide = ref<'left' | 'right' | 'single'>('single');
+  let removePanTargetListener: (() => void) | null = null;
+
+  function panModel(dir: 'left' | 'right' | 'up' | 'down'): void {
+    if (!stage) return;
+    const presets = normalizeViewPresets(settingsRef.value.view.viewPresets);
+    const isDual = presets.length === 2;
+    const side = isDual ? panTargetSide.value : 'single';
+    const cam = side === 'right'
+      ? (stage.getAuxCamera() ?? stage.getCamera())
+      : stage.getCamera();
+    cam.updateMatrixWorld(true);
+
+    const isOrtho = (cam as THREE.OrthographicCamera).isOrthographicCamera;
+    let step = 0.1;
+    if (isOrtho) {
+      const ortho = cam as THREE.OrthographicCamera;
+      step = Math.max(0.01, Math.abs(ortho.top - ortho.bottom) * 0.05);
+    }
+    else {
+      const persp = cam as THREE.PerspectiveCamera;
+      cam.getWorldPosition(panTmpCam);
+      const dist = Math.max(0.01, panTmpCam.distanceTo(stage.getControls().target));
+      const fov = THREE.MathUtils.degToRad(persp.fov);
+      const viewH = 2 * dist * Math.tan(fov * 0.5);
+      step = Math.max(0.01, viewH * 0.05);
+    }
+
+    const scale = Number.isFinite(settingsRef.value.view.panStepScale)
+      ? Math.max(0.1, settingsRef.value.view.panStepScale)
+      : 1;
+    step *= scale;
+
+    panTmpRight.set(1, 0, 0).applyQuaternion(cam.quaternion);
+    panTmpUp.set(0, 1, 0).applyQuaternion(cam.quaternion);
+
+    let dx = 0;
+    let dy = 0;
+    if (dir === 'left') dx = -1;
+    if (dir === 'right') dx = 1;
+    if (dir === 'up') dy = 1;
+    if (dir === 'down') dy = -1;
+
+    panTmpMove.set(0, 0, 0);
+    panTmpMove.addScaledVector(panTmpRight, dx * step);
+    panTmpMove.addScaledVector(panTmpUp, dy * step);
+    panTmpMove.multiplyScalar(-1);
+
+    if (side === 'left') {
+      const cur = settingsRef.value.view.panOffsetLeft ?? { x: 0, y: 0, z: 0 };
+      settingsSync.patch({
+        view: {
+          panOffsetLeft: {
+            x: cur.x + panTmpMove.x,
+            y: cur.y + panTmpMove.y,
+            z: cur.z + panTmpMove.z,
+          },
+        },
+      });
+    }
+    else if (side === 'right') {
+      const cur = settingsRef.value.view.panOffsetRight ?? { x: 0, y: 0, z: 0 };
+      settingsSync.patch({
+        view: {
+          panOffsetRight: {
+            x: cur.x + panTmpMove.x,
+            y: cur.y + panTmpMove.y,
+            z: cur.z + panTmpMove.z,
+          },
+        },
+      });
+    }
+    else {
+      const cur = settingsRef.value.view.panOffset ?? { x: 0, y: 0, z: 0 };
+      settingsSync.patch({
+        view: {
+          panOffset: {
+            x: cur.x + panTmpMove.x,
+            y: cur.y + panTmpMove.y,
+            z: cur.z + panTmpMove.z,
+          },
+        },
+      });
+    }
+    stage.invalidate();
+  }
+
+  function resetPan(): void {
+    if (!stage) return;
+    const presets = normalizeViewPresets(settingsRef.value.view.viewPresets);
+    const isDual = presets.length === 2;
+    const side = isDual ? panTargetSide.value : 'single';
+    if (side === 'left') {
+      settingsSync.patch({ view: { panOffsetLeft: { x: 0, y: 0, z: 0 } } });
+    }
+    else if (side === 'right') {
+      settingsSync.patch({ view: { panOffsetRight: { x: 0, y: 0, z: 0 } } });
+    }
+    else {
+      settingsSync.patch({ view: { panOffset: { x: 0, y: 0, z: 0 } } });
+    }
+    stage.invalidate();
+  }
+
+  function setPanStepScale(v: number): void {
+    const next = Number.isFinite(v) ? Math.max(0.1, Math.min(5, v)) : 1;
+    settingsSync.patch({ view: { panStepScale: next } });
+  }
+
+  const panStepScale = computed(() =>
+    Number.isFinite(settingsRef.value.view.panStepScale)
+      ? settingsRef.value.view.panStepScale
+      : 1,
+  );
 
   // Sync dual-view distance back to settings on zoom.
   // Event-driven (OrbitControls "change") instead of a polling RAF loop.
@@ -1509,6 +1644,26 @@ export function useViewerStage(
 
     picking.attach();
 
+    const canvas = stage.renderer.domElement;
+    const onPanTargetPointerDown = (e: PointerEvent) => {
+      const presets = normalizeViewPresets(settingsRef.value.view.viewPresets);
+      if (presets.length !== 2) {
+        panTargetSide.value = 'single';
+        return;
+      }
+      const rect = canvas.getBoundingClientRect();
+      const split = typeof settingsRef.value.view.dualViewSplit === 'number'
+        ? settingsRef.value.view.dualViewSplit
+        : 0.5;
+      const leftW = rect.width * Math.min(0.9, Math.max(0.1, split));
+      const x = e.clientX - rect.left;
+      panTargetSide.value = x <= leftW ? 'left' : 'right';
+    };
+    canvas.addEventListener('pointerdown', onPanTargetPointerDown, { passive: true });
+    removePanTargetListener = () => {
+      canvas.removeEventListener('pointerdown', onPanTargetPointerDown);
+    };
+
     stopRotationWatch = watch(
       () => [
         settingsRef.value.view.rotationDeg.x,
@@ -1594,6 +1749,9 @@ export function useViewerStage(
 
     removeControlsAutoRotateHooks?.();
     removeControlsAutoRotateHooks = null;
+
+    removePanTargetListener?.();
+    removePanTargetListener = null;
 
     stopBind?.();
     stopBind = null;
@@ -1716,6 +1874,32 @@ export function useViewerStage(
     loadUrls: loadUrlsWithSession,
   };
 
+  watch(
+    () => [
+      settingsRef.value.view.panOffset,
+      settingsRef.value.view.panOffsetLeft,
+      settingsRef.value.view.panOffsetRight,
+    ],
+    () => {
+      if (!stage) return;
+      stage.setPanOffsets({
+        single: settingsRef.value.view.panOffset,
+        left: settingsRef.value.view.panOffsetLeft,
+        right: settingsRef.value.view.panOffsetRight,
+      });
+    },
+    { immediate: true, deep: true },
+  );
+
+  watch(
+    () => settingsRef.value.view.viewPresets,
+    () => {
+      const presets = normalizeViewPresets(settingsRef.value.view.viewPresets);
+      if (presets.length !== 2) panTargetSide.value = 'single';
+    },
+    { immediate: true, deep: true },
+  );
+
   return {
     ...recording,
 
@@ -1745,6 +1929,11 @@ export function useViewerStage(
     activeLayerDisplay,
     setActiveLayerDisplay,
     applyViewFromSettings,
+    panModel,
+    panTargetSide,
+    resetPan,
+    panStepScale,
+    setPanStepScale,
     removeLayer,
 
     inspectCtx,

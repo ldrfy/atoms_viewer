@@ -806,6 +806,7 @@ export function useViewerStage(
       if (sig === lastSelectionSig.value) return;
       lastSelectionSig.value = sig;
       settingsSync.patch({ inspectSelection: items });
+      picking.rebuildSelectionVisualsFromSelected();
     },
     { deep: true },
   );

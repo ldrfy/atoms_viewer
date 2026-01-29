@@ -84,6 +84,8 @@ export function createViewerPickingController(deps: RenderDeps) {
   const pickCamQuat = new THREE.Quaternion();
   const pickTarget = new THREE.Vector3();
   const pickOffset = new THREE.Vector3();
+  let longPressTimer = 0;
+  let longPressTriggered = false;
 
   function wrapDeg180(deg: number): number {
     let x = ((((deg + 180) % 360) + 360) % 360) - 180;
@@ -398,62 +400,35 @@ export function createViewerPickingController(deps: RenderDeps) {
     updateSelectionVisuals();
   }
 
-  // Patch inspectCtx.clear to also clear visuals tracking (no need to duplicate in callers)
-  const originalClear = deps.inspectCtx.clear;
-  deps.inspectCtx.clear = () => {
-    originalClear();
-    selectionVisuals = [];
+  function removePickedAtom(layerId: string, atomIndex: number): void {
+    const sel = [...deps.inspectCtx.selected.value];
+    const visuals = [...selectionVisuals];
+    for (let i = sel.length - 1; i >= 0; i -= 1) {
+      const s = sel[i];
+      if (!s) continue;
+      if (s.layerId === layerId && s.atomIndex === atomIndex) {
+        sel.splice(i, 1);
+        visuals.splice(i, 1);
+        break;
+      }
+    }
+    deps.inspectCtx.selected.value = sel;
+    selectionVisuals = visuals;
+    updateSelectionMeasure();
     updateSelectionVisuals();
-  };
+  }
 
-  function addPickedAtom(params: {
+  function getPickInfo(e: PointerEvent): null | {
     layerId: string;
     atomIndex: number;
     element: string;
     atom: Atom;
     mesh: THREE.InstancedMesh;
     instanceId: number;
-    additive: boolean;
-  }): void {
-    const { layerId, atomIndex, element, atom, mesh, instanceId, additive }
-      = params;
-
-    const picked: SelectedAtom = {
-      layerId,
-      layerName: getLayerLabel(layerId),
-      atomIndex,
-      element,
-      id: atom.id,
-      typeId: atom.typeId,
-      position: [atom.position[0], atom.position[1], atom.position[2]],
-    };
-
-    const sel = [...deps.inspectCtx.selected.value];
-    const visuals = [...selectionVisuals];
-
-    if (!additive) {
-      sel.splice(0, sel.length, picked);
-      visuals.splice(0, visuals.length, { mesh, instanceId });
-    }
-    else {
-      sel.push(picked);
-      visuals.push({ mesh, instanceId });
-    }
-
-    deps.inspectCtx.selected.value = sel;
-    selectionVisuals = visuals;
-
-    updateSelectionMeasure();
-    updateSelectionVisuals();
-  }
-
-  function handlePick(e: PointerEvent): void {
-    if (!deps.inspectCtx.enabled.value) return;
-    if (deps.isSelectingRecordArea.value) return;
-
+  } {
     const stage = deps.getStage();
     const runtime = deps.getRuntime();
-    if (!stage || !runtime) return;
+    if (!stage || !runtime) return null;
 
     const canvas = stage.renderer.domElement;
     const rect = canvas.getBoundingClientRect();
@@ -527,42 +502,99 @@ export function createViewerPickingController(deps: RenderDeps) {
 
     const meshes = runtime.getVisibleAtomMeshes();
     const hit = raycaster.intersectObjects(meshes, false)[0];
-    if (!hit) {
-      return;
-    }
+    if (!hit) return null;
 
     const mesh = hit.object as THREE.InstancedMesh;
     const instanceId = (hit as any).instanceId as number | undefined;
-    if (instanceId == null) return;
+    if (instanceId == null) return null;
 
     const indices = mesh.userData.atomIndices as number[] | undefined;
-    if (!indices) return;
+    if (!indices) return null;
 
     const atomIndex = indices[instanceId];
-    if (atomIndex == null) return;
+    if (atomIndex == null) return null;
 
     const layerId = (mesh.userData as any).layerId as string | undefined;
-    if (!layerId) return;
+    if (!layerId) return null;
 
     const atoms = runtime.getAtomsForLayer(layerId);
-    if (!atoms) return;
+    if (!atoms) return null;
 
     const atom = atoms[atomIndex];
-    if (!atom) return;
+    if (!atom) return null;
 
     const element
       = (mesh.userData.element as string | undefined) ?? atom.element ?? 'E';
+
+    return { layerId, atomIndex, element, atom, mesh, instanceId };
+  }
+
+  // Patch inspectCtx.clear to also clear visuals tracking (no need to duplicate in callers)
+  const originalClear = deps.inspectCtx.clear;
+  deps.inspectCtx.clear = () => {
+    originalClear();
+    selectionVisuals = [];
+    updateSelectionVisuals();
+  };
+
+  function addPickedAtom(params: {
+    layerId: string;
+    atomIndex: number;
+    element: string;
+    atom: Atom;
+    mesh: THREE.InstancedMesh;
+    instanceId: number;
+    additive: boolean;
+  }): void {
+    const { layerId, atomIndex, element, atom, mesh, instanceId, additive }
+      = params;
+
+    const picked: SelectedAtom = {
+      layerId,
+      layerName: getLayerLabel(layerId),
+      atomIndex,
+      element,
+      id: atom.id,
+      typeId: atom.typeId,
+      position: [atom.position[0], atom.position[1], atom.position[2]],
+    };
+
+    const sel = [...deps.inspectCtx.selected.value];
+    const visuals = [...selectionVisuals];
+
+    if (!additive) {
+      sel.splice(0, sel.length, picked);
+      visuals.splice(0, visuals.length, { mesh, instanceId });
+    }
+    else {
+      sel.push(picked);
+      visuals.push({ mesh, instanceId });
+    }
+
+    deps.inspectCtx.selected.value = sel;
+    selectionVisuals = visuals;
+
+    updateSelectionMeasure();
+    updateSelectionVisuals();
+  }
+
+  function handlePick(e: PointerEvent): void {
+    if (!deps.inspectCtx.enabled.value) return;
+    if (deps.isSelectingRecordArea.value) return;
+
+    const info = getPickInfo(e);
+    if (!info) return;
 
     const additive
       = deps.inspectCtx.measureMode.value || e.shiftKey || e.ctrlKey || e.metaKey;
 
     addPickedAtom({
-      layerId,
-      atomIndex,
-      element,
-      atom,
-      mesh,
-      instanceId,
+      layerId: info.layerId,
+      atomIndex: info.atomIndex,
+      element: info.element,
+      atom: info.atom,
+      mesh: info.mesh,
+      instanceId: info.instanceId,
       additive,
     });
   }
@@ -653,6 +685,19 @@ export function createViewerPickingController(deps: RenderDeps) {
       if (e.isPrimary === false) return;
 
       pointerDown = { x: e.clientX, y: e.clientY, tMs: performance.now() };
+      longPressTriggered = false;
+      if (longPressTimer) {
+        window.clearTimeout(longPressTimer);
+        longPressTimer = 0;
+      }
+      longPressTimer = window.setTimeout(() => {
+        longPressTimer = 0;
+        if (!pointerDown) return;
+        const info = getPickInfo(e);
+        if (!info) return;
+        longPressTriggered = true;
+        removePickedAtom(info.layerId, info.atomIndex);
+      }, 550);
 
       const pt = (e as any).pointerType as string | undefined;
       const isTouch = pt === 'touch';
@@ -706,6 +751,12 @@ export function createViewerPickingController(deps: RenderDeps) {
       const dy = e.clientY - rotateLast.y;
       rotateLast = { x: e.clientX, y: e.clientY };
       if (dx === 0 && dy === 0) return;
+      if (pointerDown && Math.hypot(e.clientX - pointerDown.x, e.clientY - pointerDown.y) > 6) {
+        if (longPressTimer) {
+          window.clearTimeout(longPressTimer);
+          longPressTimer = 0;
+        }
+      }
 
       if (!dragRotationDeg) {
         // IMPORTANT:
@@ -755,6 +806,14 @@ export function createViewerPickingController(deps: RenderDeps) {
 
       scheduleRotationSync(true);
       clearRotate(canvas);
+      if (longPressTimer) {
+        window.clearTimeout(longPressTimer);
+        longPressTimer = 0;
+      }
+      if (longPressTriggered) {
+        longPressTriggered = false;
+        return;
+      }
 
       if (Math.hypot(dx, dy) <= 6 && dt <= 400) {
         handlePick(e);
@@ -763,6 +822,11 @@ export function createViewerPickingController(deps: RenderDeps) {
 
     const onPointerCancel = () => {
       pointerDown = null;
+      if (longPressTimer) {
+        window.clearTimeout(longPressTimer);
+        longPressTimer = 0;
+      }
+      longPressTriggered = false;
       scheduleRotationSync(true);
       clearRotate(canvas);
     };

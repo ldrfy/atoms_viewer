@@ -134,6 +134,15 @@
                               <a-typography-text v-if="item.typeId != null" type="secondary">
                                 type={{ item.typeId }}
                               </a-typography-text>
+                              <a-button
+                                type="text"
+                                size="small"
+                                aria-label="remove"
+                                title="remove"
+                                @click="removeAt(index)"
+                              >
+                                <DeleteOutlined />
+                              </a-button>
                             </div>
                           </div>
 
@@ -196,6 +205,7 @@
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
 import { useI18n } from 'vue-i18n';
 import {
+  DeleteOutlined,
   DownOutlined,
   LeftOutlined,
   RightOutlined,
@@ -216,6 +226,7 @@ const measureMode = props.ctx.measureMode;
 const selected = props.ctx.selected;
 const measure = props.ctx.measure;
 const clear = props.ctx.clear;
+const removeAt = props.ctx.removeAt;
 
 const visible = computed(() => enabled.value);
 

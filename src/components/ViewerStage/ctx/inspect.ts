@@ -23,6 +23,7 @@ export type InspectCtx = {
   selected: Ref<SelectedAtom[]>;
   measure: Ref<MeasureInfo>;
   clear: () => void;
+  removeAt: (idx: number) => void;
 };
 
 export function createInspectCtx(): InspectCtx {
@@ -36,12 +37,20 @@ export function createInspectCtx(): InspectCtx {
     measure.value = {};
   }
 
+  function removeAt(idx: number): void {
+    const sel = selected.value;
+    if (idx < 0 || idx >= sel.length) return;
+    sel.splice(idx, 1);
+    selected.value = [...sel];
+  }
+
   return {
     enabled,
     measureMode,
     selected,
     measure,
     clear,
+    removeAt,
   };
 }
 

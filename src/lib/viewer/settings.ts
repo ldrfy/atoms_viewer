@@ -4,6 +4,16 @@ import type { AutoRotatePresetId } from './autoRotate';
 import { normalizeElementSymbol } from '../structure/chem';
 export type LammpsTypeMapRecord = Record<string, string>;
 
+export type InspectSelectionItem = {
+  layerId: string;
+  layerName?: string;
+  atomIndex: number;
+  element?: string;
+  id?: number;
+  typeId?: number;
+  position?: [number, number, number];
+};
+
 export type RotationDeg = {
   x: number;
   y: number;
@@ -45,6 +55,7 @@ export type ViewerSettings = {
   colors: ColorsSettingsGroup;
   anim: AnimSettingsGroup;
   other: OtherSettingsGroup;
+  inspectSelection: InspectSelectionItem[];
 };
 
 export type DetailsSettingsGroup = {
@@ -188,6 +199,7 @@ export const DEFAULT_SETTINGS: ViewerSettings = {
   colors: DEFAULT_COLORS,
   anim: DEFAULT_ANIM,
   other: DEFAULT_OTHER,
+  inspectSelection: [],
 };
 
 type LammpsTypeMapRow = { typeId: number; element: string };

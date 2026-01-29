@@ -35,7 +35,10 @@ export function buildDefaultSettings(): ViewerSettings {
       data: { ...DEFAULT_SETTINGS.colors.data },
     },
     anim: { ...DEFAULT_SETTINGS.anim },
-    other: { ...DEFAULT_SETTINGS.other },
+    other: {
+      ...DEFAULT_SETTINGS.other,
+    },
+    inspectSelection: [...(DEFAULT_SETTINGS.inspectSelection ?? [])],
   };
 }
 
@@ -86,7 +89,10 @@ export function saveSettingsToStorage(settings: ViewerSettings): void {
         data: { ...settings.colors.data },
       },
       anim: { ...settings.anim },
-      other: { ...settings.other },
+      other: {
+        ...settings.other,
+      },
+      inspectSelection: [...(settings.inspectSelection ?? [])],
     };
     localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(data));
   }

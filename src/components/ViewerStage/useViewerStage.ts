@@ -9,6 +9,7 @@ import type {
   LammpsTypeMapRecord,
   OpenSettingsPayload,
   DetailsSettingsGroup,
+  InspectSelectionItem,
 } from '../../lib/viewer/settings';
 import { hasUnknownElementMappingForTypeIds } from '../../lib/viewer/settings';
 import type { LayerSortBy, LayersSnapshot, LayerSnapshot } from '../../lib/viewer/sessionTypes';
@@ -545,6 +546,51 @@ export function useViewerStage(
 
   // inspect
   const inspectCtx = createInspectCtx();
+  const suppressSelectionSync = ref(false);
+  const lastSelectionSig = ref('');
+
+  function normalizeSelectionForSave(sel: InspectCtx['selected']['value']): InspectSelectionItem[] {
+    return (sel ?? []).map(s => ({
+      layerId: s.layerId,
+      layerName: s.layerName,
+      atomIndex: s.atomIndex,
+      element: s.element,
+      id: s.id,
+      typeId: s.typeId,
+      position: s.position ? [...s.position] as [number, number, number] : undefined,
+    }));
+  }
+
+  function hydrateSelection(items: InspectSelectionItem[]): InspectCtx['selected']['value'] {
+    const out: InspectCtx['selected']['value'] = [];
+    for (const item of items ?? []) {
+      const base = {
+        layerId: item.layerId,
+        layerName: item.layerName,
+        atomIndex: item.atomIndex,
+        element: item.element ?? 'E',
+        id: item.id,
+        typeId: item.typeId,
+        position: item.position
+          ? [item.position[0], item.position[1], item.position[2]] as [number, number, number]
+          : [0, 0, 0] as [number, number, number],
+      };
+
+      if (!item.position || !item.element) {
+        const atoms = runtime?.getAtomsForLayer(item.layerId);
+        const atom = atoms?.[item.atomIndex];
+        if (atom) {
+          base.element = atom.element ?? base.element;
+          base.position = [atom.position[0], atom.position[1], atom.position[2]] as [number, number, number];
+          if (atom.id != null) base.id = atom.id;
+          if (atom.typeId != null) base.typeId = atom.typeId;
+        }
+      }
+
+      out.push(base);
+    }
+    return out;
+  }
 
   const layerSourceStore = createLayerSourceStore();
   const cacheRemoteOnExport = ref(true);
@@ -745,6 +791,48 @@ export function useViewerStage(
     inspectCtx,
     isSelectingRecordArea: recording.isSelectingRecordArea,
   });
+
+  watch(
+    () => inspectCtx.selected.value,
+    (sel) => {
+      if (suppressSelectionSync.value) return;
+      const items = normalizeSelectionForSave(sel);
+      const sig = JSON.stringify(items);
+      if (sig === lastSelectionSig.value) return;
+      lastSelectionSig.value = sig;
+      settingsSync.patch({ inspectSelection: items });
+    },
+    { deep: true },
+  );
+
+  watch(
+    () => settingsRef.value.inspectSelection,
+    (items) => {
+      const list = Array.isArray(items) ? items : [];
+      const sig = JSON.stringify(list);
+      if (sig === lastSelectionSig.value) return;
+      lastSelectionSig.value = sig;
+      suppressSelectionSync.value = true;
+      inspectCtx.selected.value = hydrateSelection(list);
+      suppressSelectionSync.value = false;
+      picking.rebuildSelectionVisualsFromSelected();
+    },
+    { deep: true, immediate: true },
+  );
+
+  watch(
+    () => runtimeTick.value,
+    () => {
+      const list = Array.isArray(settingsRef.value.inspectSelection)
+        ? settingsRef.value.inspectSelection
+        : [];
+      if (list.length === 0) return;
+      suppressSelectionSync.value = true;
+      inspectCtx.selected.value = hydrateSelection(list);
+      suppressSelectionSync.value = false;
+      picking.rebuildSelectionVisualsFromSelected();
+    },
+  );
 
   watch(
     () => settingsRef.value.other.selectionHighlightColor,

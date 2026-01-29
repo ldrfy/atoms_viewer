@@ -40,7 +40,10 @@ export function buildCategorizedSettings(
     anim: {
       ...nextAnim,
     },
-    other: { ...settings.other },
+    other: {
+      ...settings.other,
+    },
+    inspectSelection: [...(settings.inspectSelection ?? [])],
   };
 }
 
@@ -71,7 +74,10 @@ export function mergeCategorizedSettings(
       data: { ...DEFAULT_SETTINGS.colors.data },
     },
     anim: { ...DEFAULT_SETTINGS.anim },
-    other: { ...DEFAULT_SETTINGS.other },
+    other: {
+      ...DEFAULT_SETTINGS.other,
+    },
+    inspectSelection: [...(DEFAULT_SETTINGS.inspectSelection ?? [])],
   };
   const apply = categorized as Partial<CategorizedSettings>;
 
@@ -136,6 +142,9 @@ export function mergeCategorizedSettings(
       ...base.other,
       ...apply.other,
     };
+  }
+  if (apply.inspectSelection) {
+    base.inspectSelection = [...apply.inspectSelection];
   }
 
   return base;
@@ -280,6 +289,9 @@ export function pruneDefaultSettings(
   if (input.other.frame_rate !== d.other.frame_rate) other.frame_rate = input.other.frame_rate;
   if (input.other.selectionHighlightColor !== d.other.selectionHighlightColor) {
     other.selectionHighlightColor = input.other.selectionHighlightColor;
+  }
+  if ((input.inspectSelection ?? []).length > 0) {
+    out.inspectSelection = [...(input.inspectSelection ?? [])];
   }
   if (Object.keys(other).length > 0) out.other = other as ViewerSettingsCategorized['other'];
 

@@ -17,6 +17,7 @@ export type SettingsPatch = {
   };
   anim?: Partial<ViewerSettings['anim']>;
   other?: Partial<ViewerSettings['other']>;
+  inspectSelection?: ViewerSettings['inspectSelection'];
 };
 
 /**
@@ -37,6 +38,7 @@ export function cloneSettings(v: ViewerSettings): ViewerSettings {
     colors: { ...v.colors, data: { ...v.colors.data } },
     anim: { ...v.anim },
     other: { ...v.other },
+    inspectSelection: [...(v.inspectSelection ?? [])],
   };
 }
 
@@ -78,6 +80,7 @@ export function mergeSettings(
   }
   if (patch.anim) next.anim = { ...next.anim, ...patch.anim };
   if (patch.other) next.other = { ...next.other, ...patch.other };
+  if (patch.inspectSelection) next.inspectSelection = [...patch.inspectSelection];
   return next;
 }
 

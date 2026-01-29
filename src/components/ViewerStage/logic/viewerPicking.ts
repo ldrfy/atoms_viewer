@@ -66,7 +66,7 @@ export function createViewerPickingController(deps: RenderDeps) {
   let selectionVisuals: Array<{
     mesh: THREE.InstancedMesh;
     instanceId: number;
-  }> = [];
+  } | null> = [];
   const tmpMat = new THREE.Matrix4();
   const tmpPos = new THREE.Vector3();
   const tmpScale = new THREE.Vector3();
@@ -243,8 +243,9 @@ export function createViewerPickingController(deps: RenderDeps) {
       selectionGroup.add(markerMesh);
     }
 
-    markerMesh.count = count;
-    markerMesh.visible = count > 0;
+    let visibleCount = 0;
+    markerMesh.count = 0;
+    markerMesh.visible = false;
     tmpQuat.identity();
 
     for (let i = 0; i < count; i += 1) {
@@ -269,10 +270,13 @@ export function createViewerPickingController(deps: RenderDeps) {
 
       tmpScale.setScalar(haloR);
       tmpMat.compose(tmpPos, tmpQuat, tmpScale);
-      markerMesh.setMatrixAt(i, tmpMat);
+      markerMesh.setMatrixAt(visibleCount, tmpMat);
+      visibleCount += 1;
 
       pts.push(tmpPos.clone());
     }
+    markerMesh.count = visibleCount;
+    markerMesh.visible = visibleCount > 0;
     markerMesh.instanceMatrix.needsUpdate = true;
 
     const runtime = deps.getRuntime();
@@ -359,6 +363,39 @@ export function createViewerPickingController(deps: RenderDeps) {
     }
 
     requestRedraw();
+  }
+
+  function rebuildSelectionVisualsFromSelected(): void {
+    const runtime = deps.getRuntime();
+    const sel = deps.inspectCtx.selected.value;
+    if (!runtime || sel.length === 0) {
+      selectionVisuals = [];
+      updateSelectionMeasure();
+      updateSelectionVisuals();
+      return;
+    }
+
+    const meshes = runtime.getVisibleAtomMeshes();
+    const visuals: Array<{ mesh: THREE.InstancedMesh; instanceId: number } | null> = [];
+
+    for (const s of sel) {
+      let found: { mesh: THREE.InstancedMesh; instanceId: number } | null = null;
+      for (const mesh of meshes) {
+        const layerId = (mesh.userData as any).layerId as string | undefined;
+        if (!layerId || layerId !== s.layerId) continue;
+        const indices = mesh.userData.atomIndices as number[] | undefined;
+        if (!indices) continue;
+        const inst = indices.indexOf(s.atomIndex);
+        if (inst < 0) continue;
+        found = { mesh, instanceId: inst };
+        break;
+      }
+      visuals.push(found);
+    }
+
+    selectionVisuals = visuals;
+    updateSelectionMeasure();
+    updateSelectionVisuals();
   }
 
   // Patch inspectCtx.clear to also clear visuals tracking (no need to duplicate in callers)
@@ -755,6 +792,7 @@ export function createViewerPickingController(deps: RenderDeps) {
     attach,
     detach,
     updateSelectionVisuals,
+    rebuildSelectionVisualsFromSelected,
   };
 }
 

@@ -20,10 +20,11 @@ export function buildCategorizedSettings(
       ...settings.view,
       rotationDeg: { ...settings.view.rotationDeg },
       viewPresets: settings.view.viewPresets ? [...settings.view.viewPresets] : [],
-      panOffset: { ...settings.view.panOffset },
-      panOffsetLeft: { ...settings.view.panOffsetLeft },
-      panOffsetRight: { ...settings.view.panOffsetRight },
-      panStepScale: settings.view.panStepScale,
+      // Pan settings are exported under "other" to keep view controls clean.
+      panOffset: { ...DEFAULT_SETTINGS.view.panOffset },
+      panOffsetLeft: { ...DEFAULT_SETTINGS.view.panOffsetLeft },
+      panOffsetRight: { ...DEFAULT_SETTINGS.view.panOffsetRight },
+      panStepScale: DEFAULT_SETTINGS.view.panStepScale,
     },
     lammps: {
       applyAllLayers: applyAllLayers?.lammps ?? settings.lammps.applyAllLayers,
@@ -42,6 +43,10 @@ export function buildCategorizedSettings(
     },
     other: {
       ...settings.other,
+      panStepScale: settings.view.panStepScale,
+      panOffset: { ...settings.view.panOffset },
+      panOffsetLeft: { ...settings.view.panOffsetLeft },
+      panOffsetRight: { ...settings.view.panOffsetRight },
     },
     inspectSelection: [...(settings.inspectSelection ?? [])],
   };
@@ -142,6 +147,18 @@ export function mergeCategorizedSettings(
       ...base.other,
       ...apply.other,
     };
+    if (apply.other.panStepScale !== undefined) {
+      base.view.panStepScale = apply.other.panStepScale;
+    }
+    if (apply.other.panOffset) {
+      base.view.panOffset = { ...base.view.panOffset, ...apply.other.panOffset };
+    }
+    if (apply.other.panOffsetLeft) {
+      base.view.panOffsetLeft = { ...base.view.panOffsetLeft, ...apply.other.panOffsetLeft };
+    }
+    if (apply.other.panOffsetRight) {
+      base.view.panOffsetRight = { ...base.view.panOffsetRight, ...apply.other.panOffsetRight };
+    }
   }
   if (apply.inspectSelection) {
     base.inspectSelection = [...apply.inspectSelection];
@@ -214,28 +231,6 @@ export function pruneDefaultSettings(
     view.initialDualViewDistance = input.view.initialDualViewDistance;
   }
   if (input.view.dualViewSplit !== d.view.dualViewSplit) view.dualViewSplit = input.view.dualViewSplit;
-  if (input.view.panStepScale !== d.view.panStepScale) view.panStepScale = input.view.panStepScale;
-  if (
-    input.view.panOffset.x !== d.view.panOffset.x
-    || input.view.panOffset.y !== d.view.panOffset.y
-    || input.view.panOffset.z !== d.view.panOffset.z
-  ) {
-    view.panOffset = { ...input.view.panOffset };
-  }
-  if (
-    input.view.panOffsetLeft.x !== d.view.panOffsetLeft.x
-    || input.view.panOffsetLeft.y !== d.view.panOffsetLeft.y
-    || input.view.panOffsetLeft.z !== d.view.panOffsetLeft.z
-  ) {
-    view.panOffsetLeft = { ...input.view.panOffsetLeft };
-  }
-  if (
-    input.view.panOffsetRight.x !== d.view.panOffsetRight.x
-    || input.view.panOffsetRight.y !== d.view.panOffsetRight.y
-    || input.view.panOffsetRight.z !== d.view.panOffsetRight.z
-  ) {
-    view.panOffsetRight = { ...input.view.panOffsetRight };
-  }
   if (Object.keys(view).length > 0) out.view = view as ViewerSettingsCategorized['view'];
 
   if (!lammpsEqual(input.lammps, d.lammps)) {
@@ -290,6 +285,42 @@ export function pruneDefaultSettings(
   if (input.other.frame_rate !== d.other.frame_rate) other.frame_rate = input.other.frame_rate;
   if (input.other.selectionHighlightColor !== d.other.selectionHighlightColor) {
     other.selectionHighlightColor = input.other.selectionHighlightColor;
+  }
+  if (
+    input.other.panStepScale !== undefined
+    && input.other.panStepScale !== d.view.panStepScale
+  ) {
+    other.panStepScale = input.other.panStepScale;
+  }
+  if (
+    input.other.panOffset
+    && (
+      input.other.panOffset.x !== d.view.panOffset.x
+      || input.other.panOffset.y !== d.view.panOffset.y
+      || input.other.panOffset.z !== d.view.panOffset.z
+    )
+  ) {
+    other.panOffset = { ...input.other.panOffset };
+  }
+  if (
+    input.other.panOffsetLeft
+    && (
+      input.other.panOffsetLeft.x !== d.view.panOffsetLeft.x
+      || input.other.panOffsetLeft.y !== d.view.panOffsetLeft.y
+      || input.other.panOffsetLeft.z !== d.view.panOffsetLeft.z
+    )
+  ) {
+    other.panOffsetLeft = { ...input.other.panOffsetLeft };
+  }
+  if (
+    input.other.panOffsetRight
+    && (
+      input.other.panOffsetRight.x !== d.view.panOffsetRight.x
+      || input.other.panOffsetRight.y !== d.view.panOffsetRight.y
+      || input.other.panOffsetRight.z !== d.view.panOffsetRight.z
+    )
+  ) {
+    other.panOffsetRight = { ...input.other.panOffsetRight };
   }
   if ((input.inspectSelection ?? []).length > 0) {
     out.inspectSelection = [...(input.inspectSelection ?? [])];

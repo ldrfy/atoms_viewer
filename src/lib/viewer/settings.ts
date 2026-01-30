@@ -160,6 +160,12 @@ export type OtherSettingsGroup = {
   themeMode: ThemeMode;
   visualStyle: VisualStyleId;
   selectionHighlightColor: string;
+  /** Pan step (moved to other group in exported settings). */
+  panStepScale?: number;
+  /** Pan offsets (moved to other group in exported settings). */
+  panOffset?: { x: number; y: number; z: number };
+  panOffsetLeft?: { x: number; y: number; z: number };
+  panOffsetRight?: { x: number; y: number; z: number };
 };
 export const DEFAULT_OTHER: OtherSettingsGroup = {
   showAxes: false,

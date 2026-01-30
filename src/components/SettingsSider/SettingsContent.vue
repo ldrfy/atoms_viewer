@@ -204,16 +204,6 @@ const viewDirty = computed(() => {
     || !arraysEqual(settings.value.view.viewPresets, DEFAULT_SETTINGS.view.viewPresets)
     || settings.value.view.dualViewSplit !== DEFAULT_SETTINGS.view.dualViewSplit
     || (settings.value.view.dualViewDistance ?? defaultDistance) !== defaultDistance
-    || settings.value.view.panStepScale !== DEFAULT_SETTINGS.view.panStepScale
-    || settings.value.view.panOffset.x !== DEFAULT_SETTINGS.view.panOffset.x
-    || settings.value.view.panOffset.y !== DEFAULT_SETTINGS.view.panOffset.y
-    || settings.value.view.panOffset.z !== DEFAULT_SETTINGS.view.panOffset.z
-    || settings.value.view.panOffsetLeft.x !== DEFAULT_SETTINGS.view.panOffsetLeft.x
-    || settings.value.view.panOffsetLeft.y !== DEFAULT_SETTINGS.view.panOffsetLeft.y
-    || settings.value.view.panOffsetLeft.z !== DEFAULT_SETTINGS.view.panOffsetLeft.z
-    || settings.value.view.panOffsetRight.x !== DEFAULT_SETTINGS.view.panOffsetRight.x
-    || settings.value.view.panOffsetRight.y !== DEFAULT_SETTINGS.view.panOffsetRight.y
-    || settings.value.view.panOffsetRight.z !== DEFAULT_SETTINGS.view.panOffsetRight.z
     || settings.value.view.rotationDeg.x !== 0
     || settings.value.view.rotationDeg.y !== 0
     || settings.value.view.rotationDeg.z !== 0

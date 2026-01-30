@@ -2,6 +2,7 @@ import type {
   LammpsTypeMapRecord,
   DetailsSettingsGroup,
   ViewerSettings,
+  InspectSelectionItem,
 } from './settings';
 
 export type LayerSourceInfo = {
@@ -30,6 +31,8 @@ export type LayerSnapshot = {
   lammps?: {
     data?: LammpsTypeMapRecord;
   };
+  /** Per-layer atom selections (for export/恢复) */
+  inspectSelection?: InspectSelectionItem[];
 };
 
 export type LayerSortBy = 'time,ASC' | 'time,DESC' | 'name,ASC' | 'name,DESC';

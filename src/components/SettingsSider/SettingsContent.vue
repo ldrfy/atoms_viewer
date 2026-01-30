@@ -240,6 +240,7 @@ const otherDirty = computed(() => {
     settings.value.other.showAxes !== DEFAULT_SETTINGS.other.showAxes
     || settings.value.other.refreshBondsOnPlay !== DEFAULT_SETTINGS.other.refreshBondsOnPlay
     || settings.value.other.frame_rate !== DEFAULT_SETTINGS.other.frame_rate
+    || settings.value.view.panStepScale !== DEFAULT_SETTINGS.view.panStepScale
     || settings.value.other.themeMode !== DEFAULT_SETTINGS.other.themeMode
     || settings.value.other.visualStyle !== DEFAULT_SETTINGS.other.visualStyle
     || settings.value.other.modelLightIntensity !== styleBase.modelLightIntensity

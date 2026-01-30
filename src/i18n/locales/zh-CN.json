@@ -124,10 +124,8 @@
             "left": "左移",
             "right": "右移",
             "center": "复位到中心",
-            "step": "步长",
-            "target": "目标",
-            "sideLeft": "左侧",
-            "sideRight": "右侧",
+            "sideLeft": "左",
+            "sideRight": "右",
             "sideSingle": "单视图"
         },
         "settings": {
@@ -299,6 +297,7 @@
                 "recordFps": "录制帧率 (fps)",
                 "recordFpsHint": "录制输出的目标帧率；常用 30 / 60。",
                 "refreshBondsOnPlay": "播放时原子连接每帧刷新",
+                "panStep": "平移步长",
                 "themeReadabilityCheckOnOpen": "打开模型时检查主题可读性",
                 "modelLightIntensity": "模型灯光亮度",
                 "selectionColor": "选中高亮颜色",

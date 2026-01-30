@@ -104,6 +104,30 @@
       </a-row>
     </a-form-item>
 
+    <a-form-item :label="t('settings.panel.other.panStep')">
+      <a-row :gutter="8" align="middle">
+        <a-col :flex="1">
+          <a-slider
+            v-model:value="panStepScaleModel"
+            :min="PAN_STEP_MIN"
+            :max="PAN_STEP_MAX"
+            :step="PAN_STEP_STEP"
+          />
+        </a-col>
+        <a-col class="settings-col-compact">
+          <a-input-number
+            v-model:value="panStepScaleModel"
+            :aria-label="t('settings.panel.other.panStep')"
+            :title="t('settings.panel.other.panStep')"
+            :min="PAN_STEP_MIN"
+            :max="PAN_STEP_MAX"
+            :step="PAN_STEP_STEP"
+            class="settings-full-width"
+          />
+        </a-col>
+      </a-row>
+    </a-form-item>
+
     <a-form-item :label="t('settings.panel.other.recordFps')">
       <a-row :gutter="8" align="middle">
         <a-col :flex="1">
@@ -162,6 +186,9 @@ const { t } = useI18n();
 const { settings, patchSettings } = useSettingsSiderContext();
 const derivedContext = inject(settingsSiderDerivedContextKey, null);
 const viewerApi = computed(() => viewerApiRef.value);
+const PAN_STEP_MIN = 0.2;
+const PAN_STEP_MAX = 5;
+const PAN_STEP_STEP = 0.1;
 
 const showAxesModel = computed({
   get: () => settings.value.other.showAxes,
@@ -171,6 +198,11 @@ const showAxesModel = computed({
 const refreshBondsOnPlayModel = computed({
   get: () => settings.value.other.refreshBondsOnPlay ?? false,
   set: (v: boolean) => patchSettings({ other: { refreshBondsOnPlay: v } }),
+});
+
+const panStepScaleModel = computed({
+  get: () => settings.value.view.panStepScale ?? DEFAULT_SETTINGS.view.panStepScale,
+  set: (v: number) => patchSettings({ view: { panStepScale: v } }),
 });
 
 const recordFpsModel = computed({
@@ -267,6 +299,7 @@ const isOtherDirty = computed(() => {
     settings.value.other.showAxes !== DEFAULT_SETTINGS.other.showAxes
     || settings.value.other.refreshBondsOnPlay !== DEFAULT_SETTINGS.other.refreshBondsOnPlay
     || settings.value.other.frame_rate !== DEFAULT_SETTINGS.other.frame_rate
+    || settings.value.view.panStepScale !== DEFAULT_SETTINGS.view.panStepScale
     || settings.value.other.modelLightIntensity !== styleBase.modelLightIntensity
     || settings.value.other.themeMode !== DEFAULT_SETTINGS.other.themeMode
     || settings.value.other.visualStyle !== DEFAULT_SETTINGS.other.visualStyle
@@ -305,6 +338,7 @@ function onSelectionColorHexChange(v: unknown): void {
 function resetOtherSettings(): void {
   patchSettings({
     other: { ...DEFAULT_SETTINGS.other },
+    view: { panStepScale: DEFAULT_SETTINGS.view.panStepScale },
   });
   setThemeMode(DEFAULT_SETTINGS.other.themeMode);
   applyVisualStyle(DEFAULT_SETTINGS.other.visualStyle);

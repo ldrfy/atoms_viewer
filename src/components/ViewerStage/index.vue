@@ -67,9 +67,8 @@
       v-if="stage.hasModel"
       :on-pan="stage.panModel"
       :on-reset="stage.resetPan"
-      :pan-step-scale="stage.panStepScale.value"
-      :on-step-scale-change="stage.setPanStepScale"
       :target-side="stage.panTargetSide.value"
+      :is-panned="stage.panDirty.value"
     />
 
     <!-- 录制中：显示裁剪虚线框（不影响操作） -->

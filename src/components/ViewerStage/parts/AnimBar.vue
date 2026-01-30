@@ -488,10 +488,18 @@ function resetBgToTransparent(): void {
     margin-left: 2px;
 }
 
+@media (max-width: 768px) {
+    .anim-bar {
+        width: min(320px, calc(100vw - 24px - var(--pan-pad-width, 0px) - 8px));
+        max-width: calc(100vw - 24px - var(--pan-pad-width, 0px) - 8px);
+    }
+}
+
 /* 超小屏进一步收紧，避免任何溢出 */
 @media (max-width: 360px) {
     .anim-bar {
-        width: min(320px, calc(100vw - 24px));
+        width: min(260px, calc(100vw - 24px - var(--pan-pad-width, 0px) - 6px));
+        max-width: calc(100vw - 24px - var(--pan-pad-width, 0px) - 6px);
     }
 
     .anim-frame-text {

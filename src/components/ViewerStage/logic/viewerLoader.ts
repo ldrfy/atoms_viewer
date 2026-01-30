@@ -72,6 +72,7 @@ export function createViewerLoader(deps: {
     clear: () => void;
   };
   shouldCacheRemote?: () => boolean;
+  rehydrateSelectionFromSettings?: () => void;
 }) {
   const textDecoder = new TextDecoder();
   const parseMode = ref<ParseMode>('auto');
@@ -545,6 +546,8 @@ export function createViewerLoader(deps: {
         ...sourceMeta,
         buffer: cacheRemote ? buf : undefined,
       });
+      deps.rehydrateSelectionFromSettings?.();
+      window.setTimeout(() => deps.rehydrateSelectionFromSettings?.(), 200);
     }
   }
 
@@ -603,6 +606,7 @@ export function createViewerLoader(deps: {
               ...sourceMeta,
               buffer: cacheRemote ? buf : undefined,
             });
+            deps.rehydrateSelectionFromSettings?.();
           }
         }
         catch (err) {
@@ -627,6 +631,7 @@ export function createViewerLoader(deps: {
         parseInfo.fileName = lastOkName || lastRawFileName!;
 
         focusSettingsToLayersOrLammps();
+        window.setTimeout(() => deps.rehydrateSelectionFromSettings?.(), 200);
       }
       else {
         parseInfo.success = false;
@@ -710,6 +715,7 @@ export function createViewerLoader(deps: {
               ...sourceMeta,
               buffer: buf,
             });
+            deps.rehydrateSelectionFromSettings?.();
           }
         }
         catch (err) {

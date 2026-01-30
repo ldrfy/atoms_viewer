@@ -7,6 +7,7 @@ export type LammpsTypeMapRecord = Record<string, string>;
 export type InspectSelectionItem = {
   layerId: string;
   layerName?: string;
+  md5?: string;
   atomIndex: number;
   element?: string;
   id?: number;

@@ -124,8 +124,6 @@
             "left": "Pan left",
             "right": "Pan right",
             "center": "Reset to center",
-            "step": "Step",
-            "target": "Target",
             "sideLeft": "Left",
             "sideRight": "Right",
             "sideSingle": "Single"
@@ -299,6 +297,7 @@
                 "axes": "Axes",
                 "recordFps": "Recording FPS",
                 "recordFpsHint": "Target recording frame rate; commonly 30 / 60.",
+                "panStep": "Pan step",
                 "themeReadabilityCheckOnOpen": "Check theme readability when opening viewer",
                 "modelLightIntensity": "Model light intensity",
                 "selectionColor": "Selection highlight color",

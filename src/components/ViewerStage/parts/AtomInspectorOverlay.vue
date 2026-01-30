@@ -27,18 +27,11 @@
       >
         <!-- Resize handle -->
         <div
-          class="atom-inspector__resizer"
-          :class="placement === 'bottom' ? 'is-bottom' : 'is-right'"
+          v-if="placement === 'bottom'"
+          class="atom-inspector__resizer is-bottom"
           role="separator"
           aria-label="resize"
-          @pointerdown.prevent="onResizeStart('width', $event)"
-        />
-        <div
-          v-if="placement === 'left'"
-          class="atom-inspector__resizer is-bottom-edge"
-          role="separator"
-          aria-label="resize"
-          @pointerdown.prevent="onResizeStart('height', $event)"
+          @pointerdown.prevent="onResizeStart('mobile', $event)"
         />
 
         <div class="atom-inspector-panel__inner">
@@ -108,51 +101,45 @@
                 <a-list size="small" :data-source="selected" :split="false">
                   <template #renderItem="{ item, index }">
                     <a-list-item class="atom-item">
-                      <div class="atom-row">
-                        <div class="atom-index">
-                          <a-tag color="blue">
+                      <a-row align="middle" :gutter="[8, 0]" style="width: 100%">
+                        <a-col flex="28px">
+                          <a-tag color="blue" class="atom-index-tag">
                             {{ index + 1 }}
                           </a-tag>
-                        </div>
+                        </a-col>
 
-                        <div class="atom-body">
-                          <div class="atom-header">
-                            <a-typography-text strong class="atom-element">
-                              {{ item.element }}
-                            </a-typography-text>
+                        <a-col flex="auto">
+                          <a-popover trigger="click" :content="buildTooltip(item)" placement="topLeft">
+                            <a-space direction="vertical" size="4" style="width: 100%">
+                              <a-space align="center" size="12" wrap>
+                                <a-typography-text strong>
+                                  {{ item.element }}
+                                </a-typography-text>
+                                <div class="atom-idx">
+                                  idx={{ item.atomIndex }}
+                                </div>
+                              </a-space>
+                              <a-typography-text>
+                                x={{ fmt(item.position?.[0]) }},
+                                y={{ fmt(item.position?.[1]) }},
+                                z={{ fmt(item.position?.[2]) }}
+                              </a-typography-text>
+                            </a-space>
+                          </a-popover>
+                        </a-col>
 
-                            <div class="atom-meta">
-                              <a-typography-text v-if="item.layerName || item.layerId" type="secondary">
-                                layer={{ item.layerName || item.layerId }}
-                              </a-typography-text>
-                              <a-typography-text type="secondary">
-                                idx={{ item.atomIndex + 1 }}
-                              </a-typography-text>
-                              <a-typography-text v-if="item.id != null" type="secondary">
-                                id={{ item.id }}
-                              </a-typography-text>
-                              <a-typography-text v-if="item.typeId != null" type="secondary">
-                                type={{ item.typeId }}
-                              </a-typography-text>
-                              <a-button
-                                type="text"
-                                size="small"
-                                aria-label="remove"
-                                title="remove"
-                                @click="removeAt(index)"
-                              >
-                                <DeleteOutlined />
-                              </a-button>
-                            </div>
-                          </div>
-
-                          <div class="atom-inspector__coords">
-                            x={{ fmt(item.position?.[0]) }},
-                            y={{ fmt(item.position?.[1]) }},
-                            z={{ fmt(item.position?.[2]) }}
-                          </div>
-                        </div>
-                      </div>
+                        <a-col flex="32px" style="text-align: right">
+                          <a-button
+                            type="text"
+                            size="small"
+                            aria-label="remove"
+                            title="remove"
+                            @click="removeAt(index)"
+                          >
+                            <DeleteOutlined />
+                          </a-button>
+                        </a-col>
+                      </a-row>
                     </a-list-item>
                   </template>
                 </a-list>
@@ -255,6 +242,14 @@ const panelTransitionName = computed(() =>
   placement.value === 'left' ? 'atom-inspector-slide-left' : 'atom-inspector-slide-up',
 );
 
+function buildTooltip(item: any): string {
+  const parts: string[] = [];
+  if (item.layerName || item.layerId) parts.push(String(item.layerName || item.layerId));
+  if (item.id != null) parts.push(`id=${item.id}`);
+  if (item.typeId != null) parts.push(`type=${item.typeId}`);
+  return parts.join(' · ');
+}
+
 /** --- collapsed logic ---
  * - no atoms -> collapsed
  * - 0 -> >0 -> auto expand
@@ -339,7 +334,7 @@ const resizeDrag = createPointerDragWithPullToRefreshBlock({
         // drag handle on right edge: dragging right increases width
         const dx = e.clientX - startX;
         const maxW = Math.floor(window.innerWidth * 0.7);
-        desktopWidth.value = clampNumber(startW + dx, 260, Math.max(260, maxW));
+        desktopWidth.value = clampNumber(startW + dx, 320, Math.max(320, maxW));
         saveNumber('atomInspector.desktopWidth', desktopWidth.value);
       }
     }
@@ -375,7 +370,8 @@ const panelStyle = computed(() => {
       left: 0,
       top: `${topPx}px`,
       height: `${height}px`,
-      width: `${desktopWidth.value}px`,
+      width: 'fit-content',
+      maxWidth: 'min(360px, 42vw)',
       borderRadius: '0 10px 10px 0',
     } as Record<string, any>;
   }
@@ -636,40 +632,81 @@ function fmt(v: number | null | undefined): string {
   margin: 10px 0;
 }
 
-/* Rows */
-.atom-row {
-  display: flex;
-  gap: 8px;
+.atom-item {
+  padding: 6px 0;
+  border-bottom: 1px solid var(--ant-color-border-secondary);
 }
 
-.atom-body {
+.atom-item:last-child {
+  border-bottom: none;
+}
+
+.atom-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.atom-index-tag {
+  min-width: 28px;
+  text-align: center;
+  margin: 0;
+}
+
+.atom-idx {
+  margin-left: 8px;
+  opacity: 0.55;
+  font-size: 12px;
+  opacity: 0.75;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.atom-left-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  flex: 0 0 auto;
+}
+
+.atom-right-col {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.atom-remove-btn {
+  margin: 0;
+  padding: 0;
+  color: var(--ant-color-text-tertiary);
+}
+
+.atom-element {
+  font-size: 15px;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+
+.atom-main {
   flex: 1;
   min-width: 0;
 }
 
-.atom-header {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 8px;
+.atom-layer {
+  font-size: 12px;
+  margin-left: 10px;
 }
 
-.atom-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  justify-content: flex-end;
-}
-
-.atom-element {
-  white-space: nowrap;
-}
-
-/* coords */
-.atom-inspector__coords {
-  margin-top: 2px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  word-break: break-all;
+.atom-coord {
+  display: block;
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: var(--ant-color-fill-secondary);
+  font-size: 12px;
+  color: var(--ant-color-text);
+  font-family: ui-monospace, SFMono-Regular, SFMono, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 }
 
 /* list item spacing */

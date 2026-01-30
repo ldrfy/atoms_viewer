@@ -146,6 +146,9 @@ type LayerInternal = {
   /** Per-layer display settings (atom size, bonds, quality). */
   display: DetailsSettingsGroup;
 
+  /** Per-layer inspect selection for export/restore */
+  inspectSelection?: import('../../lib/viewer/settings').InspectSelectionItem[];
+
   // tmp
   baseCenter: THREE.Vector3; // keep at (0,0,0) so applyFrameAtomsToMeshes == shift by current mean
 };
@@ -279,6 +282,9 @@ export type ModelRuntime = {
   applyLayerSnapshots: (
     snaps: LayerSnapshot[],
   ) => void;
+
+  setLayerInspectSelection: (layerId: string, items: import('../../lib/viewer/settings').InspectSelectionItem[]) => void;
+  getLayerInspectSelection: (layerId: string) => import('../../lib/viewer/settings').InspectSelectionItem[];
 
   setActiveLayerTypeMap: (map: LammpsTypeMapRecord) => void;
   applyTypeMapToAllLayers: (templateMap: LammpsTypeMapRecord) => void;
@@ -1465,6 +1471,7 @@ export function createModelRuntime(args: {
         colors: {
           data: colorMap,
         },
+        inspectSelection: l.inspectSelection ?? [],
       });
     }
     return res;
@@ -1493,6 +1500,16 @@ export function createModelRuntime(args: {
     layer.typeIds = [...detected];
     layer.typeMapApplied = Object.keys(layer.typeMap ?? {}).length > 0;
 
+    // restore inspect selection per layer
+    layer.inspectSelection = (snap.inspectSelection ?? []).map(item => ({
+      ...item,
+      md5: item.md5 ?? snap.source?.md5 ?? layer.info.sourceMd5,
+      layerId: item.layerId ?? layer.info.id,
+      layerName: item.layerName ?? layer.info.name ?? snap.source?.fileName,
+    }));
+
+    // keep last selection for export (runtime only; visuals handled elsewhere)
+
     const atoms = (layer.model.frames?.[layer.frameIndex]
       ?? layer.model.atoms) as Atom[];
     layer.currentFrameAtoms = atoms;
@@ -1506,6 +1523,8 @@ export function createModelRuntime(args: {
     layer.colorMap = buildColorMapFromAtoms(colorSource, mapped, layer.hasAnyTypeId);
     layer.colorKeys = buildColorMapKeysFromAtoms(mapped, layer.hasAnyTypeId);
 
+    // keep last selection per layer for export/restore (visuals handled elsewhere)
+
     rebuildVisualsForLayer(layer, mapped);
 
     const atomChanged
@@ -1517,6 +1536,20 @@ export function createModelRuntime(args: {
         || Math.abs(prevDisplay.bondRadius - nextDisplay.bondRadius) > 1e-6;
     if (atomChanged) applyAtomScale();
     if (bondChanged) applyShowBonds();
+  }
+
+  function setLayerInspectSelection(
+    layerId: string,
+    items: import('../../lib/viewer/settings').InspectSelectionItem[],
+  ): void {
+    const l = layerMap.get(layerId);
+    if (!l) return;
+    l.inspectSelection = [...items];
+  }
+
+  function getLayerInspectSelection(layerId: string) {
+    const l = layerMap.get(layerId);
+    return l?.inspectSelection ?? [];
   }
 
   function applyLayerSnapshots(
@@ -2070,6 +2103,8 @@ export function createModelRuntime(args: {
     visibleCustomColors,
 
     getLayerSnapshots,
+    setLayerInspectSelection,
+    getLayerInspectSelection,
 
     getActiveAtomMeshes,
     getVisibleAtomMeshes,

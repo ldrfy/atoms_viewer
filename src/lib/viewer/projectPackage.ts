@@ -77,6 +77,15 @@ function pruneLayerSnapshot(layer: LayerSnapshot): LayerSnapshot {
     out.colors = { data: { ...colorData } };
   }
 
+  if (layer.inspectSelection && layer.inspectSelection.length > 0) {
+    out.inspectSelection = layer.inspectSelection.map(item => ({
+      ...item,
+      md5: item.md5 ?? layer.source?.md5,
+      layerId: item.layerId ?? layer.id,
+      layerName: item.layerName ?? layer.name ?? layer.source?.fileName,
+    })) as LayerSnapshot['inspectSelection'];
+  }
+
   return out;
 }
 

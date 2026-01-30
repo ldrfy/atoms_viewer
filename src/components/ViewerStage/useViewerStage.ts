@@ -9,7 +9,6 @@ import type {
   LammpsTypeMapRecord,
   OpenSettingsPayload,
   DetailsSettingsGroup,
-  InspectSelectionItem,
 } from '../../lib/viewer/settings';
 import { hasUnknownElementMappingForTypeIds } from '../../lib/viewer/settings';
 import type { LayerSortBy, LayersSnapshot, LayerSnapshot } from '../../lib/viewer/sessionTypes';
@@ -35,6 +34,7 @@ import {
 } from './modelRuntime';
 import type { ColorMapRecord } from './colorMap';
 import { createLayerSourceStore } from './logic/sourceStore';
+import { createInspectSelectionHelper } from './logic/inspectSelectionHelper';
 
 import { createInspectCtx, type InspectCtx } from './ctx/inspect';
 import { createRecordingController, type RecordingBindings, type CropBox } from './recording';
@@ -291,6 +291,8 @@ type ViewerStageBindings = {
   panModel: (dir: 'left' | 'right' | 'up' | 'down') => void;
   /** 当前平移目标视图 */
   panTargetSide: Ref<'left' | 'right' | 'single'>;
+  /** 当前是否已平移（针对目标视图） */
+  panDirty: ComputedRef<boolean>;
   /** 复位模型平移 */
   resetPan: () => void;
   /** 平移步长倍率 */
@@ -550,58 +552,36 @@ export function useViewerStage(
 
   // inspect
   const inspectCtx = createInspectCtx();
-  const originalInspectClear = inspectCtx.clear;
-  inspectCtx.clear = () => {
-    originalInspectClear();
-    settingsSync.patch({ inspectSelection: [] });
+  const rawLayerSourceStore = createLayerSourceStore();
+
+  const inspectHelper = createInspectSelectionHelper({
+    settingsRef,
+    patchSettings: settingsSync.patch,
+    inspectCtx,
+    layerSourceStore: rawLayerSourceStore,
+    runtime: () => runtime,
+    activeLayerId,
+  });
+
+  const layerSourceStore = {
+    set(id: string, data: import('../../lib/viewer/sessionTypes').LayerSourceData): void {
+      rawLayerSourceStore.set(id, data);
+      inspectHelper.backfillSelectionMd5(id, data?.md5);
+      inspectHelper.rehydrateFromSettings();
+    },
+    get(id: string) {
+      return rawLayerSourceStore.get(id);
+    },
+    delete(id: string): void {
+      rawLayerSourceStore.delete(id);
+    },
+    clear(): void {
+      rawLayerSourceStore.clear();
+    },
+    entries(): IterableIterator<[string, import('../../lib/viewer/sessionTypes').LayerSourceData]> {
+      return rawLayerSourceStore.entries();
+    },
   };
-  const suppressSelectionSync = ref(false);
-  const lastSelectionSig = ref('');
-
-  function normalizeSelectionForSave(sel: InspectCtx['selected']['value']): InspectSelectionItem[] {
-    return (sel ?? []).map(s => ({
-      layerId: s.layerId,
-      layerName: s.layerName,
-      atomIndex: s.atomIndex,
-      element: s.element,
-      id: s.id,
-      typeId: s.typeId,
-      position: s.position ? [...s.position] as [number, number, number] : undefined,
-    }));
-  }
-
-  function hydrateSelection(items: InspectSelectionItem[]): InspectCtx['selected']['value'] {
-    const out: InspectCtx['selected']['value'] = [];
-    for (const item of items ?? []) {
-      const base = {
-        layerId: item.layerId,
-        layerName: item.layerName,
-        atomIndex: item.atomIndex,
-        element: item.element ?? 'E',
-        id: item.id,
-        typeId: item.typeId,
-        position: item.position
-          ? [item.position[0], item.position[1], item.position[2]] as [number, number, number]
-          : [0, 0, 0] as [number, number, number],
-      };
-
-      if (!item.position || !item.element) {
-        const atoms = runtime?.getAtomsForLayer(item.layerId);
-        const atom = atoms?.[item.atomIndex];
-        if (atom) {
-          base.element = atom.element ?? base.element;
-          base.position = [atom.position[0], atom.position[1], atom.position[2]] as [number, number, number];
-          if (atom.id != null) base.id = atom.id;
-          if (atom.typeId != null) base.typeId = atom.typeId;
-        }
-      }
-
-      out.push(base);
-    }
-    return out;
-  }
-
-  const layerSourceStore = createLayerSourceStore();
   const cacheRemoteOnExport = ref(true);
   const CACHE_REMOTE_KEY = 'atomsViewer.cacheRemoteModels';
   try {
@@ -719,8 +699,12 @@ export function useViewerStage(
       return;
     }
 
+    const settingsForSave = {
+      ...settingsRef.value,
+      inspectSelection: [],
+    };
     const snapshot = buildSettingsSnapshot(
-      settingsRef.value,
+      settingsForSave,
       layerSnapshots,
       undefined,
       getAnimStateSnapshot(),
@@ -800,47 +784,24 @@ export function useViewerStage(
     inspectCtx,
     isSelectingRecordArea: recording.isSelectingRecordArea,
   });
+  inspectHelper.setPicking(picking);
+  inspectHelper.rehydrateFromSettings();
 
   watch(
     () => inspectCtx.selected.value,
     (sel) => {
-      if (suppressSelectionSync.value) return;
-      const items = normalizeSelectionForSave(sel);
-      const sig = JSON.stringify(items);
-      if (sig === lastSelectionSig.value) return;
-      lastSelectionSig.value = sig;
-      settingsSync.patch({ inspectSelection: items });
-      picking.rebuildSelectionVisualsFromSelected();
+      inspectHelper.onSelectionChanged(sel);
+      if (runtime && runtime.activeLayerId.value) {
+        runtime.setLayerInspectSelection(runtime.activeLayerId.value, inspectHelper.normalizeForSave(sel));
+      }
     },
     { deep: true },
   );
 
   watch(
-    () => settingsRef.value.inspectSelection,
-    (items) => {
-      const list = Array.isArray(items) ? items : [];
-      const sig = JSON.stringify(list);
-      if (sig === lastSelectionSig.value) return;
-      lastSelectionSig.value = sig;
-      suppressSelectionSync.value = true;
-      inspectCtx.selected.value = hydrateSelection(list);
-      suppressSelectionSync.value = false;
-      picking.rebuildSelectionVisualsFromSelected();
-    },
-    { deep: true, immediate: true },
-  );
-
-  watch(
     () => runtimeTick.value,
     () => {
-      const list = Array.isArray(settingsRef.value.inspectSelection)
-        ? settingsRef.value.inspectSelection
-        : [];
-      if (list.length === 0) return;
-      suppressSelectionSync.value = true;
-      inspectCtx.selected.value = hydrateSelection(list);
-      suppressSelectionSync.value = false;
-      picking.rebuildSelectionVisualsFromSelected();
+      inspectHelper.rehydrateFromSettings();
     },
   );
 
@@ -877,6 +838,7 @@ export function useViewerStage(
     stopPlay: anim.stopPlay,
     sourceStore: layerSourceStore,
     shouldCacheRemote: () => cacheRemoteOnExport.value,
+    rehydrateSelectionFromSettings: () => inspectHelper.rehydrateFromSettings(),
   });
 
   const frameMeta = computed<FrameMeta | null>(() => {
@@ -1291,14 +1253,12 @@ export function useViewerStage(
     if (!runtime) return;
     runtime.setActiveLayer(id);
     syncUiFromRuntime();
-    inspectCtx.clear();
   }
 
   function setLayerVisible(id: string, visible: boolean): void {
     if (!runtime) return;
     runtime.setLayerVisible(id, visible);
     syncUiFromRuntime();
-    inspectCtx.clear();
     if (!visible && runtime.activeLayerId.value === id) {
       anim.stopPlay();
     }
@@ -1309,7 +1269,6 @@ export function useViewerStage(
     if (!runtime) return;
     runtime.setAllLayersVisible(visible);
     syncUiFromRuntime();
-    inspectCtx.clear();
     if (!visible) {
       anim.stopPlay();
     }
@@ -1549,6 +1508,19 @@ export function useViewerStage(
   const panTmpUp = new THREE.Vector3();
   const panTargetSide = ref<'left' | 'right' | 'single'>('single');
   let removePanTargetListener: (() => void) | null = null;
+  const panDirty = computed(() => {
+    const eps = 1e-6;
+    const presets = normalizeViewPresets(settingsRef.value.view.viewPresets);
+    const isDual = presets.length === 2;
+    const side = isDual ? panTargetSide.value : 'single';
+    const v = side === 'left'
+      ? settingsRef.value.view.panOffsetLeft
+      : side === 'right'
+        ? settingsRef.value.view.panOffsetRight
+        : settingsRef.value.view.panOffset;
+    const off = v ?? { x: 0, y: 0, z: 0 };
+    return Math.abs(off.x) > eps || Math.abs(off.y) > eps || Math.abs(off.z) > eps;
+  });
 
   function panModel(dir: 'left' | 'right' | 'up' | 'down'): void {
     if (!stage) return;
@@ -2040,6 +2012,7 @@ export function useViewerStage(
     applyViewFromSettings,
     panModel,
     panTargetSide,
+    panDirty,
     resetPan,
     panStepScale,
     setPanStepScale,

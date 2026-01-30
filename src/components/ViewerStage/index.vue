@@ -23,21 +23,20 @@
       aria-orientation="vertical"
       @pointerdown.prevent="onDividerPointerDown"
     />
-    <div v-if="showDualViewDivider" class="dual-view-divider__hit" @pointerdown.prevent="onDividerPointerDown" />
-    <div v-if="showDualViewDivider" class="dual-view-divider__label" :style="dualViewLabelStyle">
-      {{ dualViewPercentLabel }}
-    </div>
-    <a-button
+    <div
+      v-if="showDualViewDivider"
+      class="dual-view-divider__hit"
+      :style="{ '--dual-view-divider-x': dualViewDividerStyle['--dual-view-divider-x'] }"
+      @pointerdown.stop.prevent="onDividerPointerDown"
+    />
+    <a-tag
       v-if="showDualViewDivider"
       size="small"
-      class="dual-view-divider__snap"
-      :style="dualViewSnapStyle"
-      :title="t('viewer.view.snapSplit')"
-      :aria-label="t('viewer.view.snapSplit')"
-      @click="onSnapSplit"
+      class="dual-view-divider__label"
+      :style="dualViewLabelStyle"
     >
-      50
-    </a-button>
+      {{ dualViewPercentLabel }}
+    </a-tag>
 
     <!-- 原子信息/测量面板（点击原子后显示） -->
     <AtomInspectorOverlay :ctx="stage.inspectCtx" />
@@ -170,8 +169,6 @@ const dualViewDividerStyle = computed(() => {
 });
 
 const dualViewLabelStyle = computed(() => ({ left: dualViewDividerStyle.value.left }));
-const dualViewSnapStyle = computed(() => ({ left: dualViewDividerStyle.value.left }));
-
 const dualViewPercentLabel = computed(() => {
   const raw = typeof settingsRef.value.view.dualViewSplit === 'number'
     ? settingsRef.value.view.dualViewSplit
@@ -214,10 +211,6 @@ function onDividerPointerDown(e: PointerEvent): void {
   window.addEventListener('pointermove', onMove, { passive: true });
   window.addEventListener('pointerup', onUp, { passive: true });
   window.addEventListener('pointercancel', onUp, { passive: true });
-}
-
-function onSnapSplit(): void {
-  patchSettings({ view: { dualViewSplit: 0.5 } });
 }
 
 // ✅ 映射集中在 useViewerStage.ts：index.vue 不再重复写
@@ -351,12 +344,12 @@ function showThemeMismatchConfirm(preferred: 'light' | 'dark'): void {
     position: absolute;
     top: 0;
     bottom: 0;
-    width: 20px;
-    left: calc(var(--dual-view-divider-x, 50%) - 10px);
+    width: 36px;
+    left: calc(var(--dual-view-divider-x, 50%) - 18px);
     transform: translateX(0);
     pointer-events: auto;
     cursor: col-resize;
-    z-index: 20;
+    z-index: 60;
     touch-action: none;
 }
 
@@ -367,15 +360,8 @@ function showThemeMismatchConfirm(preferred: 'light' | 'dark'): void {
     font-size: 12px;
     padding: 2px 6px;
     border-radius: 6px;
-    background: rgba(0, 0, 0, 0.55);
-    color: #fff;
     pointer-events: none;
     z-index: 13;
-}
-
-:root[data-theme="dark"] .dual-view-divider__label {
-    background: rgba(255, 255, 255, 0.18);
-    color: #fff;
 }
 
 .dual-view-divider__snap {

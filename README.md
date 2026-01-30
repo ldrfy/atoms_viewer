@@ -61,7 +61,7 @@ Multi-language, dark/light themes, precise rotation control, atom size, atom col
 
 ### Prerequisites
 
-- node24
+- node25
 - pnpm10
 
 ### Install & Run

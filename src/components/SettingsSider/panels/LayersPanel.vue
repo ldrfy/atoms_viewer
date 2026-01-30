@@ -42,7 +42,6 @@
         <a-tooltip :title="toggleAllLabel">
           <a-button
             type="text"
-            size="small"
             :disabled="layerList.length === 0"
             :aria-label="toggleAllLabel"
             @click="onToggleAllVisible"
@@ -53,7 +52,6 @@
         <a-tooltip :title="t('settings.panel.layers.hint')">
           <a-button
             type="text"
-            size="small"
             class="layers-help"
             :aria-label="t('settings.panel.layers.hint')"
           >

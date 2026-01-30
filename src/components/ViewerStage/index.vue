@@ -352,12 +352,13 @@ function showThemeMismatchConfirm(preferred: 'light' | 'dark'): void {
     position: absolute;
     top: 0;
     bottom: 0;
-    width: 10px;
-    left: calc(var(--dual-view-divider-x, 50%) - 5px);
+    width: 20px;
+    left: calc(var(--dual-view-divider-x, 50%) - 10px);
     transform: translateX(0);
     pointer-events: auto;
     cursor: col-resize;
-    z-index: 11;
+    z-index: 20;
+    touch-action: none;
 }
 
 .dual-view-divider__label {

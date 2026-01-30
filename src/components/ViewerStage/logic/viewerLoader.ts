@@ -107,6 +107,30 @@ export function createViewerLoader(deps: {
     );
   }
 
+  function extractUrlFileName(url: string): string {
+    const trimmed = (url ?? '').trim();
+    if (!trimmed) return 'remote';
+    try {
+      const u = new URL(trimmed, window.location.href);
+      const parts = (u.pathname ?? '').split('/').filter(Boolean);
+      const base = parts[parts.length - 1] ?? '';
+      const decoded = base ? decodeURIComponent(base) : '';
+      return decoded || u.hostname || 'remote';
+    }
+    catch {
+      const clean = trimmed.split('#')[0]?.split('?')[0] ?? trimmed;
+      const base = clean.split('/').pop() ?? '';
+      const decoded = base ? decodeURIComponent(base) : '';
+      return decoded || 'remote';
+    }
+  }
+
+  function resolveUrlDisplayName(url: string, fileName?: string): string {
+    const name = (fileName ?? '').trim();
+    if (name && !/^https?:\/\//i.test(name)) return name;
+    return extractUrlFileName(url);
+  }
+
   function updateParseInfo(
     model: StructureModel,
     displayFileName: string,
@@ -518,6 +542,7 @@ export function createViewerLoader(deps: {
     await loadInit();
     const t0 = performance.now();
 
+    const displayName = resolveUrlDisplayName(url, fileName);
     const res = await fetch(url);
     if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
     const buf = await res.arrayBuffer();
@@ -527,13 +552,13 @@ export function createViewerLoader(deps: {
     const sourceMeta: LayerSourceInfo = {
       md5,
       size: buf.byteLength,
-      fileName,
+      fileName: displayName,
       url,
       type: 'url',
       cached: cacheRemote,
     };
 
-    const layerId = await loadText(t0, text, fileName, {
+    const layerId = await loadText(t0, text, displayName, {
       hidePreviousLayers: opts?.hidePreviousLayers ?? true,
       sourceMeta,
       forcedLayerId: opts?.forcedLayerId,
@@ -570,7 +595,7 @@ export function createViewerLoader(deps: {
       let lastOkName = '';
 
       for (const item of items) {
-        const displayName = item.fileName || item.url;
+        const displayName = resolveUrlDisplayName(item.url, item.fileName);
         try {
           const res = await fetch(item.url);
           if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);

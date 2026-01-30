@@ -84,11 +84,13 @@ export const DEFAULT_DETAILS: DetailsSettingsGroup = {
 export type FileSettingsGroup = {
   exportPngScale: number;
   exportPngTransparent: boolean;
+  exportImageFormat: 'png' | 'webp' | 'jpg';
   cacheRemoteOnExport: boolean;
 };
 export const DEFAULT_FILES: FileSettingsGroup = {
   exportPngScale: 2,
   exportPngTransparent: true,
+  exportImageFormat: 'png',
   cacheRemoteOnExport: true,
 };
 

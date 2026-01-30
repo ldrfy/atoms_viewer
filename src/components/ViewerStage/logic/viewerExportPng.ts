@@ -1,8 +1,7 @@
 // src/components/ViewerStage/logic/viewerExportPng.ts
 import * as THREE from 'three';
 import { message } from 'ant-design-vue';
-import { normalizeViewPresets } from '../../../lib/viewer/viewPresets';
-import { canvasToPngBlob, cropCanvasToPngBlob, downloadBlob } from '../../../lib/image/cropPng';
+import { cropCanvasByAlpha, downloadBlob } from '../../../lib/image/cropPng';
 import { buildExportFilename } from '../../../lib/file/filename';
 import type { CropBox } from '../recording';
 import {
@@ -17,30 +16,142 @@ export function createPngExporter(deps: {
   getStage: () => ThreeStage | null;
   getSettings: () => ViewerSettings;
   getModelFileName?: () => string | undefined;
+  setExportScale?: (scale: number) => void;
   t: (key: string, args?: any) => string;
 }) {
+  const runExportWorker = async (args: {
+    width: number;
+    height: number;
+    pixels: Uint8Array;
+    crop?: CropBox;
+    alphaThreshold?: number;
+    padding?: number;
+    format: 'png' | 'webp' | 'jpg';
+    quality?: number;
+  }): Promise<{ blob: Blob; format: 'png' | 'webp' | 'jpg' } | null> => {
+    if (typeof Worker === 'undefined' || typeof OffscreenCanvas === 'undefined') {
+      return null;
+    }
+
+    const worker = new Worker(
+      new URL('../../../lib/image/exportPngWorker.ts', import.meta.url),
+      { type: 'module' },
+    );
+
+    const requestId = Math.floor(Math.random() * 1e9);
+    const payload = {
+      id: requestId,
+      width: args.width,
+      height: args.height,
+      pixels: args.pixels.buffer,
+      crop: args.crop ?? null,
+      alphaThreshold: args.alphaThreshold ?? 8,
+      padding: args.padding ?? 3,
+      format: args.format,
+      quality: args.quality ?? 0.92,
+    };
+
+    const result = await new Promise<{ blob: Blob; format: 'png' | 'webp' | 'jpg' }>((resolve, reject) => {
+      const onMessage = (ev: MessageEvent<any>) => {
+        if (!ev.data || ev.data.id !== requestId) return;
+        worker.removeEventListener('message', onMessage);
+        worker.removeEventListener('error', onError);
+        if (ev.data.error) reject(new Error(ev.data.error));
+        else resolve({ blob: ev.data.blob as Blob, format: ev.data.format as any });
+      };
+      const onError = (err: ErrorEvent) => {
+        worker.removeEventListener('message', onMessage);
+        worker.removeEventListener('error', onError);
+        reject(err.error ?? new Error('worker failed'));
+      };
+      worker.addEventListener('message', onMessage);
+      worker.addEventListener('error', onError);
+      worker.postMessage(payload, [payload.pixels]);
+    });
+
+    worker.terminate();
+    return result;
+  };
+
+  const flipPixelsIntoImageData = async (
+    src: Uint8Array,
+    dst: Uint8ClampedArray,
+    width: number,
+    height: number,
+  ): Promise<void> => {
+    const rowSize = width * 4;
+    for (let y = 0; y < height; y += 1) {
+      const srcRow = (height - 1 - y) * rowSize;
+      const dstRow = y * rowSize;
+      dst.set(src.subarray(srcRow, srcRow + rowSize), dstRow);
+      if (y % 32 === 0) {
+        await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
+      }
+    }
+  };
+
+  const canvasToBlob = (
+    canvas: HTMLCanvasElement,
+    format: 'png' | 'webp' | 'jpg',
+    quality?: number,
+  ): Promise<{ blob: Blob; format: 'png' | 'webp' | 'jpg' }> => {
+    const type = format === 'png'
+      ? 'image/png'
+      : format === 'webp'
+        ? 'image/webp'
+        : 'image/jpeg';
+    return new Promise((resolve, reject) => {
+      if (format === 'webp') {
+        // HTMLCanvasElement.toBlob 无 lossless 参数，默认有损；不支持则回退 PNG
+        canvas.toBlob((b) => {
+          if (b) resolve({ blob: b, format: 'webp' });
+          else {
+            canvas.toBlob((b2) => {
+              if (b2) resolve({ blob: b2, format: 'png' });
+              else reject(new Error('canvas.toBlob 返回空，无法导出图片'));
+            }, 'image/png');
+          }
+        }, type, quality);
+        return;
+      }
+      canvas.toBlob((b) => {
+        if (b) resolve({ blob: b, format });
+        else reject(new Error('canvas.toBlob 返回空，无法导出图片'));
+      }, type, quality);
+    });
+  };
+
   async function onExportPng(payload: {
     scale: number;
     transparent: boolean;
+    format?: 'png' | 'webp' | 'jpg';
     cropBox?: CropBox;
   }): Promise<void> {
     const stage = deps.getStage();
     if (!stage) return;
 
     const { scale, transparent, cropBox } = payload;
+    const format = payload.format ?? 'png';
+    const effectiveTransparent = format === 'jpg' ? false : transparent;
 
     const prevColor = new THREE.Color();
     stage.renderer.getClearColor(prevColor);
     const prevAlpha = stage.renderer.getClearAlpha();
-    const prevSize = new THREE.Vector2();
-    stage.renderer.getSize(prevSize);
-    const prevPixelRatio = stage.renderer.getPixelRatio();
     const prevAutoClear = stage.renderer.autoClear;
+    const prevScissor = new THREE.Vector4();
+    const prevViewport = new THREE.Vector4();
+    let prevTarget: THREE.WebGLRenderTarget | null = null;
+    let prevScissorTest = false;
+    let renderTarget: THREE.WebGLRenderTarget | null = null;
 
     try {
+      prevTarget = stage.renderer.getRenderTarget();
+      prevScissorTest = stage.renderer.getScissorTest();
+      stage.renderer.getScissor(prevScissor);
+      stage.renderer.getViewport(prevViewport);
       stage.renderer.setClearColor(
         new THREE.Color(deps.getSettings().anim.backgroundColor),
-        transparent ? 0 : 1,
+        effectiveTransparent ? 0 : 1,
       );
 
       const rect = stage.host.getBoundingClientRect();
@@ -59,6 +170,7 @@ export function createPngExporter(deps: {
       const s = Math.min(sRequested, maxScale);
 
       if (s !== sRequested) {
+        deps.setExportScale?.(s);
         message.warning(
           deps.t('viewer.export.scaleCapped', {
             requested: sRequested,
@@ -68,24 +180,69 @@ export function createPngExporter(deps: {
         );
       }
 
-      stage.renderer.setPixelRatio(1);
-      stage.renderer.setSize(Math.floor(w * s), Math.floor(h * s), false);
+      const fullW = Math.floor(w * s);
+      const fullH = Math.floor(h * s);
+      const pr = Math.max(1e-6, stage.renderer.getPixelRatio());
+      const viewW = Math.max(1, Math.floor(fullW / pr));
+      const viewH = Math.max(1, Math.floor(fullH / pr));
+      renderTarget = new THREE.WebGLRenderTarget(fullW, fullH, {
+        format: THREE.RGBAFormat,
+        type: THREE.UnsignedByteType,
+        depthBuffer: true,
+        stencilBuffer: false,
+      });
+      renderTarget.texture.name = 'exportPngTarget';
+      (renderTarget.texture as any).colorSpace = stage.renderer.outputColorSpace;
 
       const settings = deps.getSettings();
+      const stagePan = stage.getPanOffsets();
+      const panSingle = stagePan.single ?? settings.view.panOffset ?? { x: 0, y: 0, z: 0 };
+      const panLeft = stagePan.left ?? settings.view.panOffsetLeft ?? { x: 0, y: 0, z: 0 };
+      const panRight = stagePan.right ?? settings.view.panOffsetRight ?? { x: 0, y: 0, z: 0 };
       const orthoHalfHeight = stage.getOrthoHalfHeight();
 
       const camera = stage.getCamera();
       const controls = stage.getControls();
       const target = controls.target;
+      const presets = stage.getViewPresets();
 
-      const presets = (() => {
-        const v = normalizeViewPresets(settings.view.viewPresets);
-        if (v.length > 0) return v;
-        return [] as const;
-      })();
+      const withPanOffset = (
+        cam: AnyCamera,
+        offset: { x: number; y: number; z: number },
+        renderFn: () => void,
+      ): void => {
+        if (!offset) {
+          renderFn();
+          return;
+        }
+        const off = new THREE.Vector3(offset.x, offset.y, offset.z);
+        if (off.lengthSq() < 1e-12) {
+          renderFn();
+          return;
+        }
+        const prevPos = cam.position.clone();
+        const prevUp = cam.up.clone();
+        const prevQuat = cam.quaternion.clone();
+        const nextTarget = target.clone().add(off);
+        cam.position.add(off);
+        cam.lookAt(nextTarget);
+        cam.updateMatrixWorld(true);
+        renderFn();
+        cam.position.copy(prevPos);
+        cam.quaternion.copy(prevQuat);
+        cam.up.copy(prevUp);
+        cam.updateMatrixWorld(true);
+      };
+
+      stage.renderer.setRenderTarget(renderTarget);
+      stage.renderer.autoClear = false;
+      stage.renderer.setScissorTest(true);
+      stage.renderer.setViewport(0, 0, viewW, viewH);
+      stage.renderer.setScissor(0, 0, viewW, viewH);
+      stage.renderer.clear(true, true, true);
 
       if (presets.length === 2) {
-        const split = settings.view.dualViewSplit ?? 0.5;
+        const split = stage.getDualViewSplit?.() ?? settings.view.dualViewSplit ?? 0.5;
         const leftW = Math.floor(w * split);
         const rightW = Math.max(1, w - leftW);
 
@@ -131,36 +288,76 @@ export function createPngExporter(deps: {
         }
         (sideCamera as any).updateProjectionMatrix?.();
 
-        const fullW = Math.floor(w * s);
-        const fullH = Math.floor(h * s);
         const leftPx = Math.floor(leftW * s);
-        const rightPx = Math.max(1, fullW - leftPx);
+        const leftViewW = Math.max(1, Math.floor(leftPx / pr));
+        const rightViewW = Math.max(1, viewW - leftViewW);
 
-        stage.renderer.autoClear = false;
-        stage.renderer.setScissorTest(true);
-        stage.renderer.setViewport(0, 0, fullW, fullH);
-        stage.renderer.setScissor(0, 0, fullW, fullH);
-        stage.renderer.clear(true, true, true);
+        stage.renderer.setViewport(0, 0, leftViewW, viewH);
+        stage.renderer.setScissor(0, 0, leftViewW, viewH);
+        withPanOffset(camera, panLeft, () => {
+          stage.renderer.render(stage.scene, camera);
+        });
 
-        stage.renderer.setViewport(0, 0, leftPx, fullH);
-        stage.renderer.setScissor(0, 0, leftPx, fullH);
-        stage.renderer.render(stage.scene, camera);
-
-        stage.renderer.setViewport(leftPx, 0, rightPx, fullH);
-        stage.renderer.setScissor(leftPx, 0, rightPx, fullH);
-        stage.renderer.render(stage.scene, sideCamera);
+        stage.renderer.setViewport(leftViewW, 0, rightViewW, viewH);
+        stage.renderer.setScissor(leftViewW, 0, rightViewW, viewH);
+        withPanOffset(sideCamera, panRight, () => {
+          stage.renderer.render(stage.scene, sideCamera);
+        });
 
         stage.renderer.setScissorTest(false);
       }
       else {
         updateCameraForSize(camera, w, h, orthoHalfHeight);
-        stage.renderer.render(stage.scene, camera);
+        withPanOffset(camera, panSingle, () => {
+          stage.renderer.render(stage.scene, camera);
+        });
       }
 
-      let blob: Blob;
-      if (cropBox) {
-        const fullW = Math.floor(w * s);
-        const fullH = Math.floor(h * s);
+      const pixels = new Uint8Array(fullW * fullH * 4);
+      stage.renderer.readRenderTargetPixels(
+        renderTarget,
+        0,
+        0,
+        fullW,
+        fullH,
+        pixels,
+      );
+
+      let blob: Blob | null = null;
+      let actualFormat: 'png' | 'webp' | 'jpg' = format;
+      const workerCrop = cropBox
+        ? {
+            x: Math.round(cropBox.x * s),
+            y: Math.round(cropBox.y * s),
+            w: Math.round(cropBox.w * s),
+            h: Math.round(cropBox.h * s),
+          }
+        : undefined;
+
+      const workerBlob = await runExportWorker({
+        width: fullW,
+        height: fullH,
+        pixels,
+        crop: workerCrop,
+        alphaThreshold: 8,
+        padding: 3,
+        format,
+        quality: 0.92,
+      });
+      if (workerBlob) {
+        blob = workerBlob.blob;
+        actualFormat = workerBlob.format;
+      }
+      else if (cropBox) {
+        const outFull = document.createElement('canvas');
+        outFull.width = fullW;
+        outFull.height = fullH;
+        const outCtx = outFull.getContext('2d');
+        if (!outCtx) throw new Error('无法创建输出 2D 上下文（exportPng）');
+        const img = outCtx.createImageData(fullW, fullH);
+        await flipPixelsIntoImageData(pixels, img.data, fullW, fullH);
+        outCtx.putImageData(img, 0, 0);
+
         const sx = Math.round(cropBox.x * s);
         const sy = Math.round(cropBox.y * s);
         const sw = Math.round(cropBox.w * s);
@@ -173,27 +370,44 @@ export function createPngExporter(deps: {
         const out = document.createElement('canvas');
         out.width = w0;
         out.height = h0;
-        const outCtx = out.getContext('2d');
-        if (!outCtx) throw new Error('无法创建输出 2D 上下文（exportPng）');
-        outCtx.drawImage(stage.renderer.domElement, x, y, w0, h0, 0, 0, w0, h0);
-        blob = await canvasToPngBlob(out);
+        const cropCtx = out.getContext('2d');
+        if (!cropCtx) throw new Error('无法创建输出 2D 上下文（exportPng）');
+        cropCtx.drawImage(outFull, x, y, w0, h0, 0, 0, w0, h0);
+        const res = await canvasToBlob(out, format, 0.92);
+        blob = res.blob;
+        actualFormat = res.format;
       }
-      else {
-        const res = await cropCanvasToPngBlob(stage.renderer.domElement, {
+      else if (!workerBlob) {
+        const outFull = document.createElement('canvas');
+        outFull.width = fullW;
+        outFull.height = fullH;
+        const outCtx = outFull.getContext('2d');
+        if (!outCtx) throw new Error('无法创建输出 2D 上下文（exportPng）');
+        const img = outCtx.createImageData(fullW, fullH);
+        await flipPixelsIntoImageData(pixels, img.data, fullW, fullH);
+        outCtx.putImageData(img, 0, 0);
+        const { canvas } = cropCanvasByAlpha(outFull, {
           alphaThreshold: 8,
           padding: 3,
         });
+        const res = await canvasToBlob(canvas, format, 0.92);
         blob = res.blob;
+        actualFormat = res.format;
       }
+      if (!blob) throw new Error('导出失败：未生成图片');
+      stage.renderer.setRenderTarget(prevTarget);
+      stage.renderer.setScissorTest(prevScissorTest);
+      stage.renderer.setScissor(prevScissor);
+      stage.renderer.setViewport(prevViewport);
       const filename = buildExportFilename({
         modelFileName: deps.getModelFileName?.(),
-        ext: '.png',
+        ext: `.${actualFormat}`,
       });
       downloadBlob(blob, filename);
 
       message.success(
         deps.t(
-          transparent
+          effectiveTransparent
             ? 'viewer.export.pngSuccessTransparent'
             : 'viewer.export.pngSuccessSolid',
         ),
@@ -204,14 +418,16 @@ export function createPngExporter(deps: {
       message.error(
         deps.t('viewer.export.fail', { reason: (e as Error).message }),
       );
+      message.warning(deps.t('viewer.export.tryLowerScale'));
     }
     finally {
+      if (renderTarget) renderTarget.dispose();
       stage.renderer.setClearColor(prevColor, prevAlpha);
-      stage.renderer.setPixelRatio(prevPixelRatio);
-      stage.renderer.setSize(prevSize.x, prevSize.y, false);
       stage.renderer.autoClear = prevAutoClear;
-      stage.renderer.setScissorTest(false);
-      stage.syncSize();
+      stage.renderer.setScissorTest(prevScissorTest);
+      stage.renderer.setScissor(prevScissor);
+      stage.renderer.setViewport(prevViewport);
+      stage.renderer.setRenderTarget(prevTarget);
       stage.invalidate();
     }
   }

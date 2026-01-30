@@ -87,6 +87,8 @@ export type ThreeStage = {
   setDualViewDistance: (dist: number) => void;
   /** Dual view split ratio for left viewport (0..1). */
   setDualViewSplit: (ratio: number) => void;
+  /** Get current dual-view split ratio (left viewport fraction). */
+  getDualViewSplit: () => number;
 
   /** Set per-view pan offsets (world space). */
   setPanOffsets: (opts: {
@@ -94,6 +96,12 @@ export type ThreeStage = {
     left?: { x: number; y: number; z: number };
     right?: { x: number; y: number; z: number };
   }) => void;
+  /** Get current per-view pan offsets (world space). */
+  getPanOffsets: () => {
+    single: { x: number; y: number; z: number };
+    left: { x: number; y: number; z: number };
+    right: { x: number; y: number; z: number };
+  };
 
   /** Configure auto rotation (arbitrary axis + constant speed). */
   setAutoRotateConfig: (cfg: {
@@ -808,6 +816,7 @@ export function createThreeStage(params: {
     syncSize();
     invalidate();
   };
+  const getDualViewSplit = (): number => dualViewSplit;
 
   const setPanOffsets = (opts: {
     single?: { x: number; y: number; z: number };
@@ -819,6 +828,15 @@ export function createThreeStage(params: {
     if (opts.right) panOffsetRight.set(opts.right.x, opts.right.y, opts.right.z);
     invalidate();
   };
+  const getPanOffsets = (): {
+    single: { x: number; y: number; z: number };
+    left: { x: number; y: number; z: number };
+    right: { x: number; y: number; z: number };
+  } => ({
+    single: { x: panOffsetSingle.x, y: panOffsetSingle.y, z: panOffsetSingle.z },
+    left: { x: panOffsetLeft.x, y: panOffsetLeft.y, z: panOffsetLeft.z },
+    right: { x: panOffsetRight.x, y: panOffsetRight.y, z: panOffsetRight.z },
+  });
 
   return {
     host,
@@ -853,7 +871,9 @@ export function createThreeStage(params: {
 
     setDualViewDistance,
     setDualViewSplit,
+    getDualViewSplit,
     setPanOffsets,
+    getPanOffsets,
 
     setAutoRotateConfig,
     setModelLightIntensity,

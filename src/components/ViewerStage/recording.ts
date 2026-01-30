@@ -32,7 +32,8 @@ export type RecordingBindings = {
   onRecordOverlayCancel: () => void;
 
   cancelRecordSelect: () => void;
-  confirmRecordSelect: () => void;
+  confirmRecordSelect: () => Promise<void>;
+  selectConfirmLoading: Ref<boolean>;
 
   // show dash box while recording
   recordCropBox: Ref<CropBox | null>;
@@ -45,7 +46,7 @@ export type RecordingBindings = {
 
   // select an area for non-recording actions (e.g., export)
   selectExportArea: (opts: {
-    onConfirm: (box: CropBox) => void;
+    onConfirm: (box: CropBox) => Promise<void> | void;
     onCancel?: () => void;
     hint?: string;
     confirmLabel?: string;
@@ -97,6 +98,7 @@ export function createRecordingController(
   const selectConfirmLabel = ref<string | null>(null);
   const selectCancelLabel = ref<string | null>(null);
   const showDelayInput = ref(true);
+  const selectConfirmLoading = ref(false);
   let recordCropRect: CropBox | null = null;
   let lastRecordBox: CropBox | null = null;
   let selectMode: 'record' | 'custom' = 'record';
@@ -615,6 +617,7 @@ export function createRecordingController(
   }
 
   function cancelRecordSelect(): void {
+    if (selectConfirmLoading.value) return;
     clearRecordDelayTimer();
     isSelectingRecordArea.value = false;
     recordDraftBox.value = null;
@@ -623,6 +626,7 @@ export function createRecordingController(
 
     const onCancel = selectCancelCb;
     resetSelectOverrides();
+    selectConfirmLoading.value = false;
     onCancel?.();
   }
 
@@ -630,7 +634,8 @@ export function createRecordingController(
     cancelRecordSelect();
   }
 
-  function confirmRecordSelect(): void {
+  async function confirmRecordSelect(): Promise<void> {
+    if (selectConfirmLoading.value) return;
     const box = recordDraftBox.value;
     if (!box) return;
 
@@ -639,16 +644,25 @@ export function createRecordingController(
       return;
     }
 
+    if (selectMode !== 'record') {
+      const onConfirm = selectConfirmCb;
+      selectConfirmLoading.value = true;
+      try {
+        await Promise.resolve(onConfirm?.(box));
+      }
+      finally {
+        selectConfirmLoading.value = false;
+      }
+      isSelectingRecordArea.value = false;
+      recordDraftBox.value = null;
+      lastRecordBox = box;
+      resetSelectOverrides();
+      return;
+    }
+
     isSelectingRecordArea.value = false;
     recordDraftBox.value = null;
     lastRecordBox = box;
-
-    if (selectMode !== 'record') {
-      const onConfirm = selectConfirmCb;
-      resetSelectOverrides();
-      onConfirm?.(box);
-      return;
-    }
 
     recordCropRect = box;
     recordCropBox.value = box;
@@ -681,7 +695,7 @@ export function createRecordingController(
   }
 
   function selectExportArea(opts: {
-    onConfirm: (box: CropBox) => void;
+    onConfirm: (box: CropBox) => Promise<void> | void;
     onCancel?: () => void;
     hint?: string;
     confirmLabel?: string;
@@ -732,6 +746,7 @@ export function createRecordingController(
     onRecordOverlayCancel,
     cancelRecordSelect,
     confirmRecordSelect,
+    selectConfirmLoading,
 
     recordCropBox,
 

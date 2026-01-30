@@ -188,6 +188,7 @@ export function pruneDefaultSettings(
   const files: Partial<ViewerSettingsCategorized['files']> = {};
   if (input.files.exportPngScale !== d.files.exportPngScale) files.exportPngScale = input.files.exportPngScale;
   if (input.files.exportPngTransparent !== d.files.exportPngTransparent) files.exportPngTransparent = input.files.exportPngTransparent;
+  if (input.files.exportImageFormat !== d.files.exportImageFormat) files.exportImageFormat = input.files.exportImageFormat;
   if (input.files.cacheRemoteOnExport !== d.files.cacheRemoteOnExport) files.cacheRemoteOnExport = input.files.cacheRemoteOnExport;
   if (Object.keys(files).length > 0) out.files = files as ViewerSettingsCategorized['files'];
 

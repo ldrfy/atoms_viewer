@@ -96,10 +96,11 @@
             }
         },
         "export": {
-            "pngSuccess": "Exported PNG",
-            "pngSuccessTransparent": "Exported PNG (transparent background)",
-            "pngSuccessSolid": "Exported PNG (non-transparent background)",
+            "pngSuccess": "Exported image",
+            "pngSuccessTransparent": "Exported image (transparent background)",
+            "pngSuccessSolid": "Exported image (non-transparent background)",
             "scaleCapped": "Export scale was capped from {requested} to {used} (GPU limit: {limit}px).",
+            "tryLowerScale": "Export failed. Try a smaller export scale.",
             "fail": "Export failed: {reason}",
             "selectHint": "Drag to draw a box; drag/move handles to refine; click confirm to export.",
             "selectCancel": "Cancel",
@@ -252,10 +253,10 @@
                 "export": {
                     "header": "Export image",
                     "scaleLabel": "Export scale",
-                    "button": "Export as PNG",
+                    "button": "Export image",
                     "transparent": "Transparent background",
                     "selectButton": "Select Range Export",
-                    "hint": "Scale multiplies the render resolution."
+                    "hint": "Scale increases render resolution; higher scale looks sharper but creates larger files and exports slower."
                 },
                 "format": {
                     "header": "Format Conversion",

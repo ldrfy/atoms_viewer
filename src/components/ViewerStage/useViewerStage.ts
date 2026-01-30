@@ -79,12 +79,14 @@ type ViewerStageBridgeApi = {
   exportPng: (payload: {
     scale: number;
     transparent: boolean;
+    format?: 'png' | 'webp' | 'jpg';
     cropBox?: CropBox;
   }) => Promise<void>;
   /** 选择区域后导出 PNG */
   exportPngWithSelection: (payload: {
     scale: number;
     transparent: boolean;
+    format?: 'png' | 'webp' | 'jpg';
   }) => void;
   /** 导出当前图层为结构文件 */
   exportStructureFile: (format: StructureExportFormat) => Promise<{
@@ -198,11 +200,13 @@ type ViewerStageExposedApi = {
   exportPng: (payload: {
     scale: number;
     transparent: boolean;
+    format?: 'png' | 'webp' | 'jpg';
     cropBox?: CropBox;
   }) => Promise<void>;
   exportPngWithSelection: (payload: {
     scale: number;
     transparent: boolean;
+    format?: 'png' | 'webp' | 'jpg';
   }) => void;
   exportStructureFile: (format: StructureExportFormat) => Promise<{
     blob: Blob;
@@ -889,21 +893,26 @@ export function useViewerStage(
     getStage: () => stage,
     getSettings: () => settingsRef.value,
     getModelFileName: () => loader.parseInfo.fileName,
+    setExportScale: (scale: number) => {
+      settingsSync.patch({ files: { exportPngScale: scale } });
+    },
     t,
   });
 
   function exportPngWithSelection(payload: {
     scale: number;
     transparent: boolean;
+    format?: 'png' | 'webp' | 'jpg';
   }): void {
     recording.selectExportArea({
       hint: t('viewer.export.selectHint'),
       confirmLabel: t('viewer.export.selectConfirm'),
       cancelLabel: t('viewer.export.selectCancel'),
       onConfirm: (box) => {
-        void exporter.onExportPng({
+        return exporter.onExportPng({
           scale: payload.scale,
           transparent: payload.transparent,
+          format: payload.format,
           cropBox: box,
         });
       },

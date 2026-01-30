@@ -14,10 +14,15 @@
 
       <div class="record-select-actions" @pointerdown.stop @pointerup.stop>
         <a-space :size="8" align="center">
-          <a-button @click="ctx.cancelRecordSelect">
+          <a-button :disabled="confirmLoading" @click="ctx.cancelRecordSelect">
             {{ selectCancelLabel }}
           </a-button>
-          <a-button type="primary" :disabled="!draftBox" @click="ctx.confirmRecordSelect">
+          <a-button
+            type="primary"
+            :loading="confirmLoading"
+            :disabled="!draftBox || confirmLoading"
+            @click="ctx.confirmRecordSelect"
+          >
             {{ selectConfirmLabel }}
           </a-button>
           <div v-if="showDelayInput" class="record-delay">
@@ -69,6 +74,7 @@ const draftBox = computed(() => unref(props.ctx.recordDraftBox));
 const selectHint = computed(() => unref(props.ctx.selectHint) ?? t('viewer.record.selectHint'));
 const selectConfirmLabel = computed(() => unref(props.ctx.selectConfirmLabel) ?? t('viewer.record.selectConfirm'));
 const selectCancelLabel = computed(() => unref(props.ctx.selectCancelLabel) ?? t('viewer.record.selectCancel'));
+const confirmLoading = computed(() => !!unref(props.ctx.selectConfirmLoading));
 const showDelayInput = computed(() => {
   const v = unref(props.ctx.showDelayInput);
   if (typeof v === 'boolean') return v;

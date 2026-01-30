@@ -35,11 +35,13 @@ type ViewerStageExpose = {
   exportPng: (payload: {
     scale: number;
     transparent: boolean;
+    format?: 'png' | 'webp' | 'jpg';
     cropBox?: { x: number; y: number; w: number; h: number };
   }) => void | Promise<void>;
   exportPngWithSelection: (payload: {
     scale: number;
     transparent: boolean;
+    format?: 'png' | 'webp' | 'jpg';
   }) => void;
   openFilePicker: () => void;
   loadFile: (file: File) => Promise<void>;

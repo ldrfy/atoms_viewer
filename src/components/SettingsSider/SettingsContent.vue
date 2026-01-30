@@ -162,10 +162,12 @@ provide(settingsSiderDirtyContextKey, {
 const filesDirty = computed(() => {
   const exportScale = settings.value.files.exportPngScale ?? DEFAULT_SETTINGS.files.exportPngScale;
   const exportTransparent = settings.value.files.exportPngTransparent ?? DEFAULT_SETTINGS.files.exportPngTransparent;
+  const exportImageFormat = settings.value.files.exportImageFormat ?? DEFAULT_SETTINGS.files.exportImageFormat;
   const cacheRemoteOnExport = settings.value.files.cacheRemoteOnExport ?? DEFAULT_SETTINGS.files.cacheRemoteOnExport;
   return (
     exportScale !== DEFAULT_SETTINGS.files.exportPngScale
     || exportTransparent !== DEFAULT_SETTINGS.files.exportPngTransparent
+    || exportImageFormat !== DEFAULT_SETTINGS.files.exportImageFormat
     || cacheRemoteOnExport !== DEFAULT_SETTINGS.files.cacheRemoteOnExport
   );
 });

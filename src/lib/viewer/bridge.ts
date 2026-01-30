@@ -19,12 +19,14 @@ export type ViewerPublicApi = {
   exportPng: (payload: {
     scale: number;
     transparent: boolean;
+    format?: 'png' | 'webp' | 'jpg';
     cropBox?: { x: number; y: number; w: number; h: number };
   }) => void | Promise<void>;
   /** Select an area and export to PNG. */
   exportPngWithSelection: (payload: {
     scale: number;
     transparent: boolean;
+    format?: 'png' | 'webp' | 'jpg';
   }) => void;
   /** Export current active layer to a structure file (text formats). */
   exportStructureFile: (format: StructureExportFormat) => Promise<{

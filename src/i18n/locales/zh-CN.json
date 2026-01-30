@@ -96,10 +96,11 @@
             }
         },
         "export": {
-            "pngSuccess": "已导出 PNG",
-            "pngSuccessTransparent": "已导出 PNG（透明背景）",
-            "pngSuccessSolid": "已导出 PNG（非透明背景）",
+            "pngSuccess": "已导出图片",
+            "pngSuccessTransparent": "已导出图片（透明背景）",
+            "pngSuccessSolid": "已导出图片（非透明背景）",
             "scaleCapped": "导出缩放已自动从 {requested} 降到 {used}（受限于 GPU 最大尺寸 {limit}px）。",
+            "tryLowerScale": "导出失败，建议降低导出倍率后重试。",
             "fail": "导出失败：{reason}",
             "selectHint": "拖拽画框；画完后可拖动/拉伸微调；点击确认导出图片",
             "selectCancel": "取消",
@@ -252,10 +253,10 @@
                 "export": {
                     "header": "导出图片",
                     "scaleLabel": "导出倍率",
-                    "button": "导出为 PNG",
+                    "button": "导出图片",
                     "selectButton": "选择范围导出",
                     "transparent": "透明背景",
-                    "hint": "scale 会按倍率放大渲染分辨率。"
+                    "hint": "导出倍率会放大渲染像素尺寸；倍率越高越清晰，但文件会更大、导出更慢。"
                 },
                 "format": {
                     "header": "格式转换",

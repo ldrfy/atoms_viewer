@@ -4,16 +4,18 @@
       <!-- 倍率 + 透明：同一行，两端对齐（移动端更紧凑） -->
       <a-row justify="space-between" align="middle" :gutter="8">
         <a-col>
-          <a-input-number
-            v-model:value="exportScale"
-            :aria-label="t('settings.panel.files.export.scaleLabel')"
-            :title="t('settings.panel.files.export.scaleLabel')"
-            :min="1"
-            :max="10"
-            :step="0.1"
-            :precision="1"
-            class="settings-input-wide"
-          />
+          <a-tooltip :title="t('settings.panel.files.export.hint')">
+            <a-input-number
+              v-model:value="exportScale"
+              :aria-label="t('settings.panel.files.export.scaleLabel')"
+              :title="t('settings.panel.files.export.scaleLabel')"
+              :min="1"
+              :max="20"
+              :step="0.5"
+              :precision="1"
+              class="settings-input-wide"
+            />
+          </a-tooltip>
         </a-col>
         <a-col>
           <a-checkbox v-model:checked="exportTransparent">
@@ -23,11 +25,22 @@
       </a-row>
 
       <a-row :gutter="8" class="settings-gap-top-sm" align="middle">
+        <a-col :span="24">
+          <a-select
+            v-model:value="exportImageFormat"
+            :options="exportImageFormatOptions"
+            class="settings-full-width"
+          />
+        </a-col>
+      </a-row>
+
+      <a-row :gutter="8" class="settings-gap-top-sm" align="middle">
         <a-col :span="12">
           <a-button
             block
             type="primary"
-            :disabled="!hasAnyLayer"
+            :loading="exportingPng"
+            :disabled="!hasAnyLayer || exportingPng"
             @click="onExport"
           >
             {{ t('settings.panel.files.export.button') }}
@@ -43,13 +56,6 @@
           </a-button>
         </a-col>
       </a-row>
-
-      <a-typography-text
-        type="secondary"
-        class="settings-text-secondary"
-      >
-        {{ t('settings.panel.files.export.hint') }}
-      </a-typography-text>
     </a-form-item>
 
     <a-form-item :label="t('settings.panel.files.format.header')">
@@ -205,12 +211,46 @@ const cacheRemoteModel = computed<boolean>({
 
 const exportFormatModel = ref<StructureExportFormat>(DEFAULT_EXPORT_FORMAT);
 const exportingProject = ref(false);
+const exportingPng = ref(false);
 const exportFullSettings = ref(false);
+const exportImageFormat = computed<'png' | 'webp' | 'jpg'>({
+  get: () => settings.value.files.exportImageFormat ?? 'png',
+  set: (v) => {
+    patchSettings({ files: { exportImageFormat: v } });
+  },
+});
 const exportFormatOptions = computed(() => ([
   { label: 'XYZ', value: 'xyz' },
   { label: 'PDB', value: 'pdb' },
   { label: 'MOL', value: 'mol' },
 ] as { label: string; value: StructureExportFormat }[]));
+const exportImageFormatOptions = computed(() => {
+  const opts = [
+    { label: 'PNG（清晰无损）', value: 'png' },
+    { label: 'WebP（文件更小）', value: 'webp' },
+  ] as { label: string; value: 'png' | 'webp' | 'jpg' }[];
+  if (!exportTransparent.value) opts.push({ label: 'JPG（兼容性好）', value: 'jpg' });
+  return opts;
+});
+
+watch(
+  () => exportTransparent.value,
+  (v) => {
+    if (v && exportImageFormat.value === 'jpg') {
+      exportImageFormat.value = 'png';
+    }
+  },
+);
+
+watch(
+  exportImageFormatOptions,
+  (opts) => {
+    if (!opts.some(o => o.value === exportImageFormat.value)) {
+      exportImageFormat.value = 'png';
+    }
+  },
+  { immediate: true },
+);
 
 const dirtyContext = inject(settingsSiderDirtyContextKey, null);
 
@@ -308,12 +348,22 @@ function onImportFile(e: Event): void {
   reader.readAsText(file);
 }
 
-function onExport(): void {
-  if (!viewerApi.value) return;
-  void viewerApi.value.exportPng({
-    scale: exportScale.value,
-    transparent: exportTransparent.value,
-  });
+async function onExport(): Promise<void> {
+  if (!viewerApi.value || exportingPng.value) return;
+  exportingPng.value = true;
+  await nextTick();
+  await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
+  await new Promise<void>(resolve => setTimeout(resolve, 0));
+  try {
+    await viewerApi.value.exportPng({
+      scale: exportScale.value,
+      transparent: exportTransparent.value,
+      format: exportImageFormat.value,
+    });
+  }
+  finally {
+    exportingPng.value = false;
+  }
 }
 
 function onExportSelect(): void {
@@ -321,6 +371,7 @@ function onExportSelect(): void {
   viewerApi.value.exportPngWithSelection({
     scale: exportScale.value,
     transparent: exportTransparent.value,
+    format: exportImageFormat.value,
   });
 }
 

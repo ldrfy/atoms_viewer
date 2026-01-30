@@ -12,6 +12,7 @@ export type RecordSelectCtx = {
   selectConfirmLabel?: MaybeRef<string | null>;
   selectCancelLabel?: MaybeRef<string | null>;
   showDelayInput?: MaybeRef<boolean>;
+  selectConfirmLoading?: MaybeRef<boolean>;
 
   onRecordOverlayDown: (e: PointerEvent) => void;
   onRecordOverlayMove: (e: PointerEvent) => void;
@@ -33,6 +34,7 @@ export function createRecordSelectCtx(
     selectConfirmLabel: recording.selectConfirmLabel,
     selectCancelLabel: recording.selectCancelLabel,
     showDelayInput: recording.showDelayInput,
+    selectConfirmLoading: recording.selectConfirmLoading,
 
     onRecordOverlayDown: recording.onRecordOverlayDown,
     onRecordOverlayMove: recording.onRecordOverlayMove,

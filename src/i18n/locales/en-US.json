@@ -254,12 +254,16 @@
                     "button": "Export image",
                     "transparent": "Transparent background",
                     "selectButton": "Select Range Export",
-                    "hint": "Scale increases render resolution; higher scale looks sharper but creates larger files and exports slower."
+                    "hint": "Higher scale looks sharper but creates larger files and slower exports",
+                    "format": {
+                        "png": "PNG (lossless, crisp)",
+                        "webp": "WebP (smaller file)",
+                        "jpg": "JPG (compatible)"
+                    }
                 },
                 "format": {
                     "header": "Format Conversion",
                     "button": "Export",
-                    "hint": "Export the current model to another format (current frame). Not verified; please validate correctness.",
                     "success": "Format conversion exported"
                 },
                 "project": {
@@ -288,7 +292,7 @@
                     "nameAsc": "Name ↑",
                     "nameDesc": "Name ↓"
                 },
-                "hint": "Click a row to set the active layer; use the toggle to show/hide. Dragging a new model adds a layer and hides previous layers by default.",
+                "hint": "Click a row to set the active layer for per-layer colors or display; use the toggle to show/hide.",
                 "deleteConfirm": "Delete this layer?"
             },
             "other": {

@@ -1,19 +1,5 @@
 <template>
   <a-space direction="vertical" :size="8" class="settings-full-width">
-    <!-- 文件选择放在“模型图层”最上方 -->
-    <div>
-      <a-tooltip :title="t('settings.panel.files.openFileHint')">
-        <a-button
-          type="primary"
-          block
-
-          @click="onOpenFile"
-        >
-          {{ t('settings.panel.files.openFile') }}
-        </a-button>
-      </a-tooltip>
-    </div>
-
     <a-alert
       v-if="!viewerApi"
       type="info"
@@ -44,13 +30,26 @@
             {{ opt.label }}
           </a-select-option>
         </a-select>
-        <a-button
-          size="small"
-          :disabled="layerList.length === 0"
-          @click="onToggleAllVisible"
-        >
-          {{ toggleAllLabel }}
-        </a-button>
+        <a-tooltip :title="t('settings.panel.files.openFileHint')">
+          <a-button
+            type="text"
+            :aria-label="t('settings.panel.files.openFile')"
+            @click="onOpenFile"
+          >
+            <FolderOpenOutlined />
+          </a-button>
+        </a-tooltip>
+        <a-tooltip :title="toggleAllLabel">
+          <a-button
+            type="text"
+            size="small"
+            :disabled="layerList.length === 0"
+            :aria-label="toggleAllLabel"
+            @click="onToggleAllVisible"
+          >
+            <component :is="allVisible ? EyeInvisibleOutlined : EyeOutlined" />
+          </a-button>
+        </a-tooltip>
         <a-tooltip :title="t('settings.panel.layers.hint')">
           <a-button
             type="text"
@@ -120,7 +119,7 @@
 </template>
 
 <script setup lang="ts">
-import { DeleteOutlined, QuestionCircleOutlined } from '@ant-design/icons-vue';
+import { DeleteOutlined, QuestionCircleOutlined, FolderOpenOutlined, EyeOutlined, EyeInvisibleOutlined } from '@ant-design/icons-vue';
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { viewerApiRef } from '../../../lib/viewer/bridge';

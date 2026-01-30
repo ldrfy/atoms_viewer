@@ -2,37 +2,28 @@
   <a-form layout="vertical">
     <a-form-item :label="t('settings.panel.files.export.header')">
       <!-- 倍率 + 透明：同一行，两端对齐（移动端更紧凑） -->
-      <a-row justify="space-between" align="middle" :gutter="8">
-        <a-col>
-          <a-tooltip :title="t('settings.panel.files.export.hint')">
-            <a-input-number
-              v-model:value="exportScale"
-              :aria-label="t('settings.panel.files.export.scaleLabel')"
-              :title="t('settings.panel.files.export.scaleLabel')"
-              :min="1"
-              :max="20"
-              :step="0.5"
-              :precision="1"
-              class="settings-input-wide"
-            />
-          </a-tooltip>
-        </a-col>
-        <a-col>
-          <a-checkbox v-model:checked="exportTransparent">
-            {{ t('settings.panel.files.export.transparent') }}
-          </a-checkbox>
-        </a-col>
-      </a-row>
-
-      <a-row :gutter="8" class="settings-gap-top-sm" align="middle">
-        <a-col :span="24">
-          <a-select
-            v-model:value="exportImageFormat"
-            :options="exportImageFormatOptions"
-            class="settings-full-width"
+      <a-checkbox v-model:checked="exportTransparent">
+        {{ t('settings.panel.files.export.transparent') }}
+      </a-checkbox>
+      <div class="export-row settings-gap-top-sm">
+        <a-tooltip :title="t('settings.panel.files.export.hint')">
+          <a-input-number
+            v-model:value="exportScale"
+            style="width: 72px"
+            :aria-label="t('settings.panel.files.export.scaleLabel')"
+            :title="t('settings.panel.files.export.scaleLabel')"
+            :min="1"
+            :max="20"
+            :step="0.5"
+            :precision="1"
           />
-        </a-col>
-      </a-row>
+        </a-tooltip>
+        <a-select
+          v-model:value="exportImageFormat"
+          :options="exportImageFormatOptions"
+          style="flex: 1; min-width: 0;"
+        />
+      </div>
 
       <a-row :gutter="8" class="settings-gap-top-sm" align="middle">
         <a-col :span="12">
@@ -58,32 +49,7 @@
       </a-row>
     </a-form-item>
 
-    <a-form-item :label="t('settings.panel.files.format.header')">
-      <div>
-        <a-row :gutter="8" align="middle">
-          <a-col :span="12">
-            <a-select
-              v-model:value="exportFormatModel"
-              :options="exportFormatOptions"
-              class="settings-full-width"
-            />
-          </a-col>
-          <a-col :span="12">
-            <a-button
-              block
-              type="primary"
-              :disabled="!hasAnyLayer"
-              @click="onExportStructure"
-            >
-              {{ t('settings.panel.files.format.button') }}
-            </a-button>
-          </a-col>
-        </a-row>
-        <a-typography-text type="secondary" class="settings-text-secondary">
-          {{ t('settings.panel.files.format.hint') }}
-        </a-typography-text>
-      </div>
-    </a-form-item>
+    <a-divider class="settings-divider" />
 
     <a-form-item :label="t('settings.panel.files.project.header')">
       <a-checkbox v-model:checked="cacheRemoteModel">
@@ -123,6 +89,8 @@
       >
     </a-form-item>
 
+    <a-divider class="settings-divider" />
+
     <a-form-item :label="t('settings.panel.files.config.header')">
       <a-checkbox v-model:checked="exportFullSettings">
         {{ t('settings.panel.files.config.exportFull') }}
@@ -152,6 +120,32 @@
         hidden
         @change="onImportFile"
       >
+    </a-form-item>
+
+    <a-divider class="settings-divider" />
+
+    <a-form-item :label="t('settings.panel.files.format.header')">
+      <div>
+        <a-row :gutter="8" align="middle">
+          <a-col :span="12">
+            <a-select
+              v-model:value="exportFormatModel"
+              :options="exportFormatOptions"
+              class="settings-full-width"
+            />
+          </a-col>
+          <a-col :span="12">
+            <a-button
+              block
+              type="primary"
+              :disabled="!hasAnyLayer"
+              @click="onExportStructure"
+            >
+              {{ t('settings.panel.files.format.button') }}
+            </a-button>
+          </a-col>
+        </a-row>
+      </div>
     </a-form-item>
   </a-form>
 </template>
@@ -226,10 +220,10 @@ const exportFormatOptions = computed(() => ([
 ] as { label: string; value: StructureExportFormat }[]));
 const exportImageFormatOptions = computed(() => {
   const opts = [
-    { label: 'PNG（清晰无损）', value: 'png' },
-    { label: 'WebP（文件更小）', value: 'webp' },
+    { label: t('settings.panel.files.export.format.png'), value: 'png' },
+    { label: t('settings.panel.files.export.format.webp'), value: 'webp' },
   ] as { label: string; value: 'png' | 'webp' | 'jpg' }[];
-  if (!exportTransparent.value) opts.push({ label: 'JPG（兼容性好）', value: 'jpg' });
+  if (!exportTransparent.value) opts.push({ label: t('settings.panel.files.export.format.jpg'), value: 'jpg' });
   return opts;
 });
 
@@ -469,3 +463,19 @@ async function onProjectFilePicked(e: Event): Promise<void> {
   }
 }
 </script>
+
+<style scoped>
+.export-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.settings-divider {
+  margin: 12px 0;
+}
+
+.settings-import-input {
+  display: none;
+}
+</style>

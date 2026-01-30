@@ -1998,7 +1998,13 @@ export function useViewerStage(
     () => settingsRef.value.view.viewPresets,
     () => {
       const presets = normalizeViewPresets(settingsRef.value.view.viewPresets);
-      if (presets.length !== 2) panTargetSide.value = 'single';
+      if (presets.length !== 2) {
+        panTargetSide.value = 'single';
+        return;
+      }
+      if (panTargetSide.value === 'single') {
+        panTargetSide.value = 'right';
+      }
     },
     { immediate: true, deep: true },
   );

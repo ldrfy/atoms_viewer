@@ -791,6 +791,7 @@ export function useViewerStage(
     () => inspectCtx.selected.value,
     (sel) => {
       inspectHelper.onSelectionChanged(sel);
+      picking.rebuildSelectionVisualsFromSelected();
       if (runtime && runtime.activeLayerId.value) {
         runtime.setLayerInspectSelection(runtime.activeLayerId.value, inspectHelper.normalizeForSave(sel));
       }

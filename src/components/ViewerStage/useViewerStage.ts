@@ -560,7 +560,13 @@ export function useViewerStage(
       if (!suppressLayerCacheRestore && data?.md5 && runtime) {
         const cached = getLayerSnapshotFromCache(data.md5);
         if (cached) {
-          runtime.applyLayerSnapshots([cached]);
+          // 新载入模型不沿用缓存的可见性，默认显示。
+          // Do not reuse cached visibility for newly loaded models; default to visible.
+          const sanitized: LayerSnapshot = {
+            ...cached,
+            visible: true,
+          };
+          runtime.applyLayerSnapshots([sanitized]);
           runtimeTick.value += 1;
           syncUiFromRuntime();
           scheduleSessionSave('layers');

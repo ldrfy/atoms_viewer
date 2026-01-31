@@ -253,27 +253,6 @@ async function refreshStorageUsage(): Promise<void> {
     const localBytes = localStorageBytes.value;
     const cacheBytes = cacheStorageBytes.value;
     const computedUsed = localBytes + cacheBytes;
-    if (navigator.storage?.estimate) {
-      const info = await navigator.storage.estimate();
-      const usedRaw = info.usage ?? computedUsed;
-      const used = Math.max(usedRaw ?? 0, computedUsed);
-      const total = info.quota;
-      if (typeof total === 'number' && total > 0) {
-        storageUsageText.value = t('settings.storageUsage', {
-          used: formatBytes(used),
-          total: formatBytes(total),
-        });
-        return;
-      }
-      storageUsageText.value = t('settings.storageUsageOnly', {
-        used: formatBytes(used),
-      });
-      storageUsageDetailText.value = t('settings.storageUsageDetail', {
-        local: formatBytes(localBytes),
-        cache: formatBytes(cacheBytes),
-      });
-      return;
-    }
     storageUsageText.value = t('settings.storageUsageOnly', {
       used: formatBytes(computedUsed),
     });

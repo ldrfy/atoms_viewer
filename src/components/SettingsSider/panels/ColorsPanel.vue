@@ -1,40 +1,60 @@
 <template>
   <a-form layout="vertical">
-    <a-form-item>
-      <a-row justify="space-between">
+    <a-form-item class="settings-gap-top-md">
+      <a-row align="middle" justify="space-between">
         <a-col>
-          {{ t('settings.panel.colors.applyAll') }}
+          <a-space :size="6" align="center">
+            <span>{{ t('settings.panel.colors.mapLabel') }}</span>
+            <a-tooltip :title="t('settings.panel.colors.apply')">
+              <a-button
+                type="text"
+                :disabled="!hasAnyLayer || !hasPendingChanges"
+                :aria-label="t('settings.panel.colors.apply')"
+                :title="t('settings.panel.colors.apply')"
+                @click="onApplyColorEdits"
+              >
+                <CheckCircleOutlined :class="{ 'colors-apply-icon': hasAnyLayer && hasPendingChanges }" />
+              </a-button>
+            </a-tooltip>
+          </a-space>
         </a-col>
         <a-col>
-          <a-switch
-            v-model:checked="applyToAllLayers"
-            :disabled="!hasAnyLayer"
-            :aria-label="t('settings.panel.colors.applyAll')"
-            :title="t('settings.panel.colors.applyAll')"
-          />
+          <a-tooltip
+            placement="left"
+            :title="t('settings.panel.colors.hint')"
+            :overlay-class-name="'colors-hint-tooltip'"
+          >
+            <a-button
+              type="text"
+              :aria-label="t('settings.panel.colors.hint')"
+              :title="t('settings.panel.colors.hint')"
+            >
+              <QuestionCircleOutlined />
+            </a-button>
+          </a-tooltip>
         </a-col>
       </a-row>
-
-      <a-row v-if="!applyToAllLayers">
-        <a-space :size="6" class="settings-gap-top-sm settings-flex-wrap">
-          <a-typography-text type="secondary">
-            {{ t('settings.panel.colors.currentLayer') }}:
-          </a-typography-text>
-          <a-tooltip v-if="activeLayerInfo" :title="activeLayerInfo.source?.fileName || activeLayerInfo.id">
+      <a-space :size="6" class="colors-layer-row settings-flex-wrap">
+        <a-typography-text type="secondary">
+          {{ t('settings.panel.layers.applyTargets') }}:
+        </a-typography-text>
+        <template v-if="targetLayerInfos.length > 0">
+          <a-tooltip
+            v-for="l in targetLayerInfos"
+            :key="l.id"
+            :title="l.source?.fileName || l.id"
+          >
             <a-tag class="settings-tag-full">
               <span class="settings-tag-ellipsis">
-                {{ activeLayerInfo.name }}
+                {{ l.name || l.source?.fileName || l.id }}
               </span>
             </a-tag>
           </a-tooltip>
-          <a-typography-text v-else type="secondary">
-            -
-          </a-typography-text>
-        </a-space>
-      </a-row>
-    </a-form-item>
-
-    <a-form-item :label="t('settings.panel.colors.mapLabel')" class="settings-gap-top-md">
+        </template>
+        <a-typography-text v-else type="secondary">
+          -
+        </a-typography-text>
+      </a-space>
       <template v-if="colorKeys.length === 0">
         <a-alert type="info" show-icon :message="t('settings.panel.colors.empty')" />
       </template>
@@ -102,26 +122,12 @@
           </a-row>
         </div>
       </template>
-
-      <a-typography-text type="secondary" class="settings-text-secondary-tight">
-        {{ t('settings.panel.colors.hint') }}
-      </a-typography-text>
-
-      <a-row justify="end" class="settings-gap-top-sm">
-        <a-button
-          type="primary"
-          :disabled="!hasAnyLayer || !hasPendingChanges"
-          @click="onApplyColorEdits"
-        >
-          {{ t('settings.panel.colors.apply') }}
-        </a-button>
-      </a-row>
     </a-form-item>
   </a-form>
 </template>
 
 <script setup lang="ts">
-import { ReloadOutlined } from '@ant-design/icons-vue';
+import { ReloadOutlined, QuestionCircleOutlined, CheckCircleOutlined } from '@ant-design/icons-vue';
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { message } from 'ant-design-vue';
 import { useI18n } from 'vue-i18n';
@@ -131,14 +137,13 @@ import { useSettingsSiderContext } from '../useSettingsSiderContext';
 import { formatColorValue, parseColorMapKey, parseColorValue } from '../../ViewerStage/colorMap';
 import { getElementColorHex } from '../../../lib/structure/chem';
 import { getVisualStylePreset } from '../../../lib/viewer/visualStyles';
-import { readApplyAllLayersFlags, writeApplyAllLayersFlags } from '../applyAllStorage';
 import { PANEL_KEYS } from '../../../lib/viewer/panelKeys';
 import { useSettingsSiderResetContext } from '../useSettingsSiderResetContext';
 
 import type { ColorMapRecord } from '../../ViewerStage/colorMap';
 
 const { t } = useI18n();
-const { hasAnyLayer, settings } = useSettingsSiderContext();
+const { hasAnyLayer, settings, selectedLayerIds } = useSettingsSiderContext();
 
 const viewerApi = computed(() => viewerApiRef.value);
 const layerList = computed(() => viewerApi.value?.layers.value ?? []);
@@ -151,20 +156,17 @@ const draftColorMap = ref<ColorMapRecord>({});
 // Track active layer id to decide when to reset draft.
 // 记录当前图层 id，用于判断是否需要重置草稿。
 const lastActiveLayerId = ref<string | null>(null);
-const applyToAllLayers = ref(
-  readApplyAllLayersFlags().colors ?? true,
-);
-
-watch(
-  applyToAllLayers,
-  (v) => {
-    writeApplyAllLayersFlags({ colors: v });
-  },
-);
-const activeLayerInfo = computed(() => {
-  const id = activeLayerId.value;
-  if (!id) return null;
-  return layerList.value.find(l => l.id === id) ?? null;
+// Resolve target layers: selection first, otherwise active layer.
+// 解析目标图层：优先选中列表，否则回退到当前图层。
+const targetLayerIds = computed(() => {
+  const picked = selectedLayerIds.value.filter(Boolean);
+  if (picked.length > 0) return picked;
+  return activeLayerId.value ? [activeLayerId.value] : [];
+});
+const targetLayerInfos = computed(() => {
+  if (targetLayerIds.value.length === 0) return [];
+  const byId = new Map(layerList.value.map(l => [l.id, l]));
+  return targetLayerIds.value.map(id => byId.get(id)).filter(Boolean) as any[];
 });
 
 const hasPendingChanges = computed(() => {
@@ -205,13 +207,10 @@ function resetColors(): void {
   const baseMap = buildKeyBaseColorMap(keys);
   draftColorMap.value = baseMap;
   if (!api) return;
-  if (applyToAllLayers.value) {
-    api.resetAllLayersColorMapToDefaults();
-    api.refreshColorMap({ applyToAll: true });
-    syncDraftFromActive();
-    return;
-  }
-  onApplyColorEdits();
+  const targets = targetLayerIds.value;
+  if (targets.length === 0) return;
+  api.resetLayerColorMapToDefaults?.(targets);
+  api.refreshColorMap({ layerIds: targets });
   syncDraftFromActive();
 }
 
@@ -297,9 +296,10 @@ function onApplyColorEdits(): void {
   const api = viewerApi.value;
   if (!api) return;
   const map = { ...draftColorMap.value };
-  if (applyToAllLayers.value) api.setAllLayersColorMap(map);
-  else api.setActiveLayerColorMap(map);
-  api.refreshColorMap({ applyToAll: applyToAllLayers.value });
+  const targets = targetLayerIds.value;
+  if (targets.length === 0) return;
+  api.setLayerColorMapForIds?.(map, targets);
+  api.refreshColorMap({ layerIds: targets });
 }
 
 function getDraftHexValue(key: string): string {
@@ -342,3 +342,21 @@ onBeforeUnmount(() => {
   unregisterColorsReset();
 });
 </script>
+
+<style scoped>
+.colors-apply-icon {
+  color: var(--ant-colorPrimary, #1677ff);
+}
+
+.colors-hint-tooltip :deep(.ant-tooltip-inner) {
+  max-width: 320px;
+  white-space: normal;
+  word-break: break-word;
+}
+
+.colors-layer-row {
+  margin-top: 8px;
+  margin-bottom: 8px;
+  margin-left: 2px;
+}
+</style>

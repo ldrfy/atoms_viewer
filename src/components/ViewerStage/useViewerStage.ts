@@ -97,7 +97,7 @@ type ViewerStageBridgeApi = {
   /** 重新应用 LAMMPS 类型映射 */
   refreshTypeMap: () => void;
   /** 重新应用颜色映射 */
-  refreshColorMap: (opts?: { applyToAll?: boolean }) => void;
+  refreshColorMap: (opts?: { applyToAll?: boolean; layerIds?: string[] }) => void;
 
   /** 当前解析信息 */
   parseInfo: any;
@@ -133,6 +133,8 @@ type ViewerStageBridgeApi = {
   setActiveLayerTypeMap: (map: LammpsTypeMapRecord) => void;
   /** 将当前映射应用到所有图层（仅匹配已有 typeId） */
   applyTypeMapToAllLayers: (map: LammpsTypeMapRecord) => void;
+  /** 将当前映射应用到指定图层（仅匹配已有 typeId） */
+  applyTypeMapToLayerIds: (map: LammpsTypeMapRecord, layerIds: string[]) => void;
   /** 重置所有图层类型映射为默认 */
   resetAllLayersTypeMapToDefaults: (opts?: {
     templateMap?: LammpsTypeMapRecord;
@@ -147,15 +149,19 @@ type ViewerStageBridgeApi = {
   setActiveLayerColorMap: (map: ColorMapRecord) => void;
   /** 设置所有图层颜色映射 */
   setAllLayersColorMap: (map: ColorMapRecord) => void;
+  /** 设置指定图层颜色映射 */
+  setLayerColorMapForIds: (map: ColorMapRecord, layerIds: string[]) => void;
   /** 重置所有图层颜色映射为默认 */
   resetAllLayersColorMapToDefaults: () => void;
+  /** 重置指定图层颜色映射为默认 */
+  resetLayerColorMapToDefaults: (layerIds: string[]) => void;
 
   /** 当前激活图层的显示设置 */
   activeLayerDisplay: Ref<DetailsSettingsGroup | null>;
   /** 设置激活图层显示参数 */
   setActiveLayerDisplay: (
     patch: Partial<DetailsSettingsGroup>,
-    opts?: { applyToAll?: boolean },
+    opts?: { applyToAll?: boolean; layerIds?: string[] },
   ) => void;
   /** 立即应用视角/视距相关设置 */
   applyViewFromSettings: (overrides?: Partial<ViewerSettings>) => void;
@@ -249,6 +255,8 @@ type ViewerStageBindings = {
   setActiveLayerTypeMap: (map: LammpsTypeMapRecord) => void;
   /** 将当前映射应用到所有图层（仅匹配已有 typeId） */
   applyTypeMapToAllLayers: (map: LammpsTypeMapRecord) => void;
+  /** 将当前映射应用到指定图层（仅匹配已有 typeId） */
+  applyTypeMapToLayerIds: (map: LammpsTypeMapRecord, layerIds: string[]) => void;
   /** 重置所有图层类型映射为默认 */
   resetAllLayersTypeMapToDefaults: (opts?: {
     templateMap?: LammpsTypeMapRecord;
@@ -263,15 +271,19 @@ type ViewerStageBindings = {
   setActiveLayerColorMap: (map: ColorMapRecord) => void;
   /** 设置所有图层颜色映射 */
   setAllLayersColorMap: (map: ColorMapRecord) => void;
+  /** 设置指定图层颜色映射 */
+  setLayerColorMapForIds: (map: ColorMapRecord, layerIds: string[]) => void;
   /** 重置所有图层颜色映射为默认 */
   resetAllLayersColorMapToDefaults: () => void;
+  /** 重置指定图层颜色映射为默认 */
+  resetLayerColorMapToDefaults: (layerIds: string[]) => void;
 
   /** 当前激活图层显示设置 */
   activeLayerDisplay: Ref<DetailsSettingsGroup | null>;
   /** 设置激活图层显示参数 */
   setActiveLayerDisplay: (
     patch: Partial<DetailsSettingsGroup>,
-    opts?: { applyToAll?: boolean },
+    opts?: { applyToAll?: boolean; layerIds?: string[] },
   ) => void;
   /** 立即应用视角/视距相关设置 */
   applyViewFromSettings: (overrides?: Partial<ViewerSettings>) => void;
@@ -329,7 +341,7 @@ type ViewerStageBindings = {
   /** 重新应用 LAMMPS 类型映射 */
   refreshTypeMap: () => void;
   /** 重新应用颜色映射 */
-  refreshColorMap: (opts?: { applyToAll?: boolean }) => void;
+  refreshColorMap: (opts?: { applyToAll?: boolean; layerIds?: string[] }) => void;
 
   /** 是否存在动画 */
   hasAnimation: Ref<boolean>;
@@ -1450,6 +1462,17 @@ export function useViewerStage(
     void persistSessionSnapshot();
   }
 
+  function applyTypeMapToLayerIds(map: LammpsTypeMapRecord, layerIds: string[]): void {
+    if (!runtime) return;
+    runtime.applyTypeMapToLayerIds(map, layerIds);
+    syncUiFromRuntime();
+    inspectCtx.clear();
+    scheduleSessionSave('layers');
+    // 立即持久化选中图层映射应用结果。
+    // Persist selected-layer mapping application immediately.
+    void persistSessionSnapshot();
+  }
+
   function setActiveLayerColorMap(map: ColorMapRecord): void {
     if (!runtime) return;
     runtime.setActiveLayerColorMap(map);
@@ -1462,6 +1485,12 @@ export function useViewerStage(
     scheduleSessionSave('layers');
   }
 
+  function setLayerColorMapForIds(map: ColorMapRecord, layerIds: string[]): void {
+    if (!runtime) return;
+    runtime.setLayerColorMapForIds(map, layerIds);
+    scheduleSessionSave('layers');
+  }
+
   function resetAllLayersColorMapToDefaults(): void {
     if (!runtime) return;
     runtime.resetAllLayersColorMapToDefaults();
@@ -1469,9 +1498,16 @@ export function useViewerStage(
     scheduleSessionSave('layers');
   }
 
+  function resetLayerColorMapToDefaults(layerIds: string[]): void {
+    if (!runtime) return;
+    runtime.resetLayerColorMapToDefaults(layerIds);
+    syncUiFromRuntime();
+    scheduleSessionSave('layers');
+  }
+
   function setActiveLayerDisplay(
     patch: Partial<DetailsSettingsGroup>,
-    opts?: { applyToAll?: boolean },
+    opts?: { applyToAll?: boolean; layerIds?: string[] },
   ): void {
     if (!runtime) return;
     runtime.setActiveLayerDisplaySettings(patch, opts);
@@ -1949,13 +1985,16 @@ export function useViewerStage(
     activeLayerTypeMapApplied,
     setActiveLayerTypeMap,
     applyTypeMapToAllLayers,
+    applyTypeMapToLayerIds,
     resetAllLayersTypeMapToDefaults,
 
     activeLayerColorMap,
     activeLayerColorKeys,
     setActiveLayerColorMap,
     setAllLayersColorMap,
+    setLayerColorMapForIds,
     resetAllLayersColorMapToDefaults,
+    resetLayerColorMapToDefaults,
 
     activeLayerDisplay,
     setActiveLayerDisplay,
@@ -2047,13 +2086,16 @@ export function useViewerStage(
     activeLayerTypeMapApplied,
     setActiveLayerTypeMap,
     applyTypeMapToAllLayers,
+    applyTypeMapToLayerIds,
     resetAllLayersTypeMapToDefaults,
 
     activeLayerColorMap,
     activeLayerColorKeys,
     setActiveLayerColorMap,
     setAllLayersColorMap,
+    setLayerColorMapForIds,
     resetAllLayersColorMapToDefaults,
+    resetLayerColorMapToDefaults,
 
     activeLayerDisplay,
     setActiveLayerDisplay,

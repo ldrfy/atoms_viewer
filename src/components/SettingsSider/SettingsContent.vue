@@ -121,10 +121,10 @@ import {
   CloseOutlined,
   EyeOutlined,
   FolderOpenOutlined,
+  NodeIndexOutlined,
   ReloadOutlined,
   SettingOutlined,
   SlidersOutlined,
-  SwapOutlined,
   SyncOutlined,
 } from '@ant-design/icons-vue';
 import { Modal } from 'ant-design-vue';
@@ -177,19 +177,27 @@ const emit = defineEmits<{
 }>();
 
 const { t, locale } = useI18n();
-const { settings } = useSettingsSiderContext();
+const { settings, selectedLayerIds } = useSettingsSiderContext();
 const { replaceSettings, notifyClearStorageUi } = useSettingsSiderControlContext();
 
 const viewerApi = computed(() => viewerApiRef.value);
 const layerList = computed(() => viewerApi.value?.layers.value ?? []);
 const activeLayerId = computed(() => viewerApi.value?.activeLayerId.value ?? null);
-const activeLayerInfo = computed(() => {
-  const id = activeLayerId.value;
-  if (!id) return null;
-  return layerList.value.find(l => l.id === id) ?? null;
-});
 const activeLayerIsLammps = computed(() => {
-  const format = activeLayerInfo.value?.sourceFormat ?? '';
+  const selected = selectedLayerIds.value;
+  if (selected.length > 0) {
+    const selectedInfos = selected
+      .map(id => layerList.value.find(l => l.id === id))
+      .filter(Boolean) as Array<typeof layerList.value[number]>;
+    return selectedInfos.some((l) => {
+      const format = l.sourceFormat ?? '';
+      return isLammpsDumpFormat(format) || isLammpsDataFormat(format);
+    });
+  }
+  const active = activeLayerId.value
+    ? layerList.value.find(l => l.id === activeLayerId.value)
+    : null;
+  const format = active?.sourceFormat ?? '';
   return isLammpsDumpFormat(format) || isLammpsDataFormat(format);
 });
 
@@ -439,7 +447,7 @@ function resetPanel(key: string): void {
 const basePanels = [
   { key: PANEL_KEYS.view, headerKey: PANEL_HEADER_KEYS.view, comp: ViewPanel, icon: EyeOutlined },
   { key: PANEL_KEYS.layers, headerKey: PANEL_HEADER_KEYS.layers, comp: LayersPanel, icon: AppstoreOutlined },
-  { key: PANEL_KEYS.lammps, headerKey: PANEL_HEADER_KEYS.lammps, comp: LammpsPanel, icon: SwapOutlined },
+  { key: PANEL_KEYS.lammps, headerKey: PANEL_HEADER_KEYS.lammps, comp: LammpsPanel, icon: NodeIndexOutlined },
   { key: PANEL_KEYS.colors, headerKey: PANEL_HEADER_KEYS.colors, comp: ColorsPanel, icon: BgColorsOutlined },
   { key: PANEL_KEYS.details, headerKey: PANEL_HEADER_KEYS.details, comp: DetailsPanel, icon: SlidersOutlined },
   { key: PANEL_KEYS.rotation, headerKey: PANEL_HEADER_KEYS.rotation, comp: RotatePanel, icon: SyncOutlined },

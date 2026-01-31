@@ -1,4 +1,4 @@
-import type { ComputedRef, InjectionKey } from 'vue';
+import type { ComputedRef, InjectionKey, Ref } from 'vue';
 
 import type { ViewerSettings } from '../../lib/viewer/settings';
 import type { SettingsPatch } from '../../lib/viewer/mergeSettings';
@@ -15,6 +15,7 @@ export interface SettingsSiderContext {
   settings: ComputedRef<ViewerSettings>;
   patchSettings: PatchSettingsFn;
   hasAnyLayer: ComputedRef<boolean>;
+  selectedLayerIds: Ref<string[]>;
 }
 
 export const settingsSiderContextKey: InjectionKey<SettingsSiderContext> = Symbol(

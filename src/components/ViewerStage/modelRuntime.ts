@@ -328,7 +328,7 @@ export type ModelRuntime = {
 
   hasAnyTypeId: () => boolean;
   onTypeMapChanged: () => void;
-  onColorMapChanged: (opts?: { applyToAll?: boolean }) => void;
+  onColorMapChanged: (opts?: { applyToAll?: boolean; layerIds?: string[] }) => void;
   getLayerSnapshots: () => LayerSnapshot[];
   applyLayerSnapshots: (
     snaps: LayerSnapshot[],
@@ -339,6 +339,7 @@ export type ModelRuntime = {
 
   setActiveLayerTypeMap: (map: LammpsTypeMapRecord) => void;
   applyTypeMapToAllLayers: (templateMap: LammpsTypeMapRecord) => void;
+  applyTypeMapToLayerIds: (templateMap: LammpsTypeMapRecord, layerIds: string[]) => void;
   resetAllLayersTypeMapToDefaults: (opts?: {
     templateMap?: LammpsTypeMapRecord;
     useAtomDefaults?: boolean;
@@ -346,7 +347,9 @@ export type ModelRuntime = {
 
   setActiveLayerColorMap: (map: ColorMapRecord) => void;
   setAllLayersColorMap: (map: ColorMapRecord) => void;
+  setLayerColorMapForIds: (map: ColorMapRecord, layerIds: string[]) => void;
   resetAllLayersColorMapToDefaults: () => void;
+  resetLayerColorMapToDefaults: (layerIds: string[]) => void;
 
   removeLayer: (id: string) => void;
 
@@ -355,7 +358,7 @@ export type ModelRuntime = {
 
   setActiveLayerDisplaySettings: (
     patch: Partial<DetailsSettingsGroup>,
-    opts?: { applyToAll?: boolean },
+    opts?: { applyToAll?: boolean; layerIds?: string[] },
   ) => void;
 
   visibleCustomColors: Ref<boolean>;
@@ -654,6 +657,18 @@ export function createModelRuntime(args: {
     const id = activeLayerId.value;
     if (!id) return null;
     return layerMap.get(id) ?? null;
+  }
+
+  // Resolve target layers from ids.
+  // 根据 id 解析目标图层。
+  function resolveLayerTargets(layerIds?: string[]): LayerInternal[] {
+    if (!layerIds || layerIds.length === 0) return [];
+    const out: LayerInternal[] = [];
+    for (const id of layerIds) {
+      const layer = layerMap.get(id);
+      if (layer) out.push(layer);
+    }
+    return out;
   }
 
   function syncActiveTypeMap(): void {
@@ -1814,57 +1829,93 @@ export function createModelRuntime(args: {
 
     let anyChanged = false;
     for (const layer of layerMap.values()) {
-      if (!layer.hasAnyTypeId) continue;
-
-      const atoms = (layer.model.frames?.[layer.frameIndex]
-        ?? layer.model.atoms) as Atom[];
-      layer.currentFrameAtoms = atoms;
-      layer.currentMappedAtoms = null;
-      layer.mappedFrameIndex = -1;
-
-      const { typeIds: detectedTypeIds, defaults }
-        = collectTypeIdsAndElementDefaultsFromAtoms(atoms);
-
-      const nextMap: LammpsTypeMapRecord = {};
-      for (const tid0 of detectedTypeIds) {
-        const tid = Math.max(1, Math.floor(tid0));
-        if (!Number.isFinite(tid) || tid <= 0) continue;
-
-        const tplEl = normalizeElementSymbol(String(baseMap[String(tid)] ?? '')) || '';
-        if (tplEl && tplEl !== 'E') {
-          nextMap[String(tid)] = tplEl;
-          continue;
-        }
-
-        const existing = normalizeElementSymbol(String(layer.typeMap[String(tid)] ?? '')) || '';
-        if (existing && existing !== 'E') {
-          nextMap[String(tid)] = existing;
-          continue;
-        }
-
-        const def = normalizeElementSymbol(defaults[tid] ?? '') || '';
-        nextMap[String(tid)] = def && def !== 'E' ? def : 'E';
+      if (applyTypeMapToLayer(layer, baseMap)) {
+        anyChanged = true;
       }
-
-      layer.typeMap = nextMap;
-      layer.typeIds = [...detectedTypeIds];
-      layer.typeMapApplied = Object.keys(nextMap).length > 0;
-
-      const mapped = mapAtomsByTypeMap(layer, atoms);
-      layer.currentMappedAtoms = mapped;
-      layer.mappedFrameIndex = layer.frameIndex;
-
-      layer.colorMap = buildColorMapFromAtoms(
-        layer.colorMap,
-        mapped,
-        layer.hasAnyTypeId,
-      );
-      layer.colorKeys = buildColorMapKeysFromAtoms(mapped, layer.hasAnyTypeId);
-
-      rebuildVisualsForLayer(layer, mapped);
-      anyChanged = true;
     }
 
+    if (!anyChanged) return;
+
+    syncActiveTypeMap();
+    syncActiveColorMap();
+    syncActiveDisplay();
+    recomputeVisibleCustomColors();
+    recomputeVisibleClipRadius();
+    tickCameraClipping(true);
+    invalidate();
+  }
+
+  // Apply template mapping to a single layer.
+  // 将模板映射应用到单个图层。
+  function applyTypeMapToLayer(
+    layer: LayerInternal,
+    baseMap: LammpsTypeMapRecord,
+  ): boolean {
+    if (!layer.hasAnyTypeId) return false;
+
+    const atoms = (layer.model.frames?.[layer.frameIndex]
+      ?? layer.model.atoms) as Atom[];
+    layer.currentFrameAtoms = atoms;
+    layer.currentMappedAtoms = null;
+    layer.mappedFrameIndex = -1;
+
+    const { typeIds: detectedTypeIds, defaults }
+      = collectTypeIdsAndElementDefaultsFromAtoms(atoms);
+
+    const nextMap: LammpsTypeMapRecord = {};
+    for (const tid0 of detectedTypeIds) {
+      const tid = Math.max(1, Math.floor(tid0));
+      if (!Number.isFinite(tid) || tid <= 0) continue;
+
+      const tplEl = normalizeElementSymbol(String(baseMap[String(tid)] ?? '')) || '';
+      if (tplEl && tplEl !== 'E') {
+        nextMap[String(tid)] = tplEl;
+        continue;
+      }
+
+      const existing = normalizeElementSymbol(String(layer.typeMap[String(tid)] ?? '')) || '';
+      if (existing && existing !== 'E') {
+        nextMap[String(tid)] = existing;
+        continue;
+      }
+
+      const def = normalizeElementSymbol(defaults[tid] ?? '') || '';
+      nextMap[String(tid)] = def && def !== 'E' ? def : 'E';
+    }
+
+    layer.typeMap = nextMap;
+    layer.typeIds = [...detectedTypeIds];
+    layer.typeMapApplied = Object.keys(nextMap).length > 0;
+
+    const mapped = mapAtomsByTypeMap(layer, atoms);
+    layer.currentMappedAtoms = mapped;
+    layer.mappedFrameIndex = layer.frameIndex;
+
+    layer.colorMap = buildColorMapFromAtoms(
+      layer.colorMap,
+      mapped,
+      layer.hasAnyTypeId,
+    );
+    layer.colorKeys = buildColorMapKeysFromAtoms(mapped, layer.hasAnyTypeId);
+
+    rebuildVisualsForLayer(layer, mapped);
+    return true;
+  }
+
+  function applyTypeMapToLayerIds(
+    templateMap: LammpsTypeMapRecord,
+    layerIds: string[],
+  ): void {
+    const baseMap = templateMap ?? {};
+    const targets = resolveLayerTargets(layerIds);
+    if (targets.length === 0) return;
+
+    let anyChanged = false;
+    for (const layer of targets) {
+      if (applyTypeMapToLayer(layer, baseMap)) {
+        anyChanged = true;
+      }
+    }
     if (!anyChanged) return;
 
     syncActiveTypeMap();
@@ -1912,6 +1963,23 @@ export function createModelRuntime(args: {
     recomputeVisibleCustomColors();
   }
 
+  function setLayerColorMapForIds(map: ColorMapRecord, layerIds: string[]): void {
+    const mapSafe = cloneColorMap(map);
+    const targets = resolveLayerTargets(layerIds);
+    if (targets.length === 0) return;
+    for (const l of targets) {
+      const mapped = getMappedAtomsForCurrentFrame(l);
+      l.colorMap = buildColorMapFromAtoms(
+        mapSafe,
+        mapped,
+        l.hasAnyTypeId,
+      );
+      l.colorKeys = buildColorMapKeysFromAtoms(mapped, l.hasAnyTypeId);
+    }
+    syncActiveColorMap();
+    recomputeVisibleCustomColors();
+  }
+
   function resetAllLayersColorMapToDefaults(): void {
     for (const l of layerMap.values()) {
       const mapped = getMappedAtomsForCurrentFrame(l);
@@ -1923,16 +1991,30 @@ export function createModelRuntime(args: {
     onColorMapChanged({ applyToAll: true });
   }
 
+  function resetLayerColorMapToDefaults(layerIds: string[]): void {
+    const targets = resolveLayerTargets(layerIds);
+    if (targets.length === 0) return;
+    for (const l of targets) {
+      const mapped = getMappedAtomsForCurrentFrame(l);
+      l.colorMap = buildColorMapFromAtoms({}, mapped, l.hasAnyTypeId);
+      l.colorKeys = buildColorMapKeysFromAtoms(mapped, l.hasAnyTypeId);
+    }
+    syncActiveColorMap();
+    recomputeVisibleCustomColors();
+  }
+
   function setActiveLayerDisplaySettings(
     patch: Partial<DetailsSettingsGroup>,
-    opts?: { applyToAll?: boolean },
+    opts?: { applyToAll?: boolean; layerIds?: string[] },
   ): void {
     const active = getActiveLayer();
     if (!active) return;
 
-    const targets = opts?.applyToAll
-      ? Array.from(layerMap.values())
-      : [active];
+    const targets = opts?.layerIds && opts.layerIds.length > 0
+      ? resolveLayerTargets(opts.layerIds)
+      : opts?.applyToAll
+        ? Array.from(layerMap.values())
+        : [active];
 
     let atomScaleChanged = false;
     let bondsChanged = false;
@@ -2109,13 +2191,15 @@ export function createModelRuntime(args: {
     invalidate();
   }
 
-  function onColorMapChanged(opts?: { applyToAll?: boolean }): void {
-    const targets = opts?.applyToAll
-      ? Array.from(layerMap.values())
-      : (() => {
-          const a = getActiveLayer();
-          return a ? [a] : [];
-        })();
+  function onColorMapChanged(opts?: { applyToAll?: boolean; layerIds?: string[] }): void {
+    const targets = opts?.layerIds && opts.layerIds.length > 0
+      ? resolveLayerTargets(opts.layerIds)
+      : opts?.applyToAll
+        ? Array.from(layerMap.values())
+        : (() => {
+            const a = getActiveLayer();
+            return a ? [a] : [];
+          })();
     if (targets.length === 0) return;
 
     applyLayerSurfaceSettings(targets);
@@ -2207,10 +2291,13 @@ export function createModelRuntime(args: {
     applyLayerSnapshots,
     setActiveLayerTypeMap,
     applyTypeMapToAllLayers,
+    applyTypeMapToLayerIds,
     resetAllLayersTypeMapToDefaults,
     setActiveLayerColorMap,
     setAllLayersColorMap,
+    setLayerColorMapForIds,
     resetAllLayersColorMapToDefaults,
+    resetLayerColorMapToDefaults,
     setActiveLayerDisplaySettings,
     removeLayer,
 

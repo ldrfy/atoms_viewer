@@ -1,36 +1,27 @@
 <template>
   <a-form layout="vertical">
     <a-form-item>
-      <a-row justify="space-between" align="middle">
-        <a-col>
-          {{ t('settings.panel.details.applyAll') }}
-        </a-col>
-        <a-col>
-          <a-switch
-            v-model:checked="applyToAllLayers"
-            :disabled="!hasAnyLayer"
-            :aria-label="t('settings.panel.details.applyAll')"
-            :title="t('settings.panel.details.applyAll')"
-          />
-        </a-col>
-      </a-row>
-      <a-row v-if="!applyToAllLayers">
-        <a-space :size="6" class="settings-gap-top-sm settings-flex-wrap">
-          <a-typography-text type="secondary">
-            {{ t('settings.panel.details.currentLayer') }}:
-          </a-typography-text>
-          <a-tooltip v-if="activeLayerInfo" :title="activeLayerInfo.source?.fileName || activeLayerInfo.id">
+      <a-space :size="6" class="details-layer-row settings-flex-wrap">
+        <a-typography-text type="secondary">
+          {{ t('settings.panel.layers.applyTargets') }}:
+        </a-typography-text>
+        <template v-if="targetLayerInfos.length > 0">
+          <a-tooltip
+            v-for="l in targetLayerInfos"
+            :key="l.id"
+            :title="l.source?.fileName || l.id"
+          >
             <a-tag class="settings-tag-full">
               <span class="settings-tag-ellipsis">
-                {{ activeLayerInfo.name }}
+                {{ l.name || l.source?.fileName || l.id }}
               </span>
             </a-tag>
           </a-tooltip>
-          <a-typography-text v-else type="secondary">
-            -
-          </a-typography-text>
-        </a-space>
-      </a-row>
+        </template>
+        <a-typography-text v-else type="secondary">
+          -
+        </a-typography-text>
+      </a-space>
     </a-form-item>
 
     <a-form-item :label="t('settings.panel.details.representation')">
@@ -196,12 +187,11 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref, watch } from 'vue';
+import { computed, onBeforeUnmount } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { DEFAULT_DETAILS, type DetailsSettingsGroup, type RepresentationId } from '../../../lib/viewer/settings';
 import { viewerApiRef } from '../../../lib/viewer/bridge';
 import { useSettingsSiderContext } from '../useSettingsSiderContext';
-import { readApplyAllLayersFlags, writeApplyAllLayersFlags } from '../applyAllStorage';
 import { useSettingsSiderResetContext } from '../useSettingsSiderResetContext';
 import { PANEL_KEYS } from '../../../lib/viewer/panelKeys';
 import {
@@ -218,7 +208,7 @@ import {
 } from '../../../lib/viewer/constants';
 
 const { t } = useI18n();
-const { hasAnyLayer } = useSettingsSiderContext();
+const { hasAnyLayer, selectedLayerIds } = useSettingsSiderContext();
 
 const viewerApi = computed(() => viewerApiRef.value);
 const layerList = computed(() => viewerApi.value?.layers.value ?? []);
@@ -229,21 +219,18 @@ const activeLayerInfo = computed(() => {
   return layerList.value.find(l => l.id === id) ?? null;
 });
 
-const applyToAllLayers = ref(
-  readApplyAllLayersFlags().details ?? true,
-);
-
-watch(
-  applyToAllLayers,
-  (v) => {
-    writeApplyAllLayersFlags({ details: v });
-    if (!v) return;
-    const api = viewerApi.value;
-    const cur = displayModel.value;
-    if (!api || !cur) return;
-    api.setActiveLayerDisplay({ ...cur }, { applyToAll: true });
-  },
-);
+// Resolve target layers: selection first, otherwise active layer.
+// 解析目标图层：优先选中列表，否则回退到当前图层。
+const targetLayerIds = computed(() => {
+  const picked = selectedLayerIds.value.filter(Boolean);
+  if (picked.length > 0) return picked;
+  return activeLayerId.value ? [activeLayerId.value] : [];
+});
+const targetLayerInfos = computed(() => {
+  if (targetLayerIds.value.length === 0) return [];
+  const byId = new Map(layerList.value.map(l => [l.id, l]));
+  return targetLayerIds.value.map(id => byId.get(id)).filter(Boolean) as any[];
+});
 
 const displayModel = computed<DetailsSettingsGroup | null>(() => {
   return viewerApi.value?.activeLayerDisplay.value ?? null;
@@ -256,7 +243,9 @@ const controlsDisabled = computed(
 function patchDisplay(patch: Partial<DetailsSettingsGroup>): void {
   const api = viewerApi.value;
   if (!api || !activeLayerInfo.value) return;
-  api.setActiveLayerDisplay(patch, { applyToAll: applyToAllLayers.value });
+  const targets = targetLayerIds.value;
+  if (targets.length === 0) return;
+  api.setActiveLayerDisplay(patch, { layerIds: targets });
 }
 
 const showBondsModel = computed({
@@ -363,7 +352,6 @@ const representationModel = computed<RepresentationId>({
 });
 
 function onResetDisplay(): void {
-  applyToAllLayers.value = true;
   patchDisplay({
     representation: DEFAULT_DETAILS.representation,
     atomScale: DEFAULT_DETAILS.atomScale,
@@ -381,3 +369,11 @@ onBeforeUnmount(() => {
   unregisterDetailsReset();
 });
 </script>
+
+<style scoped>
+.details-layer-row {
+  margin-top: 8px;
+  margin-bottom: 8px;
+  margin-left: 2px;
+}
+</style>

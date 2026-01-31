@@ -182,6 +182,7 @@
                 "rotX": "Rotate X",
                 "rotY": "Rotate Y",
                 "rotZ": "Rotate Z",
+                "rotation": "Rotation",
                 "resetPose": "Reset rotation",
                 "resetView": "Reset original distance"
             },
@@ -242,15 +243,14 @@
                 "alert": "When a LAMMPS dump or LAMMPS data file provides only numeric types, specify the element symbol for each type here to ensure correct color/radius, bond inference, and stable rendering.",
                 "currentLayer": "Current layer",
                 "applyAll": "Apply to all layers",
-                "mapLabel": "type id → element symbol (searchable)",
+                "mapLabel": "type id → element symbol",
                 "typePlaceholder": "type",
                 "elementPlaceholder": "Element (e.g., C / O / Fe)",
                 "addMapping": "Add mapping",
                 "apply": "Apply",
-                "undo": "Undo",
                 "clear": "Clear",
                 "clearConfirm": "Clear all mappings?",
-                "hint": "Recommended dump fields: id, type, x y z. If per-frame ordering is not fixed, the parser will sort by id to avoid animation jitter."
+                "hint": "When LAMMPS dump or LAMMPS data provides only numeric type values, specify the element symbol for each type here for correct color/radius, bond inference, and stable rendering. Search is supported."
             },
             "files": {
                 "header": "File I/O",
@@ -300,7 +300,11 @@
                     "nameAsc": "Name ↑",
                     "nameDesc": "Name ↓"
                 },
-                "hint": "Click a row to set the active layer for per-layer colors or display; use the toggle to show/hide.",
+                "hint": "Click a row to set the active layer. Use checkboxes to pick apply targets; toggles show/hide.",
+                "applyTargets": "Apply to layers",
+                "selectAll": "Select all layers",
+                "clearSelection": "Clear selection",
+                "selectLayer": "Select this layer",
                 "deleteConfirm": "Delete this layer?"
             },
             "other": {
@@ -330,7 +334,7 @@
                 "alert": "After editing colors, click “Refresh” to apply them to the model.",
                 "currentLayer": "Current layer",
                 "applyAll": "Edit all layers",
-                "mapLabel": "Color map (hex)",
+                "mapLabel": "Atom color & opacity",
                 "opacity": "Opacity",
                 "apply": "Apply",
                 "hexPlaceholder": "e.g. #FF8800",
@@ -338,12 +342,12 @@
                 "invalidHex": "Invalid color format. Please use #RRGGBB or #RGB.",
                 "reset": "Reset",
                 "resetTooltip": "Reset to the built-in default color of this element.",
-                "hint": "Tip: If the active layer has typeId (e.g. LAMMPS), colors are keyed as element+typeId (C.1, C.2, ...); otherwise they are keyed by element.",
+                "hint": "Tip: If the active layer has typeId (e.g. LAMMPS), colors are keyed as element+typeId (C.1, C.2, ...); otherwise they are keyed by element. Changes take effect only after clicking “Apply” on the far right.",
                 "empty": "No editable atom types in the active layer."
             },
             "details": {
                 "header": "Model Details",
-                "alert": "These options are saved per layer. Turn on “Edit all layers” to broadcast changes.",
+                "alert": "These options are saved per layer. Applies to the selected layers in the Layers panel.",
                 "currentLayer": "Current layer",
                 "applyAll": "Edit all layers",
                 "hint": "Atom size and bond settings do not affect other layers unless you choose to edit all layers.",

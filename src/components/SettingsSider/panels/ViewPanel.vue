@@ -1,6 +1,27 @@
 <template>
   <a-form layout="vertical">
-    <a-form-item :label="t('settings.panel.view.viewPresets')">
+    <a-form-item>
+      <a-row align="middle" justify="space-between">
+        <a-col>
+          <a-space :size="6" align="center">
+            <span>{{ t('settings.panel.view.viewPresets') }}</span>
+          </a-space>
+        </a-col>
+        <a-col>
+          <a-tooltip
+            placement="left"
+            :title="t('settings.panel.view.viewPresetsHint')"
+          >
+            <a-button
+              type="text"
+              :aria-label="t('settings.panel.view.viewPresetsHint')"
+              :title="t('settings.panel.view.viewPresetsHint')"
+            >
+              <QuestionCircleOutlined />
+            </a-button>
+          </a-tooltip>
+        </a-col>
+      </a-row>
       <div class="settings-center">
         <a-checkbox-group
           :value="viewPresetsModel"
@@ -9,10 +30,6 @@
           @change="onViewPresetsChange"
         />
       </div>
-
-      <a-typography-text type="secondary" class="settings-text-secondary settings-text-center">
-        {{ t('settings.panel.view.viewPresetsHint') }}
-      </a-typography-text>
     </a-form-item>
 
     <a-form-item>
@@ -29,17 +46,30 @@
       </a-row>
     </a-form-item>
 
-    <a-form-item
-      v-if="viewPresetsModel.length > 0"
-      :label="t('settings.panel.view.dualViewDistance')"
-    >
+    <a-form-item v-if="viewPresetsModel.length > 0">
+      <template #label>
+        <a-space :size="6" align="center">
+          <span>{{ t('settings.panel.view.dualViewDistance') }}</span>
+          <a-tooltip v-if="distanceDirty" :title="t('settings.panel.view.resetView')">
+            <a-button
+              type="text"
+              size="small"
+              :aria-label="t('settings.panel.view.resetView')"
+              :title="t('settings.panel.view.resetView')"
+              @click="resetDistance"
+            >
+              <ReloadOutlined />
+            </a-button>
+          </a-tooltip>
+        </a-space>
+      </template>
       <a-row :gutter="8" align="middle">
         <a-col :flex="1">
           <a-slider
             v-model:value="dualViewDistanceModel"
             :min="DUAL_VIEW_DISTANCE_MIN"
             :max="dualViewDistanceMax"
-            :step="0.5"
+            :step="0.1"
             :disabled="!hasAnyLayer"
           />
         </a-col>
@@ -50,7 +80,8 @@
             :title="t('settings.panel.view.dualViewDistance')"
             :min="DUAL_VIEW_DISTANCE_MIN"
             :max="dualViewDistanceMax"
-            :step="0.5"
+            :step="0.1"
+            :precision="1"
             :disabled="!hasAnyLayer"
             class="settings-full-width"
           />
@@ -58,87 +89,120 @@
       </a-row>
     </a-form-item>
 
-    <a-form-item :label="t('settings.panel.view.rotX')">
-      <a-row :gutter="8" align="middle">
-        <a-col :flex="1">
-          <a-slider
-            v-model:value="rotXModel"
-            :min="-180"
-            :max="180"
-            :step="1"
-            :disabled="!hasAnyLayer"
-          />
-        </a-col>
-        <a-col class="settings-col-compact">
-          <a-input-number
-            v-model:value="rotXModel"
-            :aria-label="t('settings.panel.view.rotX')"
-            :title="t('settings.panel.view.rotX')"
-            :min="-180"
-            :max="180"
-            :step="1"
-            :disabled="!hasAnyLayer"
-            class="settings-full-width"
-          />
-        </a-col>
-      </a-row>
-    </a-form-item>
+    <a-form-item>
+      <template #label>
+        <a-space :size="6" align="center">
+          <span>{{ t('settings.panel.view.rotation') }}</span>
+          <a-tooltip v-if="rotationDirty" :title="t('settings.panel.view.resetPose')">
+            <a-button
+              type="text"
+              size="small"
+              :aria-label="t('settings.panel.view.resetPose')"
+              :title="t('settings.panel.view.resetPose')"
+              @click="resetPose"
+            >
+              <ReloadOutlined />
+            </a-button>
+          </a-tooltip>
+        </a-space>
+      </template>
+      <a-space direction="vertical" :size="8" class="settings-full-width">
+        <a-row :gutter="8" align="middle">
+          <a-col :span="2">
+            <a-typography-text class="settings-rot-axis">
+              X
+            </a-typography-text>
+          </a-col>
+          <a-col :flex="1">
+            <a-slider
+              v-model:value="rotXModel"
+              :min="-180"
+              :max="180"
+              :step="0.1"
+              :disabled="!hasAnyLayer"
+            />
+          </a-col>
+          <a-col class="settings-col-compact">
+            <a-input-number
+              v-model:value="rotXModel"
+              :aria-label="t('settings.panel.view.rotX')"
+              :title="t('settings.panel.view.rotX')"
+              :min="-180"
+              :max="180"
+              :step="0.1"
+              :precision="1"
+              :disabled="!hasAnyLayer"
+              class="settings-full-width"
+            />
+          </a-col>
+        </a-row>
 
-    <a-form-item :label="t('settings.panel.view.rotY')">
-      <a-row :gutter="8" align="middle">
-        <a-col :flex="1">
-          <a-slider
-            v-model:value="rotYModel"
-            :min="-180"
-            :max="180"
-            :step="1"
-            :disabled="!hasAnyLayer"
-          />
-        </a-col>
-        <a-col class="settings-col-compact">
-          <a-input-number
-            v-model:value="rotYModel"
-            :aria-label="t('settings.panel.view.rotY')"
-            :title="t('settings.panel.view.rotY')"
-            :min="-180"
-            :max="180"
-            :step="1"
-            :disabled="!hasAnyLayer"
-            class="settings-full-width"
-          />
-        </a-col>
-      </a-row>
-    </a-form-item>
+        <a-row :gutter="8" align="middle">
+          <a-col :span="2">
+            <a-typography-text class="settings-rot-axis">
+              Y
+            </a-typography-text>
+          </a-col>
+          <a-col :flex="1">
+            <a-slider
+              v-model:value="rotYModel"
+              :min="-180"
+              :max="180"
+              :step="0.1"
+              :disabled="!hasAnyLayer"
+            />
+          </a-col>
+          <a-col class="settings-col-compact">
+            <a-input-number
+              v-model:value="rotYModel"
+              :aria-label="t('settings.panel.view.rotY')"
+              :title="t('settings.panel.view.rotY')"
+              :min="-180"
+              :max="180"
+              :step="0.1"
+              :precision="1"
+              :disabled="!hasAnyLayer"
+              class="settings-full-width"
+            />
+          </a-col>
+        </a-row>
 
-    <a-form-item :label="t('settings.panel.view.rotZ')">
-      <a-row :gutter="8" align="middle">
-        <a-col :flex="1">
-          <a-slider
-            v-model:value="rotZModel"
-            :min="-180"
-            :max="180"
-            :step="1"
-            :disabled="!hasAnyLayer"
-          />
-        </a-col>
-        <a-col class="settings-col-compact">
-          <a-input-number
-            v-model:value="rotZModel"
-            :aria-label="t('settings.panel.view.rotZ')"
-            :title="t('settings.panel.view.rotZ')"
-            :min="-180"
-            :max="180"
-            :step="1"
-            :disabled="!hasAnyLayer"
-            class="settings-full-width"
-          />
-        </a-col>
-      </a-row>
+        <a-row :gutter="8" align="middle">
+          <a-col :span="2">
+            <a-typography-text class="settings-rot-axis">
+              Z
+            </a-typography-text>
+          </a-col>
+          <a-col :flex="1">
+            <a-slider
+              v-model:value="rotZModel"
+              :min="-180"
+              :max="180"
+              :step="0.1"
+              :disabled="!hasAnyLayer"
+            />
+          </a-col>
+          <a-col class="settings-col-compact">
+            <a-input-number
+              v-model:value="rotZModel"
+              :aria-label="t('settings.panel.view.rotZ')"
+              :title="t('settings.panel.view.rotZ')"
+              :min="-180"
+              :max="180"
+              :step="0.1"
+              :precision="1"
+              :disabled="!hasAnyLayer"
+              class="settings-full-width"
+            />
+          </a-col>
+        </a-row>
+      </a-space>
     </a-form-item>
   </a-form>
 </template>
 
 <script setup lang="ts">
+import { ReloadOutlined, QuestionCircleOutlined } from '@ant-design/icons-vue';
 import { computed, ref, watch, onBeforeUnmount } from 'vue';
 import { message } from 'ant-design-vue';
 import { useI18n } from 'vue-i18n';
@@ -216,7 +280,9 @@ const orthographicModel = computed({
   set: (v: boolean) => patchSettings({ view: { orthographic: !v } }),
 });
 
-function resetDistance(): void {
+// 获取默认视距（与重置逻辑一致）。
+// Get default distance (same logic as reset).
+function getDefaultDistance(): number {
   const s = settings.value.view;
   const d
     = typeof s.initialDualViewDistance === 'number' && Number.isFinite(s.initialDualViewDistance)
@@ -224,6 +290,22 @@ function resetDistance(): void {
       : typeof s.dualViewDistance === 'number' && Number.isFinite(s.dualViewDistance)
         ? s.dualViewDistance
         : 10;
+  return d;
+}
+
+const distanceDirty = computed(() => {
+  const cur = settings.value.view.dualViewDistance ?? 10;
+  const def = getDefaultDistance();
+  return Math.abs(cur - def) > 1e-6;
+});
+
+const rotationDirty = computed(() => {
+  const r = settings.value.view.rotationDeg;
+  return Math.abs(r.x) > 1e-6 || Math.abs(r.y) > 1e-6 || Math.abs(r.z) > 1e-6;
+});
+
+function resetDistance(): void {
+  const d = getDefaultDistance();
   patchSettings({ view: { dualViewDistance: d } });
 }
 
@@ -263,3 +345,10 @@ onBeforeUnmount(() => {
   unregisterViewReset();
 });
 </script>
+
+<style scoped>
+.settings-rot-axis {
+  margin-left: 8px;
+  display: inline-block;
+}
+</style>

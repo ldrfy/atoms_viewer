@@ -349,7 +349,7 @@ export function createViewerLoader(deps: {
     }
   }
 
-  async function refreshColorMap(opts?: { applyToAll?: boolean }): Promise<void> {
+  async function refreshColorMap(opts?: { applyToAll?: boolean; layerIds?: string[] }): Promise<void> {
     const stage = deps.getStage();
     const runtime = deps.getRuntime();
     if (!stage || !runtime) return;

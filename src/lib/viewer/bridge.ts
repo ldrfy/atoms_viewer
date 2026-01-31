@@ -44,7 +44,7 @@ export type ViewerPublicApi = {
    * Apply the current active-layer color map to existing meshes.
    * This does NOT require reloading the model data.
    */
-  refreshColorMap: (opts?: { applyToAll?: boolean }) => void;
+  refreshColorMap: (opts?: { applyToAll?: boolean; layerIds?: string[] }) => void;
 
   /** Parsed metadata for the currently loaded file(s). */
   parseInfo: ParseInfo;
@@ -80,6 +80,8 @@ export type ViewerPublicApi = {
   setActiveLayerTypeMap: (map: LammpsTypeMapRecord) => void;
   /** Apply a template mapping to all layers (only existing typeIds). */
   applyTypeMapToAllLayers: (map: LammpsTypeMapRecord) => void;
+  /** Apply a template mapping to selected layers (only existing typeIds). */
+  applyTypeMapToLayerIds: (map: LammpsTypeMapRecord, layerIds: string[]) => void;
   /** Reset all layers' type map to defaults (based on current atoms). */
   resetAllLayersTypeMapToDefaults: (opts?: {
     templateMap?: LammpsTypeMapRecord;
@@ -99,15 +101,19 @@ export type ViewerPublicApi = {
   setActiveLayerColorMap: (map: ColorMapRecord) => void;
   /** Replace all layers' color maps at once (duplicate keys per layer). */
   setAllLayersColorMap: (map: ColorMapRecord) => void;
+  /** Replace selected layers' color maps at once. */
+  setLayerColorMapForIds: (map: ColorMapRecord, layerIds: string[]) => void;
   /** Reset all layers' color maps to default element colors. */
   resetAllLayersColorMapToDefaults: () => void;
+  /** Reset selected layers' color maps to default element colors. */
+  resetLayerColorMapToDefaults: (layerIds: string[]) => void;
 
   /** Per-layer display settings (atom size / bond visibility / quality) for the active layer. */
   activeLayerDisplay: Ref<DetailsSettingsGroup | null>;
   /** Patch active-layer display settings; optionally apply to all layers. */
   setActiveLayerDisplay: (
     patch: Partial<DetailsSettingsGroup>,
-    opts?: { applyToAll?: boolean },
+    opts?: { applyToAll?: boolean; layerIds?: string[] },
   ) => void;
   /** Snapshot current layers with metadata/settings (for export/session). */
   getLayerSnapshots: () => Promise<import('./sessionTypes').LayerSnapshot[]>;

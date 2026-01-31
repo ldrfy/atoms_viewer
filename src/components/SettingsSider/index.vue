@@ -82,6 +82,9 @@ const emit = defineEmits<{
  * Use a shadow snapshot to avoid lost updates when multiple patches land in one tick.
  */
 const settingsShadow = createSettingsShadow(props.settings);
+// Selected layer ids for batch apply in panels.
+// 面板批量应用的选中图层 id 列表。
+const selectedLayerIds = ref<string[]>([]);
 
 watch(
   () => props.settings,
@@ -106,6 +109,7 @@ provide(settingsSiderContextKey, {
   // Shared layer existence flag for all panels (avoid repeated watchers).
   // 全局共享“是否有图层”状态，避免面板内重复计算。
   hasAnyLayer: computed(() => (viewerApiRef.value?.layers.value.length ?? 0) > 0),
+  selectedLayerIds,
 });
 
 provide(settingsSiderControlContextKey, {

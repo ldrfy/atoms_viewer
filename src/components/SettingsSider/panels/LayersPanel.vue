@@ -15,49 +15,64 @@
     />
 
     <div v-else class="settings-gap-top-sm">
-      <a-space :size="8" class="settings-full-width">
-        <a-select
-          size="small"
-          :disabled="layerList.length < 2"
-          :value="sortValue"
-          @change="onSortChange"
-        >
-          <a-select-option
-            v-for="opt in sortOptions"
-            :key="opt.value"
-            :value="opt.value"
-          >
-            {{ opt.label }}
-          </a-select-option>
-        </a-select>
-        <a-tooltip :title="t('settings.panel.files.openFileHint')">
-          <a-button
-            type="text"
-            :aria-label="t('settings.panel.files.openFile')"
-            @click="onOpenFile"
-          >
-            <FolderOpenOutlined />
-          </a-button>
-        </a-tooltip>
-        <a-tooltip :title="toggleAllLabel">
-          <a-button
-            type="text"
-            :disabled="layerList.length === 0"
-            :aria-label="toggleAllLabel"
-            @click="onToggleAllVisible"
-          >
-            <component :is="allVisible ? EyeInvisibleOutlined : EyeOutlined" />
-          </a-button>
-        </a-tooltip>
-        <a-tooltip :title="t('settings.panel.layers.hint')">
-          <a-button
-            type="text"
-            :aria-label="t('settings.panel.layers.hint')"
-          >
-            <QuestionCircleOutlined />
-          </a-button>
-        </a-tooltip>
-      </a-space>
+      <a-row align="middle" justify="space-between" class="settings-full-width">
+        <a-col>
+          <a-space :size="8">
+            <a-select
+              :disabled="layerList.length < 2"
+              :value="sortValue"
+              @change="onSortChange"
+            >
+              <a-select-option
+                v-for="opt in sortOptions"
+                :key="opt.value"
+                :value="opt.value"
+              >
+                {{ opt.label }}
+              </a-select-option>
+            </a-select>
+            <a-tooltip :title="t('settings.panel.files.openFileHint')">
+              <a-button
+                type="text"
+                :aria-label="t('settings.panel.files.openFile')"
+                @click="onOpenFile"
+              >
+                <FolderOpenOutlined />
+              </a-button>
+            </a-tooltip>
+            <a-tooltip :title="selectAllLabel">
+              <a-button
+                type="text"
+                :disabled="layerList.length === 0"
+                :aria-label="selectAllLabel"
+                @click="onToggleSelectAll"
+              >
+                <CheckSquareOutlined :class="{ 'layers-selectall-icon': allSelected }" />
+              </a-button>
+            </a-tooltip>
+            <a-tooltip :title="toggleAllLabel">
+              <a-button
+                type="text"
+                :disabled="layerList.length === 0"
+                :aria-label="toggleAllLabel"
+                @click="onToggleAllVisible"
+              >
+                <component :is="allVisible ? EyeInvisibleOutlined : EyeOutlined" />
+              </a-button>
+            </a-tooltip>
+          </a-space>
+        </a-col>
+        <a-col>
+          <a-tooltip :title="t('settings.panel.layers.hint')" placement="left">
+            <a-button
+              type="text"
+              :aria-label="t('settings.panel.layers.hint')"
+            >
+              <QuestionCircleOutlined />
+            </a-button>
+          </a-tooltip>
+        </a-col>
+      </a-row>
       <a-divider class="settings-divider" />
 
       <div class="layers-list">
@@ -65,11 +80,14 @@
           v-for="l in layerList"
           :key="l.id"
           class="layer-row"
-          :class="{ active: l.id === activeLayerId }"
-          @click="onSetActive(l.id)"
         >
-          <div class="layer-left">
-            <a-radio :checked="l.id === activeLayerId" />
+          <div class="layer-left" @click.stop>
+            <a-checkbox
+              :checked="isLayerSelected(l.id)"
+              :aria-label="t('settings.panel.layers.selectLayer')"
+              :title="t('settings.panel.layers.selectLayer')"
+              @change="onToggleLayerSelected(l.id, ($event as any).target?.checked)"
+            />
           </div>
 
           <div class="layer-main">
@@ -116,20 +134,37 @@
 </template>
 
 <script setup lang="ts">
-import { DeleteOutlined, QuestionCircleOutlined, FolderOpenOutlined, EyeOutlined, EyeInvisibleOutlined } from '@ant-design/icons-vue';
-import { computed } from 'vue';
+import {
+  DeleteOutlined,
+  QuestionCircleOutlined,
+  FolderOpenOutlined,
+  EyeOutlined,
+  EyeInvisibleOutlined,
+  CheckSquareOutlined,
+} from '@ant-design/icons-vue';
+import { computed, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { viewerApiRef } from '../../../lib/viewer/bridge';
+import { useSettingsSiderContext } from '../useSettingsSiderContext';
 
 const { t } = useI18n();
 
+const { selectedLayerIds } = useSettingsSiderContext();
 const viewerApi = computed(() => viewerApiRef.value);
 const layerList = computed(() => viewerApi.value?.layers.value ?? []);
-const activeLayerId = computed(() => viewerApi.value?.activeLayerId.value ?? null);
 const allVisible = computed(() => layerList.value.length > 0 && layerList.value.every(l => l.visible));
+// Selected layer id set for quick lookup.
+// 选中图层 id 的集合，用于快速判断。
+const selectedLayerSet = computed(() => new Set(selectedLayerIds.value));
+const allSelected = computed(
+  () => layerList.value.length > 0 && layerList.value.every(l => selectedLayerSet.value.has(l.id)),
+);
 
 const toggleAllLabel = computed(() => (
   allVisible.value ? t('settings.panel.layers.hideAll') : t('settings.panel.layers.showAll')
+));
+const selectAllLabel = computed(() => (
+  allSelected.value ? t('settings.panel.layers.clearSelection') : t('settings.panel.layers.selectAll')
 ));
 const sortValue = computed(() => viewerApi.value?.layerSortBy?.value ?? 'name,ASC');
 const sortOptions = computed(() => ([
@@ -181,8 +216,25 @@ function onOpenFile(): void {
   viewerApi.value?.openFilePicker();
 }
 
-function onSetActive(id: string): void {
-  viewerApi.value?.setActiveLayer(id);
+function isLayerSelected(id: string): boolean {
+  return selectedLayerSet.value.has(id);
+}
+
+function onToggleLayerSelected(id: string, checked: boolean): void {
+  const next = new Set(selectedLayerIds.value);
+  if (checked) next.add(id);
+  else next.delete(id);
+  selectedLayerIds.value = Array.from(next);
+}
+
+// Toggle select all / clear selection.
+// 切换“全选/取消全选”。
+function onToggleSelectAll(): void {
+  if (allSelected.value) {
+    selectedLayerIds.value = [];
+    return;
+  }
+  selectedLayerIds.value = layerList.value.map(l => l.id);
 }
 
 function onToggleLayer(id: string, visible: boolean): void {
@@ -192,6 +244,18 @@ function onToggleLayer(id: string, visible: boolean): void {
 function onDeleteLayer(id: string): void {
   viewerApi.value?.removeLayer(id);
 }
+
+watch(
+  layerList,
+  (next) => {
+    const ids = new Set(next.map(l => l.id));
+    const filtered = selectedLayerIds.value.filter(id => ids.has(id));
+    if (filtered.length !== selectedLayerIds.value.length) {
+      selectedLayerIds.value = filtered;
+    }
+  },
+  { immediate: true },
+);
 
 function onToggleAllVisible(): void {
   viewerApi.value?.setAllLayersVisible(!allVisible.value);

@@ -42,6 +42,14 @@ export const settingsSiderDerivedContextKey: InjectionKey<SettingsSiderDerivedCo
   'SettingsSiderDerivedContext',
 );
 
+export interface SettingsSiderResetContext {
+  registerPanelReset: (key: string, action: () => void) => () => void;
+}
+
+export const settingsSiderResetContextKey: InjectionKey<SettingsSiderResetContext> = Symbol(
+  'SettingsSiderResetContext',
+);
+
 export interface SettingsSiderControlContext {
   replaceSettings: (next: ViewerSettings) => void;
   notifyClearStorageUi?: () => void;

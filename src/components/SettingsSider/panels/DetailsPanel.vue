@@ -192,23 +192,18 @@
         {{ t('settings.panel.details.sphereSegmentsHint') }}
       </a-typography-text>
     </a-form-item>
-
-    <a-form-item v-if="detailsDirty">
-      <a-button block :disabled="controlsDisabled" @click="onResetDisplay">
-        {{ t('settings.panel.details.reset') }}
-      </a-button>
-    </a-form-item>
   </a-form>
 </template>
 
 <script setup lang="ts">
-import { computed, inject, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { DEFAULT_DETAILS, type DetailsSettingsGroup, type RepresentationId } from '../../../lib/viewer/settings';
 import { viewerApiRef } from '../../../lib/viewer/bridge';
 import { useSettingsSiderContext } from '../useSettingsSiderContext';
-import { settingsSiderDerivedContextKey } from '../context';
 import { readApplyAllLayersFlags, writeApplyAllLayersFlags } from '../applyAllStorage';
+import { useSettingsSiderResetContext } from '../useSettingsSiderResetContext';
+import { PANEL_KEYS } from '../../../lib/viewer/panelKeys';
 import {
   ATOM_ROUGHNESS_MIN,
   ATOM_ROUGHNESS_MAX,
@@ -330,8 +325,6 @@ const atomRoughnessModel = computed({
   set: (v: number) => patchDisplay({ atomRoughness: v }),
 });
 
-const derivedContext = inject(settingsSiderDerivedContextKey, null);
-
 const REPRESENTATION_PRESETS: Record<RepresentationId, Partial<DetailsSettingsGroup> | null> = {
   ballAndStick: {
     representation: 'ballAndStick',
@@ -405,20 +398,6 @@ const representationModel = computed<RepresentationId>({
   },
 });
 
-const detailsDirty = computed(() => {
-  if (derivedContext) return derivedContext.detailsDirty.value;
-  const cur = displayModel.value ?? DEFAULT_DETAILS;
-  return (
-    cur.representation !== DEFAULT_DETAILS.representation
-    || cur.atomScale !== DEFAULT_DETAILS.atomScale
-    || cur.showBonds !== DEFAULT_DETAILS.showBonds
-    || cur.sphereSegments !== DEFAULT_DETAILS.sphereSegments
-    || cur.bondFactor !== DEFAULT_DETAILS.bondFactor
-    || cur.bondRadius !== DEFAULT_DETAILS.bondRadius
-    || cur.atomRoughness !== DEFAULT_DETAILS.atomRoughness
-  );
-});
-
 function onResetDisplay(): void {
   applyToAllLayers.value = DEFAULT_DETAILS.applyAllLayers ?? true;
   patchDisplay({
@@ -431,4 +410,10 @@ function onResetDisplay(): void {
     atomRoughness: DEFAULT_DETAILS.atomRoughness,
   });
 }
+
+const { registerPanelReset } = useSettingsSiderResetContext();
+const unregisterDetailsReset = registerPanelReset(PANEL_KEYS.details, onResetDisplay);
+onBeforeUnmount(() => {
+  unregisterDetailsReset();
+});
 </script>

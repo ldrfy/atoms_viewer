@@ -171,18 +171,12 @@
         {{ t('settings.panel.other.recordFpsHint') }}
       </a-typography-text>
     </a-form-item>
-
-    <a-form-item v-if="isOtherDirty">
-      <a-button block @click="resetOtherSettings">
-        {{ t('settings.panel.other.reset') }}
-      </a-button>
-    </a-form-item>
   </a-form>
 </template>
 
 <script setup lang="ts">
 import { ReloadOutlined } from '@ant-design/icons-vue';
-import { computed, inject } from 'vue';
+import { computed, onBeforeUnmount } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { message } from 'ant-design-vue';
 
@@ -195,13 +189,13 @@ import {
 } from '../../../lib/viewer/constants';
 import { DEFAULT_SETTINGS, type VisualStyleId } from '../../../lib/viewer/settings';
 import { viewerApiRef } from '../../../lib/viewer/bridge';
-import { settingsSiderDerivedContextKey } from '../context';
 import { getThemeMode, setThemeMode, type ThemeMode } from '../../../theme/mode';
 import { getVisualStylePreset, VISUAL_STYLE_PRESETS } from '../../../lib/viewer/visualStyles';
+import { PANEL_KEYS } from '../../../lib/viewer/panelKeys';
+import { useSettingsSiderResetContext } from '../useSettingsSiderResetContext';
 
 const { t } = useI18n();
 const { settings, patchSettings } = useSettingsSiderContext();
-const derivedContext = inject(settingsSiderDerivedContextKey, null);
 const viewerApi = computed(() => viewerApiRef.value);
 const PAN_STEP_MIN = 0.2;
 const PAN_STEP_MAX = 5;
@@ -315,25 +309,6 @@ const visualStyleOptions = computed(() =>
     .map(p => ({ label: t(p.labelKey), value: p.id })),
 );
 
-const isOtherDirty = computed(() => {
-  if (derivedContext) return derivedContext.otherDirty.value;
-  const styleBase = getVisualStylePreset(
-    settings.value.other.visualStyle ?? DEFAULT_SETTINGS.other.visualStyle,
-  ).display;
-  return (
-    settings.value.other.showAxes !== DEFAULT_SETTINGS.other.showAxes
-    || settings.value.other.refreshBondsOnPlay !== DEFAULT_SETTINGS.other.refreshBondsOnPlay
-    || settings.value.other.frame_rate !== DEFAULT_SETTINGS.other.frame_rate
-    || settings.value.view.panStepScale !== DEFAULT_SETTINGS.view.panStepScale
-    || settings.value.other.modelLightIntensity !== styleBase.modelLightIntensity
-    || settings.value.other.themeMode !== DEFAULT_SETTINGS.other.themeMode
-    || settings.value.other.visualStyle !== DEFAULT_SETTINGS.other.visualStyle
-    || settings.value.other.selectionHighlightColor !== DEFAULT_SETTINGS.other.selectionHighlightColor
-    || (settings.value.other.themeReadabilityCheckOnOpen ?? true)
-      !== (DEFAULT_SETTINGS.other.themeReadabilityCheckOnOpen ?? true)
-  );
-});
-
 function normalizeHexColor(v: unknown): string | null {
   if (v == null) return null;
   const s = String(v).trim();
@@ -372,4 +347,10 @@ function resetOtherSettings(): void {
   setThemeMode(DEFAULT_SETTINGS.other.themeMode);
   applyVisualStyle(DEFAULT_SETTINGS.other.visualStyle);
 }
+
+const { registerPanelReset } = useSettingsSiderResetContext();
+const unregisterOtherReset = registerPanelReset(PANEL_KEYS.other, resetOtherSettings);
+onBeforeUnmount(() => {
+  unregisterOtherReset();
+});
 </script>

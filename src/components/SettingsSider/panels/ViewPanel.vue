@@ -135,31 +135,19 @@
         </a-col>
       </a-row>
     </a-form-item>
-
-    <a-form-item>
-      <a-row :gutter="8" align="middle">
-        <a-col :flex="1">
-          <a-button block :disabled="!hasAnyLayer" @click="resetPose">
-            {{ t('settings.panel.view.resetPose') }}
-          </a-button>
-        </a-col>
-        <a-col :flex="1">
-          <a-button block :disabled="!hasAnyLayer" @click="resetDistance">
-            {{ t('settings.panel.view.resetView') }}
-          </a-button>
-        </a-col>
-      </a-row>
-    </a-form-item>
   </a-form>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { computed, ref, watch, onBeforeUnmount } from 'vue';
 import { message } from 'ant-design-vue';
 import { useI18n } from 'vue-i18n';
 import { normalizeViewPresets, type ViewPreset } from '../../../lib/viewer/viewPresets';
 import { DUAL_VIEW_DISTANCE_MIN } from '../../../lib/viewer/constants';
+import { DEFAULT_DISPLAY } from '../../../lib/viewer/settings';
 import { useSettingsSiderContext } from '../useSettingsSiderContext';
+import { PANEL_KEYS } from '../../../lib/viewer/panelKeys';
+import { useSettingsSiderResetContext } from '../useSettingsSiderResetContext';
 
 const { t } = useI18n();
 const { settings, patchSettings, hasAnyLayer } = useSettingsSiderContext();
@@ -257,4 +245,21 @@ const rotZModel = computed({
 function resetPose(): void {
   patchSettings({ view: { rotationDeg: { x: 0, y: 0, z: 0 } } });
 }
+
+function resetViewPanel(): void {
+  resetPose();
+  resetDistance();
+  patchSettings({
+    view: {
+      orthographic: DEFAULT_DISPLAY.orthographic,
+      viewPresets: [...DEFAULT_DISPLAY.viewPresets],
+    },
+  });
+}
+
+const { registerPanelReset } = useSettingsSiderResetContext();
+const unregisterViewReset = registerPanelReset(PANEL_KEYS.view, resetViewPanel);
+onBeforeUnmount(() => {
+  unregisterViewReset();
+});
 </script>

@@ -159,6 +159,7 @@ import { viewerApiRef } from '../../../lib/viewer/bridge';
 import { settingsSiderDirtyContextKey } from '../context';
 import { useSettingsSiderContext } from '../useSettingsSiderContext';
 import { useSettingsSiderControlContext } from '../useSettingsSiderControlContext';
+import { useSettingsSiderResetContext } from '../useSettingsSiderResetContext';
 import { PANEL_KEYS } from '../../../lib/viewer/panelKeys';
 import { DEFAULT_SETTINGS } from '../../../lib/viewer/settings';
 import { buildProjectZip, parseProjectZip } from '../../../lib/viewer/projectPackage';
@@ -273,9 +274,25 @@ watch(
   { immediate: true },
 );
 
+const { registerPanelReset } = useSettingsSiderResetContext();
+const unregisterFilesReset = registerPanelReset(PANEL_KEYS.files, resetFilesSettings);
 onBeforeUnmount(() => {
   dirtyContext?.setPanelDirty(PANEL_KEYS.files, false);
+  unregisterFilesReset();
 });
+
+function resetFilesSettings(): void {
+  patchSettings({
+    files: {
+      exportPngScale: DEFAULT_EXPORT_SCALE,
+      exportPngTransparent: DEFAULT_EXPORT_TRANSPARENT,
+      exportImageFormat: DEFAULT_SETTINGS.files.exportImageFormat,
+      cacheRemoteOnExport: DEFAULT_CACHE_REMOTE,
+    },
+  });
+  exportFormatModel.value = DEFAULT_EXPORT_FORMAT;
+  exportFullSettings.value = false;
+}
 
 async function onExportSettings(): Promise<void> {
   try {

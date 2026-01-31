@@ -107,6 +107,8 @@ import { buildElementColorRecordFromMap, parseColorMapKey } from '../../ViewerSt
 import { getElementColorHex } from '../../../lib/structure/chem';
 import { getVisualStylePreset } from '../../../lib/viewer/visualStyles';
 import { readApplyAllLayersFlags, writeApplyAllLayersFlags } from '../applyAllStorage';
+import { PANEL_KEYS } from '../../../lib/viewer/panelKeys';
+import { useSettingsSiderResetContext } from '../useSettingsSiderResetContext';
 
 import type { ColorMapRecord } from '../../ViewerStage/colorMap';
 
@@ -165,6 +167,24 @@ const colorMapModel = computed<ColorMapRecord>({
     else viewerApi.value.setActiveLayerColorMap(v);
   },
 });
+
+function resetColors(): void {
+  const api = viewerApi.value;
+  const keys = colorKeys.value;
+  if (keys.length === 0) return;
+  const baseMap = buildElementBaseColorMap(keys);
+  if (applyToAllLayers.value) {
+    patchSettings({ colors: { data: {} } });
+    if (api) {
+      api.resetAllLayersColorMapToDefaults();
+      api.refreshColorMap({ applyToAll: true });
+    }
+    return;
+  }
+  colorMapModel.value = baseMap;
+  updateColorTemplate(baseMap);
+  scheduleRefreshColorMap();
+}
 
 function buildElementBaseColorMap(keys: string[]): Record<string, string> {
   const out: Record<string, string> = {};
@@ -259,10 +279,14 @@ function scheduleRefreshColorMap(): void {
   }, 120);
 }
 
+const { registerPanelReset } = useSettingsSiderResetContext();
+const unregisterColorsReset = registerPanelReset(PANEL_KEYS.colors, resetColors);
+
 onBeforeUnmount(() => {
   if (refreshTimer) {
     window.clearTimeout(refreshTimer);
     refreshTimer = null;
   }
+  unregisterColorsReset();
 });
 </script>

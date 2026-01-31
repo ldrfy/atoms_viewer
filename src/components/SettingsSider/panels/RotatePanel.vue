@@ -108,17 +108,11 @@
         </a-col>
       </a-row>
     </a-form-item>
-
-    <a-form-item v-if="isAutoRotateDirty">
-      <a-button block :disabled="!hasAnyLayer" @click="resetAutoRotateSettings">
-        {{ t('settings.panel.rotation.reset') }}
-      </a-button>
-    </a-form-item>
   </a-form>
 </template>
 
 <script setup lang="ts">
-import { computed, inject } from 'vue';
+import { computed, onBeforeUnmount } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { DownOutlined } from '@ant-design/icons-vue';
 
@@ -134,13 +128,13 @@ import {
   AUTO_ROTATE_RESUME_MAX,
 } from '../../../lib/viewer/constants';
 import { DEFAULT_SETTINGS } from '../../../lib/viewer/settings';
+import { PANEL_KEYS } from '../../../lib/viewer/panelKeys';
 
 import { useSettingsSiderContext } from '../useSettingsSiderContext';
-import { settingsSiderDerivedContextKey } from '../context';
+import { useSettingsSiderResetContext } from '../useSettingsSiderResetContext';
 
 const { t } = useI18n();
 const { settings, patchSettings, hasAnyLayer } = useSettingsSiderContext();
-const derivedContext = inject(settingsSiderDerivedContextKey, null);
 
 function patchAutoRotate(patch: Partial<(typeof settings.value)['rotation']>): void {
   patchSettings({
@@ -217,20 +211,13 @@ function onAutoRotatePresetClick(info: any): void {
   autoRotatePresetIdModel.value = String(info?.key ?? DEFAULT_AUTO_ROTATE_PRESET_ID);
 }
 
-const isAutoRotateDirty = computed(() => {
-  if (derivedContext) return derivedContext.rotationDirty.value;
-  const cur = settings.value.rotation;
-  const def = DEFAULT_SETTINGS.rotation;
-  return (
-    !!cur.enabled !== !!def.enabled
-    || cur.presetId !== def.presetId
-    || cur.speedDegPerSec !== def.speedDegPerSec
-    || !!cur.pauseOnInteract !== !!def.pauseOnInteract
-    || cur.resumeDelayMs !== def.resumeDelayMs
-  );
-});
-
 function resetAutoRotateSettings(): void {
   patchAutoRotate({ ...DEFAULT_SETTINGS.rotation });
 }
+
+const { registerPanelReset } = useSettingsSiderResetContext();
+const unregisterRotationReset = registerPanelReset(PANEL_KEYS.rotation, resetAutoRotateSettings);
+onBeforeUnmount(() => {
+  unregisterRotationReset();
+});
 </script>

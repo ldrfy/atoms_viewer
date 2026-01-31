@@ -424,6 +424,14 @@ body.resizing {
 }
 
 .settings-panel-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+}
+
+.settings-panel-header-main {
+    flex: 1;
     display: inline-flex;
     align-items: center;
     gap: 8px;
@@ -433,13 +441,42 @@ body.resizing {
     font-size: 16px;
 }
 
-
 .settings-panel-dirty {
     width: 6px;
     height: 6px;
     border-radius: 999px;
     background: var(--ant-colorPrimary, #1677ff);
     box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.15);
+}
+
+.settings-panel-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 5px;
+    position: relative;
+}
+
+.settings-panel-reset-button {
+    padding: 4px 6px;
+    min-width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateX(-4px);
+}
+
+.settings-panel-indicator:hover .settings-panel-reset-button,
+.settings-panel-indicator:focus-within .settings-panel-reset-button,
+.settings-panel-reset-button:hover,
+.settings-panel-reset-button:focus-visible {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateX(0);
 }
 
 .settings-collapse .ant-collapse-content-box {

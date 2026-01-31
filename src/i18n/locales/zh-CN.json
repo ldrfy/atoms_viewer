@@ -158,8 +158,9 @@
         "importFailed": "导入失败，文件格式不正确。",
         "buildTime": "构建部署时间：",
         "buildTimeUnknown": "未知",
-        "panel": {
-            "view": {
+            "panel": {
+                "resetPanelButton": "恢复面板默认",
+                "view": {
                 "header": "视图控制",
                 "viewPresets": "视角选择",
                 "viewPresetsHint": "可勾选 1 个视角显示单视图，或勾选 2 个视角显示双视图（左右并排）。",

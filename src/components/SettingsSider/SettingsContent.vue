@@ -44,11 +44,33 @@
         >
           <template #header>
             <span class="settings-panel-header">
-              <component :is="p.icon" class="settings-panel-icon" />
-              <a-typography-text strong>
-                {{ t(p.headerKey) }}
-              </a-typography-text>
-              <span v-if="isPanelDirty(p.key)" class="settings-panel-dirty" aria-hidden="true" />
+              <span class="settings-panel-header-main">
+                <component :is="p.icon" class="settings-panel-icon" />
+                <a-typography-text strong>
+                  {{ t(p.headerKey) }}
+                </a-typography-text>
+                <span
+                  v-if="isPanelDirty(p.key)"
+                  class="settings-panel-indicator"
+                >
+                  <span class="settings-panel-dirty" aria-hidden="true" />
+                  <a-tooltip
+                    v-if="hasPanelReset(p.key)"
+                    :title="t('settings.panel.resetPanelButton')"
+                  >
+                    <a-button
+                      type="text"
+                      size="small"
+                      class="settings-panel-reset-button"
+                      :aria-label="t('settings.panel.resetPanelButton')"
+                      :title="t('settings.panel.resetPanelButton')"
+                      @click.stop="resetPanel(p.key)"
+                    >
+                      <ReloadOutlined />
+                    </a-button>
+                  </a-tooltip>
+                </span>
+              </span>
             </span>
           </template>
           <component :is="p.comp" />
@@ -86,6 +108,7 @@ import {
   CloseOutlined,
   EyeOutlined,
   FolderOpenOutlined,
+  ReloadOutlined,
   SettingOutlined,
   SlidersOutlined,
   SwapOutlined,
@@ -108,7 +131,11 @@ import {
 } from '../../lib/viewer/settings';
 import { useSettingsSiderContext } from './useSettingsSiderContext';
 import { useSettingsSiderControlContext } from './useSettingsSiderControlContext';
-import { settingsSiderDirtyContextKey, settingsSiderDerivedContextKey } from './context';
+import {
+  settingsSiderDirtyContextKey,
+  settingsSiderDerivedContextKey,
+  settingsSiderResetContextKey,
+} from './context';
 import { viewerApiRef } from '../../lib/viewer/bridge';
 import { parseColorMapKey } from '../ViewerStage/colorMap';
 import { APP_BUILD_TIME } from '../../lib/appMeta';
@@ -159,6 +186,20 @@ provide(settingsSiderDirtyContextKey, {
   },
 });
 
+const panelResetActions = new Map<string, () => void>();
+const panelResetFlags = reactive<Record<string, boolean>>({});
+function registerPanelReset(key: string, action: () => void): () => void {
+  panelResetActions.set(key, action);
+  panelResetFlags[key] = true;
+  return () => {
+    if (panelResetActions.get(key) !== action) return;
+    panelResetActions.delete(key);
+    delete panelResetFlags[key];
+  };
+}
+
+provide(settingsSiderResetContextKey, { registerPanelReset });
+
 const filesDirty = computed(() => {
   const exportScale = settings.value.files.exportPngScale ?? DEFAULT_SETTINGS.files.exportPngScale;
   const exportTransparent = settings.value.files.exportPngTransparent ?? DEFAULT_SETTINGS.files.exportPngTransparent;
@@ -174,11 +215,6 @@ const filesDirty = computed(() => {
 const layersDirty = computed(() => (viewerApi.value?.layers.value.length ?? 0) > 1);
 
 const detailsDirty = computed(() => {
-  const applyAll = settings.value.details.applyAllLayers
-    ?? DEFAULT_SETTINGS.details.applyAllLayers
-    ?? true;
-  const flagDirty = applyAll
-    !== (DEFAULT_SETTINGS.details.applyAllLayers ?? true);
   const cur = viewerApi.value?.activeLayerDisplay?.value ?? settings.value.details;
   const styleBase = getVisualStylePreset(
     settings.value.other.visualStyle ?? DEFAULT_SETTINGS.other.visualStyle,
@@ -191,7 +227,6 @@ const detailsDirty = computed(() => {
     || cur.bondFactor !== styleBase.bondFactor
     || cur.bondRadius !== styleBase.bondRadius
     || cur.atomRoughness !== styleBase.atomRoughness
-    || flagDirty
   );
 });
 
@@ -258,9 +293,6 @@ function arraysEqual(a: unknown, b: unknown): boolean {
 
 const colorsDirty = computed(() => {
   const cur = settings.value.colors;
-  const applyAll = cur.applyAllLayers ?? DEFAULT_SETTINGS.colors.applyAllLayers ?? true;
-  const flagDirty = applyAll
-    !== (DEFAULT_SETTINGS.colors.applyAllLayers ?? true);
   const visualStyle = settings.value.other.visualStyle ?? DEFAULT_SETTINGS.other.visualStyle;
   const expected = visualStyle === 'default'
     ? {}
@@ -278,7 +310,7 @@ const colorsDirty = computed(() => {
       break;
     }
   }
-  return flagDirty || dataDirty || layerDirty;
+  return dataDirty || layerDirty;
 });
 
 function hasCustomTypeMap(): boolean {
@@ -301,6 +333,14 @@ function isPanelDirty(key: string): boolean {
   if (key === PANEL_KEYS.rotation) return rotationDirty.value;
   if (key === PANEL_KEYS.other) return otherDirty.value;
   return false;
+}
+
+function hasPanelReset(key: string): boolean {
+  return Boolean(panelResetFlags[key]);
+}
+
+function resetPanel(key: string): void {
+  panelResetActions.get(key)?.();
 }
 
 const basePanels = [

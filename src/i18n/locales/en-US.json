@@ -158,8 +158,9 @@
         "importFailed": "Import failed. Invalid file format.",
         "buildTime": "Built at:",
         "buildTimeUnknown": "Unknown",
-        "panel": {
-            "view": {
+            "panel": {
+                "resetPanelButton": "Reset panel defaults",
+                "view": {
                 "header": "View Control",
                 "viewPresets": "View presets",
                 "viewPresetsHint": "Select 1 preset for single view, or select 2 presets for side-by-side dual view.",

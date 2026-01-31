@@ -80,6 +80,7 @@
           v-for="l in layerList"
           :key="l.id"
           class="layer-row"
+          @click="onRowSelect(l.id)"
         >
           <div class="layer-left" @click.stop>
             <a-checkbox
@@ -224,6 +225,15 @@ function onToggleLayerSelected(id: string, checked: boolean): void {
   const next = new Set(selectedLayerIds.value);
   if (checked) next.add(id);
   else next.delete(id);
+  selectedLayerIds.value = Array.from(next);
+}
+
+// Toggle selection when clicking the row (non-button area).
+// 点击行的非按钮区域时切换选中状态。
+function onRowSelect(id: string): void {
+  const next = new Set(selectedLayerIds.value);
+  if (next.has(id)) next.delete(id);
+  else next.add(id);
   selectedLayerIds.value = Array.from(next);
 }
 

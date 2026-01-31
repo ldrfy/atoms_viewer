@@ -14,6 +14,16 @@ export function createInspectSelectionHelper(deps: InspectSelectionHelperDeps) {
   const suppress = { value: false };
   const lastSig = { value: '' };
 
+  // Prefer layer file name as display label.
+  // 优先使用图层文件名作为显示标签。
+  function getLayerLabel(layerId: string): string {
+    const runtime = deps.runtime();
+    const info = runtime?.layers.value.find(l => l.id === layerId) ?? null;
+    const file = String(info?.source?.fileName ?? '').trim();
+    const name = String(info?.name ?? '').trim();
+    return file || name || layerId;
+  }
+
   // 生成选中列表签名，避免无意义重复同步。
   // Build a signature for selections to prevent redundant sync.
   function buildSelectionSignature(sel: InspectCtx['selected']['value']): string {
@@ -54,6 +64,7 @@ export function createInspectSelectionHelper(deps: InspectSelectionHelperDeps) {
     for (const item of items ?? []) {
       const base = {
         layerId,
+        layerName: getLayerLabel(layerId),
         atomIndex: item.atomIndex,
         element: item.element ?? 'E',
         id: item.id,

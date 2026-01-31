@@ -126,7 +126,7 @@ export function createViewerPickingController(deps: RenderDeps) {
     const info = runtime?.layers.value.find(l => l.id === layerId) ?? null;
     const name = String(info?.name ?? '').trim();
     const file = String(info?.source?.fileName ?? '').trim();
-    return name || file || layerId;
+    return file || name || layerId;
   }
 
   function ensureSelectionVisuals(): void {

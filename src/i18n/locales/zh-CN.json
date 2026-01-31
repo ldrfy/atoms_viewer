@@ -306,6 +306,8 @@
                 "modelLightIntensity": "模型灯光亮度",
                 "selectionColor": "选中高亮颜色",
                 "selectionColorHint": "用于选中高亮、连线与区域填充。",
+                "selectionColorReset": "恢复默认选中高亮颜色",
+                "selectionColorResetTooltip": "恢复内置的选中高亮颜色。",
                 "atomRoughness": "原子球材质粗糙度",
                 "visualStyle": "渲染风格",
                 "visualStyleDefault": "默认",

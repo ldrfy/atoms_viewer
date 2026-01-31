@@ -306,6 +306,8 @@
                 "modelLightIntensity": "Model light intensity",
                 "selectionColor": "Selection highlight color",
                 "selectionColorHint": "Used for selection halos, lines, and fill.",
+                "selectionColorReset": "Restore default selection color",
+                "selectionColorResetTooltip": "Reset to the built-in selection highlight color.",
                 "atomRoughness": "Atom material roughness",
                 "visualStyle": "Visual style",
                 "visualStyleDefault": "Default",

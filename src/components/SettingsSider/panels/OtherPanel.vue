@@ -67,7 +67,23 @@
             @input="onSelectionColorPickerChange(($event as any).target?.value)"
           >
         </a-col>
-        <a-col :span="18">
+        <a-col :span="4" class="settings-col-compact">
+          <a-tooltip
+            v-if="selectionHighlightColorIsCustom"
+            :title="t('settings.panel.other.selectionColorResetTooltip')"
+          >
+            <a-button
+              type="text"
+              size="small"
+              :aria-label="t('settings.panel.other.selectionColorReset')"
+              :title="t('settings.panel.other.selectionColorResetTooltip')"
+              @click="resetSelectionHighlightColor"
+            >
+              <ReloadOutlined />
+            </a-button>
+          </a-tooltip>
+        </a-col>
+        <a-col :span="14">
           <a-input
             :value="selectionHighlightColorModel"
             :placeholder="t('settings.panel.colors.hexPlaceholder')"
@@ -165,6 +181,7 @@
 </template>
 
 <script setup lang="ts">
+import { ReloadOutlined } from '@ant-design/icons-vue';
 import { computed, inject } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { message } from 'ant-design-vue';
@@ -223,6 +240,14 @@ const modelLightIntensityModel = computed({
 const selectionHighlightColorModel = computed({
   get: () => settings.value.other.selectionHighlightColor ?? DEFAULT_SETTINGS.other.selectionHighlightColor,
   set: (v: string) => patchSettings({ other: { selectionHighlightColor: v } }),
+});
+
+const selectionHighlightColorIsCustom = computed(() => {
+  const base = normalizeHexColor(DEFAULT_SETTINGS.other.selectionHighlightColor)
+    ?? DEFAULT_SETTINGS.other.selectionHighlightColor;
+  const current = normalizeHexColor(settings.value.other.selectionHighlightColor ?? '')
+    ?? base;
+  return current.toUpperCase() !== base.toUpperCase();
 });
 
 const themeModeModel = computed<ThemeMode>({
@@ -333,6 +358,10 @@ function onSelectionColorHexChange(v: unknown): void {
     return;
   }
   selectionHighlightColorModel.value = next;
+}
+
+function resetSelectionHighlightColor(): void {
+  selectionHighlightColorModel.value = DEFAULT_SETTINGS.other.selectionHighlightColor;
 }
 
 function resetOtherSettings(): void {

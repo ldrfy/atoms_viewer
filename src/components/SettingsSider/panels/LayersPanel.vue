@@ -52,7 +52,6 @@
         <a-tooltip :title="t('settings.panel.layers.hint')">
           <a-button
             type="text"
-            class="layers-help"
             :aria-label="t('settings.panel.layers.hint')"
           >
             <QuestionCircleOutlined />

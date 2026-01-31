@@ -150,7 +150,7 @@ export function createPngExporter(deps: {
       stage.renderer.getScissor(prevScissor);
       stage.renderer.getViewport(prevViewport);
       stage.renderer.setClearColor(
-        new THREE.Color(deps.getSettings().anim.backgroundColor),
+        new THREE.Color(deps.getSettings().other.backgroundColor),
         effectiveTransparent ? 0 : 1,
       );
 
@@ -196,9 +196,9 @@ export function createPngExporter(deps: {
 
       const settings = deps.getSettings();
       const stagePan = stage.getPanOffsets();
-      const panSingle = stagePan.single ?? settings.view.panOffset ?? { x: 0, y: 0, z: 0 };
-      const panLeft = stagePan.left ?? settings.view.panOffsetLeft ?? { x: 0, y: 0, z: 0 };
-      const panRight = stagePan.right ?? settings.view.panOffsetRight ?? { x: 0, y: 0, z: 0 };
+      const panSingle = stagePan.single ?? settings.pan.panOffset ?? { x: 0, y: 0, z: 0 };
+      const panLeft = stagePan.left ?? settings.pan.panOffsetLeft ?? { x: 0, y: 0, z: 0 };
+      const panRight = stagePan.right ?? settings.pan.panOffsetRight ?? { x: 0, y: 0, z: 0 };
       const orthoHalfHeight = stage.getOrthoHalfHeight();
 
       const camera = stage.getCamera();

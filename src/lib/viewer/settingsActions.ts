@@ -11,21 +11,12 @@ import {
 import { clearSessionStorage } from './sessionStorage';
 import { buildSettingsSnapshot } from './projectPackage';
 import { mergeCategorizedSettings } from './sessionTemplates';
+import { DEFAULT_COLORS, DEFAULT_DETAILS, DEFAULT_LAMMPS } from './settings';
 
 export type ParsedSettingsImport = {
   nextSettings: ViewerSettings;
   locale?: SupportLocale;
   layers?: LayersSnapshot;
-  applyAllLayers: {
-    details: boolean;
-    colors: boolean;
-    lammps: boolean;
-  };
-  animState: {
-    frameIndex: number;
-    playFps: number;
-    recordDelaySec: number;
-  };
 };
 
 function normalizeLayerSnapshots(
@@ -74,21 +65,24 @@ export async function applyDefaultSettings(params: {
 
   viewerApi.setActiveLayerDisplay(
     {
-      atomScale: defaults.details.atomScale,
-      showBonds: defaults.details.showBonds,
-      sphereSegments: defaults.details.sphereSegments,
-      bondFactor: defaults.details.bondFactor,
-      bondRadius: defaults.details.bondRadius,
-      atomRoughness: defaults.details.atomRoughness,
+      atomScale: DEFAULT_DETAILS.atomScale,
+      showBonds: DEFAULT_DETAILS.showBonds,
+      sphereSegments: DEFAULT_DETAILS.sphereSegments,
+      bondFactor: DEFAULT_DETAILS.bondFactor,
+      bondRadius: DEFAULT_DETAILS.bondRadius,
+      atomRoughness: DEFAULT_DETAILS.atomRoughness,
     },
     { applyToAll: true },
   );
 
   viewerApi.resetAllLayersTypeMapToDefaults({
-    templateMap: defaults.lammps.data,
+    templateMap: DEFAULT_LAMMPS.data,
     useAtomDefaults: false,
   });
   viewerApi.resetAllLayersColorMapToDefaults();
+  if (Object.keys(DEFAULT_COLORS.data ?? {}).length > 0) {
+    viewerApi.setAllLayersColorMap(DEFAULT_COLORS.data);
+  }
 
   return nextSettings;
 }
@@ -100,7 +94,38 @@ export async function clearAllSettings(params: {
   nextTick?: () => Promise<void>;
   onAfterClear?: () => void;
 }): Promise<void> {
+  // 先清空当前模型，避免立即把会话重新写回本地。
+  // Clear current models first to prevent re-saving the session.
+  try {
+    const api = params.viewerApi;
+    const ids = api?.layers?.value?.map(l => l.id) ?? [];
+    for (const id of ids) {
+      api?.removeLayer?.(id);
+    }
+  }
+  catch {
+    // ignore
+  }
   clearSettingsStorage();
+  // 清理本地缓存/偏好（不包含 settings 本身，会在下方重新写入）。
+  // Clear local caches/preferences (settings will be re-saved below).
+  try {
+    const keys = [
+      'atomsViewer.layerSnapshotCache.v1',
+      'atomsViewer.cacheRemoteModels',
+      'settings.details.applyAllLayers',
+      'settings.colors.applyAllLayers',
+      'settings.lammps.applyAllLayers',
+      'settingsDrawer.desktopWidth',
+      'settingsDrawer.mobileHeight',
+      'themeMode',
+      'locale',
+    ];
+    for (const key of keys) localStorage.removeItem(key);
+  }
+  catch {
+    // ignore
+  }
   params.onAfterClear?.();
   const nextSettings = await applyDefaultSettings(params);
   saveSettingsToStorage(nextSettings);
@@ -111,26 +136,18 @@ export async function buildSettingsExportJson(params: {
   settings: ViewerSettings;
   viewerApi: ViewerPublicApi | null;
   locale?: SupportLocale;
-  applyAllLayers: {
-    details: boolean;
-    colors: boolean;
-    lammps: boolean;
-  };
   fullSettings?: boolean;
 }): Promise<{ json: string; fileStem: string }> {
-  const { settings, viewerApi, locale, applyAllLayers, fullSettings } = params;
+  const { settings, viewerApi, locale, fullSettings } = params;
   const data = settings;
   const layerSnapshots: LayerSnapshot[] = viewerApi?.getLayerSnapshots
     ? await viewerApi.getLayerSnapshots()
     : [];
   const layersSortBy = viewerApi?.layerSortBy?.value ?? 'name,ASC';
-  const animState = viewerApi?.getAnimState ? viewerApi.getAnimState() : undefined;
   const payload = buildSettingsSnapshot(
     data,
     layerSnapshots,
     locale ? { locale } : undefined,
-    animState,
-    applyAllLayers,
     layersSortBy,
     viewerApi?.activeLayerId?.value ?? null,
     !fullSettings,
@@ -160,57 +177,12 @@ export function parseSettingsImport(raw: string): ParsedSettingsImport {
     throw new Error('Invalid settings format');
   }
 
-  const categorized = topSettings as any;
-  const details = categorized.details as Record<string, unknown> | undefined;
-  const colors = categorized.colors as Record<string, unknown> | undefined;
-  const applyAllLayers = {
-    details: typeof details?.applyAllLayers === 'boolean' ? details.applyAllLayers : true,
-    colors: typeof colors?.applyAllLayers === 'boolean' ? colors.applyAllLayers : true,
-    lammps: typeof (categorized.lammps as any)?.applyAllLayers === 'boolean'
-      ? (categorized.lammps as any).applyAllLayers
-      : false,
-  };
-
-  const normalizedColors: Record<string, string> = {};
-  if (colors && typeof colors === 'object' && typeof (colors as any).data === 'object') {
-    const colorData = (colors as any).data as Record<string, unknown>;
-    for (const [key, val] of Object.entries(colorData)) {
-      if (/\d/.test(key)) continue;
-      if (typeof val !== 'string') continue;
-      const c = String(val).trim();
-      if (!c) continue;
-      normalizedColors[key] = c;
-    }
-  }
-
-  if (colors && typeof colors === 'object') {
-    categorized.colors = {
-      applyAllLayers: applyAllLayers.colors,
-      data: normalizedColors,
-    };
-  }
-  if (categorized.lammps && typeof categorized.lammps === 'object') {
-    const raw = categorized.lammps as any;
-    categorized.lammps = {
-      applyAllLayers: applyAllLayers.lammps,
-      data: (raw.data && typeof raw.data === 'object') ? raw.data : {},
-    };
-  }
-
-  const extractedSettings = mergeCategorizedSettings(categorized as any);
-  const animState = {
-    frameIndex: Number(extractedSettings.anim.frameIndex ?? 0),
-    playFps: Number(extractedSettings.anim.playFps ?? 6),
-    recordDelaySec: Number(extractedSettings.anim.recordDelaySec ?? 0),
-  };
-
+  const extractedSettings = mergeCategorizedSettings(topSettings as any);
   const nextSettings = extractedSettings as ViewerSettings;
   return {
     nextSettings,
     locale,
     layers,
-    applyAllLayers,
-    animState,
   };
 }
 
@@ -249,32 +221,6 @@ export async function applyImportedSettings(params: {
       by: sortBy.startsWith('time') ? 'time' : 'name',
       direction: sortBy.endsWith('DESC') ? 'desc' : 'asc',
     });
-    viewerApi.applyAnimState?.(parsed.animState);
     return;
   }
-
-  viewerApi.setActiveLayerDisplay(
-    {
-      atomScale: nextSettings.details.atomScale,
-      sphereSegments: nextSettings.details.sphereSegments,
-      showBonds: nextSettings.details.showBonds,
-      bondFactor: nextSettings.details.bondFactor,
-      bondRadius: nextSettings.details.bondRadius,
-      atomRoughness: nextSettings.details.atomRoughness,
-    },
-    { applyToAll: true },
-  );
-  if (parsed.applyAllLayers.colors) {
-    viewerApi.setAllLayersColorMap(nextSettings.colors.data);
-    viewerApi.refreshColorMap({ applyToAll: true });
-  }
-  else {
-    viewerApi.setActiveLayerColorMap(nextSettings.colors.data);
-    viewerApi.refreshColorMap({ applyToAll: false });
-  }
-  viewerApi.resetAllLayersTypeMapToDefaults({
-    templateMap: nextSettings.lammps.data,
-    useAtomDefaults: false,
-  });
-  viewerApi.applyAnimState?.(parsed.animState);
 }

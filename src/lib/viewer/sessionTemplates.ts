@@ -6,13 +6,7 @@ export type CategorizedSettings = ViewerSettingsCategorized;
 
 export function buildCategorizedSettings(
   settings: ViewerSettings,
-  animState?: Partial<NonNullable<ViewerSettingsCategorized['anim']>>,
-  applyAllLayers?: Partial<{ details: boolean; colors: boolean; lammps: boolean }>,
 ): ViewerSettingsCategorized {
-  const nextAnim = {
-    ...settings.anim,
-    ...(animState ?? {}),
-  };
   return {
     files: { ...settings.files },
     rotation: { ...settings.rotation },
@@ -20,35 +14,16 @@ export function buildCategorizedSettings(
       ...settings.view,
       rotationDeg: { ...settings.view.rotationDeg },
       viewPresets: settings.view.viewPresets ? [...settings.view.viewPresets] : [],
-      // Pan settings are exported under "other" to keep view controls clean.
-      panOffset: { ...DEFAULT_SETTINGS.view.panOffset },
-      panOffsetLeft: { ...DEFAULT_SETTINGS.view.panOffsetLeft },
-      panOffsetRight: { ...DEFAULT_SETTINGS.view.panOffsetRight },
-      panStepScale: DEFAULT_SETTINGS.view.panStepScale,
     },
-    lammps: {
-      applyAllLayers: applyAllLayers?.lammps ?? settings.lammps.applyAllLayers,
-      data: { ...(settings.lammps.data ?? {}) },
+    pan: {
+      panOffset: { ...settings.pan.panOffset },
+      panOffsetLeft: { ...settings.pan.panOffsetLeft },
+      panOffsetRight: { ...settings.pan.panOffsetRight },
     },
-    details: {
-      ...settings.details,
-      applyAllLayers: applyAllLayers?.details ?? settings.details.applyAllLayers,
-    },
-    colors: {
-      applyAllLayers: applyAllLayers?.colors ?? settings.colors.applyAllLayers,
-      data: { ...settings.colors.data },
-    },
-    anim: {
-      ...nextAnim,
-    },
+    record: { ...settings.record },
     other: {
       ...settings.other,
-      panStepScale: settings.view.panStepScale,
-      panOffset: { ...settings.view.panOffset },
-      panOffsetLeft: { ...settings.view.panOffsetLeft },
-      panOffsetRight: { ...settings.view.panOffsetRight },
     },
-    inspectSelection: [...(settings.inspectSelection ?? [])],
   };
 }
 
@@ -64,25 +39,16 @@ export function mergeCategorizedSettings(
       viewPresets: DEFAULT_SETTINGS.view.viewPresets
         ? [...DEFAULT_SETTINGS.view.viewPresets]
         : [],
-      panOffset: { ...DEFAULT_SETTINGS.view.panOffset },
-      panOffsetLeft: { ...DEFAULT_SETTINGS.view.panOffsetLeft },
-      panOffsetRight: { ...DEFAULT_SETTINGS.view.panOffsetRight },
-      panStepScale: DEFAULT_SETTINGS.view.panStepScale,
     },
-    lammps: {
-      applyAllLayers: DEFAULT_SETTINGS.lammps.applyAllLayers,
-      data: { ...(DEFAULT_SETTINGS.lammps.data ?? {}) },
+    pan: {
+      panOffset: { ...DEFAULT_SETTINGS.pan.panOffset },
+      panOffsetLeft: { ...DEFAULT_SETTINGS.pan.panOffsetLeft },
+      panOffsetRight: { ...DEFAULT_SETTINGS.pan.panOffsetRight },
     },
-    details: { ...DEFAULT_SETTINGS.details },
-    colors: {
-      applyAllLayers: DEFAULT_SETTINGS.colors.applyAllLayers,
-      data: { ...DEFAULT_SETTINGS.colors.data },
-    },
-    anim: { ...DEFAULT_SETTINGS.anim },
+    record: { ...DEFAULT_SETTINGS.record },
     other: {
       ...DEFAULT_SETTINGS.other,
     },
-    inspectSelection: [...(DEFAULT_SETTINGS.inspectSelection ?? [])],
   };
   const apply = categorized as Partial<CategorizedSettings>;
 
@@ -112,33 +78,28 @@ export function mergeCategorizedSettings(
     };
   }
 
-  if (apply.lammps) {
-    base.lammps = {
-      ...base.lammps,
-      ...apply.lammps,
-      data: apply.lammps.data ? { ...apply.lammps.data } : base.lammps.data,
+  // 平移设置独立合并，避免覆盖其他轴。
+  // Merge pan settings without clobbering untouched axes.
+  if (apply.pan) {
+    base.pan = {
+      ...base.pan,
+      ...apply.pan,
+      panOffset: apply.pan.panOffset
+        ? { ...base.pan.panOffset, ...apply.pan.panOffset }
+        : base.pan.panOffset,
+      panOffsetLeft: apply.pan.panOffsetLeft
+        ? { ...base.pan.panOffsetLeft, ...apply.pan.panOffsetLeft }
+        : base.pan.panOffsetLeft,
+      panOffsetRight: apply.pan.panOffsetRight
+        ? { ...base.pan.panOffsetRight, ...apply.pan.panOffsetRight }
+        : base.pan.panOffsetRight,
     };
   }
 
-  if (apply.details) {
-    base.details = {
-      ...base.details,
-      ...apply.details,
-    };
-  }
-
-  if (apply.colors) {
-    base.colors = {
-      ...base.colors,
-      ...apply.colors,
-      data: apply.colors.data ? { ...base.colors.data, ...apply.colors.data } : base.colors.data,
-    };
-  }
-
-  if (apply.anim) {
-    base.anim = {
-      ...base.anim,
-      ...apply.anim,
+  if (apply.record) {
+    base.record = {
+      ...base.record,
+      ...apply.record,
     };
   }
 
@@ -147,54 +108,14 @@ export function mergeCategorizedSettings(
       ...base.other,
       ...apply.other,
     };
-    if (apply.other.panStepScale !== undefined) {
-      base.view.panStepScale = apply.other.panStepScale;
-    }
-    if (apply.other.panOffset) {
-      base.view.panOffset = { ...base.view.panOffset, ...apply.other.panOffset };
-    }
-    if (apply.other.panOffsetLeft) {
-      base.view.panOffsetLeft = { ...base.view.panOffsetLeft, ...apply.other.panOffsetLeft };
-    }
-    if (apply.other.panOffsetRight) {
-      base.view.panOffsetRight = { ...base.view.panOffsetRight, ...apply.other.panOffsetRight };
-    }
-  }
-  if (apply.inspectSelection) {
-    base.inspectSelection = [...apply.inspectSelection];
   }
 
   return base;
 }
 
-function arraysEqual<T>(a: T[] | undefined, b: T[] | undefined): boolean {
-  if (a === b) return true;
-  const aa = a ?? [];
-  const bb = b ?? [];
-  if (aa.length !== bb.length) return false;
-  for (let i = 0; i < aa.length; i += 1) {
-    if (aa[i] !== bb[i]) return false;
-  }
-  return true;
-}
-
-function lammpsEqual(a: CategorizedSettings['lammps'], b: CategorizedSettings['lammps']): boolean {
-  if (a === b) return true;
-  const aa = a?.data ?? {};
-  const bb = b?.data ?? {};
-  if ((a?.applyAllLayers ?? false) !== (b?.applyAllLayers ?? false)) return false;
-  const aKeys = Object.keys(aa);
-  const bKeys = Object.keys(bb);
-  if (aKeys.length !== bKeys.length) return false;
-  for (const k of aKeys) {
-    if (aa[k] !== bb[k]) return false;
-  }
-  return true;
-}
-
 /**
  * Remove default-valued fields from categorized settings.
- * 仅保留与默认值不同的字段（导出时减少体积，导入时按默认补全）。
+ * 仅保留与默认值不同的字段（导出时减小体积，导入时按默认补全）。
  */
 export function pruneDefaultSettings(
   input: ViewerSettingsCategorized,
@@ -225,53 +146,56 @@ export function pruneDefaultSettings(
   if (Object.keys(rot).length > 0) view.rotationDeg = rot as ViewerSettingsCategorized['view']['rotationDeg'];
   if (input.view.orthographic !== d.view.orthographic) view.orthographic = input.view.orthographic;
   if (input.view.resetViewSeq !== d.view.resetViewSeq) view.resetViewSeq = input.view.resetViewSeq;
-  if (!arraysEqual(input.view.viewPresets, d.view.viewPresets)) view.viewPresets = input.view.viewPresets;
   if (input.view.dualViewDistance !== d.view.dualViewDistance) view.dualViewDistance = input.view.dualViewDistance;
   if (input.view.initialDualViewDistance !== d.view.initialDualViewDistance) {
     view.initialDualViewDistance = input.view.initialDualViewDistance;
   }
   if (input.view.dualViewSplit !== d.view.dualViewSplit) view.dualViewSplit = input.view.dualViewSplit;
+  const curPresets = input.view.viewPresets ?? [];
+  const defPresets = d.view.viewPresets ?? [];
+  const presetsDiff = curPresets.length !== defPresets.length
+    || curPresets.some((v, i) => v !== defPresets[i]);
+  if (presetsDiff) view.viewPresets = curPresets;
   if (Object.keys(view).length > 0) out.view = view as ViewerSettingsCategorized['view'];
 
-  if (!lammpsEqual(input.lammps, d.lammps)) {
-    out.lammps = {
-      applyAllLayers: input.lammps.applyAllLayers,
-      data: { ...(input.lammps.data ?? {}) },
-    };
+  const pan: Partial<ViewerSettingsCategorized['pan']> = {};
+  if (
+    input.pan.panOffset.x !== d.pan.panOffset.x
+    || input.pan.panOffset.y !== d.pan.panOffset.y
+    || input.pan.panOffset.z !== d.pan.panOffset.z
+  ) {
+    pan.panOffset = { ...input.pan.panOffset };
   }
-
-  const details: Partial<ViewerSettingsCategorized['details']> = {};
-  if (input.details.representation !== d.details.representation) details.representation = input.details.representation;
-  if (input.details.atomScale !== d.details.atomScale) details.atomScale = input.details.atomScale;
-  if (input.details.showBonds !== d.details.showBonds) details.showBonds = input.details.showBonds;
-  if (input.details.sphereSegments !== d.details.sphereSegments) details.sphereSegments = input.details.sphereSegments;
-  if (input.details.bondFactor !== d.details.bondFactor) details.bondFactor = input.details.bondFactor;
-  if (input.details.bondRadius !== d.details.bondRadius) details.bondRadius = input.details.bondRadius;
-  if (input.details.atomRoughness !== d.details.atomRoughness) details.atomRoughness = input.details.atomRoughness;
-  if (input.details.applyAllLayers !== d.details.applyAllLayers) details.applyAllLayers = input.details.applyAllLayers;
-  if (Object.keys(details).length > 0) out.details = details as ViewerSettingsCategorized['details'];
-
-  const colors: Partial<ViewerSettingsCategorized['colors']> & { data?: Record<string, string> } = {};
-  if (input.colors.applyAllLayers !== d.colors.applyAllLayers) colors.applyAllLayers = input.colors.applyAllLayers;
-  const colorData: Record<string, string> = {};
-  for (const [key, val] of Object.entries(input.colors.data ?? {})) {
-    if (d.colors.data[key] !== val) colorData[key] = val;
+  if (
+    input.pan.panOffsetLeft.x !== d.pan.panOffsetLeft.x
+    || input.pan.panOffsetLeft.y !== d.pan.panOffsetLeft.y
+    || input.pan.panOffsetLeft.z !== d.pan.panOffsetLeft.z
+  ) {
+    pan.panOffsetLeft = { ...input.pan.panOffsetLeft };
   }
-  if (Object.keys(colorData).length > 0) colors.data = colorData;
-  if (Object.keys(colors).length > 0) out.colors = colors as ViewerSettingsCategorized['colors'];
-
-  const anim: Partial<ViewerSettingsCategorized['anim']> = {};
-  if (input.anim.backgroundColor !== d.anim.backgroundColor) anim.backgroundColor = input.anim.backgroundColor;
-  if (input.anim.backgroundColorMode !== d.anim.backgroundColorMode) anim.backgroundColorMode = input.anim.backgroundColorMode;
-  if (input.anim.backgroundTransparent !== d.anim.backgroundTransparent) anim.backgroundTransparent = input.anim.backgroundTransparent;
-  if (input.anim.backgroundTransparent === false) {
-    anim.backgroundColor = input.anim.backgroundColor;
-    anim.backgroundColorMode = input.anim.backgroundColorMode;
+  if (
+    input.pan.panOffsetRight.x !== d.pan.panOffsetRight.x
+    || input.pan.panOffsetRight.y !== d.pan.panOffsetRight.y
+    || input.pan.panOffsetRight.z !== d.pan.panOffsetRight.z
+  ) {
+    pan.panOffsetRight = { ...input.pan.panOffsetRight };
   }
-  if (input.anim.frameIndex !== d.anim.frameIndex) anim.frameIndex = input.anim.frameIndex;
-  if (input.anim.playFps !== d.anim.playFps) anim.playFps = input.anim.playFps;
-  if (input.anim.recordDelaySec !== d.anim.recordDelaySec) anim.recordDelaySec = input.anim.recordDelaySec;
-  if (Object.keys(anim).length > 0) out.anim = anim as ViewerSettingsCategorized['anim'];
+  if (Object.keys(pan).length > 0) out.pan = pan as ViewerSettingsCategorized['pan'];
+
+  const record: Partial<ViewerSettingsCategorized['record']> = {};
+  if (input.record.frame_rate !== d.record.frame_rate) record.frame_rate = input.record.frame_rate;
+  if (input.record.recordDelaySec !== d.record.recordDelaySec) record.recordDelaySec = input.record.recordDelaySec;
+  if (input.record.recordCropBox) {
+    const b = input.record.recordCropBox;
+    const db = d.record.recordCropBox;
+    const diff = !db
+      || b.x !== db.x
+      || b.y !== db.y
+      || b.w !== db.w
+      || b.h !== db.h;
+    if (diff) record.recordCropBox = { ...b };
+  }
+  if (Object.keys(record).length > 0) out.record = record as ViewerSettingsCategorized['record'];
 
   const other: Partial<ViewerSettingsCategorized['other']> = {};
   if (input.other.themeMode !== d.other.themeMode) other.themeMode = input.other.themeMode;
@@ -282,48 +206,20 @@ export function pruneDefaultSettings(
   if (input.other.modelLightIntensity !== d.other.modelLightIntensity) other.modelLightIntensity = input.other.modelLightIntensity;
   if (input.other.showAxes !== d.other.showAxes) other.showAxes = input.other.showAxes;
   if (input.other.refreshBondsOnPlay !== d.other.refreshBondsOnPlay) other.refreshBondsOnPlay = input.other.refreshBondsOnPlay;
-  if (input.other.frame_rate !== d.other.frame_rate) other.frame_rate = input.other.frame_rate;
   if (input.other.selectionHighlightColor !== d.other.selectionHighlightColor) {
     other.selectionHighlightColor = input.other.selectionHighlightColor;
   }
-  if (
-    input.other.panStepScale !== undefined
-    && input.other.panStepScale !== d.view.panStepScale
-  ) {
+  if (input.other.panStepScale !== d.other.panStepScale) {
     other.panStepScale = input.other.panStepScale;
   }
-  if (
-    input.other.panOffset
-    && (
-      input.other.panOffset.x !== d.view.panOffset.x
-      || input.other.panOffset.y !== d.view.panOffset.y
-      || input.other.panOffset.z !== d.view.panOffset.z
-    )
-  ) {
-    other.panOffset = { ...input.other.panOffset };
+  if (input.other.backgroundColor !== d.other.backgroundColor) {
+    other.backgroundColor = input.other.backgroundColor;
   }
-  if (
-    input.other.panOffsetLeft
-    && (
-      input.other.panOffsetLeft.x !== d.view.panOffsetLeft.x
-      || input.other.panOffsetLeft.y !== d.view.panOffsetLeft.y
-      || input.other.panOffsetLeft.z !== d.view.panOffsetLeft.z
-    )
-  ) {
-    other.panOffsetLeft = { ...input.other.panOffsetLeft };
+  if (input.other.backgroundColorMode !== d.other.backgroundColorMode) {
+    other.backgroundColorMode = input.other.backgroundColorMode;
   }
-  if (
-    input.other.panOffsetRight
-    && (
-      input.other.panOffsetRight.x !== d.view.panOffsetRight.x
-      || input.other.panOffsetRight.y !== d.view.panOffsetRight.y
-      || input.other.panOffsetRight.z !== d.view.panOffsetRight.z
-    )
-  ) {
-    other.panOffsetRight = { ...input.other.panOffsetRight };
-  }
-  if ((input.inspectSelection ?? []).length > 0) {
-    out.inspectSelection = [...(input.inspectSelection ?? [])];
+  if (input.other.backgroundTransparent !== d.other.backgroundTransparent) {
+    other.backgroundTransparent = input.other.backgroundTransparent;
   }
   if (Object.keys(other).length > 0) out.other = other as ViewerSettingsCategorized['other'];
 

@@ -58,16 +58,23 @@
                     v-if="hasPanelReset(p.key)"
                     :title="t('settings.panel.resetPanelButton')"
                   >
-                    <a-button
-                      type="text"
-                      size="small"
-                      class="settings-panel-reset-button"
-                      :aria-label="t('settings.panel.resetPanelButton')"
-                      :title="t('settings.panel.resetPanelButton')"
-                      @click.stop="resetPanel(p.key)"
+                    <a-popconfirm
+                      :title="t('settings.panel.resetPanelConfirm')"
+                      :ok-text="t('common.confirm')"
+                      :cancel-text="t('common.cancel')"
+                      @confirm.stop="resetPanel(p.key)"
                     >
-                      <ReloadOutlined />
-                    </a-button>
+                      <a-button
+                        type="text"
+                        size="small"
+                        class="settings-panel-reset-button"
+                        :aria-label="t('settings.panel.resetPanelButton')"
+                        :title="t('settings.panel.resetPanelButton')"
+                        @click.stop
+                      >
+                        <ReloadOutlined />
+                      </a-button>
+                    </a-popconfirm>
                   </a-tooltip>
                 </span>
               </span>
@@ -88,6 +95,12 @@
         <a-typography-text type="secondary" class="settings-text-secondary">
           {{ t('settings.clearStorageHint') }}
         </a-typography-text>
+        <a-typography-text type="secondary" class="settings-text-secondary">
+          {{ storageUsageText }}
+        </a-typography-text>
+        <a-typography-text type="secondary" class="settings-text-secondary">
+          {{ storageUsageDetailText }}
+        </a-typography-text>
       </div>
     </div>
 
@@ -100,7 +113,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, provide, reactive, watch, nextTick } from 'vue';
+import { computed, provide, reactive, watch, nextTick, ref, onMounted, onBeforeUnmount } from 'vue';
 import { useI18n } from 'vue-i18n';
 import {
   AppstoreOutlined,
@@ -145,6 +158,7 @@ import { getElementColorHex } from '../../lib/structure/chem';
 import { getVisualStylePreset } from '../../lib/viewer/visualStyles';
 import { PANEL_KEYS, PANEL_HEADER_KEYS } from '../../lib/viewer/panelKeys';
 import { clearAllSettings } from '../../lib/viewer/settingsActions';
+import { estimateSessionCacheBytes } from '../../lib/viewer/sessionStorage';
 
 const props = withDefaults(
   defineProps<{
@@ -200,6 +214,105 @@ function registerPanelReset(key: string, action: () => void): () => void {
 
 provide(settingsSiderResetContextKey, { registerPanelReset });
 
+const storageUsageText = ref<string>('');
+const storageUsageDetailText = ref<string>('');
+const localStorageBytes = ref<number>(0);
+const cacheStorageBytes = ref<number>(0);
+
+function formatBytes(bytes: number): string {
+  if (!Number.isFinite(bytes)) return '-';
+  const b = Math.max(0, bytes);
+  if (b < 1024) return `${Math.round(b)} B`;
+  const kb = b / 1024;
+  if (kb < 1024) return `${kb.toFixed(1)} KB`;
+  const mb = kb / 1024;
+  if (mb < 1024) return `${mb.toFixed(2)} MB`;
+  const gb = mb / 1024;
+  return `${gb.toFixed(2)} GB`;
+}
+
+function calcLocalStorageBytes(): number {
+  try {
+    const encoder = new TextEncoder();
+    let total = 0;
+    for (let i = 0; i < localStorage.length; i += 1) {
+      const key = localStorage.key(i);
+      if (!key) continue;
+      const val = localStorage.getItem(key) ?? '';
+      total += encoder.encode(key).length + encoder.encode(val).length;
+    }
+    return total;
+  }
+  catch {
+    return 0;
+  }
+}
+
+async function refreshStorageUsage(): Promise<void> {
+  try {
+    const localBytes = localStorageBytes.value;
+    const cacheBytes = cacheStorageBytes.value;
+    const computedUsed = localBytes + cacheBytes;
+    if (navigator.storage?.estimate) {
+      const info = await navigator.storage.estimate();
+      const usedRaw = info.usage ?? computedUsed;
+      const used = Math.max(usedRaw ?? 0, computedUsed);
+      const total = info.quota;
+      if (typeof total === 'number' && total > 0) {
+        storageUsageText.value = t('settings.storageUsage', {
+          used: formatBytes(used),
+          total: formatBytes(total),
+        });
+        return;
+      }
+      storageUsageText.value = t('settings.storageUsageOnly', {
+        used: formatBytes(used),
+      });
+      storageUsageDetailText.value = t('settings.storageUsageDetail', {
+        local: formatBytes(localBytes),
+        cache: formatBytes(cacheBytes),
+      });
+      return;
+    }
+    storageUsageText.value = t('settings.storageUsageOnly', {
+      used: formatBytes(computedUsed),
+    });
+    storageUsageDetailText.value = t('settings.storageUsageDetail', {
+      local: formatBytes(localBytes),
+      cache: formatBytes(cacheBytes),
+    });
+  }
+  catch {
+    storageUsageText.value = t('settings.storageUsageUnknown');
+    storageUsageDetailText.value = '';
+  }
+}
+
+async function refreshLocalStorageUsage(): Promise<void> {
+  localStorageBytes.value = calcLocalStorageBytes();
+  await refreshStorageUsage();
+}
+
+async function refreshCacheStorageUsage(): Promise<void> {
+  cacheStorageBytes.value = await estimateSessionCacheBytes();
+  await refreshStorageUsage();
+}
+
+void refreshLocalStorageUsage();
+void refreshCacheStorageUsage();
+
+function onSessionSaved(): void {
+  void refreshCacheStorageUsage();
+}
+
+onMounted(() => {
+  window.addEventListener('atoms-viewer:session-saved', onSessionSaved);
+});
+
+onBeforeUnmount(() => {
+  window.removeEventListener('atoms-viewer:session-saved', onSessionSaved);
+});
+
 const filesDirty = computed(() => {
   const exportScale = settings.value.files.exportPngScale ?? DEFAULT_SETTINGS.files.exportPngScale;
   const exportTransparent = settings.value.files.exportPngTransparent ?? DEFAULT_SETTINGS.files.exportPngTransparent;
@@ -215,7 +328,7 @@ const filesDirty = computed(() => {
 const layersDirty = computed(() => (viewerApi.value?.layers.value.length ?? 0) > 1);
 
 const detailsDirty = computed(() => {
-  const cur = viewerApi.value?.activeLayerDisplay?.value ?? settings.value.details;
+  const cur = viewerApi.value?.activeLayerDisplay?.value ?? DEFAULT_DETAILS;
   const styleBase = getVisualStylePreset(
     settings.value.other.visualStyle ?? DEFAULT_SETTINGS.other.visualStyle,
   ).display;
@@ -264,11 +377,13 @@ const otherDirty = computed(() => {
   return (
     settings.value.other.showAxes !== DEFAULT_SETTINGS.other.showAxes
     || settings.value.other.refreshBondsOnPlay !== DEFAULT_SETTINGS.other.refreshBondsOnPlay
-    || settings.value.other.frame_rate !== DEFAULT_SETTINGS.other.frame_rate
-    || settings.value.view.panStepScale !== DEFAULT_SETTINGS.view.panStepScale
+    || settings.value.other.panStepScale !== DEFAULT_SETTINGS.other.panStepScale
     || settings.value.other.themeMode !== DEFAULT_SETTINGS.other.themeMode
     || settings.value.other.visualStyle !== DEFAULT_SETTINGS.other.visualStyle
     || settings.value.other.modelLightIntensity !== styleBase.modelLightIntensity
+    || settings.value.other.backgroundColor !== DEFAULT_SETTINGS.other.backgroundColor
+    || settings.value.other.backgroundColorMode !== DEFAULT_SETTINGS.other.backgroundColorMode
+    || settings.value.other.backgroundTransparent !== DEFAULT_SETTINGS.other.backgroundTransparent
     || settings.value.other.selectionHighlightColor !== DEFAULT_SETTINGS.other.selectionHighlightColor
     || (settings.value.other.themeReadabilityCheckOnOpen ?? true)
       !== (DEFAULT_SETTINGS.other.themeReadabilityCheckOnOpen ?? true)
@@ -292,12 +407,10 @@ function arraysEqual(a: unknown, b: unknown): boolean {
 }
 
 const colorsDirty = computed(() => {
-  const cur = settings.value.colors;
   const visualStyle = settings.value.other.visualStyle ?? DEFAULT_SETTINGS.other.visualStyle;
   const expected = visualStyle === 'default'
     ? {}
     : { ...getVisualStylePreset(visualStyle).colorMapTemplate };
-  const dataDirty = Object.keys(cur.data ?? {}).length > 0;
   const layerRecord = viewerApi.value?.activeLayerColorMap?.value ?? {};
   let layerDirty = false;
   for (const [key, value] of Object.entries(layerRecord)) {
@@ -310,7 +423,7 @@ const colorsDirty = computed(() => {
       break;
     }
   }
-  return dataDirty || layerDirty;
+  return layerDirty;
 });
 
 function hasCustomTypeMap(): boolean {
@@ -413,6 +526,8 @@ function onClearStorage(): void {
         nextTick,
         onAfterClear: notifyClearStorageUi,
       });
+      await refreshLocalStorageUsage();
+      await refreshCacheStorageUsage();
     },
   });
 }

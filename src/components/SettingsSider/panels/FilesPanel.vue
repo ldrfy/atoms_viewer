@@ -168,7 +168,6 @@ import type { StructureExportFormat } from '../../../lib/structure/export';
 import { buildSettingsExportJson, applyImportedSettings, parseSettingsImport } from '../../../lib/viewer/settingsActions';
 import { buildExportFilename } from '../../../lib/file/filename';
 import { setThemeMode } from '../../../theme/mode';
-import { readApplyAllLayersFlags, writeApplyAllLayersFlags } from '../applyAllStorage';
 
 const { t } = useI18n();
 const { hasAnyLayer, settings, patchSettings } = useSettingsSiderContext();
@@ -300,11 +299,6 @@ async function onExportSettings(): Promise<void> {
       settings: settings.value,
       viewerApi: viewerApi.value,
       locale: getLocale(),
-      applyAllLayers: {
-        details: readApplyAllLayersFlags().details ?? true,
-        colors: readApplyAllLayersFlags().colors ?? true,
-        lammps: readApplyAllLayersFlags().lammps ?? false,
-      },
       fullSettings: exportFullSettings.value,
     });
     const blob = new Blob([json], { type: 'application/json' });
@@ -338,7 +332,6 @@ function onImportFile(e: Event): void {
       const locale = parsed.locale && SUPPORT_LOCALES.includes(parsed.locale)
         ? parsed.locale
         : undefined;
-      writeApplyAllLayersFlags(parsed.applyAllLayers);
       await applyImportedSettings({
         parsed: { ...parsed, locale },
         viewerApi: viewerApi.value,
@@ -419,14 +412,8 @@ async function onExportProject(): Promise<void> {
       sources,
       modelFileName: api.parseInfo?.fileName ?? 'atoms-viewer',
       app: { locale: getLocale() },
-      applyAllLayers: {
-        details: readApplyAllLayersFlags().details ?? true,
-        colors: readApplyAllLayersFlags().colors ?? true,
-        lammps: readApplyAllLayersFlags().lammps ?? false,
-      },
       layersSortBy: api.layerSortBy?.value ?? 'name,ASC',
       activeLayerId: api.activeLayerId?.value ?? null,
-      animState: api.getAnimState?.(),
     });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');

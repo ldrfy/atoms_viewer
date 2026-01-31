@@ -10,14 +10,9 @@ export type SettingsPatch = {
   view?: Omit<Partial<ViewerSettings['view']>, 'rotationDeg'> & {
     rotationDeg?: Partial<RotationDeg>;
   };
-  lammps?: Partial<ViewerSettings['lammps']>;
-  details?: Partial<ViewerSettings['details']>;
-  colors?: Partial<ViewerSettings['colors']> & {
-    data?: Record<string, string>;
-  };
-  anim?: Partial<ViewerSettings['anim']>;
+  pan?: Partial<ViewerSettings['pan']>;
+  record?: Partial<ViewerSettings['record']>;
   other?: Partial<ViewerSettings['other']>;
-  inspectSelection?: ViewerSettings['inspectSelection'];
 };
 
 /**
@@ -33,12 +28,13 @@ export function cloneSettings(v: ViewerSettings): ViewerSettings {
       rotationDeg: { ...v.view.rotationDeg },
       viewPresets: v.view.viewPresets ? [...v.view.viewPresets] : [],
     },
-    lammps: { ...v.lammps, data: { ...(v.lammps.data ?? {}) } },
-    details: { ...v.details },
-    colors: { ...v.colors, data: { ...v.colors.data } },
-    anim: { ...v.anim },
+    pan: {
+      panOffset: { ...v.pan.panOffset },
+      panOffsetLeft: { ...v.pan.panOffsetLeft },
+      panOffsetRight: { ...v.pan.panOffsetRight },
+    },
+    record: { ...v.record },
     other: { ...v.other },
-    inspectSelection: [...(v.inspectSelection ?? [])],
   };
 }
 
@@ -63,24 +59,25 @@ export function mergeSettings(
       viewPresets: patch.view.viewPresets ?? next.view.viewPresets,
     };
   }
-  if (patch.lammps) {
-    next.lammps = {
-      ...next.lammps,
-      ...patch.lammps,
-      data: patch.lammps.data ? { ...patch.lammps.data } : next.lammps.data,
+  // 平移设置单独合并，避免覆盖未修改的轴。
+  // Merge pan settings to avoid overwriting untouched axes.
+  if (patch.pan) {
+    next.pan = {
+      ...next.pan,
+      ...patch.pan,
+      panOffset: patch.pan.panOffset
+        ? { ...next.pan.panOffset, ...patch.pan.panOffset }
+        : next.pan.panOffset,
+      panOffsetLeft: patch.pan.panOffsetLeft
+        ? { ...next.pan.panOffsetLeft, ...patch.pan.panOffsetLeft }
+        : next.pan.panOffsetLeft,
+      panOffsetRight: patch.pan.panOffsetRight
+        ? { ...next.pan.panOffsetRight, ...patch.pan.panOffsetRight }
+        : next.pan.panOffsetRight,
     };
   }
-  if (patch.details) next.details = { ...next.details, ...patch.details };
-  if (patch.colors) {
-    next.colors = {
-      ...next.colors,
-      ...patch.colors,
-      data: patch.colors.data ? { ...patch.colors.data } : next.colors.data,
-    };
-  }
-  if (patch.anim) next.anim = { ...next.anim, ...patch.anim };
+  if (patch.record) next.record = { ...next.record, ...patch.record };
   if (patch.other) next.other = { ...next.other, ...patch.other };
-  if (patch.inspectSelection) next.inspectSelection = [...patch.inspectSelection];
   return next;
 }
 

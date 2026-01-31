@@ -146,17 +146,17 @@ const sortOptions = computed(() => ([
  */
 function layerPrimaryText(l: any): string {
   const name = String(l?.name ?? '').trim();
-  const file = String(l?.sourceFileName ?? '').trim();
+  const file = String(l?.source?.fileName ?? '').trim();
   return name || file || String(l?.id ?? '');
 }
 
 /**
  * Secondary text shown under the layer name.
- * Avoid showing the same file name twice (e.g. when l.name === l.sourceFileName).
+ * Avoid showing the same file name twice (e.g. when l.name === l.source?.fileName).
  */
 function layerSecondaryText(l: any): string {
   const name = String(l?.name ?? '').trim();
-  const file = String(l?.sourceFileName ?? '').trim();
+  const file = String(l?.source?.fileName ?? '').trim();
   const atoms = Number.isFinite(l?.atomCount) ? Number(l.atomCount) : 0;
   const frames = Number.isFinite(l?.frameCount) ? Number(l.frameCount) : 0;
   const atomsText = new Intl.NumberFormat().format(atoms);

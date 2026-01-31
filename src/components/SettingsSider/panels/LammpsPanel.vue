@@ -6,7 +6,7 @@
       <a-typography-text type="secondary">
         {{ t('settings.panel.lammps.currentLayer') }}:
       </a-typography-text>
-      <a-tooltip v-if="activeLayerInfo" :title="activeLayerInfo.sourceFileName || activeLayerInfo.id">
+      <a-tooltip v-if="activeLayerInfo" :title="activeLayerInfo.source?.fileName || activeLayerInfo.id">
         <a-tag class="settings-tag-full">
           <span class="settings-tag-ellipsis">
             {{ activeLayerInfo.name }}
@@ -100,7 +100,7 @@ import { readApplyAllLayersFlags, writeApplyAllLayersFlags } from '../applyAllSt
 import type { LammpsTypeMapRecord } from '../../../lib/viewer/settings';
 
 const { t } = useI18n();
-const { patchSettings, hasAnyLayer, settings } = useSettingsSiderContext();
+const { hasAnyLayer } = useSettingsSiderContext();
 
 const viewerApi = computed(() => viewerApiRef.value);
 const layerList = computed(() => viewerApi.value?.layers.value ?? []);
@@ -150,18 +150,16 @@ watch(
   { immediate: true },
 );
 
-const applyAllLayersModel = computed<boolean>({
-  get: () => settings.value.lammps.applyAllLayers
-    ?? readApplyAllLayersFlags().lammps
-    ?? false,
-  set: (v: boolean) => {
-    patchSettings({ lammps: { applyAllLayers: v } });
-    writeApplyAllLayersFlags({
-      ...readApplyAllLayersFlags(),
-      lammps: v,
-    });
+const applyAllLayersModel = ref(
+  readApplyAllLayersFlags().lammps ?? false,
+);
+
+watch(
+  applyAllLayersModel,
+  (v) => {
+    writeApplyAllLayersFlags({ lammps: v });
   },
-});
+);
 
 function onLammpsElementChange(idx: number, v: unknown): void {
   const element = toElement(v);
@@ -174,7 +172,6 @@ function onLammpsElementChange(idx: number, v: unknown): void {
 function onApplyTypeMap(): void {
   const map = { ...draftMap.value };
   lastApplied.value = { ...map };
-  patchSettings({ lammps: { data: { ...map } } });
   if (applyAllLayersModel.value) {
     viewerApi.value?.applyTypeMapToAllLayers?.(map);
   }
@@ -188,7 +185,6 @@ function onUndoTypeMap(): void {
   if (!lastApplied.value) return;
   const map = { ...lastApplied.value };
   draftMap.value = { ...map };
-  patchSettings({ lammps: { data: { ...map } } });
   if (applyAllLayersModel.value) {
     viewerApi.value?.applyTypeMapToAllLayers?.(map);
   }

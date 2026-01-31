@@ -8,6 +8,7 @@ import type {
 export type LayerSourceInfo = {
   md5?: string;
   size?: number;
+  storedSize?: number;
   fileName?: string;
   mime?: string;
   type?: 'file' | 'url' | 'text';
@@ -33,6 +34,11 @@ export type LayerSnapshot = {
   };
   /** Per-layer atom selections (for export/恢复) */
   inspectSelection?: InspectSelectionItem[];
+  /** Per-layer animation state */
+  anim?: {
+    frameIndex?: number;
+    playFps?: number;
+  };
 };
 
 export type LayerSortBy = 'time,ASC' | 'time,DESC' | 'name,ASC' | 'name,DESC';

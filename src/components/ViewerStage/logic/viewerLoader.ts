@@ -12,12 +12,11 @@ import type { SettingsPatch } from '../../../lib/viewer/mergeSettings';
 import {
   hasUnknownElementMappingForTypeIds,
   DEFAULT_DETAILS,
-  lammpsRecordToRows,
-  lammpsRowsToRecord,
+  DEFAULT_LAMMPS,
 } from '../../../lib/viewer/settings';
 import { getElementColorHex, normalizeElementSymbol } from '../../../lib/structure/chem';
 import { getVisualStylePreset } from '../../../lib/viewer/visualStyles';
-import { buildElementColorRecordFromMap, type ColorMapRecord } from '../colorMap';
+import { type ColorMapRecord } from '../colorMap';
 import { normalizeViewPresets } from '../../../lib/viewer/viewPresets';
 import { computeMd5ForArrayBuffer } from '../../../lib/file/md5';
 import type { LayerSourceInfo } from '../../../lib/viewer/sessionTypes';
@@ -150,16 +149,13 @@ export function createViewerLoader(deps: {
     const runtime = deps.getRuntime();
 
     const runtimeMap = (runtime?.activeTypeMap.value ?? {}) as LammpsTypeMapRecord;
-    const settingsMap = getSettings().lammps.data ?? {};
-    const runtimeRows = lammpsRecordToRows(runtimeMap)
-      .map(r => ({ typeId: r.typeId, element: r.element }));
-    const settingsRows = lammpsRecordToRows(settingsMap)
-      .map(r => ({ typeId: r.typeId, element: r.element }));
-    const baseRows = (reason === 'reparse'
-      ? runtimeRows
-      : runtimeRows.length > 0
-        ? runtimeRows
-        : settingsRows);
+    const settingsMap = DEFAULT_LAMMPS.data ?? {};
+    const hasRuntimeMap = Object.keys(runtimeMap ?? {}).length > 0;
+    const baseMap = (reason === 'reparse'
+      ? runtimeMap
+      : hasRuntimeMap
+        ? runtimeMap
+        : settingsMap);
 
     const atoms0
       = model.frames && model.frames[0] ? model.frames[0] : model.atoms;
@@ -168,8 +164,7 @@ export function createViewerLoader(deps: {
 
     const detectedTypeIds = detectedTypeIdsRaw;
 
-    const mergedRows = mergeTypeMap(baseRows, detectedTypeIds, defaults) as any;
-    const mergedMap = lammpsRowsToRecord(mergedRows ?? []);
+    const mergedMap = mergeTypeMap(baseMap, detectedTypeIds, defaults);
 
     const hasUnknownForThisDump = hasUnknownElementMappingForTypeIds(
       mergedMap,
@@ -177,7 +172,7 @@ export function createViewerLoader(deps: {
     );
     lastLoadNeedsLammpsFocus = opts?.suppressWarning ? false : hasUnknownForThisDump;
 
-    if (runtime && mergedRows) {
+    if (runtime) {
       runtime.setActiveLayerTypeMap(mergedMap);
     }
 
@@ -208,7 +203,7 @@ export function createViewerLoader(deps: {
 
     const model = parseStructure(text, forcedName, {
       lammpsTypeToElement: buildLammpsTypeToElementMap(
-        reason === 'load' ? [] : lammpsRecordToRows(getSettings().lammps.data),
+        reason === 'load' ? {} : DEFAULT_LAMMPS.data,
       ),
       lammpsSortById: true,
     });
@@ -323,14 +318,6 @@ export function createViewerLoader(deps: {
     }
   }
 
-  function cloneTypeMap(map: LammpsTypeMapRecord | undefined): LammpsTypeMapRecord {
-    return { ...(map ?? {}) };
-  }
-
-  function cloneColorMap(map: ColorMapRecord | undefined): ColorMapRecord {
-    return { ...(map ?? {}) };
-  }
-
   async function refreshTypeMap(): Promise<void> {
     const stage = deps.getStage();
     const runtime = deps.getRuntime();
@@ -360,12 +347,6 @@ export function createViewerLoader(deps: {
       }
       deps.isLoading.value = false;
     }
-
-    if (deps.patchSettings) {
-      deps.patchSettings({
-        lammps: { data: cloneTypeMap(runtime.activeTypeMap.value) },
-      });
-    }
   }
 
   async function refreshColorMap(opts?: { applyToAll?: boolean }): Promise<void> {
@@ -392,13 +373,6 @@ export function createViewerLoader(deps: {
         );
       }
       deps.isLoading.value = false;
-    }
-
-    if (deps.patchSettings && opts?.applyToAll) {
-      const map = cloneColorMap(runtime.activeColorMap.value);
-      deps.patchSettings({
-        colors: { data: buildElementColorRecordFromMap(map, buildBaseColorMap(map)) },
-      });
     }
   }
 

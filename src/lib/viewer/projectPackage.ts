@@ -1,25 +1,22 @@
 import JSZip from 'jszip';
 import { buildExportFilename } from '../file/filename';
 import { APP_BUILD_TIME, APP_VERSION } from '../appMeta';
-import type { ViewerSettings } from './settings';
-import { DEFAULT_DETAILS } from './settings';
+import type { ViewerSettings, DetailsSettingsGroup } from './settings';
+import { DEFAULT_DETAILS, DEFAULT_LAYER_ANIM } from './settings';
 import type {
   LayerSnapshot,
   LayerSourceData,
   LayerSortBy,
   LayersSnapshot,
   SessionSnapshot,
-  ViewerSettingsCategorized,
 } from './sessionTypes';
 import { buildCategorizedSettings, pruneDefaultSettings } from './sessionTemplates';
+import { readSessionCacheSizeMap } from './sessionStorage';
 
-type ApplyAllLayersFlags = {
-  details: boolean;
-  colors: boolean;
-  lammps: boolean;
-};
-
-function pruneLayerSnapshot(layer: LayerSnapshot): LayerSnapshot {
+function pruneLayerSnapshot(
+  layer: LayerSnapshot,
+  storedSizeMap?: Record<string, number>,
+): LayerSnapshot {
   const out: LayerSnapshot = {};
   if (layer.id) out.id = layer.id;
 
@@ -35,6 +32,13 @@ function pruneLayerSnapshot(layer: LayerSnapshot): LayerSnapshot {
     const nextSource: LayerSnapshot['source'] = {};
     if (src.md5) nextSource.md5 = src.md5;
     if (Number.isFinite(src.size)) nextSource.size = src.size;
+    if (Number.isFinite(src.storedSize)) {
+      nextSource.storedSize = src.storedSize;
+    }
+    else if (src.md5 && storedSizeMap) {
+      const cachedSize = storedSizeMap[src.md5];
+      if (Number.isFinite(cachedSize)) nextSource.storedSize = cachedSize;
+    }
     if (src.fileName) nextSource.fileName = src.fileName;
     if (src.mime) nextSource.mime = src.mime;
     if (src.type) nextSource.type = src.type;
@@ -43,8 +47,8 @@ function pruneLayerSnapshot(layer: LayerSnapshot): LayerSnapshot {
     if (Object.keys(nextSource).length > 0) out.source = nextSource;
   }
 
-  const details = (layer.details ?? {}) as Partial<ViewerSettings['details']>;
-  const nextDetails: Partial<ViewerSettings['details']> = {};
+  const details = (layer.details ?? {}) as Partial<DetailsSettingsGroup>;
+  const nextDetails: Partial<DetailsSettingsGroup> = {};
   if (details.representation && details.representation !== DEFAULT_DETAILS.representation) {
     nextDetails.representation = details.representation;
   }
@@ -78,12 +82,38 @@ function pruneLayerSnapshot(layer: LayerSnapshot): LayerSnapshot {
   }
 
   if (layer.inspectSelection && layer.inspectSelection.length > 0) {
-    out.inspectSelection = layer.inspectSelection.map(item => ({
-      ...item,
-      md5: item.md5 ?? layer.source?.md5,
-      layerId: item.layerId ?? layer.id,
-      layerName: item.layerName ?? layer.name ?? layer.source?.fileName,
-    })) as LayerSnapshot['inspectSelection'];
+    const seen = new Set<string>();
+    const normalized = layer.inspectSelection
+      .map(item => ({
+        atomIndex: item.atomIndex,
+        element: item.element,
+        position: item.position,
+        typeId: item.typeId,
+        id: item.id,
+      }))
+      .filter((item) => {
+        const key = `${item.atomIndex}:${item.element ?? ''}:${item.position?.join(',') ?? ''}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+    if (normalized.length > 0) {
+      out.inspectSelection = normalized as LayerSnapshot['inspectSelection'];
+    }
+  }
+
+  if (layer.anim) {
+    const anim = layer.anim;
+    const nextAnim: NonNullable<LayerSnapshot['anim']> = {};
+    if (Number.isFinite(anim.frameIndex) && anim.frameIndex !== DEFAULT_LAYER_ANIM.frameIndex) {
+      nextAnim.frameIndex = anim.frameIndex;
+    }
+    if (Number.isFinite(anim.playFps) && anim.playFps !== DEFAULT_LAYER_ANIM.playFps) {
+      nextAnim.playFps = anim.playFps;
+    }
+    if (Object.keys(nextAnim).length > 0) {
+      out.anim = nextAnim;
+    }
   }
 
   return out;
@@ -93,54 +123,28 @@ export function buildSettingsSnapshot(
   settings: ViewerSettings,
   layers: LayerSnapshot[],
   app?: SessionSnapshot['app'],
-  animState?: Partial<NonNullable<ViewerSettingsCategorized['anim']>>,
-  applyAllLayers?: Partial<ApplyAllLayersFlags>,
   layersSortBy: LayerSortBy = 'name,ASC',
   activeLayerId?: string | null,
   compact: boolean = true,
 ): SessionSnapshot {
   const savedAt = new Date().toISOString();
-  const activeSnap = layers?.find(l => (l.id ?? '') === (activeLayerId ?? '')) ?? layers?.[0];
-  const fallbackColors = (() => {
-    if (Object.keys(settings.colors.data ?? {}).length > 0) return settings.colors.data;
-    const data = activeSnap?.colors?.data ?? {};
-    const out: Record<string, string> = {};
-    for (const [key, value] of Object.entries(data)) {
-      const [elementRaw = ''] = String(key ?? '').split('.', 2);
-      const el = elementRaw.trim();
-      if (!el || el in out) continue;
-      const c = String(value ?? '').trim();
-      if (!c) continue;
-      out[el] = c;
-    }
-    return out;
-  })();
-  const fallbackLammps = (() => {
-    if (Object.keys(settings.lammps.data ?? {}).length > 0) return settings.lammps.data;
-    return activeSnap?.lammps?.data ?? {};
-  })();
-  const categorized = buildCategorizedSettings(
-    {
-      ...settings,
-      colors: { ...settings.colors, data: fallbackColors },
-      lammps: { ...settings.lammps, data: fallbackLammps },
-    },
-    animState,
-    applyAllLayers,
-  );
+  const categorized = buildCategorizedSettings(settings);
   const pruned = compact ? pruneDefaultSettings(categorized) : categorized;
+  // 为导出补充模型压缩后的大小信息。
+  // Add compressed model sizes for export.
+  const storedSizeMap = readSessionCacheSizeMap();
   const layerData: Record<string, LayerSnapshot> = {};
   for (const layer of layers ?? []) {
     const id = layer.id ?? '';
     if (!id) continue;
-    layerData[id] = pruneLayerSnapshot(layer);
+    layerData[id] = pruneLayerSnapshot(layer, storedSizeMap);
   }
   const layersSnapshot: LayersSnapshot = {
     sortBy: layersSortBy,
     activeId: activeLayerId ?? undefined,
     data: layerData,
   };
-  return {
+  const payload: SessionSnapshot = {
     settings: pruned,
     layers: layersSnapshot,
     app: {
@@ -150,6 +154,7 @@ export function buildSettingsSnapshot(
       ...(app ?? {}),
     },
   };
+  return payload;
 }
 
 export async function buildProjectZip(params: {
@@ -158,8 +163,6 @@ export async function buildProjectZip(params: {
   sources: LayerSourceData[];
   modelFileName?: string;
   app?: SessionSnapshot['app'];
-  animState?: Partial<NonNullable<ViewerSettingsCategorized['anim']>>;
-  applyAllLayers?: Partial<ApplyAllLayersFlags>;
   layersSortBy?: LayerSortBy;
   activeLayerId?: string | null;
 }): Promise<{ blob: Blob; filename: string }> {
@@ -169,8 +172,6 @@ export async function buildProjectZip(params: {
     sources,
     modelFileName,
     app,
-    animState,
-    applyAllLayers,
     layersSortBy,
     activeLayerId,
   } = params;
@@ -179,8 +180,6 @@ export async function buildProjectZip(params: {
     settings,
     layers,
     app,
-    animState,
-    applyAllLayers,
     layersSortBy,
     activeLayerId,
   );

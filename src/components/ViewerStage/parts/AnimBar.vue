@@ -67,7 +67,7 @@
     >
       <a-col flex="auto" class="anim-col-min">
         <div class="anim-field">
-          <span class="anim-field-label">{{ t("viewer.play.fps") }}</span>
+          <span class="anim-field-label">{{ t("viewer.play.fpsLabel") }}</span>
           <a-input-number
             v-model:value="fpsModel"
             class="anim-field-input"
@@ -87,97 +87,70 @@
       </a-col>
     </a-row>
 
-    <!-- 第三行：背景色 + 录制按钮 -->
+    <!-- 第三行：录制帧率 + 录制按钮 -->
     <a-row
       :gutter="8"
       align="middle"
-      :justify="isRecording || isRecordDelayActive ? 'end' : 'space-between'"
       :wrap="false"
     >
-      <a-col v-if="!isRecording && !isRecordDelayActive" flex="auto" class="anim-col-min">
-        <div class="anim-field anim-field-tight">
-          <span class="anim-field-label">{{ t("viewer.record.bg") }}</span>
-
-          <div
-            class="color-picker-wrap"
-            :class="{ 'is-transparent': isBgTransparent }"
-            @click="onBgPickerClick"
-          >
-            <input
-              ref="bgColorInputRef"
-              v-model="bgColorModel"
-              class="color-picker"
-              type="color"
-              :aria-label="t('viewer.record.bg')"
-              :title="t('viewer.record.bg')"
-            >
-            <div
-              v-if="isBgTransparent"
-              class="color-picker-transparent"
-              aria-hidden="true"
+      <a-col flex="auto" class="anim-col-min">
+        <template v-if="!isRecording && !isRecordDelayActive">
+          <div class="anim-field">
+            <span class="anim-field-label">{{ t("settings.panel.other.recordFps") }}</span>
+            <a-input-number
+              v-model:value="recordFpsModel"
+              class="anim-field-input"
+              size="small"
+              :aria-label="t('settings.panel.other.recordFps')"
+              :title="t('settings.panel.other.recordFps')"
+              :min="RECORD_FPS_MIN"
+              :max="RECORD_FPS_MAX"
             />
           </div>
-
-          <a-typography-text
-            class="color-hex"
-            :content="bgDisplayText"
-            ellipsis
-          />
-        </div>
-
-        <a-button
-          v-if="showBgReset"
-          type="text"
-          size="small"
-          class="anim-inline-btn"
-          :disabled="isRecording"
-          :aria-label="t('viewer.record.bgReset')"
-          :title="t('viewer.record.bgReset')"
-          @click="resetBgToTransparent"
-        >
-          <ReloadOutlined />
-        </a-button>
+        </template>
+        <template v-else>
+          <div class="anim-field">
+            <a-tag v-if="isRecordDelayActive" color="orange" class="anim-rec-tag">
+              {{ t("viewer.record.countdown") }} {{ recordDelayText }}
+            </a-tag>
+            <a-tag v-else-if="isRecording" color="red" class="anim-rec-tag">
+              ● REC {{ recordTimeText }}
+            </a-tag>
+            <a-button
+              v-if="isRecording"
+              class="anim-action-btn anim-field-input"
+              @click="ctx.togglePause"
+            >
+              {{ isRecordPaused ? t("viewer.record.resume") : t("viewer.record.pause") }}
+            </a-button>
+          </div>
+        </template>
       </a-col>
 
       <a-col flex="none">
-        <a-space :size="6" :wrap="false" class="anim-right">
-          <a-tag v-if="isRecordDelayActive" color="orange" class="anim-rec-tag">
-            {{ t("viewer.record.countdown") }} {{ recordDelayText }}
-          </a-tag>
-
-          <a-tag v-else-if="isRecording" color="red" class="anim-rec-tag">
-            ● REC {{ recordTimeText }}
-          </a-tag>
-
-          <a-button v-if="isRecording" class="anim-action-btn" @click="ctx.togglePause">
-            {{ isRecordPaused ? t("viewer.record.resume") : t("viewer.record.pause") }}
-          </a-button>
-
-          <a-button
-            v-if="isRecordDelayActive"
-            type="primary"
-            class="anim-action-btn"
-            @click="ctx.cancelRecordDelay"
-          >
-            {{ t("viewer.record.stop") }}
-          </a-button>
-          <a-button
-            v-else
-            type="primary"
-            class="anim-action-btn"
-            @click="ctx.toggleRecord"
-          >
-            {{ isRecording ? t("viewer.record.stop") : t("viewer.record.start") }}
-          </a-button>
-        </a-space>
+        <a-button
+          v-if="isRecordDelayActive"
+          type="primary"
+          class="anim-action-btn"
+          @click="ctx.cancelRecordDelay"
+        >
+          {{ t("viewer.record.stop") }}
+        </a-button>
+        <a-button
+          v-else
+          type="primary"
+          class="anim-action-btn"
+          @click="ctx.toggleRecord"
+        >
+          {{ isRecording ? t("viewer.record.stop") : t("viewer.record.start") }}
+        </a-button>
       </a-col>
     </a-row>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ReloadOutlined } from '@ant-design/icons-vue';
-import { computed, ref, unref } from 'vue';
+import { computed, unref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import type { AnimCtx, ParseCtx } from '../ctx';
 import { RECORD_FPS_MIN, RECORD_FPS_MAX } from '../../../lib/viewer/constants';
@@ -233,43 +206,12 @@ const fpsModel = computed<number>({
   },
 });
 
-const bgColorInputRef = ref<HTMLInputElement | null>(null);
-
-const bgColorModel = computed<string>({
-  get: () => unref(props.ctx.settings).anim.backgroundColor,
-  set: (v: string) =>
-    props.ctx.patchSettings({
-      anim: {
-        backgroundColor: v,
-        backgroundColorMode: 'custom',
-        backgroundTransparent: false,
-      },
-    }),
+const recordFpsModel = computed<number>({
+  get: () => unref(props.ctx.settings).record.frame_rate ?? 60,
+  set: (v: number) => {
+    props.ctx.patchSettings({ record: { frame_rate: v } });
+  },
 });
-
-const isBgTransparent = computed(() => unref(props.ctx.settings).anim.backgroundTransparent);
-
-const showBgReset = computed(() => !unref(props.ctx.settings).anim.backgroundTransparent);
-
-const bgDisplayText = computed(() =>
-  isBgTransparent.value
-    ? t('viewer.record.bgTransparent')
-    : bgColorModel.value,
-);
-
-function onBgPickerClick(): void {
-  if (isRecording.value) return;
-  bgColorInputRef.value?.click();
-}
-
-function resetBgToTransparent(): void {
-  props.ctx.patchSettings({
-    anim: {
-      backgroundTransparent: true,
-      backgroundColorMode: 'custom',
-    },
-  });
-}
 </script>
 
 <style>
@@ -389,7 +331,7 @@ function resetBgToTransparent(): void {
 
 /* 为了 fps 和 bg 两行左侧对齐：给 label 固定宽度 */
 .anim-field-label {
-    width: 72px;
+    width: 96px;
     /* 需要更齐可以调 64~90 */
     opacity: 0.85;
     text-align: left;
@@ -507,7 +449,7 @@ function resetBgToTransparent(): void {
     }
 
     .anim-field-label {
-        width: 64px;
+        width: 80px;
     }
 
     .anim-field-input {

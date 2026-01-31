@@ -28,20 +28,16 @@ export function readSettingsOverridesFromUrl(
     PANEL_KEYS.files,
     PANEL_KEYS.rotation,
     PANEL_KEYS.view,
-    PANEL_KEYS.lammps,
-    PANEL_KEYS.details,
-    PANEL_KEYS.colors,
     PANEL_KEYS.other,
-    'anim',
+    'pan',
+    'record',
   ]);
   const groupPrefixes = new Set<string>([
     'files',
     'rotation',
     'view',
-    'lammps',
-    'details',
-    'colors',
-    'anim',
+    'pan',
+    'record',
     'other',
   ]);
 

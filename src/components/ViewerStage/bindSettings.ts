@@ -20,9 +20,6 @@ export function bindViewerStageSettings(params: {
 
   setProjectionMode: (orthographic: boolean) => void;
   resetView: () => void;
-
-  applyAtomScale: () => void;
-  applyShowBonds: () => void;
   applyShowAxes: () => void;
 
   setAutoRotateConfig: (cfg: {
@@ -39,16 +36,12 @@ export function bindViewerStageSettings(params: {
   setDualViewSplit: (ratio: number) => void;
 
   hasModel: Ref<boolean>;
-  hasAnyTypeId: () => boolean;
-  onTypeMapChanged: () => void;
   applyBackgroundColor: () => void;
 }): () => void {
   const {
     settingsRef,
     setProjectionMode,
     resetView,
-    applyAtomScale,
-    applyShowBonds,
     applyShowAxes,
 
     setAutoRotateConfig,
@@ -112,39 +105,6 @@ export function bindViewerStageSettings(params: {
     ),
   );
 
-  // 原子缩放 / atom scale
-  stops.push(
-    watch(
-      () => settingsRef.value.details.atomScale,
-      () => applyAtomScale(),
-    ),
-  );
-
-  // Sphere quality / sphere segments
-  stops.push(
-    watch(
-      () => settingsRef.value.details.sphereSegments,
-      () => applyAtomScale(),
-    ),
-  );
-
-  // 显示键合 / show bonds
-  stops.push(
-    watch(
-      () => settingsRef.value.details.showBonds,
-      () => applyShowBonds(),
-      { immediate: true },
-    ),
-  );
-
-  // Bond inference factor: rebuild bond meshes when changed.
-  stops.push(
-    watch(
-      () => settingsRef.value.details.bondFactor,
-      () => applyShowBonds(),
-    ),
-  );
-
   // 显示坐标轴 / show axes
   stops.push(
     watch(
@@ -196,8 +156,8 @@ export function bindViewerStageSettings(params: {
   stops.push(
     watch(
       () => [
-        settingsRef.value.anim.backgroundColor,
-        settingsRef.value.anim.backgroundTransparent,
+        settingsRef.value.other.backgroundColor,
+        settingsRef.value.other.backgroundTransparent,
       ],
       () => applyBackgroundColor(),
     ),

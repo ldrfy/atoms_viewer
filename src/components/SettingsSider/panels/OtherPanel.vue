@@ -7,6 +7,47 @@
         :options="themeSegmentOptions"
       />
     </a-form-item>
+
+    <a-form-item :label="t('settings.panel.other.backgroundColor')">
+      <a-row :gutter="8" align="middle">
+        <a-col :span="6">
+          <div class="color-picker-wrap" :class="{ 'is-transparent': isBgTransparent }">
+            <input
+              class="color-picker"
+              type="color"
+              :value="bgColorPickerValue(bgColorModel)"
+              :aria-label="t('settings.panel.other.backgroundColor')"
+              :title="t('settings.panel.other.backgroundColor')"
+              @input="onBgColorPickerChange(($event as any).target?.value)"
+            >
+            <div v-if="isBgTransparent" class="color-picker-transparent" aria-hidden="true" />
+          </div>
+        </a-col>
+        <a-col :span="4" class="settings-col-compact">
+          <a-tooltip v-if="!isBgTransparent" :title="t('viewer.record.bgReset')">
+            <a-button
+              type="text"
+              size="small"
+              :aria-label="t('viewer.record.bgReset')"
+              :title="t('viewer.record.bgReset')"
+              @click="resetBgToTransparent"
+            >
+              <ReloadOutlined />
+            </a-button>
+          </a-tooltip>
+        </a-col>
+        <a-col :span="14">
+          <a-input
+            :value="bgHexValue"
+            :placeholder="bgHexPlaceholder"
+            :aria-label="t('settings.panel.other.backgroundColor')"
+            :title="t('settings.panel.other.backgroundColor')"
+            @change="onBgColorHexChange(($event as any).target?.value)"
+          />
+        </a-col>
+      </a-row>
+    </a-form-item>
+
     <a-form-item>
       <a-row justify="space-between" align="middle">
         <a-col>{{ t('settings.panel.other.themeReadabilityCheckOnOpen') }}</a-col>
@@ -55,6 +96,28 @@
       </a-row>
     </a-form-item>
 
+    <a-form-item>
+      <a-row justify="space-between" align="middle">
+        <a-col>{{ t('settings.panel.other.axes') }}</a-col>
+        <a-col>
+          <a-switch v-model:checked="showAxesModel" :aria-label="t('settings.panel.other.axes')" :title="t('settings.panel.other.axes')" />
+        </a-col>
+      </a-row>
+    </a-form-item>
+
+    <a-form-item>
+      <a-row justify="space-between" align="middle">
+        <a-col>{{ t('settings.panel.other.refreshBondsOnPlay') }}</a-col>
+        <a-col>
+          <a-switch
+            v-model:checked="refreshBondsOnPlayModel"
+            :aria-label="t('settings.panel.other.refreshBondsOnPlay')"
+            :title="t('settings.panel.other.refreshBondsOnPlay')"
+          />
+        </a-col>
+      </a-row>
+    </a-form-item>
+
     <a-form-item :label="t('settings.panel.other.selectionColor')">
       <a-row :gutter="8" align="middle">
         <a-col :span="6">
@@ -98,28 +161,6 @@
       </a-typography-text>
     </a-form-item>
 
-    <a-form-item>
-      <a-row justify="space-between" align="middle">
-        <a-col>{{ t('settings.panel.other.axes') }}</a-col>
-        <a-col>
-          <a-switch v-model:checked="showAxesModel" :aria-label="t('settings.panel.other.axes')" :title="t('settings.panel.other.axes')" />
-        </a-col>
-      </a-row>
-    </a-form-item>
-
-    <a-form-item>
-      <a-row justify="space-between" align="middle">
-        <a-col>{{ t('settings.panel.other.refreshBondsOnPlay') }}</a-col>
-        <a-col>
-          <a-switch
-            v-model:checked="refreshBondsOnPlayModel"
-            :aria-label="t('settings.panel.other.refreshBondsOnPlay')"
-            :title="t('settings.panel.other.refreshBondsOnPlay')"
-          />
-        </a-col>
-      </a-row>
-    </a-form-item>
-
     <a-form-item :label="t('settings.panel.other.panStep')">
       <a-row :gutter="8" align="middle">
         <a-col :flex="1">
@@ -143,34 +184,6 @@
         </a-col>
       </a-row>
     </a-form-item>
-
-    <a-form-item :label="t('settings.panel.other.recordFps')">
-      <a-row :gutter="8" align="middle">
-        <a-col :flex="1">
-          <a-slider
-            v-model:value="recordFpsModel"
-            :min="RECORD_FPS_MIN"
-            :max="RECORD_FPS_MAX"
-            :step="1"
-          />
-        </a-col>
-        <a-col class="settings-col-compact">
-          <a-input-number
-            v-model:value="recordFpsModel"
-            :aria-label="t('settings.panel.other.recordFps')"
-            :title="t('settings.panel.other.recordFps')"
-            :min="RECORD_FPS_MIN"
-            :max="RECORD_FPS_MAX"
-            :step="1"
-            class="settings-full-width"
-          />
-        </a-col>
-      </a-row>
-
-      <a-typography-text type="secondary" class="settings-text-secondary">
-        {{ t('settings.panel.other.recordFpsHint') }}
-      </a-typography-text>
-    </a-form-item>
   </a-form>
 </template>
 
@@ -182,8 +195,6 @@ import { message } from 'ant-design-vue';
 
 import { useSettingsSiderContext } from '../useSettingsSiderContext';
 import {
-  RECORD_FPS_MIN,
-  RECORD_FPS_MAX,
   MODEL_LIGHT_INTENSITY_MIN,
   MODEL_LIGHT_INTENSITY_MAX,
 } from '../../../lib/viewer/constants';
@@ -212,14 +223,75 @@ const refreshBondsOnPlayModel = computed({
 });
 
 const panStepScaleModel = computed({
-  get: () => settings.value.view.panStepScale ?? DEFAULT_SETTINGS.view.panStepScale,
-  set: (v: number) => patchSettings({ view: { panStepScale: v } }),
+  get: () => settings.value.other.panStepScale ?? DEFAULT_SETTINGS.other.panStepScale,
+  set: (v: number) => patchSettings({ other: { panStepScale: v } }),
 });
 
-const recordFpsModel = computed({
-  get: () => settings.value.other.frame_rate ?? 60,
-  set: (v: number) => { patchSettings({ other: { frame_rate: v } }); },
+const bgColorModel = computed<string>({
+  get: () => settings.value.other.backgroundColor,
+  set: (v: string) =>
+    patchSettings({
+      other: {
+        backgroundColor: v,
+        backgroundColorMode: 'custom',
+        backgroundTransparent: false,
+      },
+    }),
 });
+
+const isBgTransparent = computed(() => settings.value.other.backgroundTransparent);
+const bgHexValue = computed(() => (isBgTransparent.value ? '' : bgColorModel.value));
+const bgHexPlaceholder = computed(() =>
+  isBgTransparent.value ? t('viewer.record.bgTransparent') : t('settings.panel.colors.hexPlaceholder'),
+);
+
+function resetBgToTransparent(): void {
+  patchSettings({
+    other: {
+      backgroundTransparent: true,
+      backgroundColorMode: 'custom',
+    },
+  });
+}
+
+function bgColorPickerValue(v: string): string {
+  return normalizeHexColor(v) ?? DEFAULT_SETTINGS.other.backgroundColor;
+}
+
+function onBgColorPickerChange(v: unknown): void {
+  const next = normalizeHexColor(v);
+  if (!next) {
+    message.error(t('settings.panel.colors.invalidHex'));
+    return;
+  }
+  patchSettings({
+    other: {
+      backgroundColor: next,
+      backgroundColorMode: 'custom',
+      backgroundTransparent: false,
+    },
+  });
+}
+
+function onBgColorHexChange(v: unknown): void {
+  const raw = String(v ?? '').trim();
+  if (!raw) {
+    resetBgToTransparent();
+    return;
+  }
+  const next = normalizeHexColor(raw);
+  if (!next) {
+    message.error(t('settings.panel.colors.invalidHex'));
+    return;
+  }
+  patchSettings({
+    other: {
+      backgroundColor: next,
+      backgroundColorMode: 'custom',
+      backgroundTransparent: false,
+    },
+  });
+}
 
 const themeReadabilityCheckOnOpenModel = computed({
   get: () => settings.value.other.themeReadabilityCheckOnOpen ?? true,
@@ -267,15 +339,6 @@ function applyVisualStyle(styleId: VisualStyleId): void {
     : { ...preset.colorMapTemplate };
   patchSettings({
     other: { visualStyle: styleId, modelLightIntensity: preset.display.modelLightIntensity },
-    details: {
-      atomScale: preset.display.atomScale,
-      atomRoughness: preset.display.atomRoughness,
-      bondRadius: preset.display.bondRadius,
-      bondFactor: preset.display.bondFactor,
-    },
-    colors: {
-      data: {},
-    },
   });
   if (!api) return;
   api.suspendSettingsSync(300);
@@ -342,7 +405,6 @@ function resetSelectionHighlightColor(): void {
 function resetOtherSettings(): void {
   patchSettings({
     other: { ...DEFAULT_SETTINGS.other },
-    view: { panStepScale: DEFAULT_SETTINGS.view.panStepScale },
   });
   setThemeMode(DEFAULT_SETTINGS.other.themeMode);
   applyVisualStyle(DEFAULT_SETTINGS.other.visualStyle);

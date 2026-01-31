@@ -35,6 +35,7 @@ import {
 import type { ColorMapRecord } from './colorMap';
 import { createLayerSourceStore } from './logic/sourceStore';
 import { createInspectSelectionHelper } from './logic/inspectSelectionHelper';
+import { getLayerSnapshotFromCache, saveLayerSnapshotCache } from './logic/layerSnapshotCache';
 
 import { createInspectCtx, type InspectCtx } from './ctx/inspect';
 import { createRecordingController, type RecordingBindings, type CropBox } from './recording';
@@ -58,7 +59,6 @@ import { createViewerAnimationController } from './logic/viewerAnimation';
 import { createSettingsSync } from './settingsSync';
 import { buildSettingsSnapshot, parseProjectZip } from '../../lib/viewer/projectPackage';
 import { mergeCategorizedSettings } from '../../lib/viewer/sessionTemplates';
-import { writeApplyAllLayersFlags } from '../SettingsSider/applyAllStorage';
 import { computeMd5ForArrayBuffer } from '../../lib/file/md5';
 import { buildExportFilename } from '../../lib/file/filename';
 import { saveSessionToStorage, clearSessionStorage } from '../../lib/viewer/sessionStorage';
@@ -182,18 +182,6 @@ type ViewerStageBridgeApi = {
   cacheRemoteOnExport: Ref<boolean>;
   /** 切换远程模型缓存开关 */
   setCacheRemoteOnExport: (v: boolean) => void;
-  /** 获取动画状态（用于导出/恢复） */
-  getAnimState?: () => {
-    frameIndex: number;
-    playFps: number;
-    recordDelaySec: number;
-  };
-  /** 应用动画状态（用于导入/恢复） */
-  applyAnimState?: (state: {
-    frameIndex: number;
-    playFps: number;
-    recordDelaySec: number;
-  }) => void;
 };
 
 type ViewerStageExposedApi = {
@@ -527,6 +515,11 @@ export function useViewerStage(
     () => openLammpsPanelIfNeeded(),
   );
 
+  watch(
+    () => activeLayerId.value,
+    () => inspectHelper.rehydrateFromSettings(),
+  );
+
   const activeLayerColorMap = computed<ColorMapRecord>(() => {
     return (runtimeTick.value, runtime?.activeColorMap.value ?? {});
   });
@@ -555,10 +548,7 @@ export function useViewerStage(
   const rawLayerSourceStore = createLayerSourceStore();
 
   const inspectHelper = createInspectSelectionHelper({
-    settingsRef,
-    patchSettings: settingsSync.patch,
     inspectCtx,
-    layerSourceStore: rawLayerSourceStore,
     runtime: () => runtime,
     activeLayerId,
   });
@@ -566,8 +556,16 @@ export function useViewerStage(
   const layerSourceStore = {
     set(id: string, data: import('../../lib/viewer/sessionTypes').LayerSourceData): void {
       rawLayerSourceStore.set(id, data);
-      inspectHelper.backfillSelectionMd5(id, data?.md5);
       inspectHelper.rehydrateFromSettings();
+      if (!suppressLayerCacheRestore && data?.md5 && runtime) {
+        const cached = getLayerSnapshotFromCache(data.md5);
+        if (cached) {
+          runtime.applyLayerSnapshots([cached]);
+          runtimeTick.value += 1;
+          syncUiFromRuntime();
+          scheduleSessionSave('layers');
+        }
+      }
     },
     get(id: string) {
       return rawLayerSourceStore.get(id);
@@ -616,7 +614,13 @@ export function useViewerStage(
     { immediate: true },
   );
   let sessionSaveTimer: number | null = null;
+  // 恢复会话期间不保存，避免卡顿与重复写入。
+  // Skip session saves during restore to avoid stutter and redundant writes.
+  let suppressSessionSave = false;
   let lastSessionSignature = '';
+  // 避免在批量还原会话时触发本地缓存回填。
+  // Suppress cache-based layer restores during session replay.
+  let suppressLayerCacheRestore = false;
 
   function collectLayerSources(): import('../../lib/viewer/sessionTypes').LayerSourceData[] {
     const res: import('../../lib/viewer/sessionTypes').LayerSourceData[] = [];
@@ -652,38 +656,8 @@ export function useViewerStage(
     if (tasks.length > 0) await Promise.all(tasks);
   }
 
-  function getAnimStateSnapshot(): {
-    frameIndex: number;
-    playFps: number;
-    recordDelaySec: number;
-  } {
-    const frameIndex = Number.isFinite(anim.frameIndex.value)
-      ? Math.max(0, Math.floor(anim.frameIndex.value))
-      : 0;
-    const playFps = Number.isFinite(anim.fps.value)
-      ? Math.max(1, anim.fps.value)
-      : 6;
-    const recordDelaySec = Number.isFinite(recording.recordDelaySec.value)
-      ? Math.max(0, recording.recordDelaySec.value)
-      : 0;
-    return {
-      frameIndex,
-      playFps,
-      recordDelaySec,
-    };
-  }
-
-  function applyAnimState(state: {
-    frameIndex: number;
-    playFps: number;
-    recordDelaySec: number;
-  }): void {
-    anim.fps.value = Math.max(1, state.playFps);
-    recording.recordDelaySec.value = Math.max(0, state.recordDelaySec);
-    anim.setFrame(Math.max(0, Math.floor(state.frameIndex)));
-  }
-
   async function persistSessionSnapshot(): Promise<void> {
+    if (suppressSessionSave) return;
     if (!runtime) return;
 
     if (!runtime.layers.value || runtime.layers.value.length === 0) {
@@ -699,20 +673,18 @@ export function useViewerStage(
       return;
     }
 
-    const settingsForSave = {
-      ...settingsRef.value,
-      inspectSelection: [],
-    };
+    // 缓存最近图层快照（保留未加载的最近 5 条）。
+    // Cache latest layer snapshots (keep last 5 unloaded).
+    const loadedMd5s = new Set<string>();
+    for (const snap of layerSnapshots) {
+      if (snap.source?.md5) loadedMd5s.add(snap.source.md5);
+    }
+    saveLayerSnapshotCache({ layerSnapshots, loadedMd5s });
+
     const snapshot = buildSettingsSnapshot(
-      settingsForSave,
+      settingsRef.value,
       layerSnapshots,
       undefined,
-      getAnimStateSnapshot(),
-      {
-        details: settingsRef.value.details.applyAllLayers ?? true,
-        colors: settingsRef.value.colors.applyAllLayers ?? true,
-        lammps: settingsRef.value.lammps.applyAllLayers ?? false,
-      },
       layerSortBy.value,
       runtime?.activeLayerId.value ?? null,
     );
@@ -720,17 +692,26 @@ export function useViewerStage(
     const curSettings = settingsRef.value;
     const sig = JSON.stringify({
       settings: {
-        atomScale: curSettings.details.atomScale,
-        bondFactor: curSettings.details.bondFactor,
-        bondRadius: curSettings.details.bondRadius,
         rotationDeg: curSettings.view.rotationDeg,
         dualViewDistance: curSettings.view.dualViewDistance,
+        panOffset: curSettings.pan.panOffset,
+        panOffsetLeft: curSettings.pan.panOffsetLeft,
+        panOffsetRight: curSettings.pan.panOffsetRight,
+        panStepScale: curSettings.other.panStepScale,
+        backgroundColor: curSettings.other.backgroundColor,
+        backgroundTransparent: curSettings.other.backgroundTransparent,
+        backgroundColorMode: curSettings.other.backgroundColorMode,
+        recordFps: curSettings.record.frame_rate,
+        recordDelaySec: curSettings.record.recordDelaySec,
+        recordCropBox: curSettings.record.recordCropBox,
       },
       layers: layerSnapshots.map((s) => {
         const atomScale = s.details?.atomScale ?? 0;
         const lammpsCount = s.lammps?.data ? Object.keys(s.lammps.data).length : 0;
         const colorCount = Object.keys(s.colors?.data ?? {}).length;
-        return `${s.source?.md5 ?? s.id}:${s.visible ? 1 : 0}:${atomScale}:${lammpsCount}:${colorCount}`;
+        const playFps = s.anim?.playFps ?? 0;
+        const frameIndex = s.anim?.frameIndex ?? 0;
+        return `${s.source?.md5 ?? s.id}:${s.visible ? 1 : 0}:${atomScale}:${lammpsCount}:${colorCount}:${playFps}:${frameIndex}`;
       }),
       sources: sources.map(s => `${s.md5 ?? s.layerId}:${s.size ?? 0}:${s.cached ? 1 : 0}`),
     });
@@ -740,6 +721,13 @@ export function useViewerStage(
   }
 
   function scheduleSessionSave(reason: 'settings' | 'layers' = 'layers'): void {
+    if (suppressSessionSave) {
+      if (sessionSaveTimer) {
+        window.clearTimeout(sessionSaveTimer);
+        sessionSaveTimer = null;
+      }
+      return;
+    }
     const delay = reason === 'settings'
       ? SESSION_SAVE_DELAY_SETTINGS_MS
       : SESSION_SAVE_DELAY_LAYERS_MS;
@@ -770,9 +758,44 @@ export function useViewerStage(
     patchSettings: settingsSync.patch,
     getSettings: () => settingsRef.value,
     t,
-    getRecordFps: () => settingsRef.value.other.frame_rate ?? 60,
+    getRecordFps: () => settingsRef.value.record.frame_rate ?? 60,
+    getRecordBox: () => settingsRef.value.record.recordCropBox,
+    onRecordBoxChange: (box) => {
+      settingsSync.patch({ record: { recordCropBox: box } });
+    },
     getModelFileName: () => modelFileNameProvider(),
   });
+
+  // 同步录制设置（延时与裁剪框）到运行时。
+  // Sync record settings (delay and crop box) into runtime.
+  watch(
+    () => settingsRef.value.record.recordDelaySec,
+    (v) => {
+      if (!Number.isFinite(v)) return;
+      const next = Math.max(0, Number(v));
+      if (recording.recordDelaySec.value === next) return;
+      recording.recordDelaySec.value = next;
+    },
+    { immediate: true },
+  );
+
+  watch(
+    () => recording.recordDelaySec.value,
+    (v) => {
+      if (!Number.isFinite(v)) return;
+      const next = Math.max(0, Number(v));
+      if (settingsRef.value.record.recordDelaySec === next) return;
+      settingsSync.patch({ record: { recordDelaySec: next } });
+    },
+  );
+
+  watch(
+    () => settingsRef.value.record.recordCropBox,
+    (box) => {
+      recording.setLastRecordBox(box ?? null);
+    },
+    { immediate: true, deep: true },
+  );
 
   // picking (attach after stage created)
   const picking = createViewerPickingController({
@@ -792,9 +815,6 @@ export function useViewerStage(
     (sel) => {
       inspectHelper.onSelectionChanged(sel);
       picking.rebuildSelectionVisualsFromSelected();
-      if (runtime && runtime.activeLayerId.value) {
-        runtime.setLayerInspectSelection(runtime.activeLayerId.value, inspectHelper.normalizeForSave(sel));
-      }
     },
     { deep: true },
   );
@@ -821,6 +841,17 @@ export function useViewerStage(
     onSelectionVisualsNeedUpdate: () => picking.updateSelectionVisuals(),
     wakeRender: () => stage?.invalidate(),
   });
+
+  // 记录当前图层播放帧率（每层持久化）。
+  // Persist per-layer playback fps.
+  watch(
+    () => anim.fps.value,
+    (v) => {
+      if (!runtime || !Number.isFinite(v)) return;
+      runtime.setActiveLayerPlayFps?.(Math.max(1, Math.floor(Number(v))));
+      scheduleSessionSave('layers');
+    },
+  );
 
   // loader (parse/load/refreshTypeMap)
   const loader = createViewerLoader({
@@ -932,6 +963,7 @@ export function useViewerStage(
     hidePreviousLayers?: boolean;
     forcedLayerId?: string;
     suppressLammpsWarning?: boolean;
+    suppressSessionSave?: boolean;
   };
 
   async function loadFileWithSession(
@@ -947,7 +979,10 @@ export function useViewerStage(
         return;
       }
       await loader.loadFile(file, opts);
-      scheduleSessionSave('layers');
+      if (!opts?.suppressSessionSave) {
+        scheduleSessionSave('layers');
+        await persistSessionSnapshot();
+      }
     }
     finally {
       endExternalLoading();
@@ -974,7 +1009,10 @@ export function useViewerStage(
         ? { ...(opts ?? {}), hidePreviousLayers: false }
         : opts;
       await loader.loadFiles(otherFiles, mergedOpts);
-      scheduleSessionSave('layers');
+      if (!opts?.suppressSessionSave) {
+        scheduleSessionSave('layers');
+        await persistSessionSnapshot();
+      }
     }
     finally {
       endExternalLoading();
@@ -996,7 +1034,10 @@ export function useViewerStage(
         return;
       }
       await loader.loadUrl(url, fileName, opts);
-      scheduleSessionSave('layers');
+      if (!opts?.suppressSessionSave) {
+        scheduleSessionSave('layers');
+        await persistSessionSnapshot();
+      }
     }
     finally {
       endExternalLoading();
@@ -1005,7 +1046,11 @@ export function useViewerStage(
 
   async function loadUrlsWithSession(
     items: { url: string; fileName: string; forcedLayerId?: string }[],
-    opts?: { hidePreviousLayers?: boolean; suppressLammpsWarning?: boolean },
+    opts?: {
+      hidePreviousLayers?: boolean;
+      suppressLammpsWarning?: boolean;
+      suppressSessionSave?: boolean;
+    },
   ): Promise<void> {
     clearSamplesParam();
     if (!items || items.length === 0) return;
@@ -1032,7 +1077,10 @@ export function useViewerStage(
       endExternalLoading();
     }
 
-    if (items.length > 0) scheduleSessionSave('layers');
+    if (items.length > 0 && !opts?.suppressSessionSave) {
+      scheduleSessionSave('layers');
+      await persistSessionSnapshot();
+    }
   }
 
   function isZipUrl(url: string, fileName?: string): boolean {
@@ -1093,128 +1141,122 @@ export function useViewerStage(
   async function applySessionSnapshot(
     snapshot: import('../../lib/viewer/sessionTypes').SessionSnapshot,
     files?: File[],
+    opts?: { suppressSessionSave?: boolean },
   ): Promise<void> {
     if (!snapshot) return;
     if (!runtime && !(await waitForRuntimeReady())) return;
     if (!runtime) return;
-
+    suppressLayerCacheRestore = true;
+    if (opts?.suppressSessionSave) {
+      suppressSessionSave = true;
+    }
+    try {
     // 过滤掉配置文件，只保留模型文件
-    const importFiles = (files ?? []).filter(f => f.name.toLowerCase() !== 'config.json');
-    const hasFiles = importFiles.length > 0;
-    const normalizedLayers = normalizeLayersSnapshot(snapshot.layers);
-    const activeLayerIdFromSnapshot = normalizedLayers?.activeId ?? null;
-    const { sortBy, snaps: layerSnaps } = sortLayerSnapshots(normalizedLayers);
-    // 先还原设置
-    const rawSettings = (snapshot.settings && typeof snapshot.settings === 'object')
-      ? snapshot.settings as any
-      : {};
-    const settingsPatched = mergeCategorizedSettings(rawSettings as any) as ViewerSettings;
-    const currentSettings = settingsRef.value;
-    // Keep current global details/colors/lammps; only restore other settings.
-    settingsPatched.details = { ...currentSettings.details };
-    settingsPatched.colors = {
-      applyAllLayers: currentSettings.colors.applyAllLayers,
-      data: { ...currentSettings.colors.data },
-    };
-    settingsPatched.lammps = {
-      applyAllLayers: currentSettings.lammps.applyAllLayers,
-      data: { ...(currentSettings.lammps.data ?? {}) },
-    };
-    writeApplyAllLayersFlags({
-      details: currentSettings.details.applyAllLayers ?? true,
-      colors: currentSettings.colors.applyAllLayers ?? true,
-      lammps: currentSettings.lammps.applyAllLayers ?? false,
-    });
-    const animState = {
-      frameIndex: Number(settingsPatched.anim.frameIndex ?? 0),
-      playFps: Number(settingsPatched.anim.playFps ?? 6),
-      recordDelaySec: Number(settingsPatched.anim.recordDelaySec ?? 0),
-    };
-    if (patchSettings) {
-      settingsSync.suspend(300);
-      patchSettings(settingsPatched);
-      // 同步主题到全局
-      if (settingsPatched.other.themeMode) {
-        setThemeMode(settingsPatched.other.themeMode as any);
-      }
-    }
-
-    if (!hasFiles && layerSnaps.length === 0) {
-      message.success(t('settings.importSuccess'));
-      return;
-    }
-
-    inspectCtx.clear();
-    runtime.clearModel();
-    layerSourceStore.clear();
-
-    const renameFile = (file: File, name?: string): File => {
-      if (!name || name === file.name) return file;
-      return new File([file], name, { type: file.type });
-    };
-
-    const filesByMd5 = new Map<string, File>();
-    for (const f of importFiles) {
-      const md5 = guessMd5FromName(f.name);
-      if (md5) filesByMd5.set(md5, f);
-    }
-
-    for (const layer of layerSnaps) {
-      const md5 = layer.source?.md5?.toLowerCase();
-      const file = md5 ? filesByMd5.get(md5) : undefined;
-      if (file) {
-        const fileWithName = renameFile(file, layer.source?.fileName ?? layer.name);
-        await loadFilesWithSession([fileWithName], 'api', {
-          hidePreviousLayers: false,
-          forcedLayerId: layer.id,
-          suppressLammpsWarning: true,
-        });
-        continue;
+      const importFiles = (files ?? []).filter(f => f.name.toLowerCase() !== 'config.json');
+      const hasFiles = importFiles.length > 0;
+      const normalizedLayers = normalizeLayersSnapshot(snapshot.layers);
+      const activeLayerIdFromSnapshot = normalizedLayers?.activeId ?? null;
+      const { sortBy, snaps: layerSnaps } = sortLayerSnapshots(normalizedLayers);
+      // 先还原设置
+      const rawSettings = (snapshot.settings && typeof snapshot.settings === 'object')
+        ? snapshot.settings as any
+        : {};
+      const settingsPatched = mergeCategorizedSettings(rawSettings as any) as ViewerSettings;
+      if (patchSettings) {
+        settingsSync.suspend(300);
+        patchSettings(settingsPatched);
+        // 同步主题到全局
+        if (settingsPatched.other.themeMode) {
+          setThemeMode(settingsPatched.other.themeMode as any);
+        }
       }
 
-      const url = layer.source?.url;
-      if (url) {
-        await loadUrlsWithSession(
-          [{
-            url,
-            fileName: layer.source?.fileName ?? layer.name ?? 'remote',
+      if (!hasFiles && layerSnaps.length === 0) {
+        message.success(t('settings.importSuccess'));
+        return;
+      }
+
+      inspectCtx.clear();
+      runtime.clearModel();
+      layerSourceStore.clear();
+
+      const renameFile = (file: File, name?: string): File => {
+        if (!name || name === file.name) return file;
+        return new File([file], name, { type: file.type });
+      };
+
+      const filesByMd5 = new Map<string, File>();
+      for (const f of importFiles) {
+        const md5 = guessMd5FromName(f.name);
+        if (md5) filesByMd5.set(md5, f);
+      }
+
+      for (const layer of layerSnaps) {
+        const md5 = layer.source?.md5?.toLowerCase();
+        const file = md5 ? filesByMd5.get(md5) : undefined;
+        if (file) {
+          const fileWithName = renameFile(file, layer.source?.fileName ?? layer.name);
+          await loadFilesWithSession([fileWithName], 'api', {
+            hidePreviousLayers: false,
             forcedLayerId: layer.id,
-          }],
-          { hidePreviousLayers: false, suppressLammpsWarning: true },
-        );
+            suppressLammpsWarning: true,
+            suppressSessionSave: opts?.suppressSessionSave,
+          });
+          continue;
+        }
+
+        const url = layer.source?.url;
+        if (url) {
+          await loadUrlsWithSession(
+            [{
+              url,
+              fileName: layer.source?.fileName ?? layer.name ?? 'remote',
+              forcedLayerId: layer.id,
+            }],
+            {
+              hidePreviousLayers: false,
+              suppressLammpsWarning: true,
+              suppressSessionSave: opts?.suppressSessionSave,
+            },
+          );
+        }
+      }
+
+      // 应用每层的外观/颜色/LAMMPS 设置，并恢复视角
+      runtime.applyLayerSnapshots(layerSnaps);
+      syncUiFromRuntime();
+      const hasUnknownLammps = layerSnaps.some(s =>
+        Object.values(s.lammps?.data ?? {}).some(v => String(v ?? '').trim().toUpperCase() === 'E'),
+      );
+      if (hasUnknownLammps) {
+        requestOpenSettings?.({
+          focusKeys: [PANEL_KEYS.lammps],
+          open: true,
+        });
+        message.warning(t('viewer.lammps.mappingMissing'));
+      }
+      if (activeLayerIdFromSnapshot) {
+        const target = runtime.layers.value.find(l => l.id === activeLayerIdFromSnapshot) ?? null;
+        if (target) runtime.setActiveLayer(target.id);
+      }
+      if (runtime.layers.value.length > 1) {
+        layerSortBy.value = sortBy;
+        runtime.sortLayers((a, b) => compareModelLayers(a, b, sortBy));
+      }
+      runtimeTick.value += 1;
+      applyViewFromSettings(settingsPatched);
+      if (!opts?.suppressSessionSave) scheduleSessionSave('layers');
+
+      if (runtime.layers.value.length > 0) {
+        message.success(t('settings.importSuccess'));
+      }
+      else {
+        message.success(t('settings.importSuccess'));
       }
     }
-
-    // 应用每层的外观/颜色/LAMMPS 设置，并恢复视角
-    runtime.applyLayerSnapshots(layerSnaps);
-    const hasUnknownLammps = layerSnaps.some(s =>
-      Object.values(s.lammps?.data ?? {}).some(v => String(v ?? '').trim().toUpperCase() === 'E'),
-    );
-    if (hasUnknownLammps) {
-      requestOpenSettings?.({
-        focusKeys: [PANEL_KEYS.lammps],
-        open: true,
-      });
-      message.warning(t('viewer.lammps.mappingMissing'));
-    }
-    if (activeLayerIdFromSnapshot) {
-      const target = runtime.layers.value.find(l => l.id === activeLayerIdFromSnapshot) ?? null;
-      if (target) runtime.setActiveLayer(target.id);
-    }
-    if (runtime.layers.value.length > 1) {
-      layerSortBy.value = sortBy;
-      runtime.sortLayers((a, b) => compareModelLayers(a, b, sortBy));
-    }
-    runtimeTick.value += 1;
-    applyViewFromSettings(settingsPatched);
-    applyAnimState(animState);
-    scheduleSessionSave('layers');
-
-    if (runtime.layers.value.length > 0) {
-      message.success(t('settings.importSuccess'));
-    }
-    else {
-      message.success(t('settings.importSuccess'));
+    finally {
+      suppressLayerCacheRestore = false;
+      suppressSessionSave = false;
     }
   }
 
@@ -1239,11 +1281,17 @@ export function useViewerStage(
     anim.syncFromRuntime();
 
     if (!runtime) return;
+    // 同步当前图层播放帧率到动画控制器。
+    // Sync active-layer play fps into the animation controller.
+    const nextFps = runtime.getActiveLayerPlayFps?.();
+    if (Number.isFinite(nextFps)) {
+      anim.fps.value = Math.max(1, Math.floor(Number(nextFps)));
+    }
 
     const activeId = runtime.activeLayerId.value;
     const layer = runtime.layers.value.find(x => x.id === activeId) ?? null;
     if (layer) {
-      loader.parseInfo.fileName = layer.sourceFileName ?? layer.name;
+      loader.parseInfo.fileName = layer.source?.fileName ?? layer.name;
       loader.parseInfo.format = layer.sourceFormat ?? loader.parseInfo.format;
       loader.parseInfo.atomCount = layer.atomCount;
       loader.parseInfo.frameCount = layer.frameCount;
@@ -1287,7 +1335,7 @@ export function useViewerStage(
 
   function getLayerDisplayName(l: ModelLayerInfo): string {
     const name = String(l?.name ?? '').trim();
-    const file = String(l?.sourceFileName ?? '').trim();
+    const file = String(l?.source?.fileName ?? '').trim();
     return (name || file || String(l?.id ?? '')).toLowerCase();
   }
 
@@ -1356,6 +1404,9 @@ export function useViewerStage(
     if (!runtime) return;
     runtime.setActiveLayerTypeMap(map);
     scheduleSessionSave('layers');
+    // 立即持久化 LAMMPS 映射，避免刷新前未写入。
+    // Persist LAMMPS mapping immediately to avoid missing restore.
+    void persistSessionSnapshot();
   }
 
   function resetAllLayersTypeMapToDefaults(
@@ -1369,6 +1420,9 @@ export function useViewerStage(
     syncUiFromRuntime();
     inspectCtx.clear();
     scheduleSessionSave('layers');
+    // 立即持久化 LAMMPS 默认映射恢复。
+    // Persist LAMMPS default mapping reset immediately.
+    void persistSessionSnapshot();
   }
 
   function applyTypeMapToAllLayers(map: LammpsTypeMapRecord): void {
@@ -1377,6 +1431,9 @@ export function useViewerStage(
     syncUiFromRuntime();
     inspectCtx.clear();
     scheduleSessionSave('layers');
+    // 立即持久化批量映射应用结果。
+    // Persist bulk mapping application immediately.
+    void persistSessionSnapshot();
   }
 
   function setActiveLayerColorMap(map: ColorMapRecord): void {
@@ -1406,21 +1463,6 @@ export function useViewerStage(
     runtime.setActiveLayerDisplaySettings(patch, opts);
     syncUiFromRuntime();
     picking.updateSelectionVisuals();
-
-    const applyToAll = opts?.applyToAll ?? settingsRef.value.details.applyAllLayers ?? true;
-    if (applyToAll) {
-      const next: SettingsPatch = {};
-      if (patch.representation != null) {
-        next.details = { ...(next.details ?? {}), representation: patch.representation };
-      }
-      if (patch.atomScale != null) next.details = { ...(next.details ?? {}), atomScale: patch.atomScale };
-      if (patch.showBonds != null) next.details = { ...(next.details ?? {}), showBonds: patch.showBonds };
-      if (patch.sphereSegments != null) next.details = { ...(next.details ?? {}), sphereSegments: patch.sphereSegments };
-      if (patch.bondFactor != null) next.details = { ...(next.details ?? {}), bondFactor: patch.bondFactor };
-      if (patch.bondRadius != null) next.details = { ...(next.details ?? {}), bondRadius: patch.bondRadius };
-      if (patch.atomRoughness != null) next.details = { ...(next.details ?? {}), atomRoughness: patch.atomRoughness };
-      if (Object.keys(next).length > 0) settingsSync.patch(next);
-    }
     scheduleSessionSave('layers');
   }
 
@@ -1494,9 +1536,9 @@ export function useViewerStage(
     }
 
     stage.setPanOffsets({
-      single: next.view.panOffset ?? { x: 0, y: 0, z: 0 },
-      left: next.view.panOffsetLeft ?? { x: 0, y: 0, z: 0 },
-      right: next.view.panOffsetRight ?? { x: 0, y: 0, z: 0 },
+      single: next.pan.panOffset ?? { x: 0, y: 0, z: 0 },
+      left: next.pan.panOffsetLeft ?? { x: 0, y: 0, z: 0 },
+      right: next.pan.panOffsetRight ?? { x: 0, y: 0, z: 0 },
     });
 
     stage.getControls().update();
@@ -1515,10 +1557,10 @@ export function useViewerStage(
     const isDual = presets.length === 2;
     const side = isDual ? panTargetSide.value : 'single';
     const v = side === 'left'
-      ? settingsRef.value.view.panOffsetLeft
+      ? settingsRef.value.pan.panOffsetLeft
       : side === 'right'
-        ? settingsRef.value.view.panOffsetRight
-        : settingsRef.value.view.panOffset;
+        ? settingsRef.value.pan.panOffsetRight
+        : settingsRef.value.pan.panOffset;
     const off = v ?? { x: 0, y: 0, z: 0 };
     return Math.abs(off.x) > eps || Math.abs(off.y) > eps || Math.abs(off.z) > eps;
   });
@@ -1548,8 +1590,8 @@ export function useViewerStage(
       step = Math.max(0.01, viewH * 0.05);
     }
 
-    const scale = Number.isFinite(settingsRef.value.view.panStepScale)
-      ? Math.max(0.1, settingsRef.value.view.panStepScale)
+    const scale = Number.isFinite(settingsRef.value.other.panStepScale)
+      ? Math.max(0.1, settingsRef.value.other.panStepScale)
       : 1;
     step *= scale;
 
@@ -1569,9 +1611,9 @@ export function useViewerStage(
     panTmpMove.multiplyScalar(-1);
 
     if (side === 'left') {
-      const cur = settingsRef.value.view.panOffsetLeft ?? { x: 0, y: 0, z: 0 };
+      const cur = settingsRef.value.pan.panOffsetLeft ?? { x: 0, y: 0, z: 0 };
       settingsSync.patch({
-        view: {
+        pan: {
           panOffsetLeft: {
             x: cur.x + panTmpMove.x,
             y: cur.y + panTmpMove.y,
@@ -1581,9 +1623,9 @@ export function useViewerStage(
       });
     }
     else if (side === 'right') {
-      const cur = settingsRef.value.view.panOffsetRight ?? { x: 0, y: 0, z: 0 };
+      const cur = settingsRef.value.pan.panOffsetRight ?? { x: 0, y: 0, z: 0 };
       settingsSync.patch({
-        view: {
+        pan: {
           panOffsetRight: {
             x: cur.x + panTmpMove.x,
             y: cur.y + panTmpMove.y,
@@ -1593,9 +1635,9 @@ export function useViewerStage(
       });
     }
     else {
-      const cur = settingsRef.value.view.panOffset ?? { x: 0, y: 0, z: 0 };
+      const cur = settingsRef.value.pan.panOffset ?? { x: 0, y: 0, z: 0 };
       settingsSync.patch({
-        view: {
+        pan: {
           panOffset: {
             x: cur.x + panTmpMove.x,
             y: cur.y + panTmpMove.y,
@@ -1613,25 +1655,25 @@ export function useViewerStage(
     const isDual = presets.length === 2;
     const side = isDual ? panTargetSide.value : 'single';
     if (side === 'left') {
-      settingsSync.patch({ view: { panOffsetLeft: { x: 0, y: 0, z: 0 } } });
+      settingsSync.patch({ pan: { panOffsetLeft: { x: 0, y: 0, z: 0 } } });
     }
     else if (side === 'right') {
-      settingsSync.patch({ view: { panOffsetRight: { x: 0, y: 0, z: 0 } } });
+      settingsSync.patch({ pan: { panOffsetRight: { x: 0, y: 0, z: 0 } } });
     }
     else {
-      settingsSync.patch({ view: { panOffset: { x: 0, y: 0, z: 0 } } });
+      settingsSync.patch({ pan: { panOffset: { x: 0, y: 0, z: 0 } } });
     }
     stage.invalidate();
   }
 
   function setPanStepScale(v: number): void {
     const next = Number.isFinite(v) ? Math.max(0.1, Math.min(5, v)) : 1;
-    settingsSync.patch({ view: { panStepScale: next } });
+    settingsSync.patch({ other: { panStepScale: next } });
   }
 
   const panStepScale = computed(() =>
-    Number.isFinite(settingsRef.value.view.panStepScale)
-      ? settingsRef.value.view.panStepScale
+    Number.isFinite(settingsRef.value.other.panStepScale)
+      ? settingsRef.value.other.panStepScale
       : 1,
   );
 
@@ -1698,20 +1740,12 @@ export function useViewerStage(
       setViewPresets: v => stage?.setViewPresets(v),
       setDualViewDistance: d => stage?.setDualViewDistance(d),
       setDualViewSplit: r => stage?.setDualViewSplit(r),
-
-      applyAtomScale: () => runtime?.applyAtomScale(),
-      applyShowBonds: () => runtime?.applyShowBonds(),
       applyShowAxes: () => runtime?.applyShowAxes(),
 
       setAutoRotateConfig: cfg => stage?.setAutoRotateConfig(cfg),
       setModelLightIntensity: v => stage?.setModelLightIntensity(v),
 
       hasModel,
-      hasAnyTypeId: () => runtime?.hasAnyTypeId() ?? false,
-      onTypeMapChanged: () => {
-        runtime?.onTypeMapChanged();
-        inspectCtx.clear();
-      },
       applyBackgroundColor: () => runtime?.applyBackgroundColor(),
     });
 
@@ -1918,6 +1952,7 @@ export function useViewerStage(
     applyLayerSnapshots: async (snaps) => {
       runtime?.applyLayerSnapshots(snaps);
       runtimeTick.value += 1;
+      syncUiFromRuntime();
       scheduleSessionSave('layers');
     },
     getLayerSources: async () => {
@@ -1935,8 +1970,6 @@ export function useViewerStage(
     },
     cacheRemoteOnExport,
     setCacheRemoteOnExport: setCacheRemoteOnExportFlag,
-    getAnimState: getAnimStateSnapshot,
-    applyAnimState,
   };
 
   const exposedApi: ViewerStageExposedApi = {
@@ -1952,16 +1985,16 @@ export function useViewerStage(
 
   watch(
     () => [
-      settingsRef.value.view.panOffset,
-      settingsRef.value.view.panOffsetLeft,
-      settingsRef.value.view.panOffsetRight,
+      settingsRef.value.pan.panOffset,
+      settingsRef.value.pan.panOffsetLeft,
+      settingsRef.value.pan.panOffsetRight,
     ],
     () => {
       if (!stage) return;
       stage.setPanOffsets({
-        single: settingsRef.value.view.panOffset,
-        left: settingsRef.value.view.panOffsetLeft,
-        right: settingsRef.value.view.panOffsetRight,
+        single: settingsRef.value.pan.panOffset,
+        left: settingsRef.value.pan.panOffsetLeft,
+        right: settingsRef.value.pan.panOffsetRight,
       });
     },
     { immediate: true, deep: true },

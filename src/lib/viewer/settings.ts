@@ -1,13 +1,9 @@
 import type { ViewPreset } from './viewPresets';
 import type { ThemeMode } from '../../theme/mode';
 import type { AutoRotatePresetId } from './autoRotate';
-import { normalizeElementSymbol } from '../structure/chem';
 export type LammpsTypeMapRecord = Record<string, string>;
 
 export type InspectSelectionItem = {
-  layerId: string;
-  layerName?: string;
-  md5?: string;
   atomIndex: number;
   element?: string;
   id?: number;
@@ -45,18 +41,15 @@ export type RepresentationId
 
 /**
  * ViewerSettings 与导出设置结构一致：
- * files -> rotation -> view -> lammps -> details -> colors -> anim -> other
+ * files -> rotation -> view -> pan -> record -> other
  */
 export type ViewerSettings = {
   files: FileSettingsGroup;
   rotation: RotateSettingsGroup;
   view: DisplaySettingsGroup;
-  lammps: LammpsSettingsGroup;
-  details: DetailsSettingsGroup;
-  colors: ColorsSettingsGroup;
-  anim: AnimSettingsGroup;
+  pan: PanSettingsGroup;
+  record: RecordSettingsGroup;
   other: OtherSettingsGroup;
-  inspectSelection: InspectSelectionItem[];
 };
 
 export type DetailsSettingsGroup = {
@@ -67,7 +60,6 @@ export type DetailsSettingsGroup = {
   bondFactor: number;
   bondRadius: number;
   atomRoughness: number;
-  applyAllLayers?: boolean;
 };
 
 export const DEFAULT_DETAILS: DetailsSettingsGroup = {
@@ -78,7 +70,6 @@ export const DEFAULT_DETAILS: DetailsSettingsGroup = {
   bondFactor: 1.05,
   bondRadius: 0.1,
   atomRoughness: 0.35,
-  applyAllLayers: true,
 };
 
 // 分组默认值（与设置面板分类一致）
@@ -111,10 +102,6 @@ export type DisplaySettingsGroup = {
   dualViewDistance: number;
   initialDualViewDistance: number;
   dualViewSplit: number;
-  panOffset: { x: number; y: number; z: number };
-  panOffsetLeft: { x: number; y: number; z: number };
-  panOffsetRight: { x: number; y: number; z: number };
-  panStepScale: number;
 };
 export const DEFAULT_DISPLAY: DisplaySettingsGroup = {
   rotationDeg: { x: 0, y: 0, z: 0 } as RotationDeg,
@@ -124,31 +111,47 @@ export const DEFAULT_DISPLAY: DisplaySettingsGroup = {
   dualViewDistance: 10,
   initialDualViewDistance: 10,
   dualViewSplit: 0.5,
-  panOffset: { x: 0, y: 0, z: 0 },
-  panOffsetLeft: { x: 0, y: 0, z: 0 },
-  panOffsetRight: { x: 0, y: 0, z: 0 },
-  panStepScale: 1,
 };
 
 export const DEFAULT_TYPE_MAP: LammpsTypeMapRecord = {};
 export const DEFAULT_COLOR_MAP: Record<string, string> = {};
 
+// 平移参数统一放在 pan 分组。
+// Pan settings are stored under the "pan" group.
+export type PanSettingsGroup = {
+  panOffset: { x: number; y: number; z: number };
+  panOffsetLeft: { x: number; y: number; z: number };
+  panOffsetRight: { x: number; y: number; z: number };
+};
+export const DEFAULT_PAN: PanSettingsGroup = {
+  panOffset: { x: 0, y: 0, z: 0 },
+  panOffsetLeft: { x: 0, y: 0, z: 0 },
+  panOffsetRight: { x: 0, y: 0, z: 0 },
+};
+
 export type ColorsSettingsGroup = {
-  applyAllLayers: boolean;
   data: Record<string, string>;
 };
 export const DEFAULT_COLORS: ColorsSettingsGroup = {
-  applyAllLayers: true,
   data: {},
 };
 
 export type LammpsSettingsGroup = {
-  applyAllLayers: boolean;
   data: LammpsTypeMapRecord;
 };
 export const DEFAULT_LAMMPS: LammpsSettingsGroup = {
-  applyAllLayers: false,
   data: {},
+};
+
+// 图层播放状态（用于每层持久化）。
+// Per-layer playback state for persistence.
+export type LayerAnimState = {
+  frameIndex: number;
+  playFps: number;
+};
+export const DEFAULT_LAYER_ANIM: LayerAnimState = {
+  frameIndex: 0,
+  playFps: 6,
 };
 
 export type OtherSettingsGroup = {
@@ -156,43 +159,40 @@ export type OtherSettingsGroup = {
   refreshBondsOnPlay: boolean;
   themeReadabilityCheckOnOpen?: boolean;
   modelLightIntensity: number;
-  frame_rate: number;
   themeMode: ThemeMode;
   visualStyle: VisualStyleId;
   selectionHighlightColor: string;
-  /** Pan step (moved to other group in exported settings). */
-  panStepScale?: number;
-  /** Pan offsets (moved to other group in exported settings). */
-  panOffset?: { x: number; y: number; z: number };
-  panOffsetLeft?: { x: number; y: number; z: number };
-  panOffsetRight?: { x: number; y: number; z: number };
+  panStepScale: number;
+  backgroundColor: string;
+  backgroundColorMode: 'auto' | 'custom';
+  backgroundTransparent: boolean;
 };
 export const DEFAULT_OTHER: OtherSettingsGroup = {
   showAxes: false,
   refreshBondsOnPlay: true,
   themeReadabilityCheckOnOpen: true,
   modelLightIntensity: 1.5,
-  frame_rate: 60,
   themeMode: 'system',
   visualStyle: 'default',
   selectionHighlightColor: '#ffd400',
-};
-
-export type AnimSettingsGroup = {
-  backgroundColor: string;
-  backgroundColorMode: 'auto' | 'custom';
-  backgroundTransparent: boolean;
-  frameIndex: number;
-  playFps: number;
-  recordDelaySec: number;
-};
-export const DEFAULT_ANIM: AnimSettingsGroup = {
+  panStepScale: 1,
   backgroundColor: '#ffffff',
   backgroundColorMode: 'custom',
   backgroundTransparent: true,
-  frameIndex: 0,
-  playFps: 6,
+};
+
+// 录制相关设置统一放在 record 分组。
+// Recording-related settings live under "record".
+export type RecordCropBox = { x: number; y: number; w: number; h: number };
+export type RecordSettingsGroup = {
+  frame_rate: number;
+  recordDelaySec: number;
+  recordCropBox: RecordCropBox | null;
+};
+export const DEFAULT_RECORD: RecordSettingsGroup = {
+  frame_rate: 60,
   recordDelaySec: 0,
+  recordCropBox: null,
 };
 
 /**
@@ -203,43 +203,10 @@ export const DEFAULT_SETTINGS: ViewerSettings = {
   files: DEFAULT_FILES,
   rotation: DEFAULT_AUTO_ROTATE,
   view: DEFAULT_DISPLAY,
-  lammps: DEFAULT_LAMMPS,
-  details: DEFAULT_DETAILS,
-  colors: DEFAULT_COLORS,
-  anim: DEFAULT_ANIM,
+  pan: DEFAULT_PAN,
+  record: DEFAULT_RECORD,
   other: DEFAULT_OTHER,
-  inspectSelection: [],
 };
-
-type LammpsTypeMapRow = { typeId: number; element: string };
-
-export function lammpsRecordToRows(
-  data?: LammpsTypeMapRecord,
-): LammpsTypeMapRow[] {
-  if (!data || typeof data !== 'object') return [];
-  const rows: LammpsTypeMapRow[] = [];
-  for (const [key, val] of Object.entries(data)) {
-    const tid = Math.max(1, Math.floor(Number.parseFloat(String(key))));
-    if (!Number.isFinite(tid)) continue;
-    const el = normalizeElementSymbol(String(val ?? '')) || 'E';
-    rows.push({ typeId: tid, element: el });
-  }
-  rows.sort((a, b) => a.typeId - b.typeId);
-  return rows;
-}
-
-export function lammpsRowsToRecord(
-  rows?: LammpsTypeMapRow[],
-): LammpsTypeMapRecord {
-  const out: LammpsTypeMapRecord = {};
-  for (const row of rows ?? []) {
-    const tid = Math.max(1, Math.floor(row.typeId));
-    if (!Number.isFinite(tid)) continue;
-    const el = normalizeElementSymbol(String(row.element ?? '')) || 'E';
-    out[String(tid)] = el;
-  }
-  return out;
-}
 
 /**
  * 判断元素映射是否为未知占位符（E）

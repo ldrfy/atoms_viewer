@@ -2,7 +2,7 @@
 import * as THREE from 'three';
 import type { Ref } from 'vue';
 
-import type { ViewerSettings } from '../../../lib/viewer/settings';
+import { DEFAULT_DETAILS, type ViewerSettings } from '../../../lib/viewer/settings';
 import type { SettingsPatch } from '../../../lib/viewer/mergeSettings';
 import { normalizeViewPresets } from '../../../lib/viewer/viewPresets';
 import { MANUAL_ROTATION_SYNC_INTERVAL_MS } from '../../../lib/viewer/constants';
@@ -125,7 +125,7 @@ export function createViewerPickingController(deps: RenderDeps) {
     const runtime = deps.getRuntime();
     const info = runtime?.layers.value.find(l => l.id === layerId) ?? null;
     const name = String(info?.name ?? '').trim();
-    const file = String(info?.sourceFileName ?? '').trim();
+    const file = String(info?.source?.fileName ?? '').trim();
     return name || file || layerId;
   }
 
@@ -285,9 +285,7 @@ export function createViewerPickingController(deps: RenderDeps) {
     const display = runtime?.activeDisplaySettings?.value;
     const baseBondRadius = Number.isFinite(display?.bondRadius)
       ? (display!.bondRadius as number)
-      : (Number.isFinite(deps.settingsRef.value.details.bondRadius)
-          ? deps.settingsRef.value.details.bondRadius
-          : 0.09);
+      : DEFAULT_DETAILS.bondRadius;
     const lineRadius = Math.max(0.008, baseBondRadius * 1.5);
 
     const updateLine = (mesh: THREE.InstancedMesh, idx: number, a: THREE.Vector3, b: THREE.Vector3) => {
@@ -469,15 +467,15 @@ export function createViewerPickingController(deps: RenderDeps) {
     const y = -(((e.clientY - rect.top) / Math.max(1, rect.height)) * 2 - 1);
     ndc.set(x, y);
 
-    const view = deps.settingsRef.value.view;
+    const pan = deps.settingsRef.value.pan;
     if (side === 'left') {
-      pickOffset.set(view.panOffsetLeft?.x ?? 0, view.panOffsetLeft?.y ?? 0, view.panOffsetLeft?.z ?? 0);
+      pickOffset.set(pan.panOffsetLeft?.x ?? 0, pan.panOffsetLeft?.y ?? 0, pan.panOffsetLeft?.z ?? 0);
     }
     else if (side === 'right') {
-      pickOffset.set(view.panOffsetRight?.x ?? 0, view.panOffsetRight?.y ?? 0, view.panOffsetRight?.z ?? 0);
+      pickOffset.set(pan.panOffsetRight?.x ?? 0, pan.panOffsetRight?.y ?? 0, pan.panOffsetRight?.z ?? 0);
     }
     else {
-      pickOffset.set(view.panOffset?.x ?? 0, view.panOffset?.y ?? 0, view.panOffset?.z ?? 0);
+      pickOffset.set(pan.panOffset?.x ?? 0, pan.panOffset?.y ?? 0, pan.panOffset?.z ?? 0);
     }
 
     if (pickOffset.lengthSq() > 1e-12) {

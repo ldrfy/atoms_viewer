@@ -20,25 +20,16 @@ export function buildDefaultSettings(): ViewerSettings {
       viewPresets: DEFAULT_SETTINGS.view.viewPresets
         ? [...DEFAULT_SETTINGS.view.viewPresets]
         : [],
-      panOffset: { ...DEFAULT_SETTINGS.view.panOffset },
-      panOffsetLeft: { ...DEFAULT_SETTINGS.view.panOffsetLeft },
-      panOffsetRight: { ...DEFAULT_SETTINGS.view.panOffsetRight },
-      panStepScale: DEFAULT_SETTINGS.view.panStepScale,
     },
-    lammps: {
-      applyAllLayers: DEFAULT_SETTINGS.lammps.applyAllLayers,
-      data: { ...(DEFAULT_SETTINGS.lammps.data ?? {}) },
+    pan: {
+      panOffset: { ...DEFAULT_SETTINGS.pan.panOffset },
+      panOffsetLeft: { ...DEFAULT_SETTINGS.pan.panOffsetLeft },
+      panOffsetRight: { ...DEFAULT_SETTINGS.pan.panOffsetRight },
     },
-    details: { ...DEFAULT_SETTINGS.details },
-    colors: {
-      applyAllLayers: DEFAULT_SETTINGS.colors.applyAllLayers,
-      data: { ...DEFAULT_SETTINGS.colors.data },
-    },
-    anim: { ...DEFAULT_SETTINGS.anim },
+    record: { ...DEFAULT_SETTINGS.record },
     other: {
       ...DEFAULT_SETTINGS.other,
     },
-    inspectSelection: [...(DEFAULT_SETTINGS.inspectSelection ?? [])],
   };
 }
 
@@ -74,25 +65,16 @@ export function saveSettingsToStorage(settings: ViewerSettings): void {
         ...settings.view,
         rotationDeg: { ...settings.view.rotationDeg },
         viewPresets: settings.view.viewPresets ? [...settings.view.viewPresets] : [],
-        panOffset: { ...settings.view.panOffset },
-        panOffsetLeft: { ...settings.view.panOffsetLeft },
-        panOffsetRight: { ...settings.view.panOffsetRight },
-        panStepScale: settings.view.panStepScale,
       },
-      lammps: {
-        applyAllLayers: settings.lammps.applyAllLayers,
-        data: { ...(settings.lammps.data ?? {}) },
+      pan: {
+        panOffset: { ...settings.pan.panOffset },
+        panOffsetLeft: { ...settings.pan.panOffsetLeft },
+        panOffsetRight: { ...settings.pan.panOffsetRight },
       },
-      details: { ...settings.details },
-      colors: {
-        applyAllLayers: settings.colors.applyAllLayers,
-        data: { ...settings.colors.data },
-      },
-      anim: { ...settings.anim },
+      record: { ...settings.record },
       other: {
         ...settings.other,
       },
-      inspectSelection: [...(settings.inspectSelection ?? [])],
     };
     localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(data));
   }

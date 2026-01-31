@@ -44,6 +44,10 @@ export type RecordingBindings = {
   selectCancelLabel: Ref<string | null>;
   showDelayInput: Ref<boolean>;
 
+  // sync persisted record box
+  // 同步持久化录制框
+  setLastRecordBox: (box: CropBox | null) => void;
+
   // select an area for non-recording actions (e.g., export)
   selectExportArea: (opts: {
     onConfirm: (box: CropBox) => Promise<void> | void;
@@ -69,6 +73,14 @@ type CreateRecordingControllerArgs = {
 
   /** 录制帧率（从 settings 读） */
   getRecordFps?: () => number;
+
+  /** 读取上次录制框（用于持久化） */
+  /** Read last record crop box (for persistence) */
+  getRecordBox?: () => CropBox | null;
+
+  /** 记录最新录制框（用于持久化） */
+  /** Persist latest record crop box */
+  onRecordBoxChange?: (box: CropBox | null) => void;
 
   /** 当前模型文件名（用于生成下载文件名） */
   getModelFileName?: () => string | undefined;
@@ -100,12 +112,12 @@ export function createRecordingController(
   const showDelayInput = ref(true);
   const selectConfirmLoading = ref(false);
   let recordCropRect: CropBox | null = null;
-  let lastRecordBox: CropBox | null = null;
+  let lastRecordBox: CropBox | null = args.getRecordBox?.() ?? null;
   let selectMode: 'record' | 'custom' = 'record';
   let selectConfirmCb: ((box: CropBox) => void) | null = null;
   let selectCancelCb: (() => void) | null = null;
   let recordBgRestore: Pick<
-    ViewerSettings['anim'],
+    ViewerSettings['other'],
     'backgroundTransparent' | 'backgroundColor' | 'backgroundColorMode'
   > | null = null;
 
@@ -199,14 +211,14 @@ export function createRecordingController(
     if (!patchSettings || !args.getSettings) return;
     if (recordBgRestore) return;
     const settings = args.getSettings();
-    if (!settings.anim.backgroundTransparent) return;
+    if (!settings.other.backgroundTransparent) return;
     recordBgRestore = {
-      backgroundTransparent: settings.anim.backgroundTransparent,
-      backgroundColor: settings.anim.backgroundColor,
-      backgroundColorMode: settings.anim.backgroundColorMode,
+      backgroundTransparent: settings.other.backgroundTransparent,
+      backgroundColor: settings.other.backgroundColor,
+      backgroundColorMode: settings.other.backgroundColorMode,
     };
     patchSettings({
-      anim: {
+      other: {
         backgroundTransparent: false,
         backgroundColor: getRecordBgColor(),
         backgroundColorMode: 'custom',
@@ -217,7 +229,7 @@ export function createRecordingController(
   const restoreRecordBackground = (): void => {
     if (!recordBgRestore || !patchSettings) return;
     patchSettings({
-      anim: {
+      other: {
         backgroundTransparent: recordBgRestore.backgroundTransparent,
         backgroundColor: recordBgRestore.backgroundColor,
         backgroundColorMode: recordBgRestore.backgroundColorMode,
@@ -281,6 +293,12 @@ export function createRecordingController(
     const b = clampBoxToCanvas(normBox(lastRecordBox));
     if (b.w < 8 || b.h < 8) return null;
     return b;
+  }
+
+  // 从外部同步最近一次录制框。
+  // Sync last record crop box from outside (e.g. restored settings).
+  function setLastRecordBox(box: CropBox | null): void {
+    lastRecordBox = box ? { ...box } : null;
   }
 
   function resetSelectOverrides(): void {
@@ -666,6 +684,9 @@ export function createRecordingController(
 
     recordCropRect = box;
     recordCropBox.value = box;
+    // 持久化最近一次录制框。
+    // Persist the latest record crop box.
+    args.onRecordBoxChange?.({ ...box });
 
     const fps = Math.max(1, Math.floor(args.getRecordFps?.() ?? 60));
     const delaySec = Math.max(0, Number(recordDelaySec.value) || 0);
@@ -755,5 +776,6 @@ export function createRecordingController(
     selectCancelLabel,
     showDelayInput,
     selectExportArea,
+    setLastRecordBox,
   };
 }

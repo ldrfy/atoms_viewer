@@ -20,7 +20,7 @@
           <a-typography-text type="secondary">
             {{ t('settings.panel.colors.currentLayer') }}:
           </a-typography-text>
-          <a-tooltip v-if="activeLayerInfo" :title="activeLayerInfo.sourceFileName || activeLayerInfo.id">
+          <a-tooltip v-if="activeLayerInfo" :title="activeLayerInfo.source?.fileName || activeLayerInfo.id">
             <a-tag class="settings-tag-full">
               <span class="settings-tag-ellipsis">
                 {{ activeLayerInfo.name }}
@@ -103,7 +103,7 @@ import { useI18n } from 'vue-i18n';
 
 import { viewerApiRef } from '../../../lib/viewer/bridge';
 import { useSettingsSiderContext } from '../useSettingsSiderContext';
-import { buildElementColorRecordFromMap, parseColorMapKey } from '../../ViewerStage/colorMap';
+import { parseColorMapKey } from '../../ViewerStage/colorMap';
 import { getElementColorHex } from '../../../lib/structure/chem';
 import { getVisualStylePreset } from '../../../lib/viewer/visualStyles';
 import { readApplyAllLayersFlags, writeApplyAllLayersFlags } from '../applyAllStorage';
@@ -113,7 +113,7 @@ import { useSettingsSiderResetContext } from '../useSettingsSiderResetContext';
 import type { ColorMapRecord } from '../../ViewerStage/colorMap';
 
 const { t } = useI18n();
-const { patchSettings, hasAnyLayer, settings } = useSettingsSiderContext();
+const { hasAnyLayer, settings } = useSettingsSiderContext();
 
 const viewerApi = computed(() => viewerApiRef.value);
 const layerList = computed(() => viewerApi.value?.layers.value ?? []);
@@ -121,14 +121,13 @@ const activeLayerId = computed(() => viewerApi.value?.activeLayerId.value ?? nul
 const colorKeys = computed(() => viewerApi.value?.activeLayerColorKeys.value ?? []);
 const colorMap = computed(() => viewerApi.value?.activeLayerColorMap.value ?? {});
 const applyToAllLayers = ref(
-  settings.value.colors.applyAllLayers ?? readApplyAllLayersFlags().colors ?? true,
+  readApplyAllLayersFlags().colors ?? true,
 );
 
 watch(
   applyToAllLayers,
   (v) => {
     writeApplyAllLayersFlags({ colors: v });
-    patchSettings({ colors: { applyAllLayers: v } });
     if (!v) return;
     const api = viewerApi.value;
     if (!api) return;
@@ -136,22 +135,9 @@ watch(
     const keys = api.activeLayerColorKeys?.value ?? [];
     if (keys.length > 0) {
       api.setAllLayersColorMap(map);
-      patchSettings({
-        colors: { data: buildElementColorRecordFromMap(map, buildElementBaseColorMap(keys)) },
-      });
       api.refreshColorMap({ applyToAll: true });
     }
   },
-);
-
-watch(
-  () => settings.value.colors.applyAllLayers,
-  (v) => {
-    if (typeof v !== 'boolean') return;
-    if (v === applyToAllLayers.value) return;
-    applyToAllLayers.value = v;
-  },
-  { immediate: true },
 );
 const activeLayerInfo = computed(() => {
   const id = activeLayerId.value;
@@ -172,9 +158,8 @@ function resetColors(): void {
   const api = viewerApi.value;
   const keys = colorKeys.value;
   if (keys.length === 0) return;
-  const baseMap = buildElementBaseColorMap(keys);
+  const baseMap = buildKeyBaseColorMap(keys);
   if (applyToAllLayers.value) {
-    patchSettings({ colors: { data: {} } });
     if (api) {
       api.resetAllLayersColorMapToDefaults();
       api.refreshColorMap({ applyToAll: true });
@@ -182,16 +167,15 @@ function resetColors(): void {
     return;
   }
   colorMapModel.value = baseMap;
-  updateColorTemplate(baseMap);
   scheduleRefreshColorMap();
 }
 
-function buildElementBaseColorMap(keys: string[]): Record<string, string> {
+// 为每个颜色键构建默认颜色（避免 C.1 等缺失）。
+// Build base color map for every key (keeps C.1, C.2, etc).
+function buildKeyBaseColorMap(keys: string[]): Record<string, string> {
   const out: Record<string, string> = {};
   for (const key of keys) {
-    const { element } = parseColorMapKey(key);
-    if (!element || element in out) continue;
-    out[element] = getBaseColorForKey(key);
+    out[key] = getBaseColorForKey(key);
   }
   return out;
 }
@@ -230,7 +214,6 @@ function patchColorAt(key: string, colorHex: string): void {
   if (!key) return;
   const next = { ...colorMapModel.value, [key]: colorHex };
   colorMapModel.value = next;
-  updateColorTemplate(next);
   scheduleRefreshColorMap();
 }
 
@@ -238,7 +221,6 @@ function onResetColor(key: string): void {
   const def = getBaseColorForKey(key);
   const next = { ...colorMapModel.value, [key]: def };
   colorMapModel.value = next;
-  updateColorTemplate(next);
   scheduleRefreshColorMap();
 }
 
@@ -255,17 +237,6 @@ function onColorPickerChange(key: string, v: unknown): void {
   const hex = normalizeHexColor(v);
   if (!hex) return;
   patchColorAt(key, hex);
-}
-
-function updateColorTemplate(map: ColorMapRecord): void {
-  const allMatchBase = colorKeys.value.every(k => !isKeyCustom(k, map));
-  if (allMatchBase) {
-    patchSettings({ colors: { data: {} } });
-    return;
-  }
-  patchSettings({
-    colors: { data: buildElementColorRecordFromMap(map, buildElementBaseColorMap(colorKeys.value)) },
-  });
 }
 
 let refreshTimer: number | null = null;

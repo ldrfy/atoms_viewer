@@ -4,8 +4,9 @@ import { ref, type Ref } from 'vue';
 
 import {
   DEFAULT_DETAILS,
-  lammpsRecordToRows,
-  lammpsRowsToRecord,
+  DEFAULT_COLORS,
+  DEFAULT_LAMMPS,
+  DEFAULT_LAYER_ANIM,
   type ViewerSettings,
   type LammpsTypeMapRecord,
   type DetailsSettingsGroup,
@@ -92,17 +93,7 @@ export type ModelLayerInfo = {
   frameCount: number;
   hasTypeId: boolean;
   sourceFormat?: string;
-  sourceFileName?: string;
-  /** Optional file hash (md5) to track per-layer settings across reloads. */
-  sourceMd5?: string;
-  /** Original source size in bytes (if available). */
-  sourceSize?: number;
-  /** file/url/text */
-  sourceType?: 'file' | 'url' | 'text';
-  sourceUrl?: string;
-  sourceMime?: string;
-  /** Whether raw data is cached locally for export/session restore. */
-  sourceCached?: boolean;
+  source?: LayerSourceInfo;
   createdAtMs: number;
 };
 
@@ -148,6 +139,20 @@ type LayerInternal = {
 
   /** Per-layer inspect selection for export/restore */
   inspectSelection?: import('../../lib/viewer/settings').InspectSelectionItem[];
+
+  /** Per-layer playback fps */
+  playFps: number;
+
+  /** Cached clip bounds for fast visibility toggles */
+  clipBounds?: {
+    minX: number;
+    minY: number;
+    minZ: number;
+    maxX: number;
+    maxY: number;
+    maxZ: number;
+    maxSphereBase: number;
+  };
 
   // tmp
   baseCenter: THREE.Vector3; // keep at (0,0,0) so applyFrameAtomsToMeshes == shift by current mean
@@ -210,6 +215,49 @@ function computeCenteredBox(
   return { center: c, box, maxSphereRadius: maxSphere };
 }
 
+function computeClipBounds(
+  atoms: Atom[],
+  tmpCenter: THREE.Vector3,
+  atomSizeFactor: number,
+): LayerInternal['clipBounds'] | null {
+  // 仅计算一次，用于可见性切换时的快速裁剪估算。
+  // Compute once for fast clip estimation when toggling visibility.
+  if (!atoms || atoms.length === 0) return null;
+  const c = computeMeanCenterInto(atoms, tmpCenter);
+  let minX = Number.POSITIVE_INFINITY;
+  let minY = Number.POSITIVE_INFINITY;
+  let minZ = Number.POSITIVE_INFINITY;
+  let maxX = Number.NEGATIVE_INFINITY;
+  let maxY = Number.NEGATIVE_INFINITY;
+  let maxZ = Number.NEGATIVE_INFINITY;
+  let maxSphere = 0;
+  for (const a of atoms) {
+    const x = a.position[0] - c.x;
+    const y = a.position[1] - c.y;
+    const z = a.position[2] - c.z;
+    if (x < minX) minX = x;
+    if (y < minY) minY = y;
+    if (z < minZ) minZ = z;
+    if (x > maxX) maxX = x;
+    if (y > maxY) maxY = y;
+    if (z > maxZ) maxZ = z;
+    if (a.element) {
+      const r = getSphereBaseRadiusByElement(a.element, atomSizeFactor);
+      if (r > maxSphere) maxSphere = r;
+    }
+  }
+  if (!Number.isFinite(minX) || !Number.isFinite(maxX)) return null;
+  return {
+    minX,
+    minY,
+    minZ,
+    maxX,
+    maxY,
+    maxZ,
+    maxSphereBase: maxSphere,
+  };
+}
+
 function makeCenteredAtomsView(atoms: Atom[], center: THREE.Vector3): Atom[] {
   // Minimal allocation: Atom has extra fields; fitCameraToAtoms uses only element + position.
   // We still use Atom type to satisfy typing.
@@ -256,6 +304,8 @@ export type ModelRuntime = {
   getFrameCount: () => number;
   getFrameIndex: () => number;
   applyFrameByIndex: (idx: number, opts?: { refreshBonds?: boolean }) => void;
+  getActiveLayerPlayFps: () => number;
+  setActiveLayerPlayFps: (fps: number) => void;
   getActiveAtoms: () => Atom[] | null;
   getAtomsForLayer: (id: string) => Atom[] | null;
   getFrameMetaForLayer: (id: string | null, frameIndex?: number) => FrameMeta | null;
@@ -371,33 +421,23 @@ export function createModelRuntime(args: {
     for (const l of layerMap.values()) {
       if (!l.info.visible) continue;
       const display = getLayerDisplay(l);
-
-      const atoms0 = (l.model.frames?.[l.frameIndex]
-        ?? l.model.atoms) as Atom[];
-      const atoms = mapAtomsByTypeMap(l, atoms0);
-
-      if (!atoms || atoms.length === 0) continue;
-      any = true;
-
-      const c = computeMeanCenterInto(atoms, centerTmp);
-
-      for (const a of atoms) {
-        const x = a.position[0] - c.x;
-        const y = a.position[1] - c.y;
-        const z = a.position[2] - c.z;
-
-        if (x < minX) minX = x;
-        if (y < minY) minY = y;
-        if (z < minZ) minZ = z;
-        if (x > maxX) maxX = x;
-        if (y > maxY) maxY = y;
-        if (z > maxZ) maxZ = z;
-
-        const r
-          = getSphereBaseRadiusByElement(a.element, atomSizeFactor)
-            * display.atomScale;
-        if (r > maxSphere) maxSphere = r;
+      if (!l.clipBounds) {
+        const atoms0 = (l.model.frames?.[l.frameIndex]
+          ?? l.model.atoms) as Atom[];
+        const atoms = mapAtomsByTypeMap(l, atoms0);
+        l.clipBounds = computeClipBounds(atoms, centerTmp, atomSizeFactor) ?? undefined;
       }
+      const bounds = l.clipBounds;
+      if (!bounds) continue;
+      any = true;
+      if (bounds.minX < minX) minX = bounds.minX;
+      if (bounds.minY < minY) minY = bounds.minY;
+      if (bounds.minZ < minZ) minZ = bounds.minZ;
+      if (bounds.maxX > maxX) maxX = bounds.maxX;
+      if (bounds.maxY > maxY) maxY = bounds.maxY;
+      if (bounds.maxZ > maxZ) maxZ = bounds.maxZ;
+      const r = bounds.maxSphereBase * display.atomScale;
+      if (r > maxSphere) maxSphere = r;
     }
 
     if (!any || !Number.isFinite(minX) || !Number.isFinite(maxX)) {
@@ -588,7 +628,7 @@ export function createModelRuntime(args: {
 
   function getDisplayDefaults(): DetailsSettingsGroup {
     return normalizeLayerDisplay(
-      getSettings().details,
+      DEFAULT_DETAILS_LOCAL,
       DEFAULT_DETAILS_LOCAL,
     );
   }
@@ -638,9 +678,10 @@ export function createModelRuntime(args: {
   }
 
   function mapAtomsByTypeMap(layer: LayerInternal, atoms0: Atom[]): Atom[] {
-    const rows = lammpsRecordToRows(layer.typeMap);
-    const hasRows = Array.isArray(rows) && rows.length > 0;
-    if (layer.hasAnyTypeId && hasRows) return remapAtomsByTypeId(atoms0, rows);
+    const map = layer.typeMap ?? {};
+    if (layer.hasAnyTypeId && Object.keys(map).length > 0) {
+      return remapAtomsByTypeId(atoms0, map);
+    }
     return atoms0;
   }
 
@@ -965,6 +1006,17 @@ export function createModelRuntime(args: {
     const firstAtoms = model.frames?.[0] ?? model.atoms;
 
     const srcMeta = opts?.sourceMeta;
+    const computedFileName = srcMeta?.fileName ?? model.source?.filename;
+    let infoSource: LayerSourceInfo | undefined;
+    if (srcMeta) {
+      infoSource = { ...srcMeta };
+      if (!infoSource.fileName && computedFileName) {
+        infoSource.fileName = computedFileName;
+      }
+    }
+    else if (computedFileName) {
+      infoSource = { fileName: computedFileName };
+    }
 
     const layer: LayerInternal = {
       info: {
@@ -975,13 +1027,7 @@ export function createModelRuntime(args: {
         frameCount,
         hasTypeId: false,
         sourceFormat: model.source?.format,
-        sourceFileName: srcMeta?.fileName ?? model.source?.filename,
-        sourceMd5: srcMeta?.md5,
-        sourceSize: srcMeta?.size,
-        sourceType: srcMeta?.type,
-        sourceUrl: srcMeta?.url,
-        sourceMime: srcMeta?.mime,
-        sourceCached: !!srcMeta?.cached,
+        source: infoSource,
         createdAtMs: Date.now(),
       },
       model,
@@ -1002,6 +1048,7 @@ export function createModelRuntime(args: {
       colorMap: {},
       colorKeys: [],
       display: getDisplayDefaults(),
+      playFps: DEFAULT_LAYER_ANIM.playFps,
       baseCenter: new THREE.Vector3(0, 0, 0),
     };
 
@@ -1011,11 +1058,9 @@ export function createModelRuntime(args: {
     layer.info.hasTypeId = layer.hasAnyTypeId;
 
     if (layer.hasAnyTypeId) {
-      const templateRows = lammpsRecordToRows(getSettings().lammps.data);
       const detected = expandTypeIdsContiguous(typeInfo.typeIds);
-      const mergedRows
-        = (mergeTypeMap(templateRows, detected, typeInfo.defaults) as any) ?? [];
-      layer.typeMap = lammpsRowsToRecord(mergedRows);
+      const mergedMap = mergeTypeMap(DEFAULT_LAMMPS.data, detected, typeInfo.defaults);
+      layer.typeMap = mergedMap;
       layer.typeIds = [...detected];
     }
     else {
@@ -1028,10 +1073,11 @@ export function createModelRuntime(args: {
     const mappedFirstAtoms = mapAtomsByTypeMap(layer, firstAtoms);
     layer.currentMappedAtoms = mappedFirstAtoms;
     layer.mappedFrameIndex = 0;
+    layer.clipBounds = computeClipBounds(mappedFirstAtoms, centerTmp, atomSizeFactor) ?? undefined;
 
     // Initialize per-layer color mapping from (mapped) atoms.
     layer.colorMap = buildColorMapFromAtoms(
-      getSettings().colors.data,
+      DEFAULT_COLORS.data,
       mappedFirstAtoms,
       layer.hasAnyTypeId,
     );
@@ -1083,7 +1129,11 @@ export function createModelRuntime(args: {
     active.info.atomCount = model.atoms.length;
     active.info.frameCount = model.frames?.length ? model.frames.length : 1;
     active.info.sourceFormat = model.source?.format;
-    active.info.sourceFileName = nextFileName ?? active.info.sourceFileName;
+    const prevSource = active.info.source;
+    const nextSourceName = nextFileName ?? prevSource?.fileName;
+    const nextSource = prevSource ? { ...prevSource } : {};
+    if (nextSourceName) nextSource.fileName = nextSourceName;
+    active.info.source = Object.keys(nextSource).length > 0 ? nextSource : undefined;
 
     active.frameIndex = 0;
 
@@ -1092,15 +1142,14 @@ export function createModelRuntime(args: {
     active.hasAnyTypeId = typeInfo.typeIds.length > 0;
 
     if (active.hasAnyTypeId) {
-      const baseRows = (
+      const baseMap = (
         active.typeMap && Object.keys(active.typeMap).length > 0
-          ? lammpsRecordToRows(active.typeMap)
-          : lammpsRecordToRows(getSettings().lammps.data)
-      ) as any;
+          ? active.typeMap
+          : DEFAULT_LAMMPS.data
+      );
       const detected = expandTypeIdsContiguous(typeInfo.typeIds);
-      const mergedRows
-        = (mergeTypeMap(baseRows, detected, typeInfo.defaults) as any) ?? [];
-      active.typeMap = lammpsRowsToRecord(mergedRows);
+      const mergedMap = mergeTypeMap(baseMap, detected, typeInfo.defaults);
+      active.typeMap = mergedMap;
       active.typeIds = [...detected];
     }
     else {
@@ -1190,6 +1239,20 @@ export function createModelRuntime(args: {
   function getFrameIndex(): number {
     const active = getActiveLayer();
     return active ? active.frameIndex : 0;
+  }
+
+  // 获取/设置当前图层播放帧率（与导出保持一致）。
+  // Get/set active-layer playback fps (persisted with snapshots).
+  function getActiveLayerPlayFps(): number {
+    const active = getActiveLayer();
+    return active ? active.playFps : DEFAULT_LAYER_ANIM.playFps;
+  }
+
+  function setActiveLayerPlayFps(fps: number): void {
+    const active = getActiveLayer();
+    if (!active) return;
+    if (!Number.isFinite(fps)) return;
+    active.playFps = Math.max(1, Math.floor(fps));
   }
 
   function getFrameMetaForLayer(
@@ -1457,21 +1520,17 @@ export function createModelRuntime(args: {
         name: l.info.name,
         visible: l.info.visible,
         createdAtMs: l.info.createdAtMs,
-        source: {
-          md5: l.info.sourceMd5,
-          size: l.info.sourceSize,
-          fileName: l.info.sourceFileName,
-          mime: l.info.sourceMime,
-          type: l.info.sourceType,
-          url: l.info.sourceUrl,
-          cached: l.info.sourceCached,
-        },
+        source: l.info.source ? { ...l.info.source } : undefined,
         details: layerDisplay,
         lammps: { data: typeMap },
         colors: {
           data: colorMap,
         },
         inspectSelection: l.inspectSelection ?? [],
+        anim: {
+          frameIndex: l.frameIndex,
+          playFps: l.playFps ?? DEFAULT_LAYER_ANIM.playFps,
+        },
       });
     }
     return res;
@@ -1481,6 +1540,13 @@ export function createModelRuntime(args: {
     layer: LayerInternal,
     snap: LayerSnapshot,
   ): void {
+    // 还原图层帧序号（与导出一致）。
+    // Restore per-layer frame index from snapshot.
+    const snapFrame = snap.anim?.frameIndex;
+    if (Number.isFinite(snapFrame)) {
+      const max0 = Math.max(0, (layer.model.frames?.length ?? 1) - 1);
+      layer.frameIndex = Math.min(Math.max(0, Math.floor(Number(snapFrame))), max0);
+    }
     const baseDisplay = DEFAULT_DETAILS_LOCAL;
     const snapDisplay = snap.details;
     const nextDisplay = normalizeLayerDisplay(snapDisplay ?? baseDisplay, baseDisplay);
@@ -1501,12 +1567,17 @@ export function createModelRuntime(args: {
     layer.typeMapApplied = Object.keys(layer.typeMap ?? {}).length > 0;
 
     // restore inspect selection per layer
+    if (snap.source) {
+      layer.info.source = { ...snap.source };
+    }
     layer.inspectSelection = (snap.inspectSelection ?? []).map(item => ({
       ...item,
-      md5: item.md5 ?? snap.source?.md5 ?? layer.info.sourceMd5,
-      layerId: item.layerId ?? layer.info.id,
-      layerName: item.layerName ?? layer.info.name ?? snap.source?.fileName,
     }));
+
+    const snapAnim = snap.anim ?? {};
+    if (Number.isFinite(snapAnim.playFps)) {
+      layer.playFps = Math.max(1, Math.floor(Number(snapAnim.playFps)));
+    }
 
     // keep last selection for export (runtime only; visuals handled elsewhere)
 
@@ -1518,6 +1589,7 @@ export function createModelRuntime(args: {
     const mapped = mapAtomsByTypeMap(layer, atoms);
     layer.currentMappedAtoms = mapped;
     layer.mappedFrameIndex = layer.frameIndex;
+    layer.clipBounds = computeClipBounds(mapped, centerTmp, atomSizeFactor) ?? layer.clipBounds;
 
     const colorSource = parseColorMapRecord((snap as any).colors?.data);
     layer.colorMap = buildColorMapFromAtoms(colorSource, mapped, layer.hasAnyTypeId);
@@ -1561,7 +1633,7 @@ export function createModelRuntime(args: {
     const matches: Array<{ layer: LayerInternal; snap: LayerSnapshot }> = [];
 
     for (const layer of layerMap.values()) {
-      const md5 = layer.info.sourceMd5;
+      const md5 = layer.info.source?.md5;
       if (!md5) continue;
       const idx = remaining.findIndex(s => s.source?.md5 && s.source.md5 === md5);
       if (idx >= 0) {
@@ -1608,8 +1680,8 @@ export function createModelRuntime(args: {
   }
 
   function applyBackgroundColor(): void {
-    const col = new THREE.Color(getSettings().anim.backgroundColor);
-    const alpha = getSettings().anim.backgroundTransparent ? 0 : 1;
+    const col = new THREE.Color(getSettings().other.backgroundColor);
+    const alpha = getSettings().other.backgroundTransparent ? 0 : 1;
     stage.renderer.setClearColor(col, alpha);
     invalidate();
   }
@@ -1636,6 +1708,7 @@ export function createModelRuntime(args: {
     const mapped = mapAtomsByTypeMap(active, atoms);
     active.currentMappedAtoms = mapped;
     active.mappedFrameIndex = active.frameIndex;
+    active.clipBounds = computeClipBounds(mapped, centerTmp, atomSizeFactor) ?? active.clipBounds;
 
     // Type mapping can change element labels. Keep color map in sync while preserving colors.
     active.colorMap = buildColorMapFromAtoms(
@@ -1677,7 +1750,7 @@ export function createModelRuntime(args: {
     },
   ): void {
     let anyChanged = false;
-    const baseRows = lammpsRecordToRows(opts?.templateMap ?? getSettings().lammps.data);
+    const baseMap = opts?.templateMap ?? DEFAULT_LAMMPS.data;
     const useAtomDefaults = opts?.useAtomDefaults !== false;
 
     for (const layer of layerMap.values()) {
@@ -1693,8 +1766,8 @@ export function createModelRuntime(args: {
         = collectTypeIdsAndElementDefaultsFromAtoms(atoms);
       const defaultsSafe = useAtomDefaults ? defaults : {};
       const detectedTypeIds = expandTypeIdsContiguous(detectedTypeIdsRaw);
-      const mergedRows = mergeTypeMap(baseRows, detectedTypeIds, defaultsSafe) as any;
-      layer.typeMap = lammpsRowsToRecord(mergedRows ?? []);
+      const mergedMap = mergeTypeMap(baseMap, detectedTypeIds, defaultsSafe);
+      layer.typeMap = mergedMap;
       layer.typeIds = [...detectedTypeIds];
 
       const mapped = mapAtomsByTypeMap(layer, atoms);
@@ -2070,6 +2143,8 @@ export function createModelRuntime(args: {
     getFrameCount,
     getFrameIndex,
     applyFrameByIndex,
+    getActiveLayerPlayFps,
+    setActiveLayerPlayFps,
     getActiveAtoms,
     getAtomsForLayer,
     getFrameMetaForLayer,

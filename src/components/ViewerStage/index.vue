@@ -230,11 +230,11 @@ watch(
 );
 
 watch(
-  () => props.settings.anim.backgroundColor,
+  () => props.settings.other.backgroundColor,
   (color) => {
-    if (props.settings.anim.backgroundTransparent) return;
+    if (props.settings.other.backgroundTransparent) return;
     if (!color) return;
-    if (props.settings.anim.backgroundColorMode !== 'custom') return;
+    if (props.settings.other.backgroundColorMode !== 'custom') return;
     const preferred = getPreferredThemeForBg(color);
     if (!preferred || preferred === activeThemeMode.value) return;
     skipNextThemePrompt.value = true;
@@ -256,9 +256,9 @@ function maybePromptThemeMismatch(mode: string): void {
     skipNextThemePrompt.value = false;
     return;
   }
-  if (props.settings.anim.backgroundTransparent) return;
+  if (props.settings.other.backgroundTransparent) return;
   const currentMode = mode === 'system' ? activeThemeMode.value : mode;
-  const color = props.settings.anim.backgroundColor;
+  const color = props.settings.other.backgroundColor;
   if (!color) return;
   const preferred = getPreferredThemeForBg(color);
   if (!preferred || preferred === currentMode) return;
@@ -268,8 +268,8 @@ function maybePromptThemeMismatch(mode: string): void {
 function maybePromptSevereMismatch(): void {
   if (!props.settings.other.themeReadabilityCheckOnOpen) return;
   const mode = activeThemeMode.value;
-  const color = props.settings.anim.backgroundColor;
-  if (props.settings.anim.backgroundTransparent) return;
+  const color = props.settings.other.backgroundColor;
+  if (props.settings.other.backgroundTransparent) return;
   if (!color) return;
   const L = getColorLuminance(color);
   if (L === null) return;

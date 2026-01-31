@@ -21,6 +21,7 @@
             "pause": "Pause",
             "start": "Play",
             "fps": "FPS",
+            "fpsLabel": "Playback FPS",
             "frameIndex": "Frame index",
             "timestep": "Timestep {value}"
         },
@@ -141,15 +142,20 @@
         "session": {
             "restoreTitle": "Restore last session?",
             "restoreContent": "A previous session with models and settings was found. Restore it?",
-            "restoreConfirm": "Restore"
+            "restoreConfirm": "Restore",
+            "restoreMissing": "No cached models found. Please re-import."
         }
     },
     "settings": {
         "title": "Settings",
-        "clearStorage": "Clear local settings",
-        "clearStorageConfirmTitle": "Clear local settings?",
-        "clearStorageConfirmBody": "This removes saved local settings and restores defaults.",
-        "clearStorageHint": "If the display looks wrong or settings get out of sync, try clearing local settings.",
+        "clearStorage": "Clear settings & model cache",
+        "clearStorageConfirmTitle": "Clear settings & model cache?",
+        "clearStorageConfirmBody": "This removes saved settings and cached models, then restores defaults.",
+        "clearStorageHint": "If the display looks wrong or settings get out of sync, try clearing settings and model cache.",
+        "storageUsage": "Local storage usage: {used} / {total}",
+        "storageUsageOnly": "Local storage usage: {used}",
+        "storageUsageDetail": "Settings {local} · Model cache {cache}",
+        "storageUsageUnknown": "Local storage usage: unknown",
         "exportSettings": "Export settings",
         "importSettings": "Import settings",
         "exportSuccess": "Settings exported",
@@ -160,6 +166,7 @@
         "buildTimeUnknown": "Unknown",
             "panel": {
                 "resetPanelButton": "Reset panel defaults",
+                "resetPanelConfirm": "Reset this panel to defaults?",
                 "view": {
                 "header": "View Control",
                 "viewPresets": "View presets",
@@ -309,6 +316,7 @@
                 "selectionColorHint": "Used for selection halos, lines, and fill.",
                 "selectionColorReset": "Restore default selection color",
                 "selectionColorResetTooltip": "Reset to the built-in selection highlight color.",
+                "backgroundColor": "Background color",
                 "atomRoughness": "Atom material roughness",
                 "visualStyle": "Visual style",
                 "visualStyleDefault": "Default",

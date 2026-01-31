@@ -54,10 +54,9 @@ import { readUrlListParam, writeUrlListParam, clearQueryParams } from './lib/url
 import { mergeSettings } from './lib/viewer/mergeSettings';
 import { readSettingsOverridesFromUrl } from './lib/settingsUrl';
 import { viewerApiRef } from './lib/viewer/bridge';
-import { readStoredSessionMeta, loadSessionFromStorage } from './lib/viewer/sessionStorage';
+import { clearSessionStorage, readStoredSessionMeta, loadSessionFromStorage } from './lib/viewer/sessionStorage';
 import type { SessionSnapshot, LayerSourceData } from './lib/viewer/sessionTypes';
 import { mergeCategorizedSettings } from './lib/viewer/sessionTemplates';
-import { writeApplyAllLayersFlags } from './components/SettingsSider/applyAllStorage';
 import { PANEL_KEYS } from './lib/viewer/panelKeys';
 import { VIEW_SETTINGS_SAVE_DELAY_MS } from './lib/viewer/constants';
 
@@ -257,7 +256,9 @@ async function tryApplyPendingRestore(): Promise<void> {
   if (!payload || !api?.applySessionSnapshot) return;
   restoreInFlight.value = true;
   try {
-    await api.applySessionSnapshot(payload.snapshot as SessionSnapshot, payload.files);
+    await api.applySessionSnapshot(payload.snapshot as SessionSnapshot, payload.files, {
+      suppressSessionSave: true,
+    });
     pendingRestore.value = null;
   }
   catch (err) {
@@ -288,25 +289,16 @@ async function maybePromptSessionRestore(): Promise<void> {
     onOk: async () => {
       try {
         const stored = await loadSessionFromStorage();
-        if (!stored) throw new Error('missing session');
+
+        if (!stored) {
+          await clearSessionStorage();
+          message.info(t('viewer.session.restoreMissing'));
+          return;
+        }
         const files = buildFilesFromSources(stored.sources ?? []);
         const rawSettings = (stored.snapshot.settings && typeof stored.snapshot.settings === 'object')
           ? stored.snapshot.settings as any
           : {};
-        const detailFlags = rawSettings.details as Record<string, unknown> | undefined;
-        const colorFlags = rawSettings.colors as Record<string, unknown> | undefined;
-        const lammpsFlags = rawSettings.lammps as Record<string, unknown> | undefined;
-        writeApplyAllLayersFlags({
-          details: typeof detailFlags?.applyAllLayers === 'boolean'
-            ? detailFlags.applyAllLayers
-            : undefined,
-          colors: typeof colorFlags?.applyAllLayers === 'boolean'
-            ? colorFlags.applyAllLayers
-            : undefined,
-          lammps: typeof lammpsFlags?.applyAllLayers === 'boolean'
-            ? lammpsFlags.applyAllLayers
-            : undefined,
-        });
         settings.value = mergeCategorizedSettings(rawSettings);
         pendingRestore.value = { snapshot: stored.snapshot, files };
         page.value = 'viewer';

@@ -19,7 +19,7 @@
           <a-typography-text type="secondary">
             {{ t('settings.panel.details.currentLayer') }}:
           </a-typography-text>
-          <a-tooltip v-if="activeLayerInfo" :title="activeLayerInfo.sourceFileName || activeLayerInfo.id">
+          <a-tooltip v-if="activeLayerInfo" :title="activeLayerInfo.source?.fileName || activeLayerInfo.id">
             <a-tag class="settings-tag-full">
               <span class="settings-tag-ellipsis">
                 {{ activeLayerInfo.name }}
@@ -218,7 +218,7 @@ import {
 } from '../../../lib/viewer/constants';
 
 const { t } = useI18n();
-const { hasAnyLayer, patchSettings, settings } = useSettingsSiderContext();
+const { hasAnyLayer } = useSettingsSiderContext();
 
 const viewerApi = computed(() => viewerApiRef.value);
 const layerList = computed(() => viewerApi.value?.layers.value ?? []);
@@ -230,41 +230,19 @@ const activeLayerInfo = computed(() => {
 });
 
 const applyToAllLayers = ref(
-  settings.value.details.applyAllLayers ?? readApplyAllLayersFlags().details ?? true,
+  readApplyAllLayersFlags().details ?? true,
 );
 
 watch(
   applyToAllLayers,
   (v) => {
     writeApplyAllLayersFlags({ details: v });
-    patchSettings({ details: { applyAllLayers: v } });
     if (!v) return;
     const api = viewerApi.value;
     const cur = displayModel.value;
     if (!api || !cur) return;
     api.setActiveLayerDisplay({ ...cur }, { applyToAll: true });
-    patchSettings({
-      details: {
-        representation: cur.representation,
-        atomScale: cur.atomScale,
-        showBonds: cur.showBonds,
-        sphereSegments: cur.sphereSegments,
-        bondFactor: cur.bondFactor,
-        bondRadius: cur.bondRadius,
-        atomRoughness: cur.atomRoughness,
-      },
-    });
   },
-);
-
-watch(
-  () => settings.value.details.applyAllLayers,
-  (v) => {
-    if (typeof v !== 'boolean') return;
-    if (v === applyToAllLayers.value) return;
-    applyToAllLayers.value = v;
-  },
-  { immediate: true },
 );
 
 const displayModel = computed<DetailsSettingsGroup | null>(() => {
@@ -279,20 +257,6 @@ function patchDisplay(patch: Partial<DetailsSettingsGroup>): void {
   const api = viewerApi.value;
   if (!api || !activeLayerInfo.value) return;
   api.setActiveLayerDisplay(patch, { applyToAll: applyToAllLayers.value });
-  if (!applyToAllLayers.value) return;
-  const cur = displayModel.value ?? DEFAULT_DETAILS;
-  const next = { ...cur, ...patch };
-  patchSettings({
-    details: {
-      representation: next.representation,
-      atomScale: next.atomScale,
-      showBonds: next.showBonds,
-      sphereSegments: next.sphereSegments,
-      bondFactor: next.bondFactor,
-      bondRadius: next.bondRadius,
-      atomRoughness: next.atomRoughness,
-    },
-  });
 }
 
 const showBondsModel = computed({
@@ -399,7 +363,7 @@ const representationModel = computed<RepresentationId>({
 });
 
 function onResetDisplay(): void {
-  applyToAllLayers.value = DEFAULT_DETAILS.applyAllLayers ?? true;
+  applyToAllLayers.value = true;
   patchDisplay({
     representation: DEFAULT_DETAILS.representation,
     atomScale: DEFAULT_DETAILS.atomScale,

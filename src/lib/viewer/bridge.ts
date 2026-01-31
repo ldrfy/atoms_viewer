@@ -121,6 +121,7 @@ export type ViewerPublicApi = {
   applySessionSnapshot: (
     snapshot: import('./sessionTypes').SessionSnapshot,
     files?: File[],
+    opts?: { suppressSessionSave?: boolean },
   ) => Promise<void>;
   /** Whether remote models should be cached locally for export/restore. */
   cacheRemoteOnExport: Ref<boolean>;
@@ -130,18 +131,6 @@ export type ViewerPublicApi = {
   applyViewFromSettings: (overrides?: Partial<ViewerSettings>) => void;
   /** Temporarily suspend settings sync from controls/auto-rotation. */
   suspendSettingsSync: (ms?: number) => void;
-  /** Get animation-related state for export/restore. */
-  getAnimState?: () => {
-    frameIndex: number;
-    playFps: number;
-    recordDelaySec: number;
-  };
-  /** Apply animation-related state from import/session. */
-  applyAnimState?: (state: {
-    frameIndex: number;
-    playFps: number;
-    recordDelaySec: number;
-  }) => void;
 
   /** Whether any visible layer uses custom atom colors. */
   visibleCustomColors: Ref<boolean>;

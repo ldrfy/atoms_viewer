@@ -1,104 +1,107 @@
 import type { Atom } from '../../lib/structure/types';
 import { normalizeElementSymbol } from '../../lib/structure/chem';
-
-export type LammpsTypeMapRow = { typeId: number; element: string };
+import type { LammpsTypeMapRecord } from '../../lib/viewer/settings';
 
 export function buildLammpsTypeToElementMap(
-  rows: LammpsTypeMapRow[] = [],
+  map: LammpsTypeMapRecord = {},
 ): Record<number, string> {
   const out: Record<number, string> = {};
-  for (const row of rows) {
-    const typeId = Math.max(1, Math.floor(row.typeId));
-    const el = normalizeElementSymbol(row.element) || 'E';
+  for (const [key, val] of Object.entries(map ?? {})) {
+    const typeId = Math.max(1, Math.floor(Number.parseFloat(String(key))));
+    if (!Number.isFinite(typeId)) continue;
+    const el = normalizeElementSymbol(String(val ?? '')) || 'E';
     out[typeId] = el; // 重复 typeId 时后者覆盖
   }
   return out;
 }
 
-export function normalizeTypeMapRows(
-  rows: LammpsTypeMapRow[],
-): LammpsTypeMapRow[] {
-  const seen = new Set<number>();
-  const out: LammpsTypeMapRow[] = [];
-  for (const r of rows) {
-    const id = Math.max(1, Math.floor(r.typeId));
-    if (seen.has(id)) continue;
-    seen.add(id);
-    out.push({ typeId: id, element: r.element });
+function normalizeTypeMapRecord(
+  map: LammpsTypeMapRecord = {},
+): LammpsTypeMapRecord {
+  const entries: Array<{ tid: number; el: string }> = [];
+  for (const [key, val] of Object.entries(map ?? {})) {
+    const tid = Math.max(1, Math.floor(Number.parseFloat(String(key))));
+    if (!Number.isFinite(tid)) continue;
+    const el = normalizeElementSymbol(String(val ?? '')) || 'E';
+    entries.push({ tid, el });
   }
-  out.sort((a, b) => a.typeId - b.typeId);
+  entries.sort((a, b) => a.tid - b.tid);
+  const out: LammpsTypeMapRecord = {};
+  for (const item of entries) {
+    out[String(item.tid)] = item.el;
+  }
   return out;
 }
 
 export function mergeTypeMap(
-  existing: LammpsTypeMapRow[],
+  existing: LammpsTypeMapRecord,
   detected: number[],
   defaults?: Record<number, string>,
-): LammpsTypeMapRow[] {
-  const base = normalizeTypeMapRows(existing);
+): LammpsTypeMapRecord {
+  const base = normalizeTypeMapRecord(existing);
   const detectedSet = new Set(
-    (detected ?? []).map(t => Math.max(1, Math.floor(t))).filter(t => Number.isFinite(t) && t > 0),
+    (detected ?? [])
+      .map(t => Math.max(1, Math.floor(t)))
+      .filter(t => Number.isFinite(t) && t > 0),
   );
 
-  // 用 Map 便于升级/插入
-  const map = new Map<number, LammpsTypeMapRow>();
-  for (const r of base) {
-    const tid = Math.max(1, Math.floor(r.typeId));
+  const next: LammpsTypeMapRecord = {};
+  for (const [key, val] of Object.entries(base)) {
+    const tid = Math.max(1, Math.floor(Number.parseFloat(String(key))));
+    if (!Number.isFinite(tid)) continue;
     if (detectedSet.size > 0 && !detectedSet.has(tid)) continue;
-    map.set(tid, { typeId: tid, element: r.element });
+    next[String(tid)] = val;
   }
 
   const def = defaults ?? {};
 
-  for (const tid0 of detected) {
+  for (const tid0 of detected ?? []) {
     const tid = Math.max(1, Math.floor(tid0));
     if (!Number.isFinite(tid) || tid <= 0) continue;
 
-    const row = map.get(tid);
-    const d = normalizeElementSymbol(def[tid] ?? '');
-
-    if (!row) {
-      // 新增：优先 defaults，否则 E
-      map.set(tid, { typeId: tid, element: d && d !== 'E' ? d : 'E' });
-      continue;
-    }
-
-    // 升级：仅当现有是空或 E 时，才用 defaults 覆盖
-    const cur0 = (row.element ?? '').toString().trim();
+    const cur0 = String(next[String(tid)] ?? '').trim();
     const cur = normalizeElementSymbol(cur0) || (cur0 ? cur0 : '');
     const isPlaceholder = !cur || cur === 'E';
 
+    const d = normalizeElementSymbol(def[tid] ?? '') || '';
+
+    if (!cur0) {
+      next[String(tid)] = d && d !== 'E' ? d : 'E';
+      continue;
+    }
+
     if (isPlaceholder && d && d !== 'E') {
-      row.element = d;
+      next[String(tid)] = d;
     }
   }
 
-  const out = Array.from(map.values());
-  out.sort((a, b) => a.typeId - b.typeId);
-  return out;
+  return normalizeTypeMapRecord(next);
 }
 
 export function typeMapEquals(
-  a: LammpsTypeMapRow[],
-  b: LammpsTypeMapRow[],
+  a: LammpsTypeMapRecord,
+  b: LammpsTypeMapRecord,
 ): boolean {
-  if (a.length !== b.length) return false;
-  for (let i = 0; i < a.length; i += 1) {
-    if (a[i]!.typeId !== b[i]!.typeId) return false;
-    if ((a[i]!.element ?? '') !== (b[i]!.element ?? '')) return false;
+  const na = normalizeTypeMapRecord(a);
+  const nb = normalizeTypeMapRecord(b);
+  const aKeys = Object.keys(na);
+  const bKeys = Object.keys(nb);
+  if (aKeys.length !== bKeys.length) return false;
+  for (const key of aKeys) {
+    if (na[key] !== nb[key]) return false;
   }
   return true;
 }
 
 export function remapElementByTypeId(
   frames: Atom[][],
-  rows: LammpsTypeMapRow[] = [],
+  map: LammpsTypeMapRecord = {},
 ): Atom[][] {
-  const map = buildLammpsTypeToElementMap(rows);
+  const mapById = buildLammpsTypeToElementMap(map);
 
   return frames.map(fr =>
     fr.map((a) => {
-      const mapped = a.typeId ? map[a.typeId] : undefined;
+      const mapped = a.typeId ? mapById[a.typeId] : undefined;
       return {
         ...a,
         element: normalizeElementSymbol(mapped ?? a.element ?? 'E') || 'E',
@@ -114,12 +117,12 @@ export function remapElementByTypeId(
  */
 export function remapAtomsByTypeId(
   atoms: Atom[],
-  rows: LammpsTypeMapRow[] = [],
+  map: LammpsTypeMapRecord = {},
 ): Atom[] {
-  const map = buildLammpsTypeToElementMap(rows);
+  const mapById = buildLammpsTypeToElementMap(map);
 
   return atoms.map((a) => {
-    const mapped = a.typeId ? map[a.typeId] : undefined;
+    const mapped = a.typeId ? mapById[a.typeId] : undefined;
     return {
       ...a,
       element: normalizeElementSymbol(mapped ?? a.element ?? 'E') || 'E',

@@ -108,6 +108,12 @@ export function mergeCategorizedSettings(
       ...base.other,
       ...apply.other,
     };
+    // Legacy migration: keepActiveLayerOnHideAll -> keepActiveLayerOnHide.
+    // 旧字段兼容：keepActiveLayerOnHideAll -> keepActiveLayerOnHide。
+    const legacy = (apply.other as any)?.keepActiveLayerOnHideAll;
+    if (legacy != null && (apply.other as any)?.keepActiveLayerOnHide == null) {
+      base.other.keepActiveLayerOnHide = !!legacy;
+    }
   }
 
   return base;
@@ -206,6 +212,9 @@ export function pruneDefaultSettings(
   if (input.other.modelLightIntensity !== d.other.modelLightIntensity) other.modelLightIntensity = input.other.modelLightIntensity;
   if (input.other.showAxes !== d.other.showAxes) other.showAxes = input.other.showAxes;
   if (input.other.refreshBondsOnPlay !== d.other.refreshBondsOnPlay) other.refreshBondsOnPlay = input.other.refreshBondsOnPlay;
+  if (input.other.keepActiveLayerOnHide !== d.other.keepActiveLayerOnHide) {
+    other.keepActiveLayerOnHide = input.other.keepActiveLayerOnHide;
+  }
   if (input.other.selectionHighlightColor !== d.other.selectionHighlightColor) {
     other.selectionHighlightColor = input.other.selectionHighlightColor;
   }

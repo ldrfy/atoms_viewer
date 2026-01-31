@@ -892,9 +892,12 @@ export function createModelRuntime(args: {
     layer.info.visible = visible;
     layer.group.visible = visible;
 
+    const keepActiveOnHide = getSettings().other.keepActiveLayerOnHide ?? false;
+
     if (!visible) {
-      // if active layer is hidden, pick a visible one as active
-      if (activeLayerId.value === id) {
+      // If active layer is hidden, either keep it or switch to a visible one.
+      // 若隐藏的是当前选中图层：按设置保留或切到可见图层。
+      if (activeLayerId.value === id && !keepActiveOnHide) {
         const next = layers.value.find(x => x.visible && x.id !== id) ?? null;
         activeLayerId.value = next?.id ?? null;
         syncActiveTypeMap();
@@ -904,10 +907,12 @@ export function createModelRuntime(args: {
       }
     }
     else {
-      // If nothing is active (or active is not visible), promote this layer.
+      // If nothing is active (or active is hidden and we don't keep it), promote this layer.
+      // 若没有选中图层（或选中图层不可见且不保留），则选中新显示的图层。
       const active = activeLayerId.value ? layerMap.get(activeLayerId.value) : null;
       const activeVisible = !!active?.info.visible;
-      if (!activeVisible) {
+      const shouldPromote = !activeLayerId.value || (!activeVisible && !keepActiveOnHide);
+      if (shouldPromote) {
         activeLayerId.value = id;
         syncActiveTypeMap();
         syncActiveColorMap();

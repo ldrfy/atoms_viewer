@@ -309,6 +309,7 @@
                 "recordFps": "录制帧率 (fps)",
                 "recordFpsHint": "录制输出的目标帧率；常用 30 / 60。",
                 "refreshBondsOnPlay": "播放时原子连接每帧刷新",
+                "keepActiveLayerOnHide": "隐藏图层时保留选中",
                 "panStep": "平移步长",
                 "themeReadabilityCheckOnOpen": "打开模型时检查主题可读性",
                 "modelLightIntensity": "模型灯光亮度",

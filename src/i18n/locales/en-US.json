@@ -305,6 +305,7 @@
             },
             "other": {
                 "refreshBondsOnPlay": "Refresh bonds each frame while playing",
+                "keepActiveLayerOnHide": "Keep active layer when hiding a layer",
                 "header": "Other",
                 "axes": "Axes",
                 "recordFps": "Recording FPS",

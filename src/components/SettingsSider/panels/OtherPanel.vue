@@ -118,6 +118,19 @@
       </a-row>
     </a-form-item>
 
+    <a-form-item>
+      <a-row justify="space-between" align="middle">
+        <a-col>{{ t('settings.panel.other.keepActiveLayerOnHide') }}</a-col>
+        <a-col>
+          <a-switch
+            v-model:checked="keepActiveLayerOnHideModel"
+            :aria-label="t('settings.panel.other.keepActiveLayerOnHide')"
+            :title="t('settings.panel.other.keepActiveLayerOnHide')"
+          />
+        </a-col>
+      </a-row>
+    </a-form-item>
+
     <a-form-item :label="t('settings.panel.other.selectionColor')">
       <a-row :gutter="8" align="middle">
         <a-col :span="6">
@@ -220,6 +233,13 @@ const showAxesModel = computed({
 const refreshBondsOnPlayModel = computed({
   get: () => settings.value.other.refreshBondsOnPlay ?? false,
   set: (v: boolean) => patchSettings({ other: { refreshBondsOnPlay: v } }),
+});
+
+// Keep active selection when hiding a layer.
+// 隐藏图层时保留选中状态。
+const keepActiveLayerOnHideModel = computed({
+  get: () => settings.value.other.keepActiveLayerOnHide ?? false,
+  set: (v: boolean) => patchSettings({ other: { keepActiveLayerOnHide: v } }),
 });
 
 const panStepScaleModel = computed({

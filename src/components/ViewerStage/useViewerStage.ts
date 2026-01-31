@@ -1312,7 +1312,15 @@ export function useViewerStage(
 
   function setLayerVisible(id: string, visible: boolean): void {
     if (!runtime) return;
+    const wasActive = runtime.activeLayerId.value === id;
+    // Keep active selection when hiding a layer, if enabled.
+    // 若启用，则隐藏图层时保留选中状态。
+    const keepActiveOnHide = settingsRef.value.other.keepActiveLayerOnHide ?? false;
     runtime.setLayerVisible(id, visible);
+    if (!visible && wasActive && keepActiveOnHide) {
+      runtime.setActiveLayer(id);
+    }
+    runtimeTick.value += 1;
     syncUiFromRuntime();
     if (!visible && runtime.activeLayerId.value === id) {
       anim.stopPlay();

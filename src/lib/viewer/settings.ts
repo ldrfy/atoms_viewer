@@ -157,6 +157,9 @@ export const DEFAULT_LAYER_ANIM: LayerAnimState = {
 export type OtherSettingsGroup = {
   showAxes: boolean;
   refreshBondsOnPlay: boolean;
+  // Keep active selection when hiding a layer.
+  // 隐藏图层时保留选中状态。
+  keepActiveLayerOnHide: boolean;
   themeReadabilityCheckOnOpen?: boolean;
   modelLightIntensity: number;
   themeMode: ThemeMode;
@@ -170,6 +173,9 @@ export type OtherSettingsGroup = {
 export const DEFAULT_OTHER: OtherSettingsGroup = {
   showAxes: false,
   refreshBondsOnPlay: true,
+  // Keep active selection when hiding a layer.
+  // 隐藏图层时保留选中状态。
+  keepActiveLayerOnHide: false,
   themeReadabilityCheckOnOpen: true,
   modelLightIntensity: 1.5,
   themeMode: 'system',

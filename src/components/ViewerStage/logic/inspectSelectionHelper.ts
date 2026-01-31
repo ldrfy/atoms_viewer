@@ -41,26 +41,37 @@ export function createInspectSelectionHelper(deps: InspectSelectionHelperDeps) {
   // Convert UI selections into per-layer compact items.
   function collectByLayer(sel: InspectCtx['selected']['value']): Map<string, InspectSelectionItem[]> {
     const byLayer = new Map<string, InspectSelectionItem[]>();
-    for (const s of sel ?? []) {
+    const items = sel ?? [];
+    for (let i = 0; i < items.length; i += 1) {
+      const s = items[i];
+      if (!s) continue;
       const layerId = s.layerId ?? deps.activeLayerId.value ?? '';
       if (!layerId) continue;
-      const list = byLayer.get(layerId) ?? [];
-      list.push({
+      const bucket = byLayer.get(layerId) ?? [];
+      bucket.push({
         atomIndex: s.atomIndex,
         element: s.element,
         id: s.id,
         typeId: s.typeId,
         position: s.position ? [...s.position] as [number, number, number] : undefined,
+        order: i,
       });
-      byLayer.set(layerId, list);
+      byLayer.set(layerId, bucket);
     }
     return byLayer;
   }
 
   // 将存储条目还原为 UI 选择结构（补上 layerId 与缺失属性）。
   // Hydrate stored items into UI selection (inject layerId + missing fields).
-  function hydrateSelection(items: InspectSelectionItem[], layerId: string): InspectCtx['selected']['value'] {
-    const out: InspectCtx['selected']['value'] = [];
+  function hydrateSelection(items: InspectSelectionItem[], layerId: string): Array<{
+    atom: InspectCtx['selected']['value'][number];
+    order: number;
+  }> {
+    const out: Array<{
+      atom: InspectCtx['selected']['value'][number];
+      order: number;
+    }> = [];
+    let fallback = 0;
     for (const item of items ?? []) {
       const base = {
         layerId,
@@ -83,7 +94,10 @@ export function createInspectSelectionHelper(deps: InspectSelectionHelperDeps) {
           if (atom.typeId != null) base.typeId = atom.typeId;
         }
       }
-      out.push(base);
+      const order = Number.isFinite(item.order)
+        ? Math.floor(Number(item.order))
+        : Number.MAX_SAFE_INTEGER + (fallback += 1);
+      out.push({ atom: base, order });
     }
     return out;
   }
@@ -96,16 +110,17 @@ export function createInspectSelectionHelper(deps: InspectSelectionHelperDeps) {
     if (runtimeLayers.length === 0) return;
     // 聚合所有图层的选中列表，保证多图层恢复。
     // Aggregate selections from all layers to restore multi-layer selection.
-    const hydrated: InspectCtx['selected']['value'] = [];
+    const hydrated: Array<{ atom: InspectCtx['selected']['value'][number]; order: number }> = [];
     for (const layer of runtimeLayers) {
       const items = runtime?.getLayerInspectSelection?.(layer.id) ?? [];
       if (!items || items.length === 0) continue;
       hydrated.push(...hydrateSelection(items, layer.id));
     }
+    hydrated.sort((a, b) => a.order - b.order);
     suppress.value = true;
-    deps.inspectCtx.selected.value = hydrated;
+    deps.inspectCtx.selected.value = hydrated.map(item => item.atom);
     suppress.value = false;
-    lastSig.value = buildSelectionSignature(hydrated);
+    lastSig.value = buildSelectionSignature(deps.inspectCtx.selected.value);
     pickingRef?.rebuildSelectionVisualsFromSelected();
   }
 

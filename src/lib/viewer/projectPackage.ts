@@ -90,6 +90,7 @@ function pruneLayerSnapshot(
         position: item.position,
         typeId: item.typeId,
         id: item.id,
+        order: item.order,
       }))
       .filter((item) => {
         const key = `${item.atomIndex}:${item.element ?? ''}:${item.position?.join(',') ?? ''}`;

@@ -9,6 +9,9 @@ export type InspectSelectionItem = {
   id?: number;
   typeId?: number;
   position?: [number, number, number];
+  // Order index in the global selection list.
+  // 全局选中列表中的顺序索引。
+  order?: number;
 };
 
 export type RotationDeg = {

@@ -20,6 +20,7 @@ export type LayerSnapshot = {
   id?: string;
   name?: string;
   visible?: boolean;
+  selected?: boolean;
   createdAtMs?: number;
   source?: LayerSourceInfo;
   /** Per-layer appearance */

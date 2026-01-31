@@ -25,6 +25,7 @@ function pruneLayerSnapshot(
   if (name && name !== fileName) out.name = name;
 
   if (layer.visible === false) out.visible = false;
+  if (layer.selected === true) out.selected = true;
   if (Number.isFinite(layer.createdAtMs)) out.createdAtMs = Number(layer.createdAtMs);
 
   if (layer.source && typeof layer.source === 'object') {
@@ -128,6 +129,21 @@ export function buildSettingsSnapshot(
   activeLayerId?: string | null,
   compact: boolean = true,
 ): SessionSnapshot {
+  // Read selected layer ids from storage (set by UI panel).
+  // 从本地存储读取选中图层 id（由面板维护）。
+  const selectedIds = (() => {
+    try {
+      const raw = localStorage.getItem('atomsViewer.layers.selectedIds.v1');
+      if (!raw) return new Set<string>();
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) return new Set<string>();
+      return new Set(parsed.map(v => String(v)).filter(v => v.length > 0));
+    }
+    catch {
+      return new Set<string>();
+    }
+  })();
+
   const savedAt = new Date().toISOString();
   const categorized = buildCategorizedSettings(settings);
   const pruned = compact ? pruneDefaultSettings(categorized) : categorized;
@@ -138,6 +154,9 @@ export function buildSettingsSnapshot(
   for (const layer of layers ?? []) {
     const id = layer.id ?? '';
     if (!id) continue;
+    // Mark selected flag on layer snapshot if it is selected in UI.
+    // 若该图层在面板被选中，则写入选中标记。
+    if (selectedIds.has(id)) layer.selected = true;
     layerData[id] = pruneLayerSnapshot(layer, storedSizeMap);
   }
   const layersSnapshot: LayersSnapshot = {

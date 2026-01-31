@@ -118,6 +118,7 @@ export async function clearAllSettings(params: {
       'settings.lammps.applyAllLayers',
       'settingsDrawer.desktopWidth',
       'settingsDrawer.mobileHeight',
+      'atomsViewer.layers.selectedIds.v1',
       'themeMode',
       'locale',
     ];

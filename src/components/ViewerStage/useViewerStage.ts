@@ -1257,6 +1257,21 @@ export function useViewerStage(
         const target = runtime.layers.value.find(l => l.id === activeLayerIdFromSnapshot) ?? null;
         if (target) runtime.setActiveLayer(target.id);
       }
+      // Sync selected layer ids from snapshot.
+      // 同步快照中的选中图层 id。
+      const selectedIds = layerSnaps
+        .filter(s => s.selected)
+        .map(s => s.id)
+        .filter((id): id is string => !!id);
+      if (selectedIds.length > 0) {
+        try {
+          localStorage.setItem('atomsViewer.layers.selectedIds.v1', JSON.stringify(selectedIds));
+        }
+        catch {
+          // ignore
+        }
+        window.dispatchEvent(new CustomEvent('atoms-viewer:selected-layers', { detail: { ids: selectedIds } }));
+      }
       if (runtime.layers.value.length > 1) {
         layerSortBy.value = sortBy;
         runtime.sortLayers((a, b) => compareModelLayers(a, b, sortBy));

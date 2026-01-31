@@ -85,6 +85,34 @@ const settingsShadow = createSettingsShadow(props.settings);
 // Selected layer ids for batch apply in panels.
 // 面板批量应用的选中图层 id 列表。
 const selectedLayerIds = ref<string[]>([]);
+const SELECTED_LAYER_IDS_KEY = 'atomsViewer.layers.selectedIds.v1';
+let ignoreSelectedLayerPersist = false;
+
+// Read selected layer ids from storage.
+// 从本地存储读取选中图层 id。
+function readSelectedLayerIds(): string[] {
+  try {
+    const raw = localStorage.getItem(SELECTED_LAYER_IDS_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.map(v => String(v)).filter(v => v.length > 0);
+  }
+  catch {
+    return [];
+  }
+}
+
+// Persist selected layer ids to storage.
+// 将选中图层 id 持久化到本地存储。
+function writeSelectedLayerIds(ids: string[]): void {
+  try {
+    localStorage.setItem(SELECTED_LAYER_IDS_KEY, JSON.stringify(ids));
+  }
+  catch {
+    // ignore
+  }
+}
 
 watch(
   () => props.settings,
@@ -93,6 +121,25 @@ watch(
   },
   { immediate: true, deep: true, flush: 'sync' },
 );
+
+watch(
+  selectedLayerIds,
+  (next) => {
+    if (ignoreSelectedLayerPersist) return;
+    writeSelectedLayerIds(next);
+  },
+  { deep: true },
+);
+
+// Sync selected layer ids from session restore.
+// 会话恢复时同步选中图层 id。
+function onSelectedLayersRestore(e: Event): void {
+  const detail = (e as CustomEvent<{ ids?: string[] }>).detail;
+  const ids = Array.isArray(detail?.ids) ? detail!.ids!.map(v => String(v)) : [];
+  ignoreSelectedLayerPersist = true;
+  selectedLayerIds.value = ids;
+  ignoreSelectedLayerPersist = false;
+}
 
 const patchSettings: PatchSettingsFn = (patch) => {
   const merged = settingsShadow.patch(patch);
@@ -173,10 +220,13 @@ function updateIsMobile(): void {
 onMounted(() => {
   updateIsMobile();
   window.addEventListener('resize', updateIsMobile, { passive: true });
+  selectedLayerIds.value = readSelectedLayerIds();
+  window.addEventListener('atoms-viewer:selected-layers', onSelectedLayersRestore);
 });
 
 onBeforeUnmount(() => {
   window.removeEventListener('resize', updateIsMobile);
+  window.removeEventListener('atoms-viewer:selected-layers', onSelectedLayersRestore);
   onResizeEnd();
   onDesktopResizeEnd();
   clearCloseGuards();
@@ -365,6 +415,7 @@ function onClearStorage(): void {
   try {
     localStorage.removeItem('settingsDrawer.desktopWidth');
     localStorage.removeItem('settingsDrawer.mobileHeight');
+    localStorage.removeItem(SELECTED_LAYER_IDS_KEY);
   }
   catch {
     // ignore
@@ -372,6 +423,7 @@ function onClearStorage(): void {
 
   desktopWidth.value = getDefaultDesktopWidth();
   mobileHeight.value = getDefaultMobileHeight();
+  selectedLayerIds.value = [];
 }
 
 function onDesktopResizeStart(e: PointerEvent): void {

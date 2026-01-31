@@ -331,6 +331,8 @@
                 "currentLayer": "当前图层",
                 "applyAll": "同时修改所有图层",
                 "mapLabel": "颜色映射（十六进制）",
+                "opacity": "透明度",
+                "apply": "应用",
                 "hexPlaceholder": "例如 #FF8800",
                 "colorPickerLabel": "{key} 颜色",
                 "invalidHex": "颜色格式无效，请输入 #RRGGBB 或 #RGB。",

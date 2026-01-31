@@ -356,6 +356,7 @@ const otherDirty = computed(() => {
   return (
     settings.value.other.showAxes !== DEFAULT_SETTINGS.other.showAxes
     || settings.value.other.refreshBondsOnPlay !== DEFAULT_SETTINGS.other.refreshBondsOnPlay
+    || settings.value.other.keepActiveLayerOnHide !== DEFAULT_SETTINGS.other.keepActiveLayerOnHide
     || settings.value.other.panStepScale !== DEFAULT_SETTINGS.other.panStepScale
     || settings.value.other.themeMode !== DEFAULT_SETTINGS.other.themeMode
     || settings.value.other.visualStyle !== DEFAULT_SETTINGS.other.visualStyle

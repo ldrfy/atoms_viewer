@@ -45,6 +45,7 @@ import {
   buildCustomColorMapRecord,
   parseColorMapKey,
   parseColorMapRecord,
+  parseColorValue,
   type ColorMapRecord,
 } from './colorMap';
 import type {
@@ -852,6 +853,10 @@ export function createModelRuntime(args: {
       layer.bondRadiusUsed = display.bondRadius;
       for (const b of layer.bondMeshes) layer.group.add(b);
     }
+
+    // Apply surface settings (colors + opacity + roughness).
+    // 应用材质设置（颜色 + 透明度 + 粗糙度）。
+    applyLayerSurfaceSettings([layer]);
 
     // center atoms in-place to match visual coordinate space
     applyFrameAtomsToMeshes({
@@ -1964,8 +1969,16 @@ export function createModelRuntime(args: {
   ): void {
     const matAny = mesh.material as any;
     const apply = (m: any) => {
-      if (m?.color) {
-        m.color.set(color as any);
+      if (!m) return;
+      if (m.color) {
+        const parsed = typeof color === 'string' ? parseColorValue(color) : null;
+        const hex = parsed?.hex ?? (color as any);
+        m.color.set(hex as any);
+        // Apply opacity from color value (if present).
+        // 若颜色值包含透明度，则应用到材质。
+        const alpha = parsed?.alpha ?? 1;
+        m.opacity = alpha;
+        m.transparent = alpha < 0.999;
       }
       if (m) m.needsUpdate = true;
     };
@@ -2004,6 +2017,11 @@ export function createModelRuntime(args: {
       if (!m) return;
       if (m.color) m.color.set('#ffffff');
       if ('vertexColors' in m) m.vertexColors = true;
+      // Best-effort uniform alpha for instance colors.
+      // instanceColor 只能使用统一透明度（尽量保持一致）。
+      const uniformAlpha = getUniformAlpha(instanceColorKeys, map);
+      m.opacity = uniformAlpha ?? 1;
+      m.transparent = (uniformAlpha ?? 1) < 0.999;
       m.needsUpdate = true;
     };
     if (Array.isArray(matAny)) {
@@ -2016,13 +2034,32 @@ export function createModelRuntime(args: {
     const tmp = new THREE.Color();
     for (let i = 0; i < instanceColorKeys.length; i += 1) {
       const key = instanceColorKeys[i] ?? 'E';
-      const cHex = map[key] ?? getElementColorHex(key);
-      tmp.set(cHex);
+      const raw = map[key] ?? getElementColorHex(key);
+      const parsed = parseColorValue(raw);
+      const hex = parsed?.hex ?? raw;
+      tmp.set(hex);
       mesh.setColorAt(i, tmp);
     }
 
     const ic = mesh.instanceColor;
     if (ic) ic.needsUpdate = true;
+  }
+
+  // Resolve a uniform alpha for instance-color meshes.
+  // 计算 instanceColor 网格的统一透明度。
+  function getUniformAlpha(
+    keys: string[],
+    map: Record<string, string>,
+  ): number | null {
+    let alpha: number | null = null;
+    for (const key of keys) {
+      const raw = map[key] ?? getElementColorHex(key);
+      const parsed = parseColorValue(raw);
+      const next = parsed?.alpha ?? 1;
+      if (alpha == null) alpha = next;
+      else if (Math.abs(alpha - next) > 1e-6) return null;
+    }
+    return alpha;
   }
 
   function applyLayerSurfaceSettings(layers: LayerInternal[]): void {

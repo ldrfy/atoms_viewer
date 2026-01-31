@@ -45,13 +45,13 @@
           :key="`${key}-${idx}`"
           class="settings-gap-bottom-sm"
         >
-          <a-row :gutter="8" align="middle" class="settings-color-map-row">
-            <a-col :span="7">
+          <a-row :gutter="10" align="middle" class="settings-color-map-row">
+            <a-col :span="3">
               <a-tag>{{ key }}</a-tag>
             </a-col>
 
-            <a-col :span="3">
-              <a-tooltip v-if="isKeyCustom(key)" :title="t('settings.panel.colors.resetTooltip')">
+            <a-col :span="2">
+              <a-tooltip v-if="isKeyCustom(key, draftColorMap)" :title="t('settings.panel.colors.resetTooltip')">
                 <a-button
                   type="text"
                   size="small"
@@ -68,20 +68,35 @@
               <input
                 class="color-picker"
                 type="color"
-                :value="colorPickerValue(colorMap[key] ?? '')"
+                :value="colorPickerValue(getDraftHexValue(key))"
                 :aria-label="t('settings.panel.colors.colorPickerLabel', { key })"
                 :title="t('settings.panel.colors.colorPickerLabel', { key })"
                 @input="onColorPickerChange(key, ($event as any).target?.value)"
               >
             </a-col>
 
-            <a-col :span="10">
+            <a-col :span="7">
               <a-input
-                :value="colorMap[key] ?? ''"
+                :value="getDraftHexValue(key)"
                 :placeholder="t('settings.panel.colors.hexPlaceholder')"
                 :aria-label="t('settings.panel.colors.hexPlaceholder')"
                 :title="t('settings.panel.colors.hexPlaceholder')"
                 @change="onColorHexChange(key, ($event as any).target?.value)"
+              />
+            </a-col>
+
+            <a-col :span="8">
+              <a-input-number
+                :value="getDraftOpacityValue(key)"
+                :min="0"
+                :max="100"
+                :step="1"
+                addon-after="%"
+                :aria-label="t('settings.panel.colors.opacity')"
+                :title="t('settings.panel.colors.opacity')"
+                class="settings-full-width"
+                @update:value="onOpacityChange(key, $event)"
+                @change="onOpacityChange(key, $event)"
               />
             </a-col>
           </a-row>
@@ -91,6 +106,16 @@
       <a-typography-text type="secondary" class="settings-text-secondary-tight">
         {{ t('settings.panel.colors.hint') }}
       </a-typography-text>
+
+      <a-row justify="end" class="settings-gap-top-sm">
+        <a-button
+          type="primary"
+          :disabled="!hasAnyLayer || !hasPendingChanges"
+          @click="onApplyColorEdits"
+        >
+          {{ t('settings.panel.colors.apply') }}
+        </a-button>
+      </a-row>
     </a-form-item>
   </a-form>
 </template>
@@ -103,7 +128,7 @@ import { useI18n } from 'vue-i18n';
 
 import { viewerApiRef } from '../../../lib/viewer/bridge';
 import { useSettingsSiderContext } from '../useSettingsSiderContext';
-import { parseColorMapKey } from '../../ViewerStage/colorMap';
+import { formatColorValue, parseColorMapKey, parseColorValue } from '../../ViewerStage/colorMap';
 import { getElementColorHex } from '../../../lib/structure/chem';
 import { getVisualStylePreset } from '../../../lib/viewer/visualStyles';
 import { readApplyAllLayersFlags, writeApplyAllLayersFlags } from '../applyAllStorage';
@@ -120,6 +145,12 @@ const layerList = computed(() => viewerApi.value?.layers.value ?? []);
 const activeLayerId = computed(() => viewerApi.value?.activeLayerId.value ?? null);
 const colorKeys = computed(() => viewerApi.value?.activeLayerColorKeys.value ?? []);
 const colorMap = computed(() => viewerApi.value?.activeLayerColorMap.value ?? {});
+// Draft color map for "Apply" workflow.
+// 用于“应用”按钮的颜色草稿映射。
+const draftColorMap = ref<ColorMapRecord>({});
+// Track active layer id to decide when to reset draft.
+// 记录当前图层 id，用于判断是否需要重置草稿。
+const lastActiveLayerId = ref<string | null>(null);
 const applyToAllLayers = ref(
   readApplyAllLayersFlags().colors ?? true,
 );
@@ -128,15 +159,6 @@ watch(
   applyToAllLayers,
   (v) => {
     writeApplyAllLayersFlags({ colors: v });
-    if (!v) return;
-    const api = viewerApi.value;
-    if (!api) return;
-    const map = api.activeLayerColorMap?.value ?? {};
-    const keys = api.activeLayerColorKeys?.value ?? [];
-    if (keys.length > 0) {
-      api.setAllLayersColorMap(map);
-      api.refreshColorMap({ applyToAll: true });
-    }
   },
 );
 const activeLayerInfo = computed(() => {
@@ -145,29 +167,52 @@ const activeLayerInfo = computed(() => {
   return layerList.value.find(l => l.id === id) ?? null;
 });
 
-const colorMapModel = computed<ColorMapRecord>({
-  get: () => colorMap.value,
-  set: (v) => {
-    if (!viewerApi.value) return;
-    if (applyToAllLayers.value) viewerApi.value.setAllLayersColorMap(v);
-    else viewerApi.value.setActiveLayerColorMap(v);
-  },
+const hasPendingChanges = computed(() => {
+  const keys = colorKeys.value;
+  if (keys.length === 0) return false;
+  for (const key of keys) {
+    const cur = String(colorMap.value[key] ?? '').trim();
+    const draft = String(draftColorMap.value[key] ?? '').trim();
+    if (cur !== draft) return true;
+  }
+  return false;
 });
 
+function syncDraftFromActive(): void {
+  const next: ColorMapRecord = {};
+  for (const key of colorKeys.value) {
+    next[key] = String(colorMap.value[key] ?? '').trim();
+  }
+  draftColorMap.value = next;
+}
+
+watch(
+  [colorKeys, colorMap, activeLayerId],
+  () => {
+    const layerChanged = activeLayerId.value !== lastActiveLayerId.value;
+    if (layerChanged || !hasPendingChanges.value) {
+      syncDraftFromActive();
+    }
+    lastActiveLayerId.value = activeLayerId.value;
+  },
+  { immediate: true },
+);
+
 function resetColors(): void {
-  const api = viewerApi.value;
   const keys = colorKeys.value;
   if (keys.length === 0) return;
+  const api = viewerApi.value;
   const baseMap = buildKeyBaseColorMap(keys);
+  draftColorMap.value = baseMap;
+  if (!api) return;
   if (applyToAllLayers.value) {
-    if (api) {
-      api.resetAllLayersColorMapToDefaults();
-      api.refreshColorMap({ applyToAll: true });
-    }
+    api.resetAllLayersColorMapToDefaults();
+    api.refreshColorMap({ applyToAll: true });
+    syncDraftFromActive();
     return;
   }
-  colorMapModel.value = baseMap;
-  scheduleRefreshColorMap();
+  onApplyColorEdits();
+  syncDraftFromActive();
 }
 
 // 为每个颜色键构建默认颜色（避免 C.1 等缺失）。
@@ -210,18 +255,17 @@ function colorPickerValue(color: unknown): string {
   return normalizeHexColor(color) ?? '#FFFFFF';
 }
 
-function patchColorAt(key: string, colorHex: string): void {
+// Patch draft color for a key (hex + opacity).
+// 更新某个 key 的草稿颜色（十六进制 + 透明度）。
+function patchDraftColor(key: string, colorHex: string, alpha: number): void {
   if (!key) return;
-  const next = { ...colorMapModel.value, [key]: colorHex };
-  colorMapModel.value = next;
-  scheduleRefreshColorMap();
+  const next = { ...draftColorMap.value, [key]: formatColorValue(colorHex, alpha) };
+  draftColorMap.value = next;
 }
 
 function onResetColor(key: string): void {
   const def = getBaseColorForKey(key);
-  const next = { ...colorMapModel.value, [key]: def };
-  colorMapModel.value = next;
-  scheduleRefreshColorMap();
+  patchDraftColor(key, def, 1);
 }
 
 function onColorHexChange(key: string, v: unknown): void {
@@ -230,34 +274,71 @@ function onColorHexChange(key: string, v: unknown): void {
     message.error(t('settings.panel.colors.invalidHex'));
     return;
   }
-  patchColorAt(key, hex);
+  const alpha = getDraftAlphaValue(key);
+  patchDraftColor(key, hex, alpha);
 }
 
 function onColorPickerChange(key: string, v: unknown): void {
   const hex = normalizeHexColor(v);
   if (!hex) return;
-  patchColorAt(key, hex);
+  const alpha = getDraftAlphaValue(key);
+  patchDraftColor(key, hex, alpha);
 }
 
-let refreshTimer: number | null = null;
+function onOpacityChange(key: string, v: unknown): void {
+  const percent = normalizeOpacityInput(v);
+  if (percent == null) return;
+  const alpha = percent / 100;
+  const hex = getDraftHexValue(key);
+  patchDraftColor(key, hex, alpha);
+}
 
-function scheduleRefreshColorMap(): void {
-  if (!viewerApi.value) return;
-  if (refreshTimer) window.clearTimeout(refreshTimer);
-  refreshTimer = window.setTimeout(() => {
-    refreshTimer = null;
-    viewerApi.value?.refreshColorMap({ applyToAll: applyToAllLayers.value });
-  }, 120);
+function onApplyColorEdits(): void {
+  const api = viewerApi.value;
+  if (!api) return;
+  const map = { ...draftColorMap.value };
+  if (applyToAllLayers.value) api.setAllLayersColorMap(map);
+  else api.setActiveLayerColorMap(map);
+  api.refreshColorMap({ applyToAll: applyToAllLayers.value });
+}
+
+function getDraftHexValue(key: string): string {
+  const raw = draftColorMap.value[key] ?? '';
+  const parsed = parseColorValue(raw);
+  return parsed?.hex ?? '';
+}
+
+function getDraftAlphaValue(key: string): number {
+  const raw = draftColorMap.value[key] ?? '';
+  const parsed = parseColorValue(raw);
+  return parsed?.alpha ?? 1;
+}
+
+function getDraftOpacityValue(key: string): number {
+  return Math.round(getDraftAlphaValue(key) * 100);
+}
+
+function clampOpacityPercent(v: number): number {
+  return Math.max(0, Math.min(100, Math.floor(v)));
+}
+
+function normalizeOpacityInput(v: unknown): number | null {
+  if (v == null || v === '') return null;
+  if (typeof v === 'string') {
+    const raw = String(v ?? '').replace('%', '').trim();
+    const parsed = Number(raw);
+    return clampOpacityPercent(parsed);
+  }
+  if (Number.isFinite(v as number)) {
+    return clampOpacityPercent(Number(v));
+  }
+  return null;
 }
 
 const { registerPanelReset } = useSettingsSiderResetContext();
 const unregisterColorsReset = registerPanelReset(PANEL_KEYS.colors, resetColors);
 
 onBeforeUnmount(() => {
-  if (refreshTimer) {
-    window.clearTimeout(refreshTimer);
-    refreshTimer = null;
-  }
   unregisterColorsReset();
 });
 </script>

@@ -331,6 +331,8 @@
                 "currentLayer": "Current layer",
                 "applyAll": "Edit all layers",
                 "mapLabel": "Color map (hex)",
+                "opacity": "Opacity",
+                "apply": "Apply",
                 "hexPlaceholder": "e.g. #FF8800",
                 "colorPickerLabel": "{key} color",
                 "invalidHex": "Invalid color format. Please use #RRGGBB or #RGB.",

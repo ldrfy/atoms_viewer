@@ -9,6 +9,7 @@
         :apply-active="hasAnyLayer && hasPendingChanges"
         :layers="lammpsTargetLayerInfos"
         :active-layer-id="activeLayerId"
+        :highlight-all="highlightAllTargets"
         @apply="onApplyTypeMap"
       />
     </a-form-item>
@@ -157,26 +158,19 @@ const mergedTypeIds = computed(() => {
 function buildDraftMap(typeIds: number[]): LammpsTypeMapRecord {
   const next: LammpsTypeMapRecord = {};
   const targets = lammpsTargetLayerInfos.value;
-  const targetCount = targets.length;
   for (const tid of typeIds) {
     const key = String(tid);
     let picked = '';
-    if (targetCount > 0) {
-      if (targetCount === 1) {
-        const map = (targets[0] as any)?.typeMap ?? {};
-        picked = normalizeElementSymbol(String(map[key] ?? '')) || '';
-      }
-      else {
-        const vals = new Set<string>();
-        for (const layer of targets) {
-          const map = (layer as any)?.typeMap ?? {};
-          const val = normalizeElementSymbol(String(map[key] ?? '')) || '';
-          vals.add(val);
-        }
-        if (vals.size === 1) {
-          picked = Array.from(vals)[0] ?? '';
-        }
-      }
+    // Only compare layers that declare this typeId.
+    // 仅比较包含该 typeId 的图层。
+    const vals = new Set<string>();
+    for (const layer of targets) {
+      if (!layerHasTypeId(layer, tid)) continue;
+      const val = resolveLayerTypeMapValue(layer, tid);
+      if (val) vals.add(val);
+    }
+    if (vals.size === 1) {
+      picked = Array.from(vals)[0] ?? '';
     }
     if (picked) {
       next[key] = picked;
@@ -204,6 +198,13 @@ function buildConfirmedMap(typeIds: number[]): LammpsTypeMapRecord {
   return next;
 }
 
+// Check if layer declares a specific typeId.
+// 判断图层是否包含指定 typeId。
+function layerHasTypeId(layer: any, typeId: number): boolean {
+  const list = (layer as any)?.typeIds ?? [];
+  return Array.isArray(list) && list.some((id: unknown) => Number(id) === typeId);
+}
+
 // Resolve per-layer effective mapping for a typeId.
 // 解析单层指定 typeId 的有效映射。
 function resolveLayerTypeMapValue(layer: any, typeId: number): string {
@@ -223,6 +224,7 @@ function hasMixedTypeMapAcrossTargets(): boolean {
   for (const tid of typeIds) {
     let first = '';
     for (const layer of targets) {
+      if (!layerHasTypeId(layer, tid)) continue;
       const cur = resolveLayerTypeMapValue(layer, tid);
       if (!first) {
         first = cur;
@@ -278,6 +280,12 @@ const hasPendingChanges = computed(() => {
   }
   return false;
 });
+
+// Highlight all targets when mapping already matches.
+// 当映射一致时高亮全部目标图层。
+const highlightAllTargets = computed(() => (
+  lammpsTargetLayerInfos.value.length > 0 && !hasPendingChanges.value
+));
 
 function onApplyTypeMap(): void {
   const map = { ...draftMap.value };

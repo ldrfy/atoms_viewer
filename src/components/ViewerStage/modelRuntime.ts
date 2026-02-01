@@ -996,10 +996,9 @@ export function createModelRuntime(args: {
       forcedLayerId?: string;
     },
   ): { frameCount: number; hasAnimation: boolean; layerId: string } {
-    // New model load: hide previous layers by default (layer-like behavior).
-    // When loading multiple files at once, the caller can disable this per-file
-    // so all newly-added layers remain visible.
-    const hidePrev = opts?.hidePreviousLayers !== false;
+    // 新模型加载默认不隐藏已有图层，保持图层叠加可见。
+    // New model load keeps existing layers visible by default for stacking.
+    const hidePrev = opts?.hidePreviousLayers === true;
     if (hidePrev) hideAllLayers();
 
     const preferredId = opts?.forcedLayerId;

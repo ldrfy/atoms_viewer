@@ -532,12 +532,14 @@ export function createViewerLoader(deps: {
       cached: cacheRemote,
     };
 
-    const layerId = await loadText(t0, text, displayName, {
-      hidePreviousLayers: opts?.hidePreviousLayers ?? true,
-      sourceMeta,
-      forcedLayerId: opts?.forcedLayerId,
-      suppressLammpsWarning: opts?.suppressLammpsWarning,
-    });
+      const layerId = await loadText(t0, text, displayName, {
+        // 新模型加载默认不隐藏已有图层。
+        // New model load keeps existing layers visible by default.
+        hidePreviousLayers: opts?.hidePreviousLayers ?? false,
+        sourceMeta,
+        forcedLayerId: opts?.forcedLayerId,
+        suppressLammpsWarning: opts?.suppressLammpsWarning,
+      });
 
     if (layerId) {
       deps.sourceStore.set(layerId, {
@@ -590,7 +592,9 @@ export function createViewerLoader(deps: {
           lastRawFileName = displayName;
 
           const info = renderFromText(text, displayName, 'load', {
-            hidePreviousLayers: opts?.hidePreviousLayers ?? okCount === 0,
+            // 新模型加载默认不隐藏已有图层。
+            // New model load keeps existing layers visible by default.
+            hidePreviousLayers: opts?.hidePreviousLayers ?? false,
             sourceMeta,
             forcedLayerId: item.forcedLayerId,
             suppressLammpsWarning: opts?.suppressLammpsWarning,
@@ -698,7 +702,9 @@ export function createViewerLoader(deps: {
 
           const allowAutoFit = !isBatchLoad || okCount === 0 || i === files.length - 1;
           const info = renderFromText(text, f.name, 'load', {
-            hidePreviousLayers: opts?.hidePreviousLayers ?? okCount === 0,
+            // 新模型加载默认不隐藏已有图层。
+            // New model load keeps existing layers visible by default.
+            hidePreviousLayers: opts?.hidePreviousLayers ?? false,
             sourceMeta,
             skipAutoFit: !allowAutoFit,
             forcedLayerId: opts?.forcedLayerId,

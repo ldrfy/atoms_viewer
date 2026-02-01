@@ -82,13 +82,15 @@
           </div>
 
           <div class="layer-right" @click.stop>
-            <a-space :size="6">
-              <a-switch
-                :checked="l.visible"
-                :aria-label="t('settings.panel.layers.visible')"
+            <a-space direction="vertical" align="center" :size="2">
+              <a-button
+                :type="l.visible ? 'link' : 'text'"
+                size="small"
                 :title="t('settings.panel.layers.visible')"
-                @change="onToggleLayer(l.id, !!$event)"
-              />
+                @click="onToggleLayer(l.id, !l.visible)"
+              >
+                <component :is="l.visible ? EyeOutlined : EyeInvisibleOutlined" />
+              </a-button>
 
               <a-popconfirm
                 :title="t('settings.panel.layers.deleteConfirm')"
@@ -101,7 +103,6 @@
                   type="text"
                   size="small"
                   danger
-                  :aria-label="t('common.delete')"
                   :title="t('common.delete')"
                 >
                   <DeleteOutlined />

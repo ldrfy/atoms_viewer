@@ -176,6 +176,7 @@
                 "viewPresetSide": "Side",
                 "viewPresetTop": "Top",
                 "dualViewDistance": "View distance",
+                "rotation": "Rotation",
                 "dualViewSplit": "Split ratio",
                 "dualViewSplitHint": "Adjust the width ratio between front (left) and side (right) view.",
                 "perspective": "Perspective",

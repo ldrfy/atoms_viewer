@@ -176,6 +176,7 @@
                 "viewPresetSide": "侧视图",
                 "viewPresetTop": "俯视图",
                 "dualViewDistance": "视距",
+                "rotation": "旋转",
                 "dualViewSplit": "左右比例",
                 "dualViewSplitHint": "调整左侧（正视）与右侧（侧视）的宽度比例。",
                 "perspective": "是否透视",

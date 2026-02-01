@@ -339,6 +339,7 @@ export type ModelRuntime = {
 
   setActiveLayerTypeMap: (map: LammpsTypeMapRecord) => void;
   applyTypeMapToAllLayers: (templateMap: LammpsTypeMapRecord) => void;
+  applyTypeMapToVisibleLayers: (templateMap: LammpsTypeMapRecord) => void;
   resetAllLayersTypeMapToDefaults: (opts?: {
     templateMap?: LammpsTypeMapRecord;
     useAtomDefaults?: boolean;
@@ -346,6 +347,7 @@ export type ModelRuntime = {
 
   setActiveLayerColorMap: (map: ColorMapRecord) => void;
   setAllLayersColorMap: (map: ColorMapRecord) => void;
+  setVisibleLayersColorMap: (map: ColorMapRecord) => void;
   resetAllLayersColorMapToDefaults: () => void;
 
   removeLayer: (id: string) => void;
@@ -357,6 +359,7 @@ export type ModelRuntime = {
     patch: Partial<DetailsSettingsGroup>,
     opts?: { applyToAll?: boolean },
   ) => void;
+  setVisibleLayersDisplaySettings: (patch: Partial<DetailsSettingsGroup>) => void;
 
   visibleCustomColors: Ref<boolean>;
 
@@ -654,6 +657,14 @@ export function createModelRuntime(args: {
     const id = activeLayerId.value;
     if (!id) return null;
     return layerMap.get(id) ?? null;
+  }
+
+  function getVisibleLayers(): LayerInternal[] {
+    const out: LayerInternal[] = [];
+    for (const layer of layerMap.values()) {
+      if (layer.info.visible) out.push(layer);
+    }
+    return out;
   }
 
   function syncActiveTypeMap(): void {
@@ -1806,6 +1817,18 @@ export function createModelRuntime(args: {
     invalidate();
   }
 
+  // 类型映射变更后的统一整理与刷新。
+  // Shared cleanup after applying type map changes.
+  function finalizeTypeMapChange(): void {
+    syncActiveTypeMap();
+    syncActiveColorMap();
+    syncActiveDisplay();
+    recomputeVisibleCustomColors();
+    recomputeVisibleClipRadius();
+    tickCameraClipping(true);
+    invalidate();
+  }
+
   function applyTypeMapToAllLayers(
     templateMap: LammpsTypeMapRecord,
   ): void {
@@ -1865,18 +1888,110 @@ export function createModelRuntime(args: {
     }
 
     if (!anyChanged) return;
+    finalizeTypeMapChange();
+  }
 
-    syncActiveTypeMap();
-    syncActiveColorMap();
-    syncActiveDisplay();
-    recomputeVisibleCustomColors();
-    recomputeVisibleClipRadius();
-    tickCameraClipping(true);
-    invalidate();
+  // 将类型映射更新传播到可见图层，针对每个 layer 的 typeId。
+  // Apply type-map updates to the visible layers, targeting each layer's detected type IDs.
+  function applyTypeMapToVisibleLayers(templateMap: LammpsTypeMapRecord): void {
+    const normalized: Record<string, string> = {};
+    for (const [rawId, rawEl] of Object.entries(templateMap ?? {})) {
+      const tid = Number(rawId);
+      if (!Number.isFinite(tid)) continue;
+      const boxed = Math.max(1, Math.floor(tid));
+      const el = normalizeElementSymbol(String(rawEl ?? '')) || 'E';
+      normalized[String(boxed)] = el;
+    }
+    if (Object.keys(normalized).length === 0) return;
+
+    let anyChanged = false;
+    for (const layer of getVisibleLayers()) {
+      if (!layer.hasAnyTypeId) continue;
+      const detectedIds = new Set<number>(
+        (layer.typeIds ?? []).map(v => Math.max(1, Math.floor(v))),
+      );
+      const nextMap: Record<string, string> = { ...(layer.typeMap ?? {}) };
+      let changed = false;
+      for (const [tid, el] of Object.entries(normalized)) {
+        const tidNum = Number(tid);
+        if (!detectedIds.has(tidNum)) continue;
+        const existing = normalizeElementSymbol(nextMap[tid] ?? '') || 'E';
+        if (existing === el) continue;
+        nextMap[tid] = el;
+        changed = true;
+      }
+      if (!changed) continue;
+
+      anyChanged = true;
+      layer.typeMap = nextMap;
+      layer.typeMapApplied = Object.keys(nextMap).length > 0;
+      const atoms = (layer.model.frames?.[layer.frameIndex] ?? layer.model.atoms) as Atom[];
+      layer.currentFrameAtoms = atoms;
+      layer.currentMappedAtoms = null;
+      layer.mappedFrameIndex = -1;
+      const mapped = mapAtomsByTypeMap(layer, atoms);
+      layer.currentMappedAtoms = mapped;
+      layer.mappedFrameIndex = layer.frameIndex;
+      layer.clipBounds = computeClipBounds(mapped, centerTmp, atomSizeFactor) ?? layer.clipBounds;
+      layer.colorMap = buildColorMapFromAtoms(
+        layer.colorMap,
+        mapped,
+        layer.hasAnyTypeId,
+      );
+      layer.colorKeys = buildColorMapKeysFromAtoms(mapped, layer.hasAnyTypeId);
+      rebuildVisualsForLayer(layer, mapped);
+    }
+
+    if (!anyChanged) return;
+    finalizeTypeMapChange();
   }
 
   function cloneColorMap(map: ColorMapRecord | undefined): ColorMapRecord {
     return { ...(map ?? {}) };
+  }
+
+  // 将颜色补丁应用到单层，仅更新该图层已有的颜色键。
+  // Apply a color patch to a single layer, touching only its existing color keys.
+  function applyColorPatchToLayer(layer: LayerInternal, patch: ColorMapRecord): boolean {
+    if (!patch || Object.keys(patch).length === 0) return false;
+    if (!layer.colorKeys || layer.colorKeys.length === 0) return false;
+    let changed = false;
+    const next = cloneColorMap(layer.colorMap);
+    const layerKeys = layer.colorKeys;
+    for (const [rawKey, value] of Object.entries(patch)) {
+      const normalized = String(value ?? '').trim();
+      if (!normalized) continue;
+      const { element, typeId } = parseColorMapKey(rawKey);
+      const targets = new Set<string>();
+
+      if (layerKeys.includes(rawKey)) {
+        targets.add(rawKey);
+      }
+      if (!typeId && element) {
+        for (const candidate of layerKeys) {
+          const candidateElement = parseColorMapKey(candidate).element;
+          if (candidateElement === element) {
+            targets.add(candidate);
+          }
+        }
+      }
+
+      if (targets.size === 0) continue;
+      for (const target of targets) {
+        const prev = String(next[target] ?? '').trim();
+        if (prev === normalized) continue;
+        next[target] = normalized;
+        changed = true;
+      }
+    }
+    if (!changed) return false;
+
+    layer.colorMap = next;
+    layer.colorKeys = buildColorMapKeysFromAtoms(
+      getMappedAtomsForCurrentFrame(layer),
+      layer.hasAnyTypeId,
+    );
+    return true;
   }
 
   function setActiveLayerColorMap(map: ColorMapRecord): void {
@@ -1911,6 +2026,23 @@ export function createModelRuntime(args: {
     recomputeVisibleCustomColors();
   }
 
+  // 将颜色映射更新广播到所有可见图层。
+  // Broadcast the color map update to every visible layer.
+  function setVisibleLayersColorMap(map: ColorMapRecord): void {
+    const patch = buildColorMapRecord(map);
+    if (Object.keys(patch).length === 0) return;
+    const touched: LayerInternal[] = [];
+    for (const layer of getVisibleLayers()) {
+      if (applyColorPatchToLayer(layer, patch)) {
+        touched.push(layer);
+      }
+    }
+    if (touched.length === 0) return;
+    applyLayerSurfaceSettings(touched);
+    syncActiveColorMap();
+    recomputeVisibleCustomColors();
+  }
+
   function resetAllLayersColorMapToDefaults(): void {
     for (const l of layerMap.values()) {
       const mapped = getMappedAtomsForCurrentFrame(l);
@@ -1922,17 +2054,13 @@ export function createModelRuntime(args: {
     onColorMapChanged({ applyToAll: true });
   }
 
-  function setActiveLayerDisplaySettings(
+  // 将显示设置补丁应用到一组图层并触发必要的刷新。
+  // Apply a display patch to a batch of layers and refresh dependent visuals.
+  function applyDisplayPatchToTargets(
     patch: Partial<DetailsSettingsGroup>,
-    opts?: { applyToAll?: boolean },
+    targets: LayerInternal[],
   ): void {
-    const active = getActiveLayer();
-    if (!active) return;
-
-    const targets = opts?.applyToAll
-      ? Array.from(layerMap.values())
-      : [active];
-
+    if (!targets || targets.length === 0) return;
     let atomScaleChanged = false;
     let bondsChanged = false;
     let surfaceChanged = false;
@@ -1960,6 +2088,29 @@ export function createModelRuntime(args: {
     if (surfaceChanged) applyLayerSurfaceSettings(targets);
 
     syncActiveDisplay();
+  }
+
+  function setActiveLayerDisplaySettings(
+    patch: Partial<DetailsSettingsGroup>,
+    opts?: { applyToAll?: boolean },
+  ): void {
+    const active = getActiveLayer();
+    if (!active) return;
+
+    const targets = opts?.applyToAll
+      ? Array.from(layerMap.values())
+      : [active];
+
+    applyDisplayPatchToTargets(patch, targets);
+  }
+
+  // 将显示设置变更传播到当前可见的所有图层。
+  // Propagate the display patch to every visible layer.
+  function setVisibleLayersDisplaySettings(
+    patch: Partial<DetailsSettingsGroup>,
+  ): void {
+    const targets = getVisibleLayers();
+    applyDisplayPatchToTargets(patch, targets);
   }
 
   function setMeshColor(
@@ -2206,11 +2357,14 @@ export function createModelRuntime(args: {
     applyLayerSnapshots,
     setActiveLayerTypeMap,
     applyTypeMapToAllLayers,
+    applyTypeMapToVisibleLayers,
     resetAllLayersTypeMapToDefaults,
     setActiveLayerColorMap,
     setAllLayersColorMap,
+    setVisibleLayersColorMap,
     resetAllLayersColorMapToDefaults,
     setActiveLayerDisplaySettings,
+    setVisibleLayersDisplaySettings,
     removeLayer,
 
     setActiveLayer,

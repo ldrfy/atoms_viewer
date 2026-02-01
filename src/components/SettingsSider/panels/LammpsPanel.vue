@@ -1,55 +1,51 @@
 <template>
   <a-form layout="vertical">
-    <a-alert type="info" show-icon :message="t('settings.panel.lammps.alert')" />
+    <LayerScopeControl v-model:scope="scope" />
 
-    <a-space :size="6" class="settings-gap-top-sm settings-flex-wrap">
-      <a-typography-text type="secondary">
-        {{ t('settings.panel.lammps.currentLayer') }}:
-      </a-typography-text>
-      <a-tooltip v-if="activeLayerInfo" :title="activeLayerInfo.source?.fileName || activeLayerInfo.id">
-        <a-tag class="settings-tag-full">
-          <span class="settings-tag-ellipsis">
-            {{ activeLayerInfo.name }}
-          </span>
-        </a-tag>
-      </a-tooltip>
-      <a-typography-text v-else type="secondary">
-        -
-      </a-typography-text>
-    </a-space>
+    <a-form-item class="settings-gap-top-md">
+      <a-row align="middle" justify="space-between" class="settings-gap-bottom-sm">
+        <a-col>
+          <a-typography-text>
+            {{ t('settings.panel.lammps.mapLabel') }}
+          </a-typography-text>
+        </a-col>
+        <a-col flex="1" class="header-right">
+          <a-tooltip :title="t('settings.panel.lammps.alert')" placement="left">
+            <a-button
+              type="text"
+              :aria-label="t('settings.panel.lammps.alert')"
+              :title="t('settings.panel.lammps.alert')"
+            >
+              <QuestionCircleOutlined />
+            </a-button>
+          </a-tooltip>
+        </a-col>
+      </a-row>
 
-    <a-row justify="space-between" align="middle" class="settings-gap-top-sm">
-      <a-col>
-        <a-typography-text type="secondary">
-          {{ t('settings.panel.lammps.applyAll') }}
-        </a-typography-text>
-      </a-col>
-      <a-col>
-        <a-switch v-model:checked="applyAllLayersModel" />
-      </a-col>
-    </a-row>
-
-    <a-form-item :label="t('settings.panel.lammps.mapLabel')" class="settings-gap-top-md">
       <div
         v-for="(typeId, idx) in activeLayerTypeIds"
         :key="`${typeId}-${idx}`"
         class="settings-gap-bottom-sm"
       >
         <a-row align="middle" :gutter="8">
-          <a-col :span="4">
-            <a-tag class="settings-lammps-type">
+          <a-col :span="1" />
+
+          <a-col :span="3">
+            <a-tag color="processing">
               {{ typeId }}
             </a-tag>
           </a-col>
+          <a-col :span="1" />
 
-          <a-col :span="20">
+          <a-col :span="3">
+            →
+          </a-col>
+
+          <a-col :span="16">
             <a-select
               show-search
-              :aria-label="t('settings.panel.lammps.elementPlaceholder')"
               :title="t('settings.panel.lammps.elementPlaceholder')"
               :value="draftMap[String(typeId)] || 'E'"
-              class="settings-full-width"
-              :placeholder="t('settings.panel.lammps.elementPlaceholder')"
               :options="atomicOptions"
               :filter-option="filterAtomicOption"
               @change="onLammpsElementChange(idx, $event)"
@@ -59,27 +55,14 @@
       </div>
 
       <div class="settings-gap-top-sm">
-        <a-row :gutter="8">
-          <a-col :span="12">
-            <a-button
-              block
-              type="primary"
-              :disabled="!hasAnyLayer"
-              @click="onApplyTypeMap"
-            >
-              {{ t('settings.panel.lammps.apply') }}
-            </a-button>
-          </a-col>
-          <a-col :span="12">
-            <a-button
-              block
-              :disabled="!hasAnyLayer || !hasUndo"
-              @click="onUndoTypeMap"
-            >
-              {{ t('settings.panel.lammps.undo') }}
-            </a-button>
-          </a-col>
-        </a-row>
+        <a-button
+          block
+          type="primary"
+          :disabled="!hasAnyLayer"
+          @click="onApplyTypeMap"
+        >
+          {{ t('settings.panel.lammps.apply') }}
+        </a-button>
       </div>
 
       <a-typography-text type="secondary" class="settings-text-secondary-tight">
@@ -91,29 +74,27 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
+import { QuestionCircleOutlined } from '@ant-design/icons-vue';
+
 import { useI18n } from 'vue-i18n';
 
 import { viewerApiRef } from '../../../lib/viewer/bridge';
 import { useSettingsSiderContext } from '../useSettingsSiderContext';
 import { ATOMIC_SYMBOL_LIST, normalizeElementSymbol } from '../../../lib/structure/chem';
-import { readApplyAllLayersFlags, writeApplyAllLayersFlags } from '../applyAllStorage';
+import LayerScopeControl from './LayerScopeControl.vue';
+import { useLayerScope } from '../useLayerScope';
 import type { LammpsTypeMapRecord } from '../../../lib/viewer/settings';
 
 const { t } = useI18n();
 const { hasAnyLayer } = useSettingsSiderContext();
 
 const viewerApi = computed(() => viewerApiRef.value);
-const layerList = computed(() => viewerApi.value?.layers.value ?? []);
 const activeLayerId = computed(() => viewerApi.value?.activeLayerId.value ?? null);
-const activeLayerInfo = computed(() => {
-  const id = activeLayerId.value;
-  if (!id) return null;
-  return layerList.value.find(l => l.id === id) ?? null;
-});
 
 const activeLayerTypeIds = computed(() => viewerApi.value?.activeLayerTypeIds.value ?? []);
 
 const draftMap = ref<LammpsTypeMapRecord>({});
+const scope = useLayerScope('lammps');
 
 const atomicOptions = computed(() =>
   ATOMIC_SYMBOL_LIST.map((symRaw) => {
@@ -137,28 +118,13 @@ function toElement(v: unknown): string {
   return normalizeElementSymbol(String(v ?? '')) || 'E';
 }
 
-const lastApplied = ref<LammpsTypeMapRecord | null>(null);
-const hasUndo = computed(() => Object.keys(lastApplied.value ?? {}).length > 0);
-
 watch(
   () => [activeLayerId.value, activeLayerTypeIds.value, viewerApi.value?.activeLayerTypeMapApplied?.value],
   () => {
     const map = viewerApi.value?.activeLayerTypeMap.value ?? {};
-    lastApplied.value = { ...map };
     draftMap.value = { ...map };
   },
   { immediate: true },
-);
-
-const applyAllLayersModel = ref(
-  readApplyAllLayersFlags().lammps ?? false,
-);
-
-watch(
-  applyAllLayersModel,
-  (v) => {
-    writeApplyAllLayersFlags({ lammps: v });
-  },
 );
 
 function onLammpsElementChange(idx: number, v: unknown): void {
@@ -171,26 +137,19 @@ function onLammpsElementChange(idx: number, v: unknown): void {
 
 function onApplyTypeMap(): void {
   const map = { ...draftMap.value };
-  lastApplied.value = { ...map };
-  if (applyAllLayersModel.value) {
+  if (scope.value === 'all') {
     viewerApi.value?.applyTypeMapToAllLayers?.(map);
+    return;
   }
-  else {
-    viewerApi.value?.setActiveLayerTypeMap?.(map);
-    viewerApi.value?.refreshTypeMap?.();
+  if (scope.value === 'visible') {
+    viewerApi.value?.applyTypeMapToVisibleLayers?.(map);
+    return;
   }
+  viewerApi.value?.setActiveLayerTypeMap?.(map);
+  viewerApi.value?.refreshTypeMap?.();
 }
 
-function onUndoTypeMap(): void {
-  if (!lastApplied.value) return;
-  const map = { ...lastApplied.value };
-  draftMap.value = { ...map };
-  if (applyAllLayersModel.value) {
-    viewerApi.value?.applyTypeMapToAllLayers?.(map);
-  }
-  else {
-    viewerApi.value?.setActiveLayerTypeMap?.(map);
-    viewerApi.value?.refreshTypeMap?.();
-  }
-}
 </script>
+<style scoped lang="css">
+
+</style>

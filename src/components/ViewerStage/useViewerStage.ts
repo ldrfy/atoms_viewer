@@ -133,6 +133,8 @@ type ViewerStageBridgeApi = {
   setActiveLayerTypeMap: (map: LammpsTypeMapRecord) => void;
   /** 将当前映射应用到所有图层（仅匹配已有 typeId） */
   applyTypeMapToAllLayers: (map: LammpsTypeMapRecord) => void;
+  /** 将当前映射应用到所有可见图层 */
+  applyTypeMapToVisibleLayers: (map: LammpsTypeMapRecord) => void;
   /** 重置所有图层类型映射为默认 */
   resetAllLayersTypeMapToDefaults: (opts?: {
     templateMap?: LammpsTypeMapRecord;
@@ -147,6 +149,8 @@ type ViewerStageBridgeApi = {
   setActiveLayerColorMap: (map: ColorMapRecord) => void;
   /** 设置所有图层颜色映射 */
   setAllLayersColorMap: (map: ColorMapRecord) => void;
+  /** 将当前颜色应用到所有可见图层 */
+  setVisibleLayersColorMap: (map: ColorMapRecord) => void;
   /** 重置所有图层颜色映射为默认 */
   resetAllLayersColorMapToDefaults: () => void;
 
@@ -157,6 +161,8 @@ type ViewerStageBridgeApi = {
     patch: Partial<DetailsSettingsGroup>,
     opts?: { applyToAll?: boolean },
   ) => void;
+  /** 将当前显示参数应用到所有可见图层 */
+  setVisibleLayersDisplay: (patch: Partial<DetailsSettingsGroup>) => void;
   /** 立即应用视角/视距相关设置 */
   applyViewFromSettings: (overrides?: Partial<ViewerSettings>) => void;
   /** 暂停设置同步（避免短时间内相互覆盖） */
@@ -249,6 +255,8 @@ type ViewerStageBindings = {
   setActiveLayerTypeMap: (map: LammpsTypeMapRecord) => void;
   /** 将当前映射应用到所有图层（仅匹配已有 typeId） */
   applyTypeMapToAllLayers: (map: LammpsTypeMapRecord) => void;
+  /** 将当前映射应用到所有可见图层 */
+  applyTypeMapToVisibleLayers: (map: LammpsTypeMapRecord) => void;
   /** 重置所有图层类型映射为默认 */
   resetAllLayersTypeMapToDefaults: (opts?: {
     templateMap?: LammpsTypeMapRecord;
@@ -263,6 +271,8 @@ type ViewerStageBindings = {
   setActiveLayerColorMap: (map: ColorMapRecord) => void;
   /** 设置所有图层颜色映射 */
   setAllLayersColorMap: (map: ColorMapRecord) => void;
+  /** 将当前颜色应用到所有可见图层 */
+  setVisibleLayersColorMap: (map: ColorMapRecord) => void;
   /** 重置所有图层颜色映射为默认 */
   resetAllLayersColorMapToDefaults: () => void;
 
@@ -273,6 +283,8 @@ type ViewerStageBindings = {
     patch: Partial<DetailsSettingsGroup>,
     opts?: { applyToAll?: boolean },
   ) => void;
+  /** 将当前显示参数应用到所有可见图层 */
+  setVisibleLayersDisplay: (patch: Partial<DetailsSettingsGroup>) => void;
   /** 立即应用视角/视距相关设置 */
   applyViewFromSettings: (overrides?: Partial<ViewerSettings>) => void;
   /** 平移模型（屏幕方向） */
@@ -1450,6 +1462,15 @@ export function useViewerStage(
     void persistSessionSnapshot();
   }
 
+  function applyTypeMapToVisibleLayers(map: LammpsTypeMapRecord): void {
+    if (!runtime) return;
+    runtime.applyTypeMapToVisibleLayers(map);
+    syncUiFromRuntime();
+    inspectCtx.clear();
+    scheduleSessionSave('layers');
+    void persistSessionSnapshot();
+  }
+
   function setActiveLayerColorMap(map: ColorMapRecord): void {
     if (!runtime) return;
     runtime.setActiveLayerColorMap(map);
@@ -1459,6 +1480,12 @@ export function useViewerStage(
   function setAllLayersColorMap(map: ColorMapRecord): void {
     if (!runtime) return;
     runtime.setAllLayersColorMap(map);
+    scheduleSessionSave('layers');
+  }
+
+  function setVisibleLayersColorMap(map: ColorMapRecord): void {
+    if (!runtime) return;
+    runtime.setVisibleLayersColorMap(map);
     scheduleSessionSave('layers');
   }
 
@@ -1475,6 +1502,14 @@ export function useViewerStage(
   ): void {
     if (!runtime) return;
     runtime.setActiveLayerDisplaySettings(patch, opts);
+    syncUiFromRuntime();
+    picking.updateSelectionVisuals();
+    scheduleSessionSave('layers');
+  }
+
+  function setVisibleLayersDisplay(patch: Partial<DetailsSettingsGroup>): void {
+    if (!runtime) return;
+    runtime.setVisibleLayersDisplaySettings(patch);
     syncUiFromRuntime();
     picking.updateSelectionVisuals();
     scheduleSessionSave('layers');
@@ -1949,16 +1984,19 @@ export function useViewerStage(
     activeLayerTypeMapApplied,
     setActiveLayerTypeMap,
     applyTypeMapToAllLayers,
+    applyTypeMapToVisibleLayers,
     resetAllLayersTypeMapToDefaults,
 
     activeLayerColorMap,
     activeLayerColorKeys,
     setActiveLayerColorMap,
     setAllLayersColorMap,
+    setVisibleLayersColorMap,
     resetAllLayersColorMapToDefaults,
 
     activeLayerDisplay,
     setActiveLayerDisplay,
+    setVisibleLayersDisplay,
     applyViewFromSettings,
     suspendSettingsSync: (ms = 200) => settingsSync.suspend(ms),
     visibleCustomColors,
@@ -2047,16 +2085,19 @@ export function useViewerStage(
     activeLayerTypeMapApplied,
     setActiveLayerTypeMap,
     applyTypeMapToAllLayers,
+    applyTypeMapToVisibleLayers,
     resetAllLayersTypeMapToDefaults,
 
     activeLayerColorMap,
     activeLayerColorKeys,
     setActiveLayerColorMap,
     setAllLayersColorMap,
+    setVisibleLayersColorMap,
     resetAllLayersColorMapToDefaults,
 
     activeLayerDisplay,
     setActiveLayerDisplay,
+    setVisibleLayersDisplay,
     applyViewFromSettings,
     panModel,
     panTargetSide,

@@ -80,6 +80,8 @@ export type ViewerPublicApi = {
   setActiveLayerTypeMap: (map: LammpsTypeMapRecord) => void;
   /** Apply a template mapping to all layers (only existing typeIds). */
   applyTypeMapToAllLayers: (map: LammpsTypeMapRecord) => void;
+  /** Apply a template mapping to all visible layers. */
+  applyTypeMapToVisibleLayers: (map: LammpsTypeMapRecord) => void;
   /** Reset all layers' type map to defaults (based on current atoms). */
   resetAllLayersTypeMapToDefaults: (opts?: {
     templateMap?: LammpsTypeMapRecord;
@@ -99,6 +101,8 @@ export type ViewerPublicApi = {
   setActiveLayerColorMap: (map: ColorMapRecord) => void;
   /** Replace all layers' color maps at once (duplicate keys per layer). */
   setAllLayersColorMap: (map: ColorMapRecord) => void;
+  /** Apply color edits to the visible layers. */
+  setVisibleLayersColorMap: (map: ColorMapRecord) => void;
   /** Reset all layers' color maps to default element colors. */
   resetAllLayersColorMapToDefaults: () => void;
 
@@ -109,6 +113,8 @@ export type ViewerPublicApi = {
     patch: Partial<DetailsSettingsGroup>,
     opts?: { applyToAll?: boolean },
   ) => void;
+  /** Patch display settings for all visible layers. */
+  setVisibleLayersDisplay: (patch: Partial<DetailsSettingsGroup>) => void;
   /** Snapshot current layers with metadata/settings (for export/session). */
   getLayerSnapshots: () => Promise<import('./sessionTypes').LayerSnapshot[]>;
   /** Apply per-layer snapshots with MD5 matching fallback by order. */

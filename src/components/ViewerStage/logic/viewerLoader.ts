@@ -532,14 +532,14 @@ export function createViewerLoader(deps: {
       cached: cacheRemote,
     };
 
-      const layerId = await loadText(t0, text, displayName, {
-        // 新模型加载默认不隐藏已有图层。
-        // New model load keeps existing layers visible by default.
-        hidePreviousLayers: opts?.hidePreviousLayers ?? false,
-        sourceMeta,
-        forcedLayerId: opts?.forcedLayerId,
-        suppressLammpsWarning: opts?.suppressLammpsWarning,
-      });
+    const layerId = await loadText(t0, text, displayName, {
+      // 新模型加载默认不隐藏已有图层。
+      // New model load keeps existing layers visible by default.
+      hidePreviousLayers: opts?.hidePreviousLayers ?? false,
+      sourceMeta,
+      forcedLayerId: opts?.forcedLayerId,
+      suppressLammpsWarning: opts?.suppressLammpsWarning,
+    });
 
     if (layerId) {
       deps.sourceStore.set(layerId, {

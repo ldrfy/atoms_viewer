@@ -286,6 +286,18 @@
                     "exportFull": "Export full settings (include defaults)"
                 }
             },
+            "scope": {
+                "currentLayerLabel": "Current layer",
+                "options": {
+                    "current": "current layer only",
+                    "visible": "visible layers only",
+                    "all": "all layers"
+                }
+                ,
+                "selectPlaceholder": "Choose scope"
+                ,
+                "effectRangeLabel": "Effect range"
+            },
             "layers": {
                 "header": "Layers Manage",
                 "noViewer": "Viewer is not available.",
@@ -326,11 +338,11 @@
                 "reset": "Reset other settings"
             },
             "colors": {
-                "header": "Colors Set",
+                "header": "Atom Colors",
                 "alert": "After editing colors, click “Refresh” to apply them to the model.",
                 "currentLayer": "Current layer",
                 "applyAll": "Edit all layers",
-                "mapLabel": "Color map (hex)",
+                "mapLabel": "Color map (hex) and Opacity",
                 "opacity": "Opacity",
                 "apply": "Apply",
                 "hexPlaceholder": "e.g. #FF8800",

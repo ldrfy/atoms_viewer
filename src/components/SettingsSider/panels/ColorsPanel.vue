@@ -1,127 +1,109 @@
 <template>
   <a-form layout="vertical">
-    <a-form-item>
-      <a-row justify="space-between">
-        <a-col>
-          {{ t('settings.panel.colors.applyAll') }}
-        </a-col>
-        <a-col>
-          <a-switch
-            v-model:checked="applyToAllLayers"
-            :disabled="!hasAnyLayer"
-            :aria-label="t('settings.panel.colors.applyAll')"
-            :title="t('settings.panel.colors.applyAll')"
-          />
-        </a-col>
-      </a-row>
+    <LayerScopeControl v-model:scope="scope" />
 
-      <a-row v-if="!applyToAllLayers">
-        <a-space :size="6" class="settings-gap-top-sm settings-flex-wrap">
-          <a-typography-text type="secondary">
-            {{ t('settings.panel.colors.currentLayer') }}:
+    <a-form-item class="settings-gap-top-md">
+      <a-row align="middle" justify="space-between" class="settings-gap-bottom-sm">
+        <a-col>
+          <a-typography-text>
+            {{ t('settings.panel.colors.mapLabel') }}
           </a-typography-text>
-          <a-tooltip v-if="activeLayerInfo" :title="activeLayerInfo.source?.fileName || activeLayerInfo.id">
-            <a-tag class="settings-tag-full">
-              <span class="settings-tag-ellipsis">
-                {{ activeLayerInfo.name }}
-              </span>
-            </a-tag>
+        </a-col>
+        <a-col flex="1" class="header-right">
+          <a-tooltip :title="t('settings.panel.colors.alert')" placement="left">
+            <a-button
+              type="text"
+              :aria-label="t('settings.panel.colors.alert')"
+              :title="t('settings.panel.colors.alert')"
+            >
+              <QuestionCircleOutlined />
+            </a-button>
           </a-tooltip>
-          <a-typography-text v-else type="secondary">
-            -
-          </a-typography-text>
-        </a-space>
+        </a-col>
       </a-row>
-    </a-form-item>
 
-    <a-form-item :label="t('settings.panel.colors.mapLabel')" class="settings-gap-top-md">
-      <template v-if="colorKeys.length === 0">
-        <a-alert type="info" show-icon :message="t('settings.panel.colors.empty')" />
-      </template>
+      <div v-for="(key, idx) in colorKeys" :key="`${key}-${idx}`" class="settings-gap-bottom-sm">
+        <a-row :gutter="10" align="middle" class="settings-color-map-row">
+          <a-col :span="3">
+            <a-tag>{{ key }}</a-tag>
+          </a-col>
 
-      <template v-else>
-        <div
-          v-for="(key, idx) in colorKeys"
-          :key="`${key}-${idx}`"
-          class="settings-gap-bottom-sm"
-        >
-          <a-row :gutter="10" align="middle" class="settings-color-map-row">
-            <a-col :span="3">
-              <a-tag>{{ key }}</a-tag>
-            </a-col>
-
-            <a-col :span="2">
-              <a-tooltip v-if="isKeyCustom(key, draftColorMap)" :title="t('settings.panel.colors.resetTooltip')">
-                <a-button
-                  type="text"
-                  size="small"
-                  :aria-label="t('settings.panel.colors.reset')"
-                  :title="t('settings.panel.colors.resetTooltip')"
-                  @click="onResetColor(key)"
-                >
-                  <ReloadOutlined />
-                </a-button>
-              </a-tooltip>
-            </a-col>
-
-            <a-col :span="4">
-              <input
-                class="color-picker"
-                type="color"
-                :value="colorPickerValue(getDraftHexValue(key))"
-                :aria-label="t('settings.panel.colors.colorPickerLabel', { key })"
-                :title="t('settings.panel.colors.colorPickerLabel', { key })"
-                @input="onColorPickerChange(key, ($event as any).target?.value)"
+          <a-col :span="2">
+            <a-tooltip
+              v-if="isKeyCustom(key, draftColorMap)"
+              :title="t('settings.panel.colors.resetTooltip')"
+            >
+              <a-button
+                type="text"
+                size="small"
+                :aria-label="t('settings.panel.colors.reset')"
+                :title="t('settings.panel.colors.resetTooltip')"
+                @click="onResetColor(key)"
               >
-            </a-col>
+                <ReloadOutlined />
+              </a-button>
+            </a-tooltip>
+          </a-col>
 
-            <a-col :span="7">
-              <a-input
-                :value="getDraftHexValue(key)"
-                :placeholder="t('settings.panel.colors.hexPlaceholder')"
-                :aria-label="t('settings.panel.colors.hexPlaceholder')"
-                :title="t('settings.panel.colors.hexPlaceholder')"
-                @change="onColorHexChange(key, ($event as any).target?.value)"
-              />
-            </a-col>
+          <a-col :span="4">
+            <input
+              class="color-picker"
+              type="color"
+              :value="colorPickerValue(getDraftHexValue(key))"
+              :aria-label="t('settings.panel.colors.colorPickerLabel', { key })"
+              :title="t('settings.panel.colors.colorPickerLabel', { key })"
+              @input="onColorPickerChange(key, ($event as any).target?.value)"
+            >
+          </a-col>
 
-            <a-col :span="8">
-              <a-input-number
-                :value="getDraftOpacityValue(key)"
-                :min="0"
-                :max="100"
-                :step="1"
-                addon-after="%"
-                :aria-label="t('settings.panel.colors.opacity')"
-                :title="t('settings.panel.colors.opacity')"
-                class="settings-full-width"
-                @update:value="onOpacityChange(key, $event)"
-                @change="onOpacityChange(key, $event)"
-              />
-            </a-col>
-          </a-row>
-        </div>
-      </template>
+          <a-col :span="7">
+            <a-input
+              :value="getDraftHexValue(key)"
+              :placeholder="t('settings.panel.colors.hexPlaceholder')"
+              :aria-label="t('settings.panel.colors.hexPlaceholder')"
+              :title="t('settings.panel.colors.hexPlaceholder')"
+              @change="onColorHexChange(key, ($event as any).target?.value)"
+            />
+          </a-col>
 
-      <a-typography-text type="secondary" class="settings-text-secondary-tight">
-        {{ t('settings.panel.colors.hint') }}
-      </a-typography-text>
+          <a-col :span="8">
+            <a-input-number
+              :value="getDraftOpacityValue(key)"
+              :min="0"
+              :max="100"
+              :step="1"
+              addon-after="%"
+              :aria-label="t('settings.panel.colors.opacity')"
+              :title="t('settings.panel.colors.opacity')"
+              class="settings-full-width"
+              @update:value="onOpacityChange(key, $event)"
+              @change="onOpacityChange(key, $event)"
+            />
+          </a-col>
+        </a-row>
+      </div>
 
-      <a-row justify="end" class="settings-gap-top-sm">
+      <div class="settings-gap-top-sm settings-full-width">
         <a-button
+          block
           type="primary"
-          :disabled="!hasAnyLayer || !hasPendingChanges"
+          :disabled="isApplyDisabled"
           @click="onApplyColorEdits"
         >
           {{ t('settings.panel.colors.apply') }}
         </a-button>
-      </a-row>
+      </div>
+
+      <a-typography-text type="secondary" class="settings-text-secondary-tight">
+        {{ t('settings.panel.colors.hint') }}
+      </a-typography-text>
     </a-form-item>
   </a-form>
 </template>
 
 <script setup lang="ts">
-import { ReloadOutlined } from '@ant-design/icons-vue';
+import { ReloadOutlined, QuestionCircleOutlined } from '@ant-design/icons-vue';
+
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { message } from 'ant-design-vue';
 import { useI18n } from 'vue-i18n';
@@ -131,7 +113,8 @@ import { useSettingsSiderContext } from '../useSettingsSiderContext';
 import { formatColorValue, parseColorMapKey, parseColorValue } from '../../ViewerStage/colorMap';
 import { getElementColorHex } from '../../../lib/structure/chem';
 import { getVisualStylePreset } from '../../../lib/viewer/visualStyles';
-import { readApplyAllLayersFlags, writeApplyAllLayersFlags } from '../applyAllStorage';
+import LayerScopeControl from './LayerScopeControl.vue';
+import { useLayerScope } from '../useLayerScope';
 import { PANEL_KEYS } from '../../../lib/viewer/panelKeys';
 import { useSettingsSiderResetContext } from '../useSettingsSiderResetContext';
 
@@ -141,7 +124,6 @@ const { t } = useI18n();
 const { hasAnyLayer, settings } = useSettingsSiderContext();
 
 const viewerApi = computed(() => viewerApiRef.value);
-const layerList = computed(() => viewerApi.value?.layers.value ?? []);
 const activeLayerId = computed(() => viewerApi.value?.activeLayerId.value ?? null);
 const colorKeys = computed(() => viewerApi.value?.activeLayerColorKeys.value ?? []);
 const colorMap = computed(() => viewerApi.value?.activeLayerColorMap.value ?? {});
@@ -151,21 +133,27 @@ const draftColorMap = ref<ColorMapRecord>({});
 // Track active layer id to decide when to reset draft.
 // 记录当前图层 id，用于判断是否需要重置草稿。
 const lastActiveLayerId = ref<string | null>(null);
-const applyToAllLayers = ref(
-  readApplyAllLayersFlags().colors ?? true,
+const scope = useLayerScope('colors');
+const lastAppliedScope = ref(scope.value);
+const scopeDirty = ref(false);
+function markScopeApplied(): void {
+  lastAppliedScope.value = scope.value;
+  scopeDirty.value = false;
+}
+watch(
+  scope,
+  (value) => {
+    scopeDirty.value = value !== lastAppliedScope.value;
+  },
+  { immediate: true },
 );
 
-watch(
-  applyToAllLayers,
-  (v) => {
-    writeApplyAllLayersFlags({ colors: v });
-  },
-);
-const activeLayerInfo = computed(() => {
-  const id = activeLayerId.value;
-  if (!id) return null;
-  return layerList.value.find(l => l.id === id) ?? null;
-});
+type ColorMapDigest = string;
+function computeColorMapDigest(map: ColorMapRecord): ColorMapDigest {
+  const entries = Object.entries(map ?? {})
+    .sort((a, b) => a[0].localeCompare(b[0]));
+  return JSON.stringify(entries);
+}
 
 const hasPendingChanges = computed(() => {
   const keys = colorKeys.value;
@@ -181,17 +169,22 @@ const hasPendingChanges = computed(() => {
 function syncDraftFromActive(): void {
   const next: ColorMapRecord = {};
   for (const key of colorKeys.value) {
-    next[key] = String(colorMap.value[key] ?? '').trim();
+    const raw = String(colorMap.value[key] ?? '').trim();
+    next[key] = raw || getBaseColorForKey(key);
   }
   draftColorMap.value = next;
 }
 
+let lastColorMapDigest: ColorMapDigest | null = null;
 watch(
   [colorKeys, colorMap, activeLayerId],
   () => {
     const layerChanged = activeLayerId.value !== lastActiveLayerId.value;
-    if (layerChanged || !hasPendingChanges.value) {
+    const nextDigest = computeColorMapDigest(colorMap.value);
+    const mapChanged = lastColorMapDigest !== nextDigest;
+    if (layerChanged || mapChanged || !hasPendingChanges.value) {
       syncDraftFromActive();
+      lastColorMapDigest = nextDigest;
     }
     lastActiveLayerId.value = activeLayerId.value;
   },
@@ -205,7 +198,7 @@ function resetColors(): void {
   const baseMap = buildKeyBaseColorMap(keys);
   draftColorMap.value = baseMap;
   if (!api) return;
-  if (applyToAllLayers.value) {
+  if (scope.value === 'all') {
     api.resetAllLayersColorMapToDefaults();
     api.refreshColorMap({ applyToAll: true });
     syncDraftFromActive();
@@ -293,13 +286,28 @@ function onOpacityChange(key: string, v: unknown): void {
   patchDraftColor(key, hex, alpha);
 }
 
+const isApplyDisabled = computed(() => (
+  !hasAnyLayer.value || (!hasPendingChanges.value && !scopeDirty.value)
+));
+
 function onApplyColorEdits(): void {
   const api = viewerApi.value;
   if (!api) return;
   const map = { ...draftColorMap.value };
-  if (applyToAllLayers.value) api.setAllLayersColorMap(map);
-  else api.setActiveLayerColorMap(map);
-  api.refreshColorMap({ applyToAll: applyToAllLayers.value });
+  if (scope.value === 'all') {
+    api.setAllLayersColorMap(map);
+    api.refreshColorMap({ applyToAll: true });
+    markScopeApplied();
+    return;
+  }
+  if (scope.value === 'visible') {
+    api.setVisibleLayersColorMap(map);
+    markScopeApplied();
+    return;
+  }
+  api.setActiveLayerColorMap(map);
+  api.refreshColorMap();
+  markScopeApplied();
 }
 
 function getDraftHexValue(key: string): string {

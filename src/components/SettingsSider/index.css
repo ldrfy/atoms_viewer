@@ -368,19 +368,6 @@
     margin-top: 8px;
 }
 
-.settings-lammps-type {
-    margin-left: 8px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    height: 24px;
-    min-height: 24px;
-    border-radius: 999px;
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    color: var(--color-text);
-    font-variant-numeric: tabular-nums;
-}
 
 .settings-text-secondary-compact {
     margin-bottom: 2px;
@@ -503,4 +490,11 @@ body.resizing {
     .settings-drawer .ant-form-item-label > label {
         font-size: 13px;
     }
+}
+.header-right {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
+    min-width: 0;
 }

@@ -1,45 +1,23 @@
 <template>
   <a-form layout="vertical">
+    <LayerScopeControl v-model:scope="scope" />
+
     <a-form-item>
-      <a-row justify="space-between" align="middle">
-        <a-col>
-          {{ t('settings.panel.details.applyAll') }}
+      <a-row class="settings-gap-top-sm" align="middle" :gutter="8">
+        <a-col :span="8">
+          <a-typography-text>
+            {{ t('settings.panel.details.representation') }}
+          </a-typography-text>
         </a-col>
-        <a-col>
-          <a-switch
-            v-model:checked="applyToAllLayers"
-            :disabled="!hasAnyLayer"
-            :aria-label="t('settings.panel.details.applyAll')"
-            :title="t('settings.panel.details.applyAll')"
+        <a-col :span="16">
+          <a-select
+            v-model:value="representationModel"
+            :options="representationOptions"
+            :disabled="controlsDisabled"
+            class="settings-full-width"
           />
         </a-col>
       </a-row>
-      <a-row v-if="!applyToAllLayers">
-        <a-space :size="6" class="settings-gap-top-sm settings-flex-wrap">
-          <a-typography-text type="secondary">
-            {{ t('settings.panel.details.currentLayer') }}:
-          </a-typography-text>
-          <a-tooltip v-if="activeLayerInfo" :title="activeLayerInfo.source?.fileName || activeLayerInfo.id">
-            <a-tag class="settings-tag-full">
-              <span class="settings-tag-ellipsis">
-                {{ activeLayerInfo.name }}
-              </span>
-            </a-tag>
-          </a-tooltip>
-          <a-typography-text v-else type="secondary">
-            -
-          </a-typography-text>
-        </a-space>
-      </a-row>
-    </a-form-item>
-
-    <a-form-item :label="t('settings.panel.details.representation')">
-      <a-select
-        v-model:value="representationModel"
-        :options="representationOptions"
-        :disabled="controlsDisabled"
-        class="settings-full-width"
-      />
     </a-form-item>
 
     <a-form-item>
@@ -56,7 +34,10 @@
       </a-row>
     </a-form-item>
 
-    <a-form-item :label="t('settings.panel.details.bondRadius')">
+    <a-form-item
+      v-if="showBondsModel"
+      :label="t('settings.panel.details.bondRadius')"
+    >
       <a-row :gutter="8" align="middle">
         <a-col :flex="1">
           <a-slider
@@ -80,6 +61,35 @@
           />
         </a-col>
       </a-row>
+    </a-form-item>
+
+    <a-form-item v-if="showBondsModel" :label="t('settings.panel.details.bondFactor')">
+      <a-row :gutter="8" align="middle">
+        <a-col :flex="1">
+          <a-slider
+            v-model:value="bondFactorModel"
+            :min="BOND_FACTOR_MIN"
+            :max="BOND_FACTOR_MAX"
+            :step="0.01"
+            :disabled="controlsDisabled || !showBondsModel"
+          />
+        </a-col>
+        <a-col class="settings-col-compact">
+          <a-input-number
+            v-model:value="bondFactorModel"
+            :aria-label="t('settings.panel.details.bondFactor')"
+            :title="t('settings.panel.details.bondFactor')"
+            :min="BOND_FACTOR_MIN"
+            :max="BOND_FACTOR_MAX"
+            :step="0.01"
+            :disabled="controlsDisabled || !showBondsModel"
+            class="settings-full-width"
+          />
+        </a-col>
+      </a-row>
+      <a-typography-text type="secondary" class="settings-text-secondary">
+        {{ t('settings.panel.details.bondFactorHint') }}
+      </a-typography-text>
     </a-form-item>
 
     <a-form-item :label="t('settings.panel.details.atomSize')">
@@ -134,35 +144,6 @@
       </a-row>
     </a-form-item>
 
-    <a-form-item :label="t('settings.panel.details.bondFactor')">
-      <a-row :gutter="8" align="middle">
-        <a-col :flex="1">
-          <a-slider
-            v-model:value="bondFactorModel"
-            :min="BOND_FACTOR_MIN"
-            :max="BOND_FACTOR_MAX"
-            :step="0.01"
-            :disabled="controlsDisabled || !showBondsModel"
-          />
-        </a-col>
-        <a-col class="settings-col-compact">
-          <a-input-number
-            v-model:value="bondFactorModel"
-            :aria-label="t('settings.panel.details.bondFactor')"
-            :title="t('settings.panel.details.bondFactor')"
-            :min="BOND_FACTOR_MIN"
-            :max="BOND_FACTOR_MAX"
-            :step="0.01"
-            :disabled="controlsDisabled || !showBondsModel"
-            class="settings-full-width"
-          />
-        </a-col>
-      </a-row>
-      <a-typography-text type="secondary" class="settings-text-secondary">
-        {{ t('settings.panel.details.bondFactorHint') }}
-      </a-typography-text>
-    </a-form-item>
-
     <a-form-item :label="t('settings.panel.details.sphereSegments')">
       <a-row :gutter="8" align="middle">
         <a-col :flex="1">
@@ -196,12 +177,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref, watch } from 'vue';
+import { computed, onBeforeUnmount } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { DEFAULT_DETAILS, type DetailsSettingsGroup, type RepresentationId } from '../../../lib/viewer/settings';
 import { viewerApiRef } from '../../../lib/viewer/bridge';
 import { useSettingsSiderContext } from '../useSettingsSiderContext';
-import { readApplyAllLayersFlags, writeApplyAllLayersFlags } from '../applyAllStorage';
+import LayerScopeControl from './LayerScopeControl.vue';
+import { useLayerScope } from '../useLayerScope';
 import { useSettingsSiderResetContext } from '../useSettingsSiderResetContext';
 import { PANEL_KEYS } from '../../../lib/viewer/panelKeys';
 import {
@@ -229,21 +211,7 @@ const activeLayerInfo = computed(() => {
   return layerList.value.find(l => l.id === id) ?? null;
 });
 
-const applyToAllLayers = ref(
-  readApplyAllLayersFlags().details ?? true,
-);
-
-watch(
-  applyToAllLayers,
-  (v) => {
-    writeApplyAllLayersFlags({ details: v });
-    if (!v) return;
-    const api = viewerApi.value;
-    const cur = displayModel.value;
-    if (!api || !cur) return;
-    api.setActiveLayerDisplay({ ...cur }, { applyToAll: true });
-  },
-);
+const scope = useLayerScope('details');
 
 const displayModel = computed<DetailsSettingsGroup | null>(() => {
   return viewerApi.value?.activeLayerDisplay.value ?? null;
@@ -256,7 +224,12 @@ const controlsDisabled = computed(
 function patchDisplay(patch: Partial<DetailsSettingsGroup>): void {
   const api = viewerApi.value;
   if (!api || !activeLayerInfo.value) return;
-  api.setActiveLayerDisplay(patch, { applyToAll: applyToAllLayers.value });
+  if (scope.value === 'visible') {
+    api.setVisibleLayersDisplay(patch);
+    return;
+  }
+  const opts = scope.value === 'all' ? { applyToAll: true } : undefined;
+  api.setActiveLayerDisplay(patch, opts);
 }
 
 const showBondsModel = computed({
@@ -363,7 +336,7 @@ const representationModel = computed<RepresentationId>({
 });
 
 function onResetDisplay(): void {
-  applyToAllLayers.value = true;
+  scope.value = 'all';
   patchDisplay({
     representation: DEFAULT_DETAILS.representation,
     atomScale: DEFAULT_DETAILS.atomScale,

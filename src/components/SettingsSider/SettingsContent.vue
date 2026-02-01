@@ -50,8 +50,8 @@
                   {{ t(p.headerKey) }}
                 </a-typography-text>
                 <span
-                  v-if="isPanelDirty(p.key)"
                   class="settings-panel-indicator"
+                  :class="{ 'is-hidden': !isPanelDirty(p.key) }"
                 >
                   <span class="settings-panel-dirty" aria-hidden="true" />
                   <a-tooltip

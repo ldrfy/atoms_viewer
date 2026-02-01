@@ -93,6 +93,11 @@ export type ModelLayerInfo = {
   atomCount: number;
   frameCount: number;
   hasTypeId: boolean;
+  display?: DetailsSettingsGroup;
+  typeMap?: LammpsTypeMapRecord;
+  typeIds?: number[];
+  colorMap?: ColorMapRecord;
+  colorKeys?: string[];
   sourceFormat?: string;
   source?: LayerSourceInfo;
   createdAtMs: number;
@@ -285,6 +290,10 @@ export type ModelRuntime = {
   activeColorKeys: Ref<string[]>;
   activeDisplaySettings: Ref<DetailsSettingsGroup | null>;
 
+  // Preferred LAMMPS map for new layers.
+  // 新图层优先使用的 LAMMPS 映射。
+  setPreferredTypeMap: (map: LammpsTypeMapRecord) => void;
+
   renderModel: (
     model: StructureModel,
     opts?: {
@@ -394,6 +403,16 @@ export function createModelRuntime(args: {
   const activeColorKeys = ref<string[]>([]);
   const activeDisplaySettings = ref<DetailsSettingsGroup | null>(null);
   const visibleCustomColors = ref(false);
+
+  // Remember the latest confirmed LAMMPS mapping for new layers.
+  // 记录最新确认的 LAMMPS 映射，供新图层使用。
+  let preferredTypeMap: LammpsTypeMapRecord = {};
+
+  // Update preferred LAMMPS mapping for future layers.
+  // 更新供后续图层使用的首选 LAMMPS 映射。
+  function setPreferredTypeMap(map: LammpsTypeMapRecord): void {
+    preferredTypeMap = { ...(map ?? {}) };
+  }
 
   // Internal layer registry keyed by id (source of truth).
   // 内部图层注册表（以 id 为键的唯一真源数据）。
@@ -687,6 +706,24 @@ export function createModelRuntime(args: {
   function syncActiveDisplay(): void {
     const d = getActiveDisplay();
     activeDisplaySettings.value = d ? { ...d } : null;
+  }
+
+  // Sync layer meta info used by settings panels.
+  // 同步设置面板需要的图层元信息。
+  function syncLayerInfoMeta(layer: LayerInternal): void {
+    const nextInfo: ModelLayerInfo = {
+      ...layer.info,
+      hasTypeId: layer.hasAnyTypeId,
+      display: { ...getLayerDisplay(layer) },
+      typeMap: { ...(layer.typeMap ?? {}) },
+      typeIds: [...(layer.typeIds ?? [])],
+      colorMap: { ...(layer.colorMap ?? {}) },
+      colorKeys: [...(layer.colorKeys ?? [])],
+    };
+    layer.info = nextInfo;
+    // Replace the info object in the layers list to trigger UI updates.
+    // 替换 layers 列表中的 info 对象以触发 UI 更新。
+    layers.value = layers.value.map(l => (l.id === nextInfo.id ? nextInfo : l));
   }
 
   function expandTypeIdsContiguous(typeIdsRaw: number[]): number[] {
@@ -1084,7 +1121,12 @@ export function createModelRuntime(args: {
 
     if (layer.hasAnyTypeId) {
       const detected = expandTypeIdsContiguous(typeInfo.typeIds);
-      const mergedMap = mergeTypeMap(DEFAULT_LAMMPS.data, detected, typeInfo.defaults);
+      // Prefer the last confirmed mapping if available for new layers.
+      // 新图层优先使用最近确认的映射（若存在）。
+      const baseMap = Object.keys(preferredTypeMap ?? {}).length > 0
+        ? preferredTypeMap
+        : DEFAULT_LAMMPS.data;
+      const mergedMap = mergeTypeMap(baseMap, detected, typeInfo.defaults);
       layer.typeMap = mergedMap;
       layer.typeIds = [...detected];
     }
@@ -1107,6 +1149,7 @@ export function createModelRuntime(args: {
       layer.hasAnyTypeId,
     );
     layer.colorKeys = buildColorMapKeysFromAtoms(mappedFirstAtoms, layer.hasAnyTypeId);
+    syncLayerInfoMeta(layer);
 
     // Store a model whose frame[0] uses mapped atoms for rendering (keep raw for reparse logic elsewhere)
     // We do not mutate the original model; we only render with mapped atoms.
@@ -1198,6 +1241,7 @@ export function createModelRuntime(args: {
       active.hasAnyTypeId,
     );
     active.colorKeys = buildColorMapKeysFromAtoms(mappedFirstAtoms, active.hasAnyTypeId);
+    syncLayerInfoMeta(active);
 
     rebuildVisualsForLayer(active, mappedFirstAtoms);
 
@@ -1619,6 +1663,7 @@ export function createModelRuntime(args: {
     const colorSource = parseColorMapRecord((snap as any).colors?.data);
     layer.colorMap = buildColorMapFromAtoms(colorSource, mapped, layer.hasAnyTypeId);
     layer.colorKeys = buildColorMapKeysFromAtoms(mapped, layer.hasAnyTypeId);
+    syncLayerInfoMeta(layer);
 
     // keep last selection per layer for export/restore (visuals handled elsewhere)
 
@@ -1679,6 +1724,19 @@ export function createModelRuntime(args: {
 
     for (const { layer, snap } of matches) {
       applyLayerSnapshotToLayer(layer, snap);
+    }
+
+    // Seed preferred mapping from snapshots when available.
+    // 从快照中恢复首选映射（若存在）。
+    const active = getActiveLayer();
+    const activeMap = active?.typeMap ?? {};
+    if (Object.keys(activeMap).length > 0) {
+      setPreferredTypeMap(activeMap);
+    }
+    else {
+      const first = matches.map(m => m.layer)
+        .find(l => Object.keys(l.typeMap ?? {}).length > 0);
+      if (first) setPreferredTypeMap(first.typeMap ?? {});
     }
 
     // 更新 layers 列表以触发可见性等变更的响应式更新
@@ -1742,6 +1800,7 @@ export function createModelRuntime(args: {
       active.hasAnyTypeId,
     );
     active.colorKeys = buildColorMapKeysFromAtoms(mapped, active.hasAnyTypeId);
+    syncLayerInfoMeta(active);
     active.typeMapApplied = true;
     activeColorMap.value = { ...(active.colorMap ?? {}) };
     activeColorKeys.value = [...(active.colorKeys ?? [])];
@@ -1776,6 +1835,9 @@ export function createModelRuntime(args: {
   ): void {
     let anyChanged = false;
     const baseMap = opts?.templateMap ?? DEFAULT_LAMMPS.data;
+    // Reset preferred map to the same template.
+    // 同步重置首选映射模板。
+    setPreferredTypeMap(baseMap);
     const useAtomDefaults = opts?.useAtomDefaults !== false;
 
     for (const layer of layerMap.values()) {
@@ -1805,6 +1867,7 @@ export function createModelRuntime(args: {
         layer.hasAnyTypeId,
       );
       layer.colorKeys = buildColorMapKeysFromAtoms(mapped, layer.hasAnyTypeId);
+      syncLayerInfoMeta(layer);
 
       rebuildVisualsForLayer(layer, mapped);
       anyChanged = true;
@@ -1812,6 +1875,9 @@ export function createModelRuntime(args: {
 
     if (!anyChanged) return;
 
+    // Trigger UI updates for layer meta (color keys, type ids).
+    // 触发图层元信息更新（颜色键、typeId）。
+    layers.value = [...layers.value];
     syncActiveTypeMap();
     syncActiveColorMap();
     syncActiveDisplay();
@@ -1826,6 +1892,9 @@ export function createModelRuntime(args: {
     templateMap: LammpsTypeMapRecord,
   ): void {
     const baseMap = templateMap ?? {};
+    // Track latest applied map as preferred for new layers.
+    // 记录最近应用的映射，供新图层复用。
+    setPreferredTypeMap(baseMap);
 
     let anyChanged = false;
     for (const layer of layerMap.values()) {
@@ -1836,6 +1905,9 @@ export function createModelRuntime(args: {
 
     if (!anyChanged) return;
 
+    // Trigger UI updates for layer meta (color keys, type ids).
+    // 触发图层元信息更新（颜色键、typeId）。
+    layers.value = [...layers.value];
     syncActiveTypeMap();
     syncActiveColorMap();
     syncActiveDisplay();
@@ -1897,6 +1969,7 @@ export function createModelRuntime(args: {
       layer.hasAnyTypeId,
     );
     layer.colorKeys = buildColorMapKeysFromAtoms(mapped, layer.hasAnyTypeId);
+    syncLayerInfoMeta(layer);
 
     rebuildVisualsForLayer(layer, mapped);
     return true;
@@ -1907,6 +1980,9 @@ export function createModelRuntime(args: {
     layerIds: string[],
   ): void {
     const baseMap = templateMap ?? {};
+    // Track latest applied map as preferred for new layers.
+    // 记录最近应用的映射，供新图层复用。
+    setPreferredTypeMap(baseMap);
     const targets = resolveLayerTargets(layerIds);
     if (targets.length === 0) return;
 
@@ -1939,6 +2015,7 @@ export function createModelRuntime(args: {
       getMappedAtomsForCurrentFrame(active),
       active.hasAnyTypeId,
     );
+    syncLayerInfoMeta(active);
     activeColorMap.value = cloneColorMap(active.colorMap);
     activeColorKeys.value = [...active.colorKeys];
     recomputeVisibleCustomColors();
@@ -1954,6 +2031,7 @@ export function createModelRuntime(args: {
         l.hasAnyTypeId,
       );
       l.colorKeys = buildColorMapKeysFromAtoms(mapped, l.hasAnyTypeId);
+      syncLayerInfoMeta(l);
     }
     const active = getActiveLayer();
     if (active) {
@@ -1975,6 +2053,7 @@ export function createModelRuntime(args: {
         l.hasAnyTypeId,
       );
       l.colorKeys = buildColorMapKeysFromAtoms(mapped, l.hasAnyTypeId);
+      syncLayerInfoMeta(l);
     }
     syncActiveColorMap();
     recomputeVisibleCustomColors();
@@ -1985,6 +2064,7 @@ export function createModelRuntime(args: {
       const mapped = getMappedAtomsForCurrentFrame(l);
       l.colorMap = buildColorMapFromAtoms({}, mapped, l.hasAnyTypeId);
       l.colorKeys = buildColorMapKeysFromAtoms(mapped, l.hasAnyTypeId);
+      syncLayerInfoMeta(l);
     }
     syncActiveColorMap();
     recomputeVisibleCustomColors();
@@ -1998,6 +2078,7 @@ export function createModelRuntime(args: {
       const mapped = getMappedAtomsForCurrentFrame(l);
       l.colorMap = buildColorMapFromAtoms({}, mapped, l.hasAnyTypeId);
       l.colorKeys = buildColorMapKeysFromAtoms(mapped, l.hasAnyTypeId);
+      syncLayerInfoMeta(l);
     }
     syncActiveColorMap();
     recomputeVisibleCustomColors();
@@ -2033,6 +2114,7 @@ export function createModelRuntime(args: {
       const surfaceChangedForLayer
         = Math.abs(prev.atomRoughness - next.atomRoughness) > 1e-6;
       l.display = next;
+      syncLayerInfoMeta(l);
       atomScaleChanged = atomScaleChanged || atomChanged;
       bondsChanged = bondsChanged || bondChanged;
       surfaceChanged = surfaceChanged || surfaceChangedForLayer;
@@ -2290,6 +2372,7 @@ export function createModelRuntime(args: {
     onColorMapChanged,
     applyLayerSnapshots,
     setActiveLayerTypeMap,
+    setPreferredTypeMap,
     applyTypeMapToAllLayers,
     applyTypeMapToLayerIds,
     resetAllLayersTypeMapToDefaults,

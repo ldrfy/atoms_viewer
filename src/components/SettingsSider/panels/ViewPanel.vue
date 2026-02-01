@@ -22,7 +22,7 @@
           </a-tooltip>
         </a-col>
       </a-row>
-      <div class="settings-center">
+      <div class="settings-center settings-gap-top-sm">
         <a-checkbox-group
           :value="viewPresetsModel"
           :options="viewPresetOptions"
@@ -89,7 +89,7 @@
       </a-row>
     </a-form-item>
 
-    <a-form-item>
+    <a-form-item class="settings-gap-bottom-sm">
       <template #label>
         <a-space :size="6" align="center">
           <span>{{ t('settings.panel.view.rotation') }}</span>

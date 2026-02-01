@@ -1,6 +1,6 @@
 <template>
   <a-form layout="vertical">
-    <a-form-item :label="t('settings.panel.files.export.header')">
+    <a-form-item class="settings-gap-top-sm" :label="t('settings.panel.files.export.header')">
       <!-- 倍率 + 透明：同一行，两端对齐（移动端更紧凑） -->
       <a-checkbox v-model:checked="exportTransparent">
         {{ t('settings.panel.files.export.transparent') }}
@@ -124,7 +124,7 @@
 
     <a-divider class="settings-divider" />
 
-    <a-form-item :label="t('settings.panel.files.format.header')">
+    <a-form-item class="settings-gap-bottom-sm" :label="t('settings.panel.files.format.header')">
       <div>
         <a-row :gutter="8" align="middle">
           <a-col :span="12">

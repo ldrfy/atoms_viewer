@@ -300,7 +300,7 @@
                     "nameAsc": "Name ↑",
                     "nameDesc": "Name ↓"
                 },
-                "hint": "Click a row to set the active layer. Use checkboxes to pick apply targets; toggles show/hide.",
+                "hint": "Click a row to select the layer. Use checkboxes to pick apply targets / visible layers.",
                 "applyTargets": "Apply to layers",
                 "selectAll": "Select all layers",
                 "clearSelection": "Clear selection",

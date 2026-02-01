@@ -450,6 +450,12 @@ body.resizing {
     gap: 6px;
     padding: 0 5px;
     position: relative;
+    min-height: 24px;
+}
+
+.settings-panel-indicator.is-hidden {
+    visibility: hidden;
+    pointer-events: none;
 }
 
 .settings-panel-reset-button {

@@ -1,22 +1,22 @@
 <template>
   <a-form layout="vertical">
-    <a-form-item class="settings-gap-top-md">
+    <a-form-item class="settings-gap-bottom-sm">
+      <ApplyLayerTargets
+        :label="t('settings.panel.layers.applyTargets')"
+        :apply-title="t('settings.panel.colors.apply')"
+        :show-apply="hasPendingChanges"
+        :apply-disabled="!hasAnyLayer || !hasPendingChanges"
+        :apply-active="hasAnyLayer && hasPendingChanges"
+        :layers="targetLayerInfos"
+        :active-layer-id="activeLayerId"
+        @apply="onApplyColorEdits"
+      />
+    </a-form-item>
+
+    <a-form-item class="settings-gap-top-sm settings-gap-bottom-sm">
       <a-row align="middle" justify="space-between">
         <a-col>
-          <a-space :size="6" align="center">
-            <span>{{ t('settings.panel.colors.mapLabel') }}</span>
-            <a-tooltip :title="t('settings.panel.colors.apply')">
-              <a-button
-                type="text"
-                :disabled="!hasAnyLayer || !hasPendingChanges"
-                :aria-label="t('settings.panel.colors.apply')"
-                :title="t('settings.panel.colors.apply')"
-                @click="onApplyColorEdits"
-              >
-                <CheckCircleOutlined :class="{ 'colors-apply-icon': hasAnyLayer && hasPendingChanges }" />
-              </a-button>
-            </a-tooltip>
-          </a-space>
+          <span>{{ t('settings.panel.colors.mapLabel') }}</span>
         </a-col>
         <a-col>
           <a-tooltip
@@ -34,27 +34,7 @@
           </a-tooltip>
         </a-col>
       </a-row>
-      <a-space :size="6" class="colors-layer-row settings-flex-wrap">
-        <a-typography-text type="secondary">
-          {{ t('settings.panel.layers.applyTargets') }}:
-        </a-typography-text>
-        <template v-if="targetLayerInfos.length > 0">
-          <a-tooltip
-            v-for="l in targetLayerInfos"
-            :key="l.id"
-            :title="l.source?.fileName || l.id"
-          >
-            <a-tag class="settings-tag-full">
-              <span class="settings-tag-ellipsis">
-                {{ l.name || l.source?.fileName || l.id }}
-              </span>
-            </a-tag>
-          </a-tooltip>
-        </template>
-        <a-typography-text v-else type="secondary">
-          -
-        </a-typography-text>
-      </a-space>
+
       <template v-if="colorKeys.length === 0">
         <a-alert type="info" show-icon :message="t('settings.panel.colors.empty')" />
       </template>
@@ -127,7 +107,7 @@
 </template>
 
 <script setup lang="ts">
-import { ReloadOutlined, QuestionCircleOutlined, CheckCircleOutlined } from '@ant-design/icons-vue';
+import { ReloadOutlined, QuestionCircleOutlined } from '@ant-design/icons-vue';
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { message } from 'ant-design-vue';
 import { useI18n } from 'vue-i18n';
@@ -139,6 +119,9 @@ import { getElementColorHex } from '../../../lib/structure/chem';
 import { getVisualStylePreset } from '../../../lib/viewer/visualStyles';
 import { PANEL_KEYS } from '../../../lib/viewer/panelKeys';
 import { useSettingsSiderResetContext } from '../useSettingsSiderResetContext';
+import ApplyLayerTargets from '../components/ApplyLayerTargets.vue';
+import { usePendingAutoApply } from '../composables/usePendingAutoApply';
+import { useSettingsTargetLayers } from '../composables/useSettingsTargetLayers';
 
 import type { ColorMapRecord } from '../../ViewerStage/colorMap';
 
@@ -148,7 +131,28 @@ const { hasAnyLayer, settings, selectedLayerIds } = useSettingsSiderContext();
 const viewerApi = computed(() => viewerApiRef.value);
 const layerList = computed(() => viewerApi.value?.layers.value ?? []);
 const activeLayerId = computed(() => viewerApi.value?.activeLayerId.value ?? null);
-const colorKeys = computed(() => viewerApi.value?.activeLayerColorKeys.value ?? []);
+const colorKeys = computed(() => {
+  const keys: string[] = [];
+  const seen = new Set<string>();
+  const pushKey = (key: unknown) => {
+    const k = String(key ?? '').trim();
+    if (!k || seen.has(k)) return;
+    seen.add(k);
+    keys.push(k);
+  };
+  const targets = targetLayerInfos.value;
+  if (targets.length > 0) {
+    for (const l of targets) {
+      const list = (l as any)?.colorKeys ?? [];
+      for (const key of list) pushKey(key);
+    }
+  }
+  if (keys.length === 0) {
+    const fallback = viewerApi.value?.activeLayerColorKeys.value ?? [];
+    for (const key of fallback) pushKey(key);
+  }
+  return keys;
+});
 const colorMap = computed(() => viewerApi.value?.activeLayerColorMap.value ?? {});
 // Draft color map for "Apply" workflow.
 // 用于“应用”按钮的颜色草稿映射。
@@ -156,24 +160,108 @@ const draftColorMap = ref<ColorMapRecord>({});
 // Track active layer id to decide when to reset draft.
 // 记录当前图层 id，用于判断是否需要重置草稿。
 const lastActiveLayerId = ref<string | null>(null);
-// Resolve target layers: selection first, otherwise active layer.
-// 解析目标图层：优先选中列表，否则回退到当前图层。
-const targetLayerIds = computed(() => {
-  const picked = selectedLayerIds.value.filter(Boolean);
-  if (picked.length > 0) return picked;
-  return activeLayerId.value ? [activeLayerId.value] : [];
+const lastColorKeysSig = ref<string>('');
+const lastSelectedIds = ref<string[]>([]);
+const { targetLayerIds, targetLayerInfos } = useSettingsTargetLayers({
+  selectedLayerIds,
+  activeLayerId,
+  layerList,
 });
-const targetLayerInfos = computed(() => {
-  if (targetLayerIds.value.length === 0) return [];
-  const byId = new Map(layerList.value.map(l => [l.id, l]));
-  return targetLayerIds.value.map(id => byId.get(id)).filter(Boolean) as any[];
-});
+const { filterPending } = usePendingAutoApply(layerList);
+// Track target layer color/key changes.
+// 跟踪目标图层颜色/键变化。
+const targetLayerColorDeps = computed(() => (
+  targetLayerInfos.value.map(l => ({
+    keys: (l as any)?.colorKeys ?? [],
+    map: (l as any)?.colorMap ?? {},
+  }))
+));
+
+function getMergedColorValue(key: string): string {
+  const { element } = parseColorMapKey(key);
+  const targets = targetLayerInfos.value;
+  if (targets.length > 0) {
+    const base = getBaseColorForKey(key);
+    let firstExplicit = '';
+    for (const layer of targets) {
+      const map = (layer as any)?.colorMap ?? {};
+      if (!Object.prototype.hasOwnProperty.call(map, key)) continue;
+      const val = String(map[key] ?? '').trim();
+      if (!firstExplicit) firstExplicit = val;
+      if (val && String(val).toUpperCase() !== String(base).toUpperCase()) {
+        return val;
+      }
+    }
+    if (firstExplicit) return firstExplicit;
+    // Fallback: use element-level custom color if present (e.g. C -> C.1).
+    // 回退：使用元素级自定义颜色（例如 C -> C.1）。
+    const elementKey = String(element ?? '').trim();
+    if (elementKey) {
+      const baseElement = getBaseColorForKey(elementKey);
+      for (const layer of targets) {
+        const map = (layer as any)?.colorMap ?? {};
+        if (!Object.prototype.hasOwnProperty.call(map, elementKey)) continue;
+        const val = String(map[elementKey] ?? '').trim();
+        if (val && String(val).toUpperCase() !== String(baseElement).toUpperCase()) {
+          return val;
+        }
+      }
+    }
+  }
+  const cur = String(colorMap.value[key] ?? '').trim();
+  if (cur) return cur;
+  return getBaseColorForKey(key);
+}
+
+// Resolve per-layer effective color (hex + alpha).
+// 解析单层的实际颜色（包含透明度）。
+function resolveLayerColorValue(key: string, layer: any): string {
+  const { element } = parseColorMapKey(key);
+  const map = (layer as any)?.colorMap ?? {};
+  const base = getBaseColorForKey(key);
+  let raw = '';
+  if (Object.prototype.hasOwnProperty.call(map, key)) {
+    raw = String(map[key] ?? '').trim();
+  }
+  else if (element && Object.prototype.hasOwnProperty.call(map, element)) {
+    raw = String(map[element] ?? '').trim();
+  }
+  const parsed = parseColorValue(raw);
+  if (!parsed) return formatColorValue(base, 1);
+  return formatColorValue(parsed.hex, parsed.alpha);
+}
+
+// Detect if selected layers have conflicting colors.
+// 判断选中图层是否存在颜色冲突。
+function hasMixedColorsAcrossTargets(): boolean {
+  const targets = targetLayerInfos.value;
+  if (targets.length <= 1) return false;
+  for (const key of colorKeys.value) {
+    let first = '';
+    for (const layer of targets) {
+      const cur = resolveLayerColorValue(key, layer);
+      if (!first) {
+        first = cur;
+        continue;
+      }
+      if (cur !== first) return true;
+    }
+  }
+  return false;
+}
+
+function getCurrentColorValue(key: string): string {
+  return getMergedColorValue(key);
+}
 
 const hasPendingChanges = computed(() => {
   const keys = colorKeys.value;
   if (keys.length === 0) return false;
+  // If selected layers disagree, allow applying to unify.
+  // 若选中图层存在差异，则允许应用统一设置。
+  if (hasMixedColorsAcrossTargets()) return true;
   for (const key of keys) {
-    const cur = String(colorMap.value[key] ?? '').trim();
+    const cur = String(getCurrentColorValue(key) ?? '').trim();
     const draft = String(draftColorMap.value[key] ?? '').trim();
     if (cur !== draft) return true;
   }
@@ -183,19 +271,49 @@ const hasPendingChanges = computed(() => {
 function syncDraftFromActive(): void {
   const next: ColorMapRecord = {};
   for (const key of colorKeys.value) {
-    next[key] = String(colorMap.value[key] ?? '').trim();
+    next[key] = getCurrentColorValue(key);
   }
   draftColorMap.value = next;
 }
 
 watch(
-  [colorKeys, colorMap, activeLayerId],
+  [colorKeys, colorMap, activeLayerId, targetLayerColorDeps],
   () => {
+    const nextSig = colorKeys.value.join('|');
+    const keysChanged = nextSig !== lastColorKeysSig.value;
     const layerChanged = activeLayerId.value !== lastActiveLayerId.value;
-    if (layerChanged || !hasPendingChanges.value) {
+    if (keysChanged || layerChanged || !hasPendingChanges.value) {
       syncDraftFromActive();
     }
     lastActiveLayerId.value = activeLayerId.value;
+    lastColorKeysSig.value = nextSig;
+  },
+  { immediate: true, deep: true },
+);
+
+// Auto-apply custom colors to newly selected layers.
+// 将自定义颜色自动应用到新选中的图层。
+watch(
+  targetLayerIds,
+  (nextIds) => {
+    const prev = new Set(lastSelectedIds.value);
+    const added = nextIds.filter(id => !prev.has(id));
+    lastSelectedIds.value = [...nextIds];
+    if (added.length === 0) return;
+    if (hasPendingChanges.value) return;
+    const toApply = filterPending(added);
+    if (toApply.length === 0) return;
+    const customMap: ColorMapRecord = {};
+    for (const [key, value] of Object.entries(draftColorMap.value)) {
+      const base = getBaseColorForKey(key);
+      const val = String(value ?? '').trim();
+      if (val && String(val).toUpperCase() !== String(base).toUpperCase()) {
+        customMap[key] = val;
+      }
+    }
+    if (Object.keys(customMap).length === 0) return;
+    viewerApi.value?.setLayerColorMapForIds?.(customMap, toApply);
+    viewerApi.value?.refreshColorMap({ layerIds: toApply });
   },
   { immediate: true },
 );
@@ -300,6 +418,7 @@ function onApplyColorEdits(): void {
   if (targets.length === 0) return;
   api.setLayerColorMapForIds?.(map, targets);
   api.refreshColorMap({ layerIds: targets });
+  syncDraftFromActive();
 }
 
 function getDraftHexValue(key: string): string {
@@ -344,19 +463,9 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-.colors-apply-icon {
-  color: var(--ant-colorPrimary, #1677ff);
-}
-
 .colors-hint-tooltip :deep(.ant-tooltip-inner) {
   max-width: 320px;
   white-space: normal;
   word-break: break-word;
-}
-
-.colors-layer-row {
-  margin-top: 8px;
-  margin-bottom: 8px;
-  margin-left: 2px;
 }
 </style>

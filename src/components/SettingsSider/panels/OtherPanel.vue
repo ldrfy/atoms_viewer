@@ -1,6 +1,6 @@
 <template>
   <a-form layout="vertical">
-    <a-form-item :label="t('viewer.theme.title')">
+    <a-form-item class="settings-gap-top-sm" :label="t('viewer.theme.title')">
       <a-segmented
         v-model:value="themeModeModel"
         block
@@ -174,7 +174,7 @@
       </a-typography-text>
     </a-form-item>
 
-    <a-form-item :label="t('settings.panel.other.panStep')">
+    <a-form-item class="settings-gap-bottom-sm" :label="t('settings.panel.other.panStep')">
       <a-row :gutter="8" align="middle">
         <a-col :flex="1">
           <a-slider

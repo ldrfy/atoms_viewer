@@ -1,27 +1,17 @@
 <template>
   <a-form layout="vertical">
     <a-form-item>
-      <a-space :size="6" class="details-layer-row settings-flex-wrap">
-        <a-typography-text type="secondary">
-          {{ t('settings.panel.layers.applyTargets') }}:
-        </a-typography-text>
-        <template v-if="targetLayerInfos.length > 0">
-          <a-tooltip
-            v-for="l in targetLayerInfos"
-            :key="l.id"
-            :title="l.source?.fileName || l.id"
-          >
-            <a-tag class="settings-tag-full">
-              <span class="settings-tag-ellipsis">
-                {{ l.name || l.source?.fileName || l.id }}
-              </span>
-            </a-tag>
-          </a-tooltip>
-        </template>
-        <a-typography-text v-else type="secondary">
-          -
-        </a-typography-text>
-      </a-space>
+      <ApplyLayerTargets
+        :label="t('settings.panel.layers.applyTargets')"
+        :apply-title="t('settings.panel.colors.apply')"
+        :show-apply="hasPendingChanges"
+        :apply-disabled="!hasAnyLayer || !hasPendingChanges"
+        :apply-active="hasAnyLayer && hasPendingChanges"
+        :highlight-all="!hasPendingChanges"
+        :layers="targetLayerInfos"
+        :active-layer-id="activeLayerId"
+        @apply="onApplyDisplayToTargets"
+      />
     </a-form-item>
 
     <a-form-item :label="t('settings.panel.details.representation')">
@@ -154,7 +144,7 @@
       </a-typography-text>
     </a-form-item>
 
-    <a-form-item :label="t('settings.panel.details.sphereSegments')">
+    <a-form-item class="settings-gap-bottom-sm" :label="t('settings.panel.details.sphereSegments')">
       <a-row :gutter="8" align="middle">
         <a-col :flex="1">
           <a-slider
@@ -187,13 +177,16 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount } from 'vue';
+import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { DEFAULT_DETAILS, type DetailsSettingsGroup, type RepresentationId } from '../../../lib/viewer/settings';
 import { viewerApiRef } from '../../../lib/viewer/bridge';
 import { useSettingsSiderContext } from '../useSettingsSiderContext';
 import { useSettingsSiderResetContext } from '../useSettingsSiderResetContext';
 import { PANEL_KEYS } from '../../../lib/viewer/panelKeys';
+import ApplyLayerTargets from '../components/ApplyLayerTargets.vue';
+import { usePendingAutoApply } from '../composables/usePendingAutoApply';
+import { useSettingsTargetLayers } from '../composables/useSettingsTargetLayers';
 import {
   ATOM_ROUGHNESS_MIN,
   ATOM_ROUGHNESS_MAX,
@@ -219,18 +212,13 @@ const activeLayerInfo = computed(() => {
   return layerList.value.find(l => l.id === id) ?? null;
 });
 
-// Resolve target layers: selection first, otherwise active layer.
-// 解析目标图层：优先选中列表，否则回退到当前图层。
-const targetLayerIds = computed(() => {
-  const picked = selectedLayerIds.value.filter(Boolean);
-  if (picked.length > 0) return picked;
-  return activeLayerId.value ? [activeLayerId.value] : [];
+const { targetLayerIds, targetLayerInfos } = useSettingsTargetLayers({
+  selectedLayerIds,
+  activeLayerId,
+  layerList,
 });
-const targetLayerInfos = computed(() => {
-  if (targetLayerIds.value.length === 0) return [];
-  const byId = new Map(layerList.value.map(l => [l.id, l]));
-  return targetLayerIds.value.map(id => byId.get(id)).filter(Boolean) as any[];
-});
+const lastSelectedIds = ref<string[]>([]);
+const { filterPending } = usePendingAutoApply(layerList);
 
 const displayModel = computed<DetailsSettingsGroup | null>(() => {
   return viewerApi.value?.activeLayerDisplay.value ?? null;
@@ -240,6 +228,52 @@ const controlsDisabled = computed(
   () => !hasAnyLayer.value || !activeLayerInfo.value || !displayModel.value,
 );
 
+// Build a stable signature for display settings.
+// 生成显示设置的稳定签名。
+function buildDisplaySignature(display: DetailsSettingsGroup | null): string {
+  if (!display) return '';
+  const toFixed = (n: number, digits = 4) => n.toFixed(digits);
+  return [
+    display.representation,
+    display.showBonds ? '1' : '0',
+    toFixed(display.atomScale),
+    String(display.sphereSegments),
+    toFixed(display.bondFactor),
+    toFixed(display.bondRadius),
+    toFixed(display.atomRoughness),
+  ].join('|');
+}
+
+// Detect if selected layers have conflicting display settings.
+// 判断选中图层是否存在显示设置冲突。
+function hasMixedDisplayAcrossTargets(): boolean {
+  const targets = targetLayerInfos.value;
+  if (targets.length <= 1) return false;
+  let first = '';
+  for (const layer of targets) {
+    const sig = buildDisplaySignature((layer as any)?.display ?? displayModel.value);
+    if (!first) {
+      first = sig;
+      continue;
+    }
+    if (sig !== first) return true;
+  }
+  return false;
+}
+
+const hasPendingChanges = computed(() => {
+  if (!hasAnyLayer.value) return false;
+  return hasMixedDisplayAcrossTargets();
+});
+
+function onApplyDisplayToTargets(): void {
+  const api = viewerApi.value;
+  if (!api || !displayModel.value) return;
+  const targets = targetLayerIds.value;
+  if (targets.length === 0) return;
+  api.setActiveLayerDisplay(displayModel.value, { layerIds: targets });
+}
+
 function patchDisplay(patch: Partial<DetailsSettingsGroup>): void {
   const api = viewerApi.value;
   if (!api || !activeLayerInfo.value) return;
@@ -247,6 +281,24 @@ function patchDisplay(patch: Partial<DetailsSettingsGroup>): void {
   if (targets.length === 0) return;
   api.setActiveLayerDisplay(patch, { layerIds: targets });
 }
+
+// Auto-apply current display settings to newly selected layers.
+// 将当前显示设置自动应用到新选中的图层。
+watch(
+  targetLayerIds,
+  (nextIds) => {
+    const prev = new Set(lastSelectedIds.value);
+    const added = nextIds.filter(id => !prev.has(id));
+    lastSelectedIds.value = [...nextIds];
+    if (added.length === 0) return;
+    const toApply = filterPending(added);
+    if (toApply.length === 0) return;
+    const api = viewerApi.value;
+    if (!api || !displayModel.value) return;
+    api.setActiveLayerDisplay(displayModel.value, { layerIds: toApply });
+  },
+  { immediate: true },
+);
 
 const showBondsModel = computed({
   get: () => displayModel.value?.showBonds ?? false,
@@ -369,11 +421,3 @@ onBeforeUnmount(() => {
   unregisterDetailsReset();
 });
 </script>
-
-<style scoped>
-.details-layer-row {
-  margin-top: 8px;
-  margin-bottom: 8px;
-  margin-left: 2px;
-}
-</style>

@@ -1,6 +1,6 @@
 <template>
   <a-form layout="vertical">
-    <a-form-item>
+    <a-form-item class="settings-gap-top-sm">
       <a-row justify="space-between" align="middle">
         <a-col>{{ t('settings.panel.rotation.enable') }}</a-col>
         <a-col>
@@ -82,6 +82,7 @@
 
     <a-form-item
       v-if="autoRotatePauseOnInteractModel"
+      class="settings-gap-bottom-sm"
       :label="t('settings.panel.rotation.resumeDelay')"
     >
       <a-row :gutter="8" align="middle">

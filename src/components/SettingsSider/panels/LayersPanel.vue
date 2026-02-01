@@ -50,16 +50,6 @@
                 <CheckSquareOutlined :class="{ 'layers-selectall-icon': allSelected }" />
               </a-button>
             </a-tooltip>
-            <a-tooltip :title="toggleAllLabel">
-              <a-button
-                type="text"
-                :disabled="layerList.length === 0"
-                :aria-label="toggleAllLabel"
-                @click="onToggleAllVisible"
-              >
-                <component :is="allVisible ? EyeInvisibleOutlined : EyeOutlined" />
-              </a-button>
-            </a-tooltip>
           </a-space>
         </a-col>
         <a-col>
@@ -102,13 +92,6 @@
 
           <div class="layer-right" @click.stop>
             <a-space :size="6">
-              <a-switch
-                :checked="l.visible"
-                :aria-label="t('settings.panel.layers.visible')"
-                :title="t('settings.panel.layers.visible')"
-                @change="onToggleLayer(l.id, !!$event)"
-              />
-
               <a-popconfirm
                 :title="t('settings.panel.layers.deleteConfirm')"
                 :ok-text="t('common.delete')"
@@ -139,8 +122,6 @@ import {
   DeleteOutlined,
   QuestionCircleOutlined,
   FolderOpenOutlined,
-  EyeOutlined,
-  EyeInvisibleOutlined,
   CheckSquareOutlined,
 } from '@ant-design/icons-vue';
 import { computed, watch } from 'vue';
@@ -153,7 +134,6 @@ const { t } = useI18n();
 const { selectedLayerIds } = useSettingsSiderContext();
 const viewerApi = computed(() => viewerApiRef.value);
 const layerList = computed(() => viewerApi.value?.layers.value ?? []);
-const allVisible = computed(() => layerList.value.length > 0 && layerList.value.every(l => l.visible));
 // Selected layer id set for quick lookup.
 // 选中图层 id 的集合，用于快速判断。
 const selectedLayerSet = computed(() => new Set(selectedLayerIds.value));
@@ -161,9 +141,6 @@ const allSelected = computed(
   () => layerList.value.length > 0 && layerList.value.every(l => selectedLayerSet.value.has(l.id)),
 );
 
-const toggleAllLabel = computed(() => (
-  allVisible.value ? t('settings.panel.layers.hideAll') : t('settings.panel.layers.showAll')
-));
 const selectAllLabel = computed(() => (
   allSelected.value ? t('settings.panel.layers.clearSelection') : t('settings.panel.layers.selectAll')
 ));
@@ -221,11 +198,27 @@ function isLayerSelected(id: string): boolean {
   return selectedLayerSet.value.has(id);
 }
 
+// Ensure selection is never empty when layers exist.
+// 确保有图层时选中列表不为空。
+function ensureNonEmptySelection(nextIds: string[]): string[] {
+  if (layerList.value.length === 0) return [];
+  if (nextIds.length > 0) return nextIds;
+  const fallback = layerList.value[0]?.id;
+  return fallback ? [fallback] : [];
+}
+
+// Commit selection with the non-empty guard.
+// 提交选中结果，并保证至少选中一个图层。
+function commitSelection(nextSet: Set<string>): void {
+  const next = ensureNonEmptySelection(Array.from(nextSet));
+  selectedLayerIds.value = next;
+}
+
 function onToggleLayerSelected(id: string, checked: boolean): void {
   const next = new Set(selectedLayerIds.value);
   if (checked) next.add(id);
   else next.delete(id);
-  selectedLayerIds.value = Array.from(next);
+  commitSelection(next);
 }
 
 // Toggle selection when clicking the row (non-button area).
@@ -234,21 +227,17 @@ function onRowSelect(id: string): void {
   const next = new Set(selectedLayerIds.value);
   if (next.has(id)) next.delete(id);
   else next.add(id);
-  selectedLayerIds.value = Array.from(next);
+  commitSelection(next);
 }
 
 // Toggle select all / clear selection.
 // 切换“全选/取消全选”。
 function onToggleSelectAll(): void {
   if (allSelected.value) {
-    selectedLayerIds.value = [];
+    commitSelection(new Set());
     return;
   }
   selectedLayerIds.value = layerList.value.map(l => l.id);
-}
-
-function onToggleLayer(id: string, visible: boolean): void {
-  viewerApi.value?.setLayerVisible(id, visible);
 }
 
 function onDeleteLayer(id: string): void {
@@ -257,19 +246,21 @@ function onDeleteLayer(id: string): void {
 
 watch(
   layerList,
-  (next) => {
-    const ids = new Set(next.map(l => l.id));
-    const filtered = selectedLayerIds.value.filter(id => ids.has(id));
-    if (filtered.length !== selectedLayerIds.value.length) {
-      selectedLayerIds.value = filtered;
+  (next, prev) => {
+    const prevIds = new Set((prev ?? []).map(l => l.id));
+    const nextIds = new Set(next.map(l => l.id));
+    const filtered = selectedLayerIds.value.filter(id => nextIds.has(id));
+    const nextSet = new Set(filtered);
+    for (const l of next) {
+      if (!prevIds.has(l.id)) nextSet.add(l.id);
+    }
+    const nextSelected = ensureNonEmptySelection(Array.from(nextSet));
+    if (nextSelected.length !== selectedLayerIds.value.length) {
+      selectedLayerIds.value = nextSelected;
     }
   },
   { immediate: true },
 );
-
-function onToggleAllVisible(): void {
-  viewerApi.value?.setAllLayersVisible(!allVisible.value);
-}
 
 function onSortChange(val: string): void {
   const raw = String(val ?? 'name,ASC');

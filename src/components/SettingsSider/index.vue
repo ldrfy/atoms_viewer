@@ -131,6 +131,41 @@ watch(
   { deep: true },
 );
 
+// Apply selection to layer visibility.
+// 用选中状态控制图层显示。
+function applySelectionVisibility(): void {
+  const api = viewerApiRef.value;
+  if (!api) return;
+  const selected = new Set(selectedLayerIds.value);
+  const layers = api.layers.value ?? [];
+  if (layers.length > 0) {
+    const idSet = new Set(layers.map(l => l.id));
+    const hasOverlap = Array.from(selected).some(id => idSet.has(id));
+    if (!hasOverlap) {
+      const fallback = layers[0]?.id;
+      if (fallback) {
+        selectedLayerIds.value = [fallback];
+        selected.clear();
+        selected.add(fallback);
+      }
+    }
+  }
+  for (const layer of layers) {
+    const shouldShow = selected.has(layer.id);
+    if (layer.visible !== shouldShow) {
+      api.setLayerVisible?.(layer.id, shouldShow);
+    }
+  }
+}
+
+watch(
+  () => [selectedLayerIds.value, viewerApiRef.value?.layers.value],
+  () => {
+    applySelectionVisibility();
+  },
+  { deep: true },
+);
+
 // Sync selected layer ids from session restore.
 // 会话恢复时同步选中图层 id。
 function onSelectedLayersRestore(e: Event): void {

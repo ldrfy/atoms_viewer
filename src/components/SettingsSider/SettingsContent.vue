@@ -85,35 +85,32 @@
       </a-collapse>
 
       <div class="settings-clear-storage settings-gap-top-md">
-        <a-button
-          block
-          danger
-          @click="onClearStorage"
-        >
-          {{ t('settings.clearStorage') }}
-        </a-button>
+        <a-space direction="vertical" class="settings-full-width">
+          <a-button
+            block
+            danger
+            @click="onClearSettings"
+          >
+            {{ t('settings.clearSettings') }}
+          </a-button>
+        </a-space>
         <a-typography-text type="secondary" class="settings-text-secondary">
           {{ t('settings.clearStorageHint') }}
         </a-typography-text>
-        <a-typography-text type="secondary" class="settings-text-secondary">
-          {{ storageUsageText }}
-        </a-typography-text>
-        <a-typography-text type="secondary" class="settings-text-secondary">
-          {{ storageUsageDetailText }}
-        </a-typography-text>
+        <!-- Dev tip: use the browser console to inspect cache/storage sizes via `localStorage.getItem('settings')` or `localStorage.getItem('atomsViewer.layerSnapshotCache.v1')`. -->
       </div>
     </div>
 
     <div class="settings-footer">
       <a-typography-text type="secondary" class="settings-text-secondary settings-build-text">
-        {{ t('settings.buildTime') }} {{ buildTimeText }}
+        v{{ APP_VERSION }} · {{ t('settings.buildTime') }} {{ buildTimeText }}
       </a-typography-text>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, provide, reactive, watch, nextTick, ref, onMounted, onBeforeUnmount } from 'vue';
+import { computed, provide, reactive, watch, nextTick, onMounted, onBeforeUnmount } from 'vue';
 import { useI18n } from 'vue-i18n';
 import {
   AppstoreOutlined,
@@ -151,14 +148,14 @@ import {
 } from './context';
 import { viewerApiRef } from '../../lib/viewer/bridge';
 import { parseColorMapKey } from '../ViewerStage/colorMap';
-import { APP_BUILD_TIME } from '../../lib/appMeta';
+import { APP_BUILD_TIME, APP_VERSION } from '../../lib/appMeta';
 import { isLammpsDumpFormat } from '../../lib/structure/parsers/lammpsDump';
 import { isLammpsDataFormat } from '../../lib/structure/parsers/lammpsData';
 import { getElementColorHex } from '../../lib/structure/chem';
 import { getVisualStylePreset } from '../../lib/viewer/visualStyles';
 import { PANEL_KEYS, PANEL_HEADER_KEYS } from '../../lib/viewer/panelKeys';
-import { clearAllSettings } from '../../lib/viewer/settingsActions';
-import { estimateSessionCacheBytes } from '../../lib/viewer/sessionStorage';
+import { applyDefaultSettings } from '../../lib/viewer/settingsActions';
+import { saveSettingsToStorage } from '../../lib/viewer/settingsStorage';
 
 const props = withDefaults(
   defineProps<{
@@ -214,74 +211,10 @@ function registerPanelReset(key: string, action: () => void): () => void {
 
 provide(settingsSiderResetContextKey, { registerPanelReset });
 
-const storageUsageText = ref<string>('');
-const storageUsageDetailText = ref<string>('');
-const localStorageBytes = ref<number>(0);
-const cacheStorageBytes = ref<number>(0);
-
-function formatBytes(bytes: number): string {
-  if (!Number.isFinite(bytes)) return '-';
-  const b = Math.max(0, bytes);
-  if (b < 1024) return `${Math.round(b)} B`;
-  const kb = b / 1024;
-  if (kb < 1024) return `${kb.toFixed(1)} KB`;
-  const mb = kb / 1024;
-  if (mb < 1024) return `${mb.toFixed(2)} MB`;
-  const gb = mb / 1024;
-  return `${gb.toFixed(2)} GB`;
-}
-
-function calcLocalStorageBytes(): number {
-  try {
-    const encoder = new TextEncoder();
-    let total = 0;
-    for (let i = 0; i < localStorage.length; i += 1) {
-      const key = localStorage.key(i);
-      if (!key) continue;
-      const val = localStorage.getItem(key) ?? '';
-      total += encoder.encode(key).length + encoder.encode(val).length;
-    }
-    return total;
-  }
-  catch {
-    return 0;
-  }
-}
-
-async function refreshStorageUsage(): Promise<void> {
-  try {
-    const localBytes = localStorageBytes.value;
-    const cacheBytes = cacheStorageBytes.value;
-    const computedUsed = localBytes + cacheBytes;
-    storageUsageText.value = t('settings.storageUsageOnly', {
-      used: formatBytes(computedUsed),
-    });
-    storageUsageDetailText.value = t('settings.storageUsageDetail', {
-      local: formatBytes(localBytes),
-      cache: formatBytes(cacheBytes),
-    });
-  }
-  catch {
-    storageUsageText.value = t('settings.storageUsageUnknown');
-    storageUsageDetailText.value = '';
-  }
-}
-
-async function refreshLocalStorageUsage(): Promise<void> {
-  localStorageBytes.value = calcLocalStorageBytes();
-  await refreshStorageUsage();
-}
-
-async function refreshCacheStorageUsage(): Promise<void> {
-  cacheStorageBytes.value = await estimateSessionCacheBytes();
-  await refreshStorageUsage();
-}
-
-void refreshLocalStorageUsage();
-void refreshCacheStorageUsage();
+// 需要检查设置/模型缓存大小时，可在浏览器控制台运行：
+// console.log(localStorage.getItem('settings'), localStorage.getItem('atomsViewer.layerSnapshotCache.v1'));
 
 function onSessionSaved(): void {
-  void refreshCacheStorageUsage();
 }
 
 onMounted(() => {
@@ -491,23 +424,26 @@ function onResizeStart(ev: PointerEvent): void {
   emit('resize-start', ev);
 }
 
-function onClearStorage(): void {
+async function applyDefaultSettingsRoutine(): Promise<void> {
+  const next = await applyDefaultSettings({
+    currentSettings: settings.value,
+    viewerApi: viewerApi.value,
+    replaceSettings,
+    nextTick,
+  });
+  saveSettingsToStorage(next);
+  notifyClearStorageUi?.();
+}
+
+function onClearSettings(): void {
   Modal.confirm({
-    title: t('settings.clearStorageConfirmTitle'),
-    content: t('settings.clearStorageConfirmBody'),
+    title: t('settings.clearSettingsConfirmTitle'),
+    content: t('settings.clearSettingsConfirmBody'),
     centered: true,
     okText: t('common.confirm'),
     cancelText: t('common.cancel'),
     onOk: async () => {
-      await clearAllSettings({
-        currentSettings: settings.value,
-        viewerApi: viewerApi.value,
-        replaceSettings,
-        nextTick,
-        onAfterClear: notifyClearStorageUi,
-      });
-      await refreshLocalStorageUsage();
-      await refreshCacheStorageUsage();
+      await applyDefaultSettingsRoutine();
     },
   });
 }

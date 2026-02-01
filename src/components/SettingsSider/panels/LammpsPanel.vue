@@ -28,7 +28,7 @@
         class="settings-gap-bottom-sm"
       >
         <a-row align="middle" :gutter="8">
-          <a-col :span="1" />
+          <a-col :span="0.5" />
 
           <a-col :span="3">
             <a-tag color="processing">

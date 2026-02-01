@@ -57,7 +57,6 @@
             :max="AUTO_ROTATE_SPEED_MAX"
             :step="1"
             :disabled="!hasAnyLayer"
-            class="settings-full-width"
           />
         </a-col>
       </a-row>
@@ -103,7 +102,6 @@
             :max="AUTO_ROTATE_RESUME_MAX"
             :step="50"
             :disabled="!hasAnyLayer"
-            class="settings-full-width"
           />
         </a-col>
       </a-row>

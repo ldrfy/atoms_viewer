@@ -24,8 +24,11 @@
 
       <div v-for="(key, idx) in colorKeys" :key="`${key}-${idx}`" class="settings-gap-bottom-sm">
         <a-row :gutter="10" align="middle" class="settings-color-map-row">
-          <a-col :span="3">
-            <a-tag>{{ key }}</a-tag>
+          <a-col :span="0.5" />
+          <a-col :span="2">
+            <a-tag :bordered="false" color="success">
+              {{ key }}
+            </a-tag>
           </a-col>
 
           <a-col :span="2">
@@ -75,7 +78,6 @@
               addon-after="%"
               :aria-label="t('settings.panel.colors.opacity')"
               :title="t('settings.panel.colors.opacity')"
-              class="settings-full-width"
               @update:value="onOpacityChange(key, $event)"
               @change="onOpacityChange(key, $event)"
             />
@@ -83,7 +85,7 @@
         </a-row>
       </div>
 
-      <div class="settings-gap-top-sm settings-full-width">
+      <div class="settings-gap-top-sm">
         <a-button
           block
           type="primary"

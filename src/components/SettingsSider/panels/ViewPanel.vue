@@ -60,6 +60,8 @@
         </a-space>
       </template>
       <a-row :gutter="8" align="middle">
+        <a-col :span="0.5" />
+
         <a-col :flex="1">
           <a-slider
             v-model:value="dualViewDistanceModel"
@@ -79,7 +81,6 @@
             :step="0.01"
             :precision="2"
             :disabled="!hasAnyLayer"
-            class="settings-full-width"
           />
         </a-col>
       </a-row>
@@ -104,6 +105,8 @@
       </template>
       <a-space direction="vertical" :size="8" class="settings-full-width">
         <a-row :gutter="8" align="middle">
+          <a-col :span="0.5" />
+
           <a-col :span="3" class="settings-rot-label-col">
             <a-tag color="processing" class="settings-rot-label">
               X
@@ -128,11 +131,12 @@
               :step="1"
               :precision="1"
               :disabled="!hasAnyLayer"
-              class="settings-full-width"
             />
           </a-col>
         </a-row>
         <a-row :gutter="8" align="middle">
+          <a-col :span="0.6" />
+
           <a-col :span="3" class="settings-rot-label-col">
             <a-tag color="processing" class="settings-rot-label">
               Y
@@ -157,11 +161,12 @@
               :step="1"
               :precision="1"
               :disabled="!hasAnyLayer"
-              class="settings-full-width"
             />
           </a-col>
         </a-row>
         <a-row :gutter="8" align="middle">
+          <a-col :span="0.6" />
+
           <a-col :span="3" class="settings-rot-label-col">
             <a-tag color="processing" class="settings-rot-label">
               Z
@@ -186,7 +191,6 @@
               :step="1"
               :precision="1"
               :disabled="!hasAnyLayer"
-              class="settings-full-width"
             />
           </a-col>
         </a-row>

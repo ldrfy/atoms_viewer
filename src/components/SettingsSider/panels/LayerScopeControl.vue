@@ -1,31 +1,29 @@
 <template>
-  <div class="layer-scope-control settings-gap-top-sm">
-    <a-row
-      class="settings-gap-top-sm"
-      align="middle"
-      :gutter="8"
-    >
-      <a-col :span="8">
-        <a-typography-text>
-          {{ t('settings.panel.scope.effectRangeLabel') }}
-        </a-typography-text>
-      </a-col>
-      <a-col :span="16">
-        <a-select
-          v-model:value="scopeModel"
-          class="settings-full-width"
-          :options="scopeOptions"
-          :placeholder="t('settings.panel.scope.selectPlaceholder')"
-        />
-      </a-col>
-    </a-row>
-
-    <a-divider>
-      <a-typography-text type="secondary">
-        {{ t('settings.panel.scope.currentLayerLabel') }}:{{ activeLayerInfo?.name ?? "-" }}
+  <a-row
+    class="settings-gap-top-sm"
+    align="middle"
+    :gutter="8"
+  >
+    <a-col :span="8">
+      <a-typography-text>
+        {{ t('settings.panel.scope.effectRangeLabel') }}
       </a-typography-text>
-    </a-divider>
-  </div>
+    </a-col>
+    <a-col :span="16">
+      <a-select
+        v-model:value="scopeModel"
+        class="settings-full-width"
+        :options="scopeOptions"
+        :placeholder="t('settings.panel.scope.selectPlaceholder')"
+      />
+    </a-col>
+  </a-row>
+
+  <a-divider style="margin-top: 8px;">
+    <a-typography-text type="secondary">
+      {{ t('settings.panel.scope.currentLayerLabel') }}:{{ activeLayerInfo?.name ?? "-" }}
+    </a-typography-text>
+  </a-divider>
 </template>
 
 <script setup lang="ts">

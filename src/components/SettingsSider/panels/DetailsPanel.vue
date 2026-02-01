@@ -14,7 +14,6 @@
             v-model:value="representationModel"
             :options="representationOptions"
             :disabled="controlsDisabled"
-            class="settings-full-width"
           />
         </a-col>
       </a-row>
@@ -57,7 +56,6 @@
             :max="BOND_RADIUS_MAX"
             :step="0.01"
             :disabled="controlsDisabled || !showBondsModel"
-            class="settings-full-width"
           />
         </a-col>
       </a-row>
@@ -83,7 +81,6 @@
             :max="BOND_FACTOR_MAX"
             :step="0.01"
             :disabled="controlsDisabled || !showBondsModel"
-            class="settings-full-width"
           />
         </a-col>
       </a-row>
@@ -112,7 +109,6 @@
             :max="ATOM_SCALE_MAX"
             :step="0.01"
             :disabled="controlsDisabled"
-            class="settings-full-width"
           />
         </a-col>
       </a-row>
@@ -138,7 +134,6 @@
             :max="ATOM_ROUGHNESS_MAX"
             :step="0.05"
             :disabled="controlsDisabled"
-            class="settings-full-width"
           />
         </a-col>
       </a-row>
@@ -164,7 +159,6 @@
             :max="SPHERE_SEGMENTS_MAX"
             :step="1"
             :disabled="controlsDisabled"
-            class="settings-full-width"
           />
         </a-col>
       </a-row>

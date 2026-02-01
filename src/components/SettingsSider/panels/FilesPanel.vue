@@ -1,6 +1,12 @@
 <template>
   <a-form layout="vertical">
-    <a-form-item :label="t('settings.panel.files.export.header')">
+    <a-form-item>
+      <a-divider class="settings-divider-title">
+        <a-typography-text type="secondary">
+          {{ t('settings.panel.files.export.header') }}
+        </a-typography-text>
+      </a-divider>
+
       <!-- 倍率 + 透明：同一行，两端对齐（移动端更紧凑） -->
       <a-checkbox v-model:checked="exportTransparent">
         {{ t('settings.panel.files.export.transparent') }}
@@ -49,9 +55,13 @@
       </a-row>
     </a-form-item>
 
-    <a-divider class="settings-divider" />
+    <a-form-item>
+      <a-divider class="settings-divider-title">
+        <a-typography-text type="secondary">
+          {{ t('settings.panel.files.project.header') }}
+        </a-typography-text>
+      </a-divider>
 
-    <a-form-item :label="t('settings.panel.files.project.header')">
       <a-checkbox v-model:checked="cacheRemoteModel">
         {{ t('settings.panel.files.project.cacheRemote') }}
       </a-checkbox>
@@ -89,9 +99,13 @@
       >
     </a-form-item>
 
-    <a-divider class="settings-divider" />
+    <a-form-item>
+      <a-divider class="settings-divider-title">
+        <a-typography-text type="secondary">
+          {{ t('settings.panel.files.config.header') }}
+        </a-typography-text>
+      </a-divider>
 
-    <a-form-item :label="t('settings.panel.files.config.header')">
       <a-checkbox v-model:checked="exportFullSettings">
         {{ t('settings.panel.files.config.exportFull') }}
       </a-checkbox>
@@ -122,30 +136,31 @@
       >
     </a-form-item>
 
-    <a-divider class="settings-divider" />
+    <a-form-item>
+      <a-divider class="settings-divider-title">
+        <a-typography-text type="secondary">
+          {{ t('settings.panel.files.format.header') }}
+        </a-typography-text>
+      </a-divider>
 
-    <a-form-item :label="t('settings.panel.files.format.header')">
-      <div>
-        <a-row :gutter="8" align="middle">
-          <a-col :span="12">
-            <a-select
-              v-model:value="exportFormatModel"
-              :options="exportFormatOptions"
-              class="settings-full-width"
-            />
-          </a-col>
-          <a-col :span="12">
-            <a-button
-              block
-              type="primary"
-              :disabled="!hasAnyLayer"
-              @click="onExportStructure"
-            >
-              {{ t('settings.panel.files.format.button') }}
-            </a-button>
-          </a-col>
-        </a-row>
-      </div>
+      <a-row :gutter="8" align="middle" style="margin-top: 12px;">
+        <a-col :span="12">
+          <a-select
+            v-model:value="exportFormatModel"
+            :options="exportFormatOptions"
+          />
+        </a-col>
+        <a-col :span="12">
+          <a-button
+            block
+            type="primary"
+            :disabled="!hasAnyLayer"
+            @click="onExportStructure"
+          >
+            {{ t('settings.panel.files.format.button') }}
+          </a-button>
+        </a-col>
+      </a-row>
     </a-form-item>
   </a-form>
 </template>
@@ -477,6 +492,10 @@ async function onProjectFilePicked(e: Event): Promise<void> {
 
 .settings-divider {
   margin: 12px 0;
+}
+
+.settings-divider-title {
+    margin: 0 0 8px;
 }
 
 .settings-import-input {

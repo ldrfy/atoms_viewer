@@ -65,7 +65,6 @@
       <a-select
         v-model:value="visualStyleModel"
         :options="visualStyleOptions"
-        class="settings-full-width"
       />
       <a-typography-text type="secondary" class="settings-text-secondary">
         {{ t('settings.panel.other.visualStyleHint') }}
@@ -90,7 +89,6 @@
             :min="MODEL_LIGHT_INTENSITY_MIN"
             :max="MODEL_LIGHT_INTENSITY_MAX"
             :step="0.05"
-            class="settings-full-width"
           />
         </a-col>
       </a-row>
@@ -192,7 +190,6 @@
             :min="PAN_STEP_MIN"
             :max="PAN_STEP_MAX"
             :step="PAN_STEP_STEP"
-            class="settings-full-width"
           />
         </a-col>
       </a-row>

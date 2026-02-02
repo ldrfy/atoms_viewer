@@ -324,10 +324,6 @@ const recordFpsModel = computed<number>({
     /* 允许压缩 */
 }
 
-/* 第三行更紧凑一点（可选） */
-.anim-field-tight {
-    gap: 4px;
-}
 
 /* 为了 fps 和 bg 两行左侧对齐：给 label 固定宽度 */
 .anim-field-label {
@@ -342,75 +338,6 @@ const recordFpsModel = computed<number>({
 /* fps 输入框宽度（紧凑） */
 .anim-field-input {
     width: 80px;
-}
-
-/* 颜色输入控件 */
-.color-picker {
-    width: 48px;
-    height: 32px;
-    flex: 0 0 auto;
-}
-
-.color-picker-wrap {
-    position: relative;
-    display: inline-flex;
-    width: 48px;
-    height: 32px;
-    flex: 0 0 auto;
-}
-
-.color-picker-wrap.is-transparent .color-picker {
-    opacity: 0;
-}
-
-.color-picker-transparent {
-    position: absolute;
-    inset: 0;
-    margin: 5px;
-    border-radius: 5px;
-    background-color: #ffffff;
-    background-image:
-        linear-gradient(45deg, rgba(0, 0, 0, 0.12) 25%, transparent 25%),
-        linear-gradient(-45deg, rgba(0, 0, 0, 0.12) 25%, transparent 25%),
-        linear-gradient(45deg, transparent 75%, rgba(0, 0, 0, 0.12) 75%),
-        linear-gradient(-45deg, transparent 75%, rgba(0, 0, 0, 0.12) 75%);
-    background-size: 10px 10px;
-    background-position: 0 0, 0 5px, 5px -5px, -5px 0;
-    pointer-events: none;
-    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.15);
-}
-
-:root[data-theme="dark"] .color-picker-transparent {
-    background-color: #1f1f1f;
-    background-image:
-        linear-gradient(45deg, rgba(255, 255, 255, 0.14) 25%, transparent 25%),
-        linear-gradient(-45deg, rgba(255, 255, 255, 0.14) 25%, transparent 25%),
-        linear-gradient(45deg, transparent 75%, rgba(255, 255, 255, 0.14) 75%),
-        linear-gradient(-45deg, transparent 75%, rgba(255, 255, 255, 0.14) 75%);
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18);
-}
-
-/* 颜色 hex：必须能省略，否则手机会横向溢出 */
-.color-hex {
-    display: inline-flex;
-    align-items: center;
-    align-self: center;
-    height: 32px;
-    line-height: 32px;
-    vertical-align: middle;
-    min-width: 0;
-    max-width: 80px;
-    /* 手机关键：控制住 */
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-
-    min-width: 72px;
-    /* 若你想更紧，可删掉这一行 */
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
-        "Liberation Mono", "Courier New", monospace;
-    font-variant-numeric: tabular-nums;
-    opacity: 0.85;
 }
 
 /* 按钮文字不折行（不然会把高度撑得很怪） */

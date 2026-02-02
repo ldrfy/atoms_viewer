@@ -375,7 +375,9 @@ export function createViewerPickingController(deps: RenderDeps) {
       return;
     }
 
-    const meshes = runtime.getVisibleAtomMeshes();
+    const meshes = runtime.getSelectionAtomMeshes
+      ? runtime.getSelectionAtomMeshes()
+      : runtime.getVisibleAtomMeshes();
     const visuals: Array<{ mesh: THREE.InstancedMesh; instanceId: number } | null> = [];
 
     for (const s of sel) {

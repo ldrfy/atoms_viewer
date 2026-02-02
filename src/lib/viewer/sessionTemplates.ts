@@ -108,12 +108,6 @@ export function mergeCategorizedSettings(
       ...base.other,
       ...apply.other,
     };
-    // Legacy migration: keepActiveLayerOnHideAll -> keepActiveLayerOnHide.
-    // 旧字段兼容：keepActiveLayerOnHideAll -> keepActiveLayerOnHide。
-    const legacy = (apply.other as any)?.keepActiveLayerOnHideAll;
-    if (legacy != null && (apply.other as any)?.keepActiveLayerOnHide == null) {
-      base.other.keepActiveLayerOnHide = !!legacy;
-    }
   }
 
   return base;

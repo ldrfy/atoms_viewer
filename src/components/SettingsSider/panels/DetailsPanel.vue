@@ -47,9 +47,11 @@
             :disabled="controlsDisabled || !showBondsModel"
           />
         </a-col>
-        <a-col class="settings-col-compact">
+        <a-col>
           <a-input-number
             v-model:value="bondRadiusModel"
+            class="settings-col-compact"
+
             :aria-label="t('settings.panel.details.bondRadius')"
             :title="t('settings.panel.details.bondRadius')"
             :min="BOND_RADIUS_MIN"
@@ -72,9 +74,11 @@
             :disabled="controlsDisabled || !showBondsModel"
           />
         </a-col>
-        <a-col class="settings-col-compact">
+        <a-col>
           <a-input-number
             v-model:value="bondFactorModel"
+            class="settings-col-compact"
+
             :aria-label="t('settings.panel.details.bondFactor')"
             :title="t('settings.panel.details.bondFactor')"
             :min="BOND_FACTOR_MIN"
@@ -100,9 +104,11 @@
             :disabled="controlsDisabled"
           />
         </a-col>
-        <a-col class="settings-col-compact">
+        <a-col>
           <a-input-number
             v-model:value="atomScaleModel"
+            class="settings-col-compact"
+
             :aria-label="t('settings.panel.details.atomSize')"
             :title="t('settings.panel.details.atomSize')"
             :min="ATOM_SCALE_MIN"
@@ -125,9 +131,11 @@
             :disabled="controlsDisabled"
           />
         </a-col>
-        <a-col class="settings-col-compact">
+        <a-col>
           <a-input-number
             v-model:value="atomRoughnessModel"
+            class="settings-col-compact"
+
             :aria-label="t('settings.panel.details.atomRoughness')"
             :title="t('settings.panel.details.atomRoughness')"
             :min="ATOM_ROUGHNESS_MIN"
@@ -150,9 +158,11 @@
             :disabled="controlsDisabled"
           />
         </a-col>
-        <a-col class="settings-col-compact">
+        <a-col>
           <a-input-number
             v-model:value="sphereSegmentsModel"
+            class="settings-col-compact"
+
             :aria-label="t('settings.panel.details.sphereSegments')"
             :title="t('settings.panel.details.sphereSegments')"
             :min="SPHERE_SEGMENTS_MIN"

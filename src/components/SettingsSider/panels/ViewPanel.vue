@@ -71,9 +71,11 @@
             :disabled="!hasAnyLayer"
           />
         </a-col>
-        <a-col class="settings-col-compact">
+        <a-col>
           <a-input-number
             v-model:value="dualViewDistanceModel"
+            class="settings-col-compact"
+
             :aria-label="t('settings.panel.view.dualViewDistance')"
             :title="t('settings.panel.view.dualViewDistance')"
             :min="DUAL_VIEW_DISTANCE_MIN"
@@ -107,8 +109,8 @@
         <a-row :gutter="8" align="middle">
           <a-col :span="0.5" />
 
-          <a-col :span="3" class="settings-rot-label-col">
-            <a-tag color="processing" class="settings-rot-label">
+          <a-col>
+            <a-tag color="processing">
               X
             </a-tag>
           </a-col>
@@ -117,13 +119,14 @@
               v-model:value="rotXModel"
               :min="-180"
               :max="180"
-              :step="1"
+              :step="0.1"
               :disabled="!hasAnyLayer"
             />
           </a-col>
-          <a-col class="settings-col-compact">
+          <a-col>
             <a-input-number
               v-model:value="rotXModel"
+              class="settings-col-compact"
               :aria-label="t('settings.panel.view.rotX')"
               :title="t('settings.panel.view.rotX')"
               :min="-180"
@@ -135,10 +138,10 @@
           </a-col>
         </a-row>
         <a-row :gutter="8" align="middle">
-          <a-col :span="0.6" />
+          <a-col :span="0.5" />
 
-          <a-col :span="3" class="settings-rot-label-col">
-            <a-tag color="processing" class="settings-rot-label">
+          <a-col>
+            <a-tag color="processing">
               Y
             </a-tag>
           </a-col>
@@ -147,13 +150,15 @@
               v-model:value="rotYModel"
               :min="-180"
               :max="180"
-              :step="1"
+              :step="0.1"
               :disabled="!hasAnyLayer"
             />
           </a-col>
-          <a-col class="settings-col-compact">
+          <a-col>
             <a-input-number
               v-model:value="rotYModel"
+              class="settings-col-compact"
+
               :aria-label="t('settings.panel.view.rotY')"
               :title="t('settings.panel.view.rotY')"
               :min="-180"
@@ -165,10 +170,10 @@
           </a-col>
         </a-row>
         <a-row :gutter="8" align="middle">
-          <a-col :span="0.6" />
+          <a-col :span="0.5" />
 
-          <a-col :span="3" class="settings-rot-label-col">
-            <a-tag color="processing" class="settings-rot-label">
+          <a-col>
+            <a-tag color="processing">
               Z
             </a-tag>
           </a-col>
@@ -177,13 +182,14 @@
               v-model:value="rotZModel"
               :min="-180"
               :max="180"
-              :step="1"
+              :step="0.1"
               :disabled="!hasAnyLayer"
             />
           </a-col>
-          <a-col class="settings-col-compact">
+          <a-col>
             <a-input-number
               v-model:value="rotZModel"
+              class="settings-col-compact"
               :aria-label="t('settings.panel.view.rotZ')"
               :title="t('settings.panel.view.rotZ')"
               :min="-180"
@@ -342,15 +348,4 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-.settings-rot-label-col {
-  padding-right: 4px;
-}
-.settings-rot-label {
-  display: inline-flex;
-  justify-content: center;
-  align-items: center;
-  width: 32px;
-  border-radius: 6px;
-  font-weight: 600;
-}
 </style>

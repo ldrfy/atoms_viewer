@@ -1,56 +1,70 @@
 <template>
   <a-form layout="vertical">
-    <a-form-item :label="t('viewer.theme.title')">
-      <a-segmented
-        v-model:value="themeModeModel"
-        block
-        :options="themeSegmentOptions"
-      />
+    <a-form-item>
+      <a-row justify="space-between" align="middle" :gutter="8">
+        <a-col :span="8">
+          {{ t('viewer.theme.title') }}
+        </a-col>
+        <a-col :flex="1">
+          <a-segmented v-model:value="themeModeModel" block :options="themeSegmentOptions" />
+        </a-col>
+      </a-row>
     </a-form-item>
 
-    <a-form-item :label="t('settings.panel.other.backgroundColor')">
-      <a-row :gutter="8" align="middle">
-        <a-col :span="6">
-          <div class="color-picker-wrap" :class="{ 'is-transparent': isBgTransparent }">
-            <input
-              class="color-picker"
-              type="color"
-              :value="bgColorPickerValue(bgColorModel)"
+    <a-form-item>
+      <a-row :gutter="8" justify="space-between" align="middle">
+        <!-- 左侧 label -->
+        <a-col>
+          {{ t('settings.panel.other.backgroundColor') }}
+        </a-col>
+
+        <!-- 右侧：三个控件成组，整体靠右 -->
+        <a-col>
+          <a-space :size="6" align="center">
+            <!-- reset（建议用 v-show 占位，避免 input 跳动） -->
+            <a-tooltip :title="t('viewer.record.bgReset')">
+              <a-button
+                v-show="!isBgTransparent"
+                type="text"
+                size="small"
+                :aria-label="t('viewer.record.bgReset')"
+                :title="t('viewer.record.bgReset')"
+                @click="resetBgToTransparent"
+              >
+                <ReloadOutlined />
+              </a-button>
+            </a-tooltip>
+
+            <!-- picker -->
+            <div class="color-picker-wrap" :class="{ 'is-transparent': isBgTransparent }">
+              <input
+                class="color-picker"
+                type="color"
+                :value="bgColorPickerValue(bgColorModel)"
+                :aria-label="t('settings.panel.other.backgroundColor')"
+                :title="t('settings.panel.other.backgroundColor')"
+                @input="onBgColorPickerChange(($event as any).target?.value)"
+              >
+              <div v-if="isBgTransparent" class="color-picker-transparent" aria-hidden="true" />
+            </div>
+
+            <!-- hex -->
+            <a-input
+              class="settings-col-compact"
+              :value="bgHexValue"
+              :placeholder="bgHexPlaceholder"
               :aria-label="t('settings.panel.other.backgroundColor')"
               :title="t('settings.panel.other.backgroundColor')"
-              @input="onBgColorPickerChange(($event as any).target?.value)"
-            >
-            <div v-if="isBgTransparent" class="color-picker-transparent" aria-hidden="true" />
-          </div>
-        </a-col>
-        <a-col :span="4" class="settings-col-compact">
-          <a-tooltip v-if="!isBgTransparent" :title="t('viewer.record.bgReset')">
-            <a-button
-              type="text"
-              size="small"
-              :aria-label="t('viewer.record.bgReset')"
-              :title="t('viewer.record.bgReset')"
-              @click="resetBgToTransparent"
-            >
-              <ReloadOutlined />
-            </a-button>
-          </a-tooltip>
-        </a-col>
-        <a-col :span="14">
-          <a-input
-            :value="bgHexValue"
-            :placeholder="bgHexPlaceholder"
-            :aria-label="t('settings.panel.other.backgroundColor')"
-            :title="t('settings.panel.other.backgroundColor')"
-            @change="onBgColorHexChange(($event as any).target?.value)"
-          />
+              @change="onBgColorHexChange(($event as any).target?.value)"
+            />
+          </a-space>
         </a-col>
       </a-row>
     </a-form-item>
 
     <a-form-item>
       <a-row justify="space-between" align="middle">
-        <a-col>{{ t('settings.panel.other.themeReadabilityCheckOnOpen') }}</a-col>
+        <a-col>{{ t('settings.panel.other.themeReadabilityLabel') }}</a-col>
         <a-col>
           <a-switch
             v-model:checked="themeReadabilityCheckOnOpenModel"
@@ -59,13 +73,21 @@
           />
         </a-col>
       </a-row>
+      <a-typography-text type="secondary" class="settings-text-secondary">
+        {{ t('settings.panel.other.themeReadabilityCheckOnOpen') }}
+      </a-typography-text>
     </a-form-item>
 
-    <a-form-item :label="t('settings.panel.other.visualStyle')">
-      <a-select
-        v-model:value="visualStyleModel"
-        :options="visualStyleOptions"
-      />
+    <a-form-item>
+      <a-row justify="space-between" align="middle">
+        <a-col :span="8">
+          {{ t('settings.panel.other.visualStyle') }}
+        </a-col>
+        <a-col />        <a-col flex="1">
+          <a-select v-model:value="visualStyleModel" :options="visualStyleOptions" />
+        </a-col>
+      </a-row>
+
       <a-typography-text type="secondary" class="settings-text-secondary">
         {{ t('settings.panel.other.visualStyleHint') }}
       </a-typography-text>
@@ -81,9 +103,11 @@
             :step="0.05"
           />
         </a-col>
-        <a-col class="settings-col-compact">
+        <a-col>
           <a-input-number
             v-model:value="modelLightIntensityModel"
+            class="settings-col-compact"
+
             :aria-label="t('settings.panel.details.modelLightIntensity')"
             :title="t('settings.panel.details.modelLightIntensity')"
             :min="MODEL_LIGHT_INTENSITY_MIN"
@@ -105,7 +129,7 @@
 
     <a-form-item>
       <a-row justify="space-between" align="middle">
-        <a-col>{{ t('settings.panel.other.refreshBondsOnPlay') }}</a-col>
+        <a-col>{{ t('settings.panel.other.refreshBondsOnPlayLabel') }}</a-col>
         <a-col>
           <a-switch
             v-model:checked="refreshBondsOnPlayModel"
@@ -114,11 +138,14 @@
           />
         </a-col>
       </a-row>
+      <a-typography-text type="secondary" class="settings-text-secondary">
+        {{ t('settings.panel.other.refreshBondsOnPlay') }}
+      </a-typography-text>
     </a-form-item>
 
     <a-form-item>
       <a-row justify="space-between" align="middle">
-        <a-col>{{ t('settings.panel.other.keepActiveLayerOnHide') }}</a-col>
+        <a-col>{{ t('settings.panel.other.keepActiveLayerOnHideLabel') }}</a-col>
         <a-col>
           <a-switch
             v-model:checked="keepActiveLayerOnHideModel"
@@ -127,44 +154,47 @@
           />
         </a-col>
       </a-row>
+      <a-typography-text type="secondary" class="settings-text-secondary">
+        {{ t('settings.panel.other.keepActiveLayerOnHide') }}
+      </a-typography-text>
     </a-form-item>
 
-    <a-form-item :label="t('settings.panel.other.selectionColor')">
-      <a-row :gutter="8" align="middle">
-        <a-col :span="6">
-          <input
-            class="color-picker"
-            type="color"
-            :value="colorPickerValue(selectionHighlightColorModel)"
-            :aria-label="t('settings.panel.other.selectionColor')"
-            :title="t('settings.panel.other.selectionColor')"
-            @input="onSelectionColorPickerChange(($event as any).target?.value)"
-          >
-        </a-col>
-        <a-col :span="4" class="settings-col-compact">
-          <a-tooltip
-            v-if="selectionHighlightColorIsCustom"
-            :title="t('settings.panel.other.selectionColorResetTooltip')"
-          >
-            <a-button
-              type="text"
-              size="small"
-              :aria-label="t('settings.panel.other.selectionColorReset')"
+    <a-form-item>
+      <a-row :gutter="8" justify="space-between" align="middle">
+        <a-col>{{ t('settings.panel.other.selectionColorLabel') }}</a-col>
+
+        <a-col>
+          <a-space :size="6" align="center">
+            <a-tooltip
+              v-if="selectionHighlightColorIsCustom"
               :title="t('settings.panel.other.selectionColorResetTooltip')"
-              @click="resetSelectionHighlightColor"
             >
-              <ReloadOutlined />
-            </a-button>
-          </a-tooltip>
-        </a-col>
-        <a-col :span="14">
-          <a-input
-            :value="selectionHighlightColorModel"
-            :placeholder="t('settings.panel.colors.hexPlaceholder')"
-            :aria-label="t('settings.panel.colors.hexPlaceholder')"
-            :title="t('settings.panel.colors.hexPlaceholder')"
-            @change="onSelectionColorHexChange(($event as any).target?.value)"
-          />
+              <a-button
+                type="text"
+                size="small"
+                :aria-label="t('settings.panel.other.selectionColorReset')"
+                :title="t('settings.panel.other.selectionColorResetTooltip')"
+                @click="resetSelectionHighlightColor"
+              >
+                <ReloadOutlined />
+              </a-button>
+            </a-tooltip>
+
+            <input
+              class="color-picker"
+              type="color"
+              :value="colorPickerValue(selectionHighlightColorModel)"
+              @input="onSelectionColorPickerChange(($event as any).target?.value)"
+            >
+            <a-input
+              class="settings-col-compact"
+              :value="selectionHighlightColorModel"
+              :placeholder="t('settings.panel.colors.hexPlaceholder')"
+              :aria-label="t('settings.panel.colors.hexPlaceholder')"
+              :title="t('settings.panel.colors.hexPlaceholder')"
+              @change="onSelectionColorHexChange(($event as any).target?.value)"
+            />
+          </a-space>
         </a-col>
       </a-row>
       <a-typography-text type="secondary" class="settings-text-secondary">
@@ -182,9 +212,11 @@
             :step="PAN_STEP_STEP"
           />
         </a-col>
-        <a-col class="settings-col-compact">
+        <a-col>
           <a-input-number
             v-model:value="panStepScaleModel"
+            class="settings-col-compact"
+
             :aria-label="t('settings.panel.other.panStep')"
             :title="t('settings.panel.other.panStep')"
             :min="PAN_STEP_MIN"

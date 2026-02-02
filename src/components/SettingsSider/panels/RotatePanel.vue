@@ -14,23 +14,20 @@
       </a-row>
     </a-form-item>
 
-    <a-form-item :label="t('settings.panel.rotation.mode')">
-      <a-dropdown trigger="click">
-        <a-button block :disabled="!hasAnyLayer">
-          {{ currentAutoRotatePresetLabel }}
-          <DownOutlined class="settings-dropdown-caret" />
-        </a-button>
-        <template #overlay>
-          <a-menu
-            :selected-keys="[autoRotatePresetIdModel]"
-            @click="onAutoRotatePresetClick"
-          >
-            <a-menu-item v-for="p in autoRotatePresetOptions" :key="p.id">
-              {{ p.label }}
-            </a-menu-item>
-          </a-menu>
-        </template>
-      </a-dropdown>
+    <a-form-item>
+      <a-row justify="space-between" align="middle">
+        <a-col :span="8">
+          {{ t('settings.panel.rotation.mode') }}
+        </a-col>
+        <a-col />
+        <a-col flex="1">
+          <a-select
+            v-model:value="autoRotatePresetIdModel"
+            :options="autoRotatePresetOptions"
+            :disabled="!hasAnyLayer"
+          />
+        </a-col>
+      </a-row>
 
       <a-typography-text type="secondary" class="settings-text-secondary">
         {{ currentAutoRotatePresetHint }}
@@ -48,9 +45,11 @@
             :disabled="!hasAnyLayer"
           />
         </a-col>
-        <a-col class="settings-col-compact">
+        <a-col>
           <a-input-number
             v-model:value="autoRotateSpeedModel"
+            class="settings-col-compact"
+
             :aria-label="t('settings.panel.rotation.speed')"
             :title="t('settings.panel.rotation.speed')"
             :min="AUTO_ROTATE_SPEED_MIN"
@@ -93,9 +92,11 @@
             :disabled="!hasAnyLayer"
           />
         </a-col>
-        <a-col class="settings-col-compact">
+        <a-col>
           <a-input-number
             v-model:value="autoRotateResumeDelayMsModel"
+            class="settings-col-compact"
+
             :aria-label="t('settings.panel.rotation.resumeDelay')"
             :title="t('settings.panel.rotation.resumeDelay')"
             :min="AUTO_ROTATE_RESUME_MIN"
@@ -112,11 +113,8 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { DownOutlined } from '@ant-design/icons-vue';
-
 import {
   AUTO_ROTATE_PRESETS,
-  DEFAULT_AUTO_ROTATE_PRESET_ID,
   type AutoRotatePresetId,
 } from '../../../lib/viewer/autoRotate';
 import {
@@ -187,16 +185,11 @@ const autoRotatePresetOptions = computed(() => {
     const hintKey = `settings.panel.rotation.presets.${p.id}.hint`;
     return {
       id: p.id,
+      value: p.id,
       label: t(labelKey),
       hint: t(hintKey),
     };
   });
-});
-
-const currentAutoRotatePresetLabel = computed(() => {
-  const id = autoRotatePresetIdModel.value;
-  const opt = autoRotatePresetOptions.value.find(o => o.id === id);
-  return opt?.label ?? id;
 });
 
 const currentAutoRotatePresetHint = computed(() => {
@@ -204,10 +197,6 @@ const currentAutoRotatePresetHint = computed(() => {
   const opt = autoRotatePresetOptions.value.find(o => o.id === id);
   return opt?.hint ?? '';
 });
-
-function onAutoRotatePresetClick(info: any): void {
-  autoRotatePresetIdModel.value = String(info?.key ?? DEFAULT_AUTO_ROTATE_PRESET_ID);
-}
 
 function resetAutoRotateSettings(): void {
   patchAutoRotate({ ...DEFAULT_SETTINGS.rotation });

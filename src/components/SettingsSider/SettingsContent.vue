@@ -50,32 +50,33 @@
                   {{ t(p.headerKey) }}
                 </a-typography-text>
                 <span
-                  v-if="isPanelDirty(p.key)"
                   class="settings-panel-indicator"
+                  :class="{ 'settings-panel-indicator--inactive': !isPanelDirty(p.key) }"
                 >
                   <span class="settings-panel-dirty" aria-hidden="true" />
-                  <a-tooltip
-                    v-if="hasPanelReset(p.key)"
-                    :title="t('settings.panel.resetPanelButton')"
-                  >
-                    <a-popconfirm
-                      :title="t('settings.panel.resetPanelConfirm')"
-                      :ok-text="t('common.confirm')"
-                      :cancel-text="t('common.cancel')"
-                      @confirm.stop="resetPanel(p.key)"
+                  <template v-if="isPanelDirty(p.key) && hasPanelReset(p.key)">
+                    <a-tooltip
+                      :title="t('settings.panel.resetPanelButton')"
                     >
-                      <a-button
-                        type="text"
-                        size="small"
-                        class="settings-panel-reset-button"
-                        :aria-label="t('settings.panel.resetPanelButton')"
-                        :title="t('settings.panel.resetPanelButton')"
-                        @click.stop
+                      <a-popconfirm
+                        :title="t('settings.panel.resetPanelConfirm')"
+                        :ok-text="t('common.confirm')"
+                        :cancel-text="t('common.cancel')"
+                        @confirm.stop="resetPanel(p.key)"
                       >
-                        <ReloadOutlined />
-                      </a-button>
-                    </a-popconfirm>
-                  </a-tooltip>
+                        <a-button
+                          type="text"
+                          size="small"
+                          class="settings-panel-reset-button"
+                          :aria-label="t('settings.panel.resetPanelButton')"
+                          :title="t('settings.panel.resetPanelButton')"
+                          @click.stop
+                        >
+                          <ReloadOutlined />
+                        </a-button>
+                      </a-popconfirm>
+                    </a-tooltip>
+                  </template>
                 </span>
               </span>
             </span>

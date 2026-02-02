@@ -23,64 +23,61 @@
       </a-row>
 
       <div v-for="(key, idx) in colorKeys" :key="`${key}-${idx}`" class="settings-gap-bottom-sm">
-        <a-row :gutter="10" align="middle" class="settings-color-map-row">
-          <a-col :span="0.5" />
-          <a-col :span="2">
-            <a-tag :bordered="false" color="success">
+        <a-row :gutter="0" justify="space-between" align="middle">
+          <a-col>
+            <a-tag style="margin-left: 8px;" :bordered="false" color="success">
               {{ key }}
             </a-tag>
           </a-col>
 
-          <a-col :span="2">
-            <a-tooltip
-              v-if="isKeyCustom(key, draftColorMap)"
-              :title="t('settings.panel.colors.resetTooltip')"
-            >
-              <a-button
-                type="text"
-                size="small"
-                :aria-label="t('settings.panel.colors.reset')"
+          <a-col>
+            <a-space :size="6" align="center">
+              <a-tooltip
+                v-if="isKeyCustom(key, draftColorMap)"
                 :title="t('settings.panel.colors.resetTooltip')"
-                @click="onResetColor(key)"
               >
-                <ReloadOutlined />
-              </a-button>
-            </a-tooltip>
-          </a-col>
+                <a-button
+                  type="text"
+                  size="small"
+                  :aria-label="t('settings.panel.colors.reset')"
+                  :title="t('settings.panel.colors.resetTooltip')"
+                  @click="onResetColor(key)"
+                >
+                  <ReloadOutlined />
+                </a-button>
+              </a-tooltip>
 
-          <a-col :span="4">
-            <input
-              class="color-picker"
-              type="color"
-              :value="colorPickerValue(getDraftHexValue(key))"
-              :aria-label="t('settings.panel.colors.colorPickerLabel', { key })"
-              :title="t('settings.panel.colors.colorPickerLabel', { key })"
-              @input="onColorPickerChange(key, ($event as any).target?.value)"
-            >
-          </a-col>
+              <input
+                class="color-picker"
+                type="color"
+                :value="colorPickerValue(getDraftHexValue(key))"
+                :aria-label="t('settings.panel.colors.colorPickerLabel', { key })"
+                :title="t('settings.panel.colors.colorPickerLabel', { key })"
+                @input="onColorPickerChange(key, ($event as any).target?.value)"
+              >
+              <a-input
+                class="settings-col-compact"
 
-          <a-col :span="7">
-            <a-input
-              :value="getDraftHexValue(key)"
-              :placeholder="t('settings.panel.colors.hexPlaceholder')"
-              :aria-label="t('settings.panel.colors.hexPlaceholder')"
-              :title="t('settings.panel.colors.hexPlaceholder')"
-              @change="onColorHexChange(key, ($event as any).target?.value)"
-            />
-          </a-col>
-
-          <a-col :span="8">
-            <a-input-number
-              :value="getDraftOpacityValue(key)"
-              :min="0"
-              :max="100"
-              :step="1"
-              addon-after="%"
-              :aria-label="t('settings.panel.colors.opacity')"
-              :title="t('settings.panel.colors.opacity')"
-              @update:value="onOpacityChange(key, $event)"
-              @change="onOpacityChange(key, $event)"
-            />
+                :value="getHexInputValue(key)"
+                :placeholder="t('settings.panel.colors.hexPlaceholder')"
+                :aria-label="t('settings.panel.colors.hexPlaceholder')"
+                :title="t('settings.panel.colors.hexPlaceholder')"
+                @input="onColorHexInput(key, ($event as any).target?.value)"
+                @change="onColorHexChange(key, ($event as any).target?.value)"
+              />
+              <a-input-number
+                style="width: 96px;"
+                :value="getDraftOpacityValue(key)"
+                :min="0"
+                :max="100"
+                :step="1"
+                addon-after="%"
+                :aria-label="t('settings.panel.colors.opacity')"
+                :title="t('settings.panel.colors.opacity')"
+                @update:value="onOpacityChange(key, $event)"
+                @change="onOpacityChange(key, $event)"
+              />
+            </a-space>
           </a-col>
         </a-row>
       </div>
@@ -132,6 +129,39 @@ const colorMap = computed(() => viewerApi.value?.activeLayerColorMap.value ?? {}
 // Draft color map for "Apply" workflow.
 // 用于“应用”按钮的颜色草稿映射。
 const draftColorMap = ref<ColorMapRecord>({});
+// Temporary cache for manual hex inputs, avoiding automatic resets.
+// 缓存手动十六进制输入，避免自动重置。
+const hexInputValues = ref<Record<string, string>>({});
+
+// Try cached input first, falling back to the draft hex value for display.
+// 先使用缓存的输入，若无则回退到草稿十六进制值。
+function getHexInputValue(key: string): string {
+  return hexInputValues.value[key] ?? getDraftHexValue(key);
+}
+
+// Update the cached hex input for a specific key.
+// 更新特定键的缓存十六进制输入。
+function setHexInputValue(key: string, value: string): void {
+  const next = { ...hexInputValues.value };
+  next[key] = value;
+  hexInputValues.value = next;
+}
+
+// Clear the cached hex input for a key after syncing.
+// 在同步后清理该键的缓存输入。
+function clearHexInputValue(key: string): void {
+  if (!(key in hexInputValues.value)) return;
+  const next = { ...hexInputValues.value };
+  delete next[key];
+  hexInputValues.value = next;
+}
+
+// Reset all cached inputs when the draft map refreshes.
+// 草稿映射刷新时清空所有缓存输入。
+function resetHexInputValues(): void {
+  hexInputValues.value = {};
+}
+
 // Track active layer id to decide when to reset draft.
 // 记录当前图层 id，用于判断是否需要重置草稿。
 const lastActiveLayerId = ref<string | null>(null);
@@ -175,6 +205,7 @@ function syncDraftFromActive(): void {
     next[key] = raw || getBaseColorForKey(key);
   }
   draftColorMap.value = next;
+  resetHexInputValues();
 }
 
 let lastColorMapDigest: ColorMapDigest | null = null;
@@ -199,6 +230,7 @@ function resetColors(): void {
   const api = viewerApi.value;
   const baseMap = buildKeyBaseColorMap(keys);
   draftColorMap.value = baseMap;
+  resetHexInputValues();
   if (!api) return;
   if (scope.value === 'all') {
     api.resetAllLayersColorMapToDefaults();
@@ -271,6 +303,14 @@ function onColorHexChange(key: string, v: unknown): void {
   }
   const alpha = getDraftAlphaValue(key);
   patchDraftColor(key, hex, alpha);
+  clearHexInputValue(key);
+}
+
+// Cache manual hex typing so the field doesn't reset mid-edit.
+// 缓存手动输入的十六进制，避免输入过程中被重置。
+function onColorHexInput(key: string, v: unknown): void {
+  if (!key) return;
+  setHexInputValue(key, String(v ?? ''));
 }
 
 function onColorPickerChange(key: string, v: unknown): void {

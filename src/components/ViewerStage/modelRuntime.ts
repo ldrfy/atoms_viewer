@@ -365,6 +365,7 @@ export type ModelRuntime = {
 
   getActiveAtomMeshes: () => THREE.InstancedMesh[];
   getVisibleAtomMeshes: () => THREE.InstancedMesh[];
+  getSelectionAtomMeshes: () => THREE.InstancedMesh[];
 };
 
 export function createModelRuntime(args: {
@@ -950,13 +951,18 @@ export function createModelRuntime(args: {
 
   function setAllLayersVisible(visible: boolean): void {
     if (layers.value.length === 0) return;
+    // 隐藏所有图层时是否保持当前激活图层。
+    // Whether to retain the current active layer when hiding every layer.
+    const keepActiveOnHide = getSettings().other.keepActiveLayerOnHide ?? false;
     for (const l of layerMap.values()) {
       l.info.visible = visible;
       l.group.visible = visible;
     }
 
     if (!visible) {
-      activeLayerId.value = null;
+      if (!keepActiveOnHide) {
+        activeLayerId.value = null;
+      }
     }
     else {
       const active = activeLayerId.value ? layerMap.get(activeLayerId.value) : null;
@@ -2317,6 +2323,20 @@ export function createModelRuntime(args: {
     return out;
   }
 
+  // Selection visuals may need hidden active layer meshes when keep-on-hide is enabled.
+  // 选中高亮在开启“隐藏时保留选中”时，也要包含已隐藏的活跃图层。
+  function getSelectionAtomMeshes(): THREE.InstancedMesh[] {
+    const includeHiddenActive = getSettings().other.keepActiveLayerOnHide ?? false;
+    const activeId = includeHiddenActive ? activeLayerId.value : null;
+    const out: THREE.InstancedMesh[] = [];
+    for (const l of layerMap.values()) {
+      const visible = l.info.visible || (includeHiddenActive && l.info.id === activeId);
+      if (!visible) continue;
+      for (const m of l.atomMeshes) out.push(m);
+    }
+    return out;
+  }
+
   return {
     layers,
     activeLayerId,
@@ -2378,5 +2398,6 @@ export function createModelRuntime(args: {
 
     getActiveAtomMeshes,
     getVisibleAtomMeshes,
+    getSelectionAtomMeshes,
   };
 }

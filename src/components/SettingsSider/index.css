@@ -315,7 +315,7 @@
 }
 
 .settings-col-compact {
-    width: 96px;
+    width: 81px;
 }
 
 .settings-full-width {
@@ -444,6 +444,7 @@ body.resizing {
     gap: 6px;
     padding: 0 5px;
     position: relative;
+    min-height: 32px;
 }
 
 .settings-panel-reset-button {
@@ -468,15 +469,14 @@ body.resizing {
     transform: translateX(0);
 }
 
-.settings-collapse .ant-collapse-content-box {
-    padding: 0 12px 12px !important;
+.settings-panel-indicator--inactive .settings-panel-dirty,
+.settings-panel-indicator--inactive .settings-panel-reset-button {
+    opacity: 0;
+    pointer-events: none;
 }
 
-/* Native color input (used in Atom Colors panel) */
-.color-picker {
-    width: 100%;
-    height: 32px;
-    max-width: 100%;
+.settings-collapse .ant-collapse-content-box {
+    padding: 0 12px 12px !important;
 }
 
 /* Make InputNumber steppers easier to tap on mobile */

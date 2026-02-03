@@ -2,11 +2,17 @@ import { defineConfig } from 'vite';
 import vue from '@vitejs/plugin-vue';
 import { compression, defineAlgorithm } from 'vite-plugin-compression2';
 import { constants } from 'node:zlib';
+import Components from 'unplugin-vue-components/vite';
+import { AntdvNextResolver } from '@antdv-next/auto-import-resolver';
 
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
     vue(),
+    Components({
+      dts: true,
+      resolvers: [AntdvNextResolver()],
+    }),
     compression({
       threshold: 1024, // >1KB 才压（建议）
       algorithms: [

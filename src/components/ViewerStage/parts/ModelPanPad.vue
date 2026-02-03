@@ -70,7 +70,7 @@ import {
   CaretLeftOutlined,
   CaretRightOutlined,
   CaretUpOutlined,
-} from '@ant-design/icons-vue';
+} from '@antdv-next/icons';
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 

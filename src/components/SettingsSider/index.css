@@ -54,9 +54,6 @@
   Drawer appearance
   - Semi-transparent background so the model is still slightly visible
   - Backdrop blur for readability
-
-  Note: on mobile, Ant Drawer has several internal wrappers; we keep them
-  transparent so our blurred translucent surface is always visible.
 */
 .settings-drawer,
 .settings-sider-fixed {
@@ -64,6 +61,8 @@
     --settings-panel-header-bg: var(--glass-panel-header-bg);
     --settings-panel-blur: var(--glass-panel-blur);
 }
+
+
 
 /* Smoothly animate between desktop and mobile panel geometry. */
 .settings-drawer {
@@ -78,11 +77,8 @@
 }
 
 /* Apply blur surface to:
-   - Ant Drawer content (legacy mobile implementation)
    - Desktop fixed panel
    - Mobile Teleport bottom sheet panel */
-.settings-drawer .ant-drawer-content,
-.settings-drawer .ant-drawer-content-wrapper,
 .settings-sider-fixed,
 .settings-drawer.settings-sheet {
     background: var(--settings-panel-bg) !important;
@@ -94,12 +90,6 @@
 /* Mobile sheet should only round top corners */
 .settings-drawer.settings-sheet {
     border-radius: 14px 14px 0 0 !important;
-}
-
-/* Ensure Ant internal wrappers don't paint opaque layers over our blur */
-.settings-drawer .ant-drawer-wrapper-body,
-.settings-drawer .ant-drawer-body {
-    background: transparent;
 }
 
 /* Mobile Teleport mask (captures outside clicks). Keep it subtle so blur stays visible. */
@@ -263,23 +253,10 @@
     /* 防止滚动穿透到页面 */
     touch-action: pan-y;
     /* 明确允许纵向滚动手势 */
+    scrollbar-width: thin;
+    scrollbar-color: rgba(120, 120, 120, 0.35) transparent;
 }
 
-.settings-reset {
-    margin-top: 12px;
-    padding: 0 0 12px;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.settings-import-export {
-    margin-top: 4px;
-}
-
-.settings-import-input {
-    display: none;
-}
 
 .settings-gap-top-sm {
     margin-top: 8px;
@@ -291,10 +268,6 @@
 
 .settings-gap-bottom-sm {
     margin-bottom: 8px;
-}
-
-.settings-block {
-    display: block;
 }
 
 .settings-center {
@@ -310,9 +283,6 @@
     flex-wrap: wrap;
 }
 
-.settings-input-wide {
-    width: 140px;
-}
 
 .settings-col-compact {
     width: 81px;
@@ -322,32 +292,6 @@
     width: 100%;
 }
 
-.settings-word-break {
-    word-break: break-all;
-}
-
-
-.settings-divider {
-    margin: 8px 0;
-}
-
-.settings-dropdown-caret {
-    margin-left: 6px;
-    opacity: 0.75;
-}
-
-.settings-tag-ellipsis {
-    display: inline-block;
-    max-width: 260px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    vertical-align: bottom;
-}
-
-.settings-tag-full {
-    max-width: 100%;
-}
 
 .settings-text-secondary {
     display: block;
@@ -375,14 +319,6 @@
     margin-bottom: 2px;
 }
 
-/* Settings panel scrollbars (soft, theme-aware) */
-.settings-body {
-    flex: 1 1 auto;
-    min-height: 0;
-    scrollbar-width: thin;
-    scrollbar-color: rgba(120, 120, 120, 0.35) transparent;
-}
-
 .settings-body::-webkit-scrollbar {
     width: 8px;
 }
@@ -408,16 +344,10 @@ body.resizing {
 
 /* Collapse touch friendliness */
 .settings-collapse .ant-collapse-header {
-    padding: 12px 0 !important;
+    padding: 8px 2px !important;
     font-size: 13px;
 }
 
-.settings-panel-header {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    width: 100%;
-}
 
 .settings-panel-header-main {
     flex: 1;
@@ -475,9 +405,6 @@ body.resizing {
     pointer-events: none;
 }
 
-.settings-collapse .ant-collapse-content-box {
-    padding: 0 12px 12px !important;
-}
 
 /* Make InputNumber steppers easier to tap on mobile */
 @media (max-width: 768px) {

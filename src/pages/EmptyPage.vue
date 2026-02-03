@@ -37,38 +37,13 @@
           <a-button type="primary" block @click="openFilePicker">
             {{ t("viewer.empty.pickFile") }}
           </a-button>
-          <a-dropdown :trigger="['click']">
+          <a-dropdown :trigger="['click']" :menu="sampleMenu">
             <a-button block class="dropdown-btn">
               <span class="dropdown-btn__text">
                 {{ t("viewer.empty.preloadDefault") }}
               </span>
               <DownOutlined class="dropdown-btn__icon" />
             </a-button>
-            <template #overlay>
-              <a-menu @click="onSampleMenuClick">
-                <a-menu-item v-if="loadingSamples" key="__loading" disabled>
-                  {{ t("viewer.empty.samples.loading") }}
-                </a-menu-item>
-
-                <template v-else>
-                  <!-- 失败提示：展示，但不阻断下面的样例列表 -->
-                  <a-menu-item v-if="sampleLoadError" key="__error" disabled>
-                    {{ t("viewer.empty.samples.loadFailed", { error: sampleLoadError }) }}
-                  </a-menu-item>
-                  <a-menu-divider v-if="sampleLoadError" />
-
-                  <!-- 空状态 -->
-                  <a-menu-item v-if="sampleOptions.length === 0" key="__empty" disabled>
-                    {{ t("viewer.empty.samples.empty") }}
-                  </a-menu-item>
-
-                  <!-- 正常列表（包含 fallback 内置样例） -->
-                  <a-menu-item v-for="s in sampleOptions" v-else :key="s.url">
-                    {{ s.label }} ({{ s.size }}MB)
-                  </a-menu-item>
-                </template>
-              </a-menu>
-            </template>
           </a-dropdown>
         </a-space>
       </a-card>
@@ -108,11 +83,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
+import type { MenuProps } from 'antdv-next';
 import { readUrlListParam, writeUrlListParam } from '../lib/urlParams';
 import type { SampleManifestItem } from '../lib/structure/types';
-import { DownOutlined } from '@ant-design/icons-vue';
+import { DownOutlined } from '@antdv-next/icons';
 import {
   APP_AUTHOR,
   APP_DISPLAY_NAME,
@@ -333,6 +309,46 @@ function onSampleMenuClick(info: { key: string | number }): void {
   if (!item) return;
   emit('preload-sample', item);
 }
+
+// 下拉菜单项：按加载状态/错误/空列表组装
+// Dropdown items: built from loading/error/empty/samples state.
+const sampleMenuItems = computed<NonNullable<MenuProps['items']>>(() => {
+  if (loadingSamples.value) {
+    return [{ key: '__loading', label: t('viewer.empty.samples.loading'), disabled: true }];
+  }
+
+  const items: Array<NonNullable<MenuProps['items']>[number]> = [];
+
+  if (sampleLoadError.value) {
+    items.push({
+      key: '__error',
+      label: t('viewer.empty.samples.loadFailed', { error: sampleLoadError.value }),
+      disabled: true,
+    });
+    items.push({ key: '__divider', type: 'divider' });
+  }
+
+  if (sampleOptions.value.length === 0) {
+    items.push({ key: '__empty', label: t('viewer.empty.samples.empty'), disabled: true });
+    return items;
+  }
+
+  items.push(
+    ...sampleOptions.value.map(s => ({
+      key: s.url,
+      label: `${s.label} (${s.size}MB)`,
+    })),
+  );
+
+  return items;
+});
+
+// 下拉菜单配置：使用 antdv-next 的 menu 方式
+// Dropdown menu config: use antdv-next menu prop.
+const sampleMenu = computed<MenuProps>(() => ({
+  items: sampleMenuItems.value,
+  onClick: onSampleMenuClick,
+}));
 
 onMounted(() => {
   void loadSampleManifest();

@@ -1,7 +1,7 @@
 <template>
   <a-form layout="vertical">
     <a-form-item>
-      <a-divider class="settings-divider-title">
+      <a-divider style="margin-top: 0;">
         <a-typography-text type="secondary">
           {{ t('settings.panel.files.export.header') }}
         </a-typography-text>
@@ -56,7 +56,7 @@
     </a-form-item>
 
     <a-form-item>
-      <a-divider class="settings-divider-title">
+      <a-divider style="margin-top: 0;">
         <a-typography-text type="secondary">
           {{ t('settings.panel.files.project.header') }}
         </a-typography-text>
@@ -91,7 +91,6 @@
 
       <input
         ref="projectInputRef"
-        class="settings-import-input"
         type="file"
         accept=".zip,application/zip"
         hidden
@@ -100,7 +99,7 @@
     </a-form-item>
 
     <a-form-item>
-      <a-divider class="settings-divider-title">
+      <a-divider style="margin-top: 0;">
         <a-typography-text type="secondary">
           {{ t('settings.panel.files.config.header') }}
         </a-typography-text>
@@ -128,7 +127,6 @@
       </a-row>
       <input
         ref="settingsImportInputRef"
-        class="settings-import-input"
         type="file"
         accept="application/json,.json"
         hidden
@@ -137,7 +135,7 @@
     </a-form-item>
 
     <a-form-item>
-      <a-divider class="settings-divider-title">
+      <a-divider style="margin-top: 0;">
         <a-typography-text type="secondary">
           {{ t('settings.panel.files.format.header') }}
         </a-typography-text>
@@ -168,7 +166,7 @@
 <script setup lang="ts">
 import { computed, inject, nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { message } from 'ant-design-vue';
+import { message } from 'antdv-next';
 
 import { viewerApiRef } from '../../../lib/viewer/bridge';
 import { settingsSiderDirtyContextKey } from '../context';
@@ -490,15 +488,4 @@ async function onProjectFilePicked(e: Event): Promise<void> {
   gap: 8px;
 }
 
-.settings-divider {
-  margin: 12px 0;
-}
-
-.settings-divider-title {
-    margin: 0 0 8px;
-}
-
-.settings-import-input {
-  display: none;
-}
 </style>

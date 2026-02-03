@@ -1,412 +1,413 @@
 {
-    "LDR Atoms Viewer": "LDR Atoms Viewer",
+  "LDR Atoms Viewer": "LDR Atoms Viewer",
+  "locale": {
+    "selfName": "English"
+  },
+  "common": {
+    "error": "Error",
+    "delete": "Delete",
+    "confirm": "Confirm",
+    "cancel": "Cancel",
+    "close": "Close",
+    "menu": "Menu",
+    "resize": "Resize",
+    "collapse": "Collapse"
+  },
+  "net": {
+    "timeout": "request timeout"
+  },
+  "viewer": {
+    "play": {
+      "pause": "Pause",
+      "start": "Play",
+      "fps": "FPS",
+      "fpsLabel": "Playback FPS",
+      "frameIndex": "Frame index",
+      "timestep": "Timestep {value}",
+      "noNote": "No notes for this model"
+    },
+    "record": {
+      "bg": "Background",
+      "bgTransparent": "Transparent",
+      "bgReset": "Reset to transparent",
+      "delay": "Delay",
+      "countdown": "Countdown",
+      "start": "Record",
+      "stop": "Stop",
+      "resume": "Resume",
+      "pause": "Pause",
+      "selectHint": "Drag to draw a box. After drawing, you can move/resize it. Click Confirm to start recording.",
+      "selectCancel": "Cancel",
+      "selectConfirm": "Confirm recording"
+    },
+    "parse": {
+      "notice": "Please manually select the parsing method",
+      "mode": "Parse mode",
+      "format": "Format",
+      "file": "File",
+      "atoms": "Atoms",
+      "frames": "Frames",
+      "modeOptions": {
+        "auto": "Auto (recommended)",
+        "xyz": "XYZ",
+        "pdb": "PDB",
+        "mol": "MOL",
+        "sdf": "SDF",
+        "lammpsdump": "LAMMPS dump (trajectory)",
+        "lammpsdata": "LAMMPS data (read_data)"
+      },
+      "reparseSuccess": "Re-parsed as {format}",
+      "reparseFailed": "Re-parse failed: {reason}",
+      "fileSize": "File size",
+      "storedSize": "Compressed size"
+    },
+    "theme": {
+      "title": "Theme",
+      "mode": {
+        "system": "System",
+        "light": "Light",
+        "dark": "Dark"
+      },
+      "bgMismatchTitle": "Background contrast",
+      "bgMismatch": "The current {theme} theme has low contrast with the background color, so text may be hard to read.\nCheck the top-right icons and the text in the top-left/bottom-left.\nYou can turn off this prompt in Settings > Other.",
+      "bgMismatchThemeLight": "light",
+      "bgMismatchThemeDark": "dark",
+      "bgMismatchKeep": "Keep current theme",
+      "bgMismatchRestore": "Restore previous theme",
+      "bgMismatchKeepTip": "Kept the current theme. You can clear settings to restore defaults."
+    },
     "locale": {
-        "selfName": "English"
+      "system": "System",
+      "title": "Language"
     },
-    "common": {
-        "error": "Error",
-        "delete": "Delete",
-        "confirm": "Confirm",
-        "cancel": "Cancel",
-        "close": "Close",
-        "menu": "Menu",
-        "resize": "Resize",
-        "collapse": "Collapse"
+    "links": {
+      "github": "GitHub",
+      "docs": "Docs"
     },
-    "net": {
-        "timeout": "request timeout"
+    "empty": {
+      "title": "Drag and drop a file here",
+      "subtitle": "Or simply select the file, the \"{action}\" button can load built-in samples",
+      "pickFile": "Choose file",
+      "preloadDefault": "Load samples",
+      "samples": {
+        "loading": "Loading…",
+        "loadFailed": "Failed to load: {error} (switched to built-in sample)",
+        "empty": "No samples available"
+      },
+      "footer": {
+        "localOnly": "All data is computed and rendered locally. No uploads or data collection.",
+        "copyright": "Copyright © {years} {author}. All rights reserved."
+      }
     },
-    "viewer": {
-        "play": {
-            "pause": "Pause",
-            "start": "Play",
-            "fps": "FPS",
-            "fpsLabel": "Playback FPS",
-            "frameIndex": "Frame index",
-            "timestep": "Timestep {value}"
-        },
-        "record": {
-            "bg": "Background",
-            "bgTransparent": "Transparent",
-            "bgReset": "Reset to transparent",
-            "delay": "Delay",
-            "countdown": "Countdown",
-            "start": "Record",
-            "stop": "Stop",
-            "resume": "Resume",
-            "pause": "Pause",
-            "selectHint": "Drag to draw a box. After drawing, you can move/resize it. Click Confirm to start recording.",
-            "selectCancel": "Cancel",
-            "selectConfirm": "Confirm recording"
-        },
-        "parse": {
-            "notice": "Please manually select the parsing method",
-            "mode": "Parse mode",
-            "format": "Format",
-            "file": "File",
-            "atoms": "Atoms",
-            "frames": "Frames",
-            "modeOptions": {
-                "auto": "Auto (recommended)",
-                "xyz": "XYZ",
-                "pdb": "PDB",
-                "mol": "MOL",
-                "sdf": "SDF",
-                "lammpsdump": "LAMMPS dump (trajectory)",
-                "lammpsdata": "LAMMPS data (read_data)"
-            },
-            "reparseSuccess": "Re-parsed as {format}",
-            "reparseFailed": "Re-parse failed: {reason}"
-        },
-        "theme": {
-            "title": "Theme",
-            "mode": {
-                "system": "System",
-                "light": "Light",
-                "dark": "Dark"
-            },
-            "bgMismatchTitle": "Background contrast",
-            "bgMismatch": "The current {theme} theme has low contrast with the background color, so text may be hard to read.\nCheck the top-right icons and the text in the top-left/bottom-left.\nYou can turn off this prompt in Settings > Other.",
-            "bgMismatchThemeLight": "light",
-            "bgMismatchThemeDark": "dark",
-            "bgMismatchKeep": "Keep current theme",
-            "bgMismatchRestore": "Restore previous theme",
-            "bgMismatchKeepTip": "Kept the current theme. You can clear settings to restore defaults."
-        },
-        "locale": {
-            "system": "System",
-            "title": "Language"
-        },
-        "links": {
-            "github": "GitHub",
-            "docs": "Docs"
-        },
-        "empty": {
-            "title": "Drag and drop a file here",
-            "subtitle": "Or simply select the file, the \"{action}\" button can load built-in samples",
-            "pickFile": "Choose file",
-            "preloadDefault": "Load samples",
-            "samples": {
-                "loading": "Loading…",
-                "loadFailed": "Failed to load: {error} (switched to built-in sample)",
-                "empty": "No samples available"
-            },
-            "footer": {
-                "localOnly": "All data is computed and rendered locally. No uploads or data collection.",
-                "copyright": "Copyright © {years} {author}. All rights reserved."
-            }
-        },
-        "export": {
-            "pngSuccess": "Exported image",
-            "pngSuccessTransparent": "Exported image (transparent background)",
-            "pngSuccessSolid": "Exported image (non-transparent background)",
-            "scaleCapped": "Export scale was capped from {requested} to {used} (GPU limit: {limit}px).",
-            "tryLowerScale": "Export failed. Try a smaller export scale.",
-            "fail": "Export failed: {reason}",
-            "selectHint": "Drag to draw a box; drag/move handles to refine; click confirm to export.",
-            "selectCancel": "Cancel",
-            "selectConfirm": "Export selection"
-        },
-        "lammps": {
-            "mappingMissing": "Unresolved LAMMPS type→element mappings found (placeholder 'E'). Please complete them in Settings for correct colors/radii/bond inference."
-        },
-        "inspect": {
-            "title": "Atom inspector",
-            "measureMode": "Measure mode (multi-select 2/3 points)",
-            "clear": "Clear",
-            "hint": "Click an atom to inspect; enable measure mode to accumulate selections (up to 3).",
-            "distance": "Distance",
-            "angle": "Angle",
-            "orderHint": "Computed in selection order: ∠(1–2–3) with point 2 as the vertex."
-        },
-        "pan": {
-            "up": "Pan up",
-            "down": "Pan down",
-            "left": "Pan left",
-            "right": "Pan right",
-            "center": "Reset to center",
-            "sideLeft": "Left",
-            "sideRight": "Right",
-            "sideSingle": "Single"
-        },
-        "settings": {
-            "modifiedHint": "Detected modified settings for the current model. Relevant panels are now open."
-        },
-        "view": {
-            "snapSplit": "Snap 50%"
-        },
-        "autoRotate": {
-            "enabledHint": "Auto-rotation enabled. Temporary off: Settings → Auto-rotate → Enable; permanent off: Settings → Other → Auto rotate after loading models.",
-            "disabledHint": "Related panels are open; auto-rotate has been stopped."
-        },
-        "session": {
-            "restoreTitle": "Restore last session?",
-            "restoreContent": "A previous session with models and settings was found. Restore it?",
-            "restoreConfirm": "Restore",
-            "restoreMissing": "No cached models found. Please re-import."
-        }
+    "export": {
+      "pngSuccess": "Exported image",
+      "pngSuccessTransparent": "Exported image (transparent background)",
+      "pngSuccessSolid": "Exported image (non-transparent background)",
+      "scaleCapped": "Export scale was capped from {requested} to {used} (GPU limit: {limit}px).",
+      "tryLowerScale": "Export failed. Try a smaller export scale.",
+      "fail": "Export failed: {reason}",
+      "selectHint": "Drag to draw a box; drag/move handles to refine; click confirm to export.",
+      "selectCancel": "Cancel",
+      "selectConfirm": "Export selection"
+    },
+    "lammps": {
+      "mappingMissing": "Unresolved LAMMPS type→element mappings found (placeholder 'E'). Please complete them in Settings for correct colors/radii/bond inference."
+    },
+    "inspect": {
+      "title": "Atom inspector",
+      "measureMode": "Measure mode (multi-select 2/3 points)",
+      "clear": "Clear",
+      "hint": "Click an atom to inspect; enable measure mode to accumulate selections (up to 3).",
+      "distance": "Distance",
+      "angle": "Angle",
+      "orderHint": "Computed in selection order: ∠(1–2–3) with point 2 as the vertex."
+    },
+    "pan": {
+      "up": "Pan up",
+      "down": "Pan down",
+      "left": "Pan left",
+      "right": "Pan right",
+      "center": "Reset to center",
+      "sideLeft": "Left",
+      "sideRight": "Right",
+      "sideSingle": "Single"
     },
     "settings": {
-        "title": "Settings",
-        "clearSettings": "Clear settings",
-        "clearStorage": "Clear settings & model cache",
-        "clearStorageConfirmTitle": "Clear settings & model cache?",
-        "clearStorageConfirmBody": "This removes saved settings and cached models, then restores defaults.",
-        "clearSettingsConfirmTitle": "Clear settings?",
-        "clearSettingsConfirmBody": "Restores defaults.",
-        "clearStorageHint": "If the display looks wrong or settings get out of sync, try clearing settings.",
-        "storageUsage": "Local storage usage: {used} / {total}",
-        "storageUsageOnly": "Local storage usage: {used}",
-        "storageUsageDetail": "Settings {local} · Model cache {cache}",
-        "storageUsageUnknown": "Local storage usage: unknown",
-        "exportSettings": "Export settings",
-        "importSettings": "Import settings",
-        "exportSuccess": "Settings exported",
-        "importSuccess": "Settings imported",
-        "importing": "Importing…",
-        "importFailed": "Import failed. Invalid file format.",
-        "buildTime": "Built at:",
-        "buildTimeUnknown": "Unknown",
-            "panel": {
-                "resetPanelButton": "Reset panel defaults",
-                "resetPanelConfirm": "Reset this panel to defaults?",
-                "view": {
-                "header": "View Control",
-                "viewPresets": "View presets",
-                "viewPresetsHint": "Select 1 preset for single view, or select 2 presets for side-by-side dual view.",
-                "viewPresetsNeedOne": "Please keep at least one view preset selected (cannot uncheck the last one).",
-                "viewPresetFront": "Front",
-                "viewPresetSide": "Side",
-                "viewPresetTop": "Top",
-                "dualViewDistance": "View distance",
-                "rotation": "Rotation",
-                "dualViewSplit": "Split ratio",
-                "dualViewSplitHint": "Adjust the width ratio between front (left) and side (right) view.",
-                "perspective": "Perspective",
-                "rotX": "Rotate X",
-                "rotY": "Rotate Y",
-                "rotZ": "Rotate Z",
-                "resetPose": "Reset rotation",
-                "resetView": "Reset original distance"
-            },
-            "rotation": {
-                "header": "Auto Spin",
-                "enable": "Enable",
-                "mode": "Axis preset",
-                "speed": "Speed (°/s)",
-                "speedHint": "Speed is adjusted independently; the preset only defines the axis (direction).",
-                "pauseOnInteract": "Pause while interacting",
-                "resumeDelay": "Resume delay (ms)",
-                "reset": "Reset auto-rotate",
-                "presets": {
-                    "off": {
-                        "name": "Off",
-                        "hint": "No continuous rotation"
-                    },
-                    "diag": {
-                        "name": "Diagonal axis",
-                        "hint": "A common isometric-like diagonal axis"
-                    },
-                    "y": {
-                        "name": "Y axis",
-                        "hint": "Rotate around the Y axis"
-                    },
-                    "x": {
-                        "name": "X axis",
-                        "hint": "Rotate around the X axis"
-                    },
-                    "z": {
-                        "name": "Z axis",
-                        "hint": "Rotate around the Z axis"
-                    },
-                    "diagXY": {
-                        "name": "XY plane diagonal",
-                        "hint": "Rotate around the diagonal direction in the XY plane"
-                    },
-                    "diagYZ": {
-                        "name": "YZ plane diagonal",
-                        "hint": "Rotate around the diagonal direction in the YZ plane"
-                    },
-                    "diagXZ": {
-                        "name": "XZ plane diagonal",
-                        "hint": "Rotate around the diagonal direction in the XZ plane"
-                    },
-                    "space": {
-                        "name": "Space diagonal",
-                        "hint": "Rotate around the (1,1,1) direction"
-                    },
-                    "tilt": {
-                        "name": "Tilted axis",
-                        "hint": "A slightly tilted axis that often looks good"
-                    }
-                }
-            },
-            "lammps": {
-                "header": "LAMMPS Map",
-                "alert": "When a LAMMPS dump or LAMMPS data file provides only numeric types, specify the element symbol for each type here to ensure correct color/radius, bond inference, and stable rendering.",
-                "currentLayer": "Current layer",
-                "applyAll": "Apply to all layers",
-                "mapLabel": "type id → element symbol (searchable)",
-                "typePlaceholder": "type",
-                "elementPlaceholder": "Element (e.g., C / O / Fe)",
-                "addMapping": "Add mapping",
-                "apply": "Apply",
-                "undo": "Undo",
-                "clear": "Clear",
-                "clearConfirm": "Clear all mappings?",
-                "hint": "Recommended dump fields: id, type, x y z. If per-frame ordering is not fixed, the parser will sort by id to avoid animation jitter."
-            },
-            "files": {
-                "header": "File I/O",
-                "openFile": "Open file",
-                "openFileHint": "You can also drag & drop a file onto the canvas. New loads are added as layers and previous layers are hidden by default.",
-                "export": {
-                    "header": "Export image",
-                    "scaleLabel": "Export scale",
-                    "button": "Export image",
-                    "transparent": "Transparent background",
-                    "selectButton": "Select Range Export",
-                    "hint": "Higher scale looks sharper but creates larger files and slower exports",
-                    "format": {
-                        "png": "PNG (lossless, crisp)",
-                        "webp": "WebP (smaller file)",
-                        "jpg": "JPG (compatible)"
-                    }
-                },
-                "format": {
-                    "header": "Format Conversion",
-                    "button": "Export",
-                    "success": "Format conversion exported"
-                },
-                "project": {
-                    "header": "Project package",
-                    "export": "Export ZIP",
-                    "import": "Import ZIP",
-                    "cacheRemote": "Cache remote models for export/restore",
-                    "hint": "ZIP contains config.json; uncached remote models will be re-fetched via URL."
-                },
-                "config": {
-                    "header": "Settings Backup",
-                    "exportFull": "Export full settings (include defaults)"
-                }
-            },
-            "scope": {
-                "currentLayerLabel": "Current layer",
-                "options": {
-                    "current": "current layer only",
-                    "visible": "visible layers only",
-                    "all": "all layers"
-                }
-                ,
-                "selectPlaceholder": "Choose scope"
-                ,
-                "effectRangeLabel": "Effect range"
-            },
-            "layers": {
-                "header": "Layers Manage",
-                "noViewer": "Viewer is not available.",
-                "empty": "No models loaded yet.",
-                "meta": "{atoms} atoms · {frames} frames",
-                "visible": "Show layer",
-                "showAll": "Show all",
-                "hideAll": "Hide all",
-                "sort": {
-                    "timeAsc": "Time ↑",
-                    "timeDesc": "Time ↓",
-                    "nameAsc": "Name ↑",
-                    "nameDesc": "Name ↓"
-                },
-                "hint": "Click a row to set the active layer for per-layer colors or display; use the toggle to show/hide.",
-                "deleteConfirm": "Delete this layer?"
-            },
-                "other": {
-                    "refreshBondsOnPlayLabel": "Bond refresh",
-                    "refreshBondsOnPlay": "Refresh bonds each frame while playing",
-                    "keepActiveLayerOnHideLabel": "Selection",
-                    "keepActiveLayerOnHide": "Keep atom selection when hiding a layer",
-                    "header": "Other",
-                    "axes": "Axes",
-                    "recordFps": "Recording FPS",
-                    "recordFpsHint": "Target recording frame rate; commonly 30 / 60.",
-                    "panStep": "Pan step",
-                    "selectionColorLabel": "Highlight Color",
-                    "selectionColorHint": "Used for selection halos, connecting lines, and fill overlays.",
-                    "selectionColorReset": "Restore default selection color",
-                    "selectionColorResetTooltip": "Reset to the built-in selection highlight color.",
-                    "backgroundColor": "Background color",
-                    "atomRoughness": "Atom material roughness",
-                    "visualStyle": "Visual style",
-                    "visualStyleDefault": "Default",
-                    "visualStyleJmol": "Jmol style",
-                    "visualStyleHint": "Switch preset colors and atom thickness.",
-                    "themeReadabilityLabel": "Readability",
-                    "themeReadabilityCheckOnOpen": "Check theme readability when opening the viewer",
-                    "modelLightIntensity": "Model light intensity",
-                    "reset": "Reset other settings"
-                },
-            "colors": {
-                "header": "Atom Colors",
-                "alert": "After editing colors, click “Refresh” to apply them to the model.",
-                "currentLayer": "Current layer",
-                "applyAll": "Edit all layers",
-                "mapLabel": "Color map (hex) and Opacity",
-                "opacity": "Opacity",
-                "apply": "Apply",
-                "hexPlaceholder": "e.g. #FF8800",
-                "colorPickerLabel": "{key} color",
-                "invalidHex": "Invalid color format. Please use #RRGGBB or #RGB.",
-                "reset": "Reset",
-                "resetTooltip": "Reset to the built-in default color of this element.",
-                "hint": "Tip: If the active layer has typeId (e.g. LAMMPS), colors are keyed as element+typeId (C.1, C.2, ...); otherwise they are keyed by element.",
-                "empty": "No editable atom types in the active layer."
-            },
-            "details": {
-                "header": "Model Details",
-                "alert": "These options are saved per layer. Turn on “Edit all layers” to broadcast changes.",
-                "currentLayer": "Current layer",
-                "applyAll": "Edit all layers",
-                "hint": "Atom size and bond settings do not affect other layers unless you choose to edit all layers.",
-                "representation": "Representation",
-                "repr": {
-                    "ballAndStick": "Ball and stick",
-                    "stick": "Stick",
-                    "wireframe": "Wireframe",
-                    "spacefill": "Spacefill (CPK)",
-                    "points": "Points",
-                    "custom": "Custom"
-                },
-                "bonds": "Show bonds",
-                "bondFactor": "Bond cutoff factor (bondFactor)",
-                "bondFactorHint": "Used to infer bonds: cutoff = (r_i + r_j) × bondFactor. Larger values create bonds more easily.",
-                "bondRadius": "Bond thickness",
-                "atomSize": "Atom size",
-                "sphereSegments": "Sphere segments",
-                "modelLightIntensity": "Model light intensity",
-                "atomRoughness": "Atom material roughness",
-                "reset": "Reset layer appearance",
-                "sphereSegmentsHint": "Higher values look smoother but are slower to render."
-            }
-        }
+      "modifiedHint": "Detected modified settings for the current model. Relevant panels are now open."
     },
-    "errors": {
-        "parseIntFailed": "Failed to parse integer: {value}",
-        "lammpsDump": {
-            "unexpectedHeader": "LAMMPS dump parse failed: expected \"{expected}\", got \"{actual}\"",
-            "badBoxBoundsLine": "Failed to parse BOX BOUNDS line: {line}",
-            "missingAtomsSection": "LAMMPS dump parse failed: missing ITEM: ATOMS section.",
-            "missingTypeColumn": "LAMMPS dump: missing \"type\" in ATOMS columns. columns={columns}",
-            "missingCoordsColumns": "LAMMPS dump: missing coordinate columns (x y z or xs ys zs). columns={columns}",
-            "noFrames": "LAMMPS dump parse failed: no frames were read (ITEM: TIMESTEP)."
-        },
-        "lammpsData": {
-            "missingAtomsSection": "LAMMPS data parse failed: missing \"Atoms\" section in {fileName}"
-        },
-        "pdb": {
-            "noAtomRecords": "No ATOM/HETATM records found in the PDB file."
-        },
-        "xyz": {
-            "noFrames": "XYZ parse failed: no frames were read.",
-            "inconsistentAtomCountPerFrame": "XYZ multi-frame parse failed: each frame must have the same atom count."
-        }
+    "view": {
+      "snapSplit": "Snap 50%"
+    },
+    "autoRotate": {
+      "enabledHint": "Auto-rotation enabled. Temporary off: Settings → Auto-rotate → Enable; permanent off: Settings → Other → Auto rotate after loading models.",
+      "disabledHint": "Related panels are open; auto-rotate has been stopped."
+    },
+    "session": {
+      "restoreTitle": "Restore last session?",
+      "restoreContent": "A previous session with models and settings was found. Restore it?",
+      "restoreConfirm": "Restore",
+      "restoreMissing": "No cached models found. Please re-import."
     }
+  },
+  "settings": {
+    "title": "Settings",
+    "clearSettings": "Clear settings",
+    "clearStorage": "Clear settings & model cache",
+    "clearStorageConfirmTitle": "Clear settings & model cache?",
+    "clearStorageConfirmBody": "This removes saved settings and cached models, then restores defaults.",
+    "clearSettingsConfirmTitle": "Clear settings?",
+    "clearSettingsConfirmBody": "Restores defaults.",
+    "clearStorageHint": "If the display looks wrong or settings get out of sync, try clearing settings.",
+    "storageUsage": "Local storage usage: {used} / {total}",
+    "storageUsageOnly": "Local storage usage: {used}",
+    "storageUsageDetail": "Settings {local} · Model cache {cache}",
+    "storageUsageUnknown": "Local storage usage: unknown",
+    "exportSettings": "Export settings",
+    "importSettings": "Import settings",
+    "exportSuccess": "Settings exported",
+    "importSuccess": "Settings imported",
+    "importing": "Importing…",
+    "importFailed": "Import failed. Invalid file format.",
+    "buildTime": "Built at:",
+    "buildTimeUnknown": "Unknown",
+    "panel": {
+      "resetPanelButton": "Reset panel defaults",
+      "resetPanelConfirm": "Reset this panel to defaults?",
+      "view": {
+        "header": "View Control",
+        "viewPresets": "View presets",
+        "viewPresetsHint": "Select 1 preset for single view, or select 2 presets for side-by-side dual view.",
+        "viewPresetsNeedOne": "Please keep at least one view preset selected (cannot uncheck the last one).",
+        "viewPresetFront": "Front",
+        "viewPresetSide": "Side",
+        "viewPresetTop": "Top",
+        "dualViewDistance": "View distance",
+        "rotation": "Rotation",
+        "dualViewSplit": "Split ratio",
+        "dualViewSplitHint": "Adjust the width ratio between front (left) and side (right) view.",
+        "perspective": "Perspective",
+        "rotX": "Rotate X",
+        "rotY": "Rotate Y",
+        "rotZ": "Rotate Z",
+        "resetPose": "Reset rotation",
+        "resetView": "Reset original distance"
+      },
+      "rotation": {
+        "header": "Auto Spin",
+        "enable": "Enable",
+        "mode": "Axis preset",
+        "speed": "Speed (°/s)",
+        "speedHint": "Speed is adjusted independently; the preset only defines the axis (direction).",
+        "pauseOnInteract": "Pause while interacting",
+        "resumeDelay": "Resume delay (ms)",
+        "reset": "Reset auto-rotate",
+        "presets": {
+          "off": {
+            "name": "Off",
+            "hint": "No continuous rotation"
+          },
+          "diag": {
+            "name": "Diagonal axis",
+            "hint": "A common isometric-like diagonal axis"
+          },
+          "y": {
+            "name": "Y axis",
+            "hint": "Rotate around the Y axis"
+          },
+          "x": {
+            "name": "X axis",
+            "hint": "Rotate around the X axis"
+          },
+          "z": {
+            "name": "Z axis",
+            "hint": "Rotate around the Z axis"
+          },
+          "diagXY": {
+            "name": "XY plane diagonal",
+            "hint": "Rotate around the diagonal direction in the XY plane"
+          },
+          "diagYZ": {
+            "name": "YZ plane diagonal",
+            "hint": "Rotate around the diagonal direction in the YZ plane"
+          },
+          "diagXZ": {
+            "name": "XZ plane diagonal",
+            "hint": "Rotate around the diagonal direction in the XZ plane"
+          },
+          "space": {
+            "name": "Space diagonal",
+            "hint": "Rotate around the (1,1,1) direction"
+          },
+          "tilt": {
+            "name": "Tilted axis",
+            "hint": "A slightly tilted axis that often looks good"
+          }
+        }
+      },
+      "lammps": {
+        "header": "LAMMPS Map",
+        "alert": "When a LAMMPS dump or LAMMPS data file provides only numeric types, specify the element symbol for each type here to ensure correct color/radius, bond inference, and stable rendering.",
+        "currentLayer": "Current layer",
+        "applyAll": "Apply to all layers",
+        "mapLabel": "type id → element symbol (searchable)",
+        "typePlaceholder": "type",
+        "elementPlaceholder": "Element (e.g., C / O / Fe)",
+        "addMapping": "Add mapping",
+        "apply": "Apply",
+        "undo": "Undo",
+        "clear": "Clear",
+        "clearConfirm": "Clear all mappings?",
+        "hint": "Recommended dump fields: id, type, x y z. If per-frame ordering is not fixed, the parser will sort by id to avoid animation jitter."
+      },
+      "files": {
+        "header": "File I/O",
+        "openFile": "Open file",
+        "openFileHint": "You can also drag & drop a file onto the canvas. New loads are added as layers and previous layers are hidden by default.",
+        "export": {
+          "header": "Export image",
+          "scaleLabel": "Export scale",
+          "button": "Export image",
+          "transparent": "Transparent background",
+          "selectButton": "Select Range Export",
+          "hint": "Higher scale looks sharper but creates larger files and slower exports",
+          "format": {
+            "png": "PNG (lossless, crisp)",
+            "webp": "WebP (smaller file)",
+            "jpg": "JPG (compatible)"
+          }
+        },
+        "format": {
+          "header": "Format Conversion",
+          "button": "Export",
+          "success": "Format conversion exported"
+        },
+        "project": {
+          "header": "Project package",
+          "export": "Export ZIP",
+          "import": "Import ZIP",
+          "cacheRemote": "Cache remote models for export/restore",
+          "hint": "ZIP contains config.json; uncached remote models will be re-fetched via URL."
+        },
+        "config": {
+          "header": "Settings Backup",
+          "exportFull": "Export full settings (include defaults)"
+        }
+      },
+      "scope": {
+        "currentLayerLabel": "Current layer",
+        "options": {
+          "current": "current layer only",
+          "visible": "visible layers only",
+          "all": "all layers"
+        },
+        "selectPlaceholder": "Choose scope",
+        "effectRangeLabel": "Effect range"
+      },
+      "layers": {
+        "header": "Layers Manage",
+        "noViewer": "Viewer is not available.",
+        "empty": "No models loaded yet.",
+        "meta": "{atoms} atoms · {frames} frames",
+        "visible": "Show layer",
+        "showAll": "Show all",
+        "hideAll": "Hide all",
+        "sort": {
+          "timeAsc": "Time ↑",
+          "timeDesc": "Time ↓",
+          "nameAsc": "Name ↑",
+          "nameDesc": "Name ↓"
+        },
+        "hint": "Click a row to set the active layer for per-layer colors or display; use the toggle to show/hide.",
+        "deleteConfirm": "Delete this layer?"
+      },
+      "other": {
+        "refreshBondsOnPlayLabel": "Bond refresh",
+        "refreshBondsOnPlay": "Refresh bonds each frame while playing",
+        "keepActiveLayerOnHideLabel": "Selection",
+        "keepActiveLayerOnHide": "Keep atom selection when hiding a layer",
+        "header": "Other",
+        "axes": "Axes",
+        "recordFps": "Recording FPS",
+        "recordFpsHint": "Target recording frame rate; commonly 30 / 60.",
+        "panStep": "Pan step",
+        "selectionColorLabel": "Highlight Color",
+        "selectionColorHint": "Used for selection halos, connecting lines, and fill overlays.",
+        "selectionColorReset": "Restore default selection color",
+        "selectionColorResetTooltip": "Reset to the built-in selection highlight color.",
+        "backgroundColor": "Background color",
+        "atomRoughness": "Atom material roughness",
+        "visualStyle": "Visual style",
+        "visualStyleDefault": "Default",
+        "visualStyleJmol": "Jmol style",
+        "visualStyleHint": "Switch preset colors and atom thickness.",
+        "themeReadabilityLabel": "Readability",
+        "themeReadabilityCheckOnOpen": "Check theme readability when opening the viewer",
+        "modelLightIntensity": "Model light intensity",
+        "reset": "Reset other settings"
+      },
+      "colors": {
+        "header": "Atom Colors",
+        "alert": "After editing colors, click “Refresh” to apply them to the model.",
+        "currentLayer": "Current layer",
+        "applyAll": "Edit all layers",
+        "mapLabel": "Color map (hex) and Opacity",
+        "opacity": "Opacity",
+        "apply": "Apply",
+        "hexPlaceholder": "e.g. #FF8800",
+        "colorPickerLabel": "{key} color",
+        "invalidHex": "Invalid color format. Please use #RRGGBB or #RGB.",
+        "reset": "Reset",
+        "resetTooltip": "Reset to the built-in default color of this element.",
+        "hint": "Tip: If the active layer has typeId (e.g. LAMMPS), colors are keyed as element+typeId (C.1, C.2, ...); otherwise they are keyed by element.",
+        "empty": "No editable atom types in the active layer."
+      },
+      "details": {
+        "header": "Model Details",
+        "alert": "These options are saved per layer. Turn on “Edit all layers” to broadcast changes.",
+        "currentLayer": "Current layer",
+        "applyAll": "Edit all layers",
+        "hint": "Atom size and bond settings do not affect other layers unless you choose to edit all layers.",
+        "representation": "Representation",
+        "repr": {
+          "ballAndStick": "Ball and stick",
+          "stick": "Stick",
+          "wireframe": "Wireframe",
+          "spacefill": "Spacefill (CPK)",
+          "points": "Points",
+          "custom": "Custom"
+        },
+        "bonds": "Show bonds",
+        "bondFactor": "Bond cutoff factor (bondFactor)",
+        "bondFactorHint": "Used to infer bonds: cutoff = (r_i + r_j) × bondFactor. Larger values create bonds more easily.",
+        "bondRadius": "Bond thickness",
+        "atomSize": "Atom size",
+        "sphereSegments": "Sphere segments",
+        "modelLightIntensity": "Model light intensity",
+        "atomRoughness": "Atom material roughness",
+        "reset": "Reset layer appearance",
+        "sphereSegmentsHint": "Higher values look smoother but are slower to render."
+      }
+    }
+  },
+  "errors": {
+    "parseIntFailed": "Failed to parse integer: {value}",
+    "lammpsDump": {
+      "unexpectedHeader": "LAMMPS dump parse failed: expected \"{expected}\", got \"{actual}\"",
+      "badBoxBoundsLine": "Failed to parse BOX BOUNDS line: {line}",
+      "missingAtomsSection": "LAMMPS dump parse failed: missing ITEM: ATOMS section.",
+      "missingTypeColumn": "LAMMPS dump: missing \"type\" in ATOMS columns. columns={columns}",
+      "missingCoordsColumns": "LAMMPS dump: missing coordinate columns (x y z or xs ys zs). columns={columns}",
+      "noFrames": "LAMMPS dump parse failed: no frames were read (ITEM: TIMESTEP)."
+    },
+    "lammpsData": {
+      "missingAtomsSection": "LAMMPS data parse failed: missing \"Atoms\" section in {fileName}"
+    },
+    "pdb": {
+      "noAtomRecords": "No ATOM/HETATM records found in the PDB file."
+    },
+    "xyz": {
+      "noFrames": "XYZ parse failed: no frames were read.",
+      "inconsistentAtomCountPerFrame": "XYZ multi-frame parse failed: each frame must have the same atom count."
+    }
+  }
 }

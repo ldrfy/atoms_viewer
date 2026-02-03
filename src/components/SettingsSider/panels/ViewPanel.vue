@@ -1,23 +1,6 @@
 <template>
   <a-form layout="vertical">
-    <a-form-item>
-      <template #label>
-        <a-space :size="6" align="center">
-          <span>{{ t('settings.panel.view.viewPresets') }}</span>
-          <a-tooltip
-            placement="left"
-            :title="t('settings.panel.view.viewPresetsHint')"
-          >
-            <a-button
-              type="text"
-              :aria-label="t('settings.panel.view.viewPresetsHint')"
-              :title="t('settings.panel.view.viewPresetsHint')"
-            >
-              <QuestionCircleOutlined />
-            </a-button>
-          </a-tooltip>
-        </a-space>
-      </template>
+    <a-form-item :label="viewPresetsLabel">
       <div class="settings-center">
         <a-checkbox-group
           :value="viewPresetsModel"
@@ -42,23 +25,10 @@
       </a-row>
     </a-form-item>
 
-    <a-form-item v-if="viewPresetsModel.length > 0">
-      <template #label>
-        <a-space :size="6" align="center">
-          <span>{{ t('settings.panel.view.dualViewDistance') }}</span>
-          <a-tooltip v-if="distanceDirty" :title="t('settings.panel.view.resetView')">
-            <a-button
-              type="text"
-              size="small"
-              :aria-label="t('settings.panel.view.resetView')"
-              :title="t('settings.panel.view.resetView')"
-              @click="resetDistance"
-            >
-              <ReloadOutlined />
-            </a-button>
-          </a-tooltip>
-        </a-space>
-      </template>
+    <a-form-item
+      v-if="viewPresetsModel.length > 0"
+      :label="dualViewDistanceLabel"
+    >
       <a-row :gutter="8" align="middle">
         <a-col :span="0.5" />
 
@@ -88,23 +58,7 @@
       </a-row>
     </a-form-item>
 
-    <a-form-item>
-      <template #label>
-        <a-space :size="6" align="center">
-          <span>{{ t('settings.panel.view.rotation') }}</span>
-          <a-tooltip v-if="rotationDirty" :title="t('settings.panel.view.resetPose')">
-            <a-button
-              type="text"
-              size="small"
-              :aria-label="t('settings.panel.view.resetPose')"
-              :title="t('settings.panel.view.resetPose')"
-              @click="resetPose"
-            >
-              <ReloadOutlined />
-            </a-button>
-          </a-tooltip>
-        </a-space>
-      </template>
+    <a-form-item :label="rotationLabel">
       <a-space direction="vertical" :size="8" class="settings-full-width">
         <a-row :gutter="8" align="middle">
           <a-col :span="0.5" />
@@ -206,9 +160,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch, onBeforeUnmount } from 'vue';
-import { message } from 'ant-design-vue';
-import { QuestionCircleOutlined, ReloadOutlined } from '@ant-design/icons-vue';
+import { computed, h, ref, watch, onBeforeUnmount } from 'vue';
+import { Button, Space, Tooltip, message } from 'antdv-next';
+import { QuestionCircleOutlined, ReloadOutlined } from '@antdv-next/icons';
 import { useI18n } from 'vue-i18n';
 import { normalizeViewPresets, type ViewPreset } from '../../../lib/viewer/viewPresets';
 import { DUAL_VIEW_DISTANCE_MIN } from '../../../lib/viewer/constants';
@@ -220,6 +174,56 @@ import { useSettingsSiderResetContext } from '../useSettingsSiderResetContext';
 const { t } = useI18n();
 const { settings, patchSettings, hasAnyLayer } = useSettingsSiderContext();
 
+// Build FormItem label VNodes for antdv-next (label slot removed).
+// 为 antdv-next 构建 FormItem label 的 VNode（已移除 label slot）。
+function buildFormItemLabel(
+  text: string,
+  action?: {
+    title: string;
+    ariaLabel: string;
+    onClick?: () => void;
+    icon: any;
+    show?: boolean;
+    size?: 'small' | 'middle' | 'large';
+  },
+  tooltipPlacement: 'left' | 'right' | 'top' | 'bottom' = 'left',
+) {
+  const children = [
+    h('span', text),
+  ];
+
+  if (action) {
+    const showAction = action.show ?? true;
+    const buttonNode = h(
+      Button,
+      {
+        'type': 'text',
+        'size': action.size ?? 'middle',
+        'aria-label': action.ariaLabel,
+        'title': action.title,
+        'onClick': action.onClick,
+        'style': showAction ? undefined : { visibility: 'hidden', pointerEvents: 'none' },
+        'tabIndex': showAction ? undefined : -1,
+      },
+      () => h(action.icon),
+    );
+
+    if (showAction) {
+      const tooltipNode = h(
+        Tooltip,
+        { title: action.title, placement: tooltipPlacement },
+        () => buttonNode,
+      );
+      children.push(tooltipNode);
+    }
+    else {
+      children.push(buttonNode);
+    }
+  }
+
+  return h(Space, { size: 6, align: 'center' }, () => children);
+}
+
 const viewPresetOptions = computed(() => [
   { label: t('settings.panel.view.viewPresetFront'), value: 'front' as const },
   { label: t('settings.panel.view.viewPresetSide'), value: 'side' as const },
@@ -228,6 +232,17 @@ const viewPresetOptions = computed(() => [
 
 // Controlled selection (max two, min one)
 const viewPresetsModel = ref<ViewPreset[]>(['front']);
+
+// View presets label (text + hint).
+// 视角预设 label（文本 + 提示）。
+const viewPresetsLabel = computed(() => buildFormItemLabel(
+  t('settings.panel.view.viewPresets'),
+  {
+    title: t('settings.panel.view.viewPresetsHint'),
+    ariaLabel: t('settings.panel.view.viewPresetsHint'),
+    icon: QuestionCircleOutlined,
+  },
+));
 
 function syncViewPresetsFromSettings(): void {
   const cur = normalizeViewPresets(settings.value.view.viewPresets);
@@ -301,6 +316,20 @@ const distanceDirty = computed(() => {
   return Math.abs(cur - def) > 1e-6;
 });
 
+// Dual view distance label (text + reset when dirty).
+// 双视图间距 label（文本 + 脏数据时重置）。
+const dualViewDistanceLabel = computed(() => buildFormItemLabel(
+  t('settings.panel.view.dualViewDistance'),
+  {
+    title: t('settings.panel.view.resetView'),
+    ariaLabel: t('settings.panel.view.resetView'),
+    onClick: resetDistance,
+    icon: ReloadOutlined,
+    size: 'small',
+    show: distanceDirty.value,
+  },
+));
+
 function resetDistance(): void {
   patchSettings({ view: { dualViewDistance: getDefaultDistance() } });
 }
@@ -309,6 +338,20 @@ const rotationDirty = computed(() => {
   const r = settings.value.view.rotationDeg;
   return Math.abs(r.x) > 1e-6 || Math.abs(r.y) > 1e-6 || Math.abs(r.z) > 1e-6;
 });
+
+// Rotation label (text + reset when dirty).
+// 旋转 label（文本 + 脏数据时重置）。
+const rotationLabel = computed(() => buildFormItemLabel(
+  t('settings.panel.view.rotation'),
+  {
+    title: t('settings.panel.view.resetPose'),
+    ariaLabel: t('settings.panel.view.resetPose'),
+    onClick: resetPose,
+    icon: ReloadOutlined,
+    size: 'small',
+    show: rotationDirty.value,
+  },
+));
 
 const rotXModel = computed({
   get: () => settings.value.view.rotationDeg.x,

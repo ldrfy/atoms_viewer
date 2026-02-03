@@ -231,6 +231,8 @@ export type ParseInfo = {
   format: string;
   atomCount: number;
   frameCount: number;
+  fileSize: number | null;
+  storedSize: number | null;
   success: boolean;
   errorMsg: string;
   errorSeq: number;

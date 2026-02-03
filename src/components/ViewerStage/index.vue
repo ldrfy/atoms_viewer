@@ -81,7 +81,7 @@ import { useI18n } from 'vue-i18n';
 import { useViewerStage } from './useViewerStage';
 import type { ViewerSettings, OpenSettingsPayload } from '../../lib/viewer/settings';
 import type { SettingsPatch } from '../../lib/viewer/mergeSettings';
-import { Modal, message } from 'ant-design-vue';
+import { Modal, message } from 'antdv-next';
 import {
   setThemeMode,
   isDark,

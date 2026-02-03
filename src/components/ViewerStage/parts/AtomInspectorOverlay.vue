@@ -98,79 +98,60 @@
             <div v-else class="atom-inspector__content">
               <!-- Scrollable list -->
               <div class="atom-inspector__list">
-                <a-list size="small" :data-source="selected" :split="false">
-                  <template #renderItem="{ item, index }">
-                    <a-list-item class="atom-item">
-                      <a-row align="middle" :gutter="[8, 0]" style="width: 100%">
-                        <a-col flex="28px">
-                          <a-tag color="blue" class="atom-index-tag">
-                            {{ index + 1 }}
-                          </a-tag>
-                        </a-col>
+                <a-space direction="vertical" :size="4" style="width: 100%">
+                  <div
+                    v-for="(item, index) in selected"
+                    :key="item.atomIndex ?? index"
+                    class="atom-item"
+                  >
+                    <a-row align="middle" :gutter="[8, 0]" style="width: 100%">
+                      <a-col flex="28px">
+                        <a-tag color="blue" class="atom-index-tag">
+                          {{ index + 1 }}
+                        </a-tag>
+                      </a-col>
 
-                        <a-col flex="auto">
-                          <a-popover trigger="click" :content="buildTooltip(item)" placement="topLeft">
-                            <a-space direction="vertical" size="4" style="width: 100%">
-                              <a-space align="center" size="12" wrap>
-                                <a-typography-text strong>
-                                  {{ item.element }}
-                                </a-typography-text>
-                                <div class="atom-idx">
-                                  idx={{ item.atomIndex }}
-                                </div>
-                              </a-space>
-                              <a-typography-text>
-                                x={{ fmt(item.position?.[0]) }},
-                                y={{ fmt(item.position?.[1]) }},
-                                z={{ fmt(item.position?.[2]) }}
+                      <a-col flex="auto">
+                        <a-popover :trigger="['click']" :content="buildTooltip(item)" placement="topLeft">
+                          <a-space direction="vertical" :size="4" style="width: 100%">
+                            <a-space align="center" :size="12" wrap>
+                              <a-typography-text strong>
+                                {{ item.element }}
                               </a-typography-text>
+                              <div class="atom-idx">
+                                idx={{ item.atomIndex }}
+                              </div>
                             </a-space>
-                          </a-popover>
-                        </a-col>
+                            <a-typography-text>
+                              x={{ fmt(item.position?.[0]) }},
+                              y={{ fmt(item.position?.[1]) }},
+                              z={{ fmt(item.position?.[2]) }}
+                            </a-typography-text>
+                          </a-space>
+                        </a-popover>
+                      </a-col>
 
-                        <a-col flex="32px" style="text-align: right">
-                          <a-button
-                            type="text"
-                            size="small"
-                            aria-label="remove"
-                            title="remove"
-                            @click="removeAt(index)"
-                          >
-                            <DeleteOutlined />
-                          </a-button>
-                        </a-col>
-                      </a-row>
-                    </a-list-item>
-                  </template>
-                </a-list>
+                      <a-col flex="32px" style="text-align: right">
+                        <a-button
+                          type="text"
+                          size="small"
+                          aria-label="remove"
+                          title="remove"
+                          @click="removeAt(index)"
+                        >
+                          <DeleteOutlined />
+                        </a-button>
+                      </a-col>
+                    </a-row>
+                  </div>
+                </a-space>
               </div>
 
               <!-- Fixed footer: measures -->
               <div class="atom-inspector__footer">
                 <a-divider v-if="measureMode && measure.distance12 != null" class="atom-inspector__divider" />
 
-                <a-descriptions size="small" :column="1">
-                  <a-descriptions-item
-                    v-if="measureMode && measure.distance12 != null"
-                    :label="`${t('viewer.inspect.distance')} (1–2)`"
-                  >
-                    {{ fmt(measure.distance12) }} Å
-                  </a-descriptions-item>
-
-                  <a-descriptions-item
-                    v-if="measureMode && measure.distance23 != null"
-                    :label="`${t('viewer.inspect.distance')} (2–3)`"
-                  >
-                    {{ fmt(measure.distance23) }} Å
-                  </a-descriptions-item>
-
-                  <a-descriptions-item
-                    v-if="measureMode && measure.angleDeg != null"
-                    :label="t('viewer.inspect.angle')"
-                  >
-                    {{ fmt(measure.angleDeg) }}°
-                  </a-descriptions-item>
-                </a-descriptions>
+                <a-descriptions size="small" :column="1" :items="measureItems" />
 
                 <a-typography-text
                   v-if="measureMode && selected.length > 1"
@@ -197,7 +178,7 @@ import {
   LeftOutlined,
   RightOutlined,
   UpOutlined,
-} from '@ant-design/icons-vue';
+} from '@antdv-next/icons';
 import type { InspectCtx } from '../ctx/inspect';
 import {
   createPointerDragWithPullToRefreshBlock,
@@ -216,6 +197,31 @@ const clear = props.ctx.clear;
 const removeAt = props.ctx.removeAt;
 
 const visible = computed(() => enabled.value);
+
+// 测量信息描述项
+// Measurement description items.
+const measureItems = computed(() => {
+  const items = [];
+  if (measureMode.value && measure.value.distance12 != null) {
+    items.push({
+      label: `${t('viewer.inspect.distance')} (1–2)`,
+      content: `${fmt(measure.value.distance12)} Å`,
+    });
+  }
+  if (measureMode.value && measure.value.distance23 != null) {
+    items.push({
+      label: `${t('viewer.inspect.distance')} (2–3)`,
+      content: `${fmt(measure.value.distance23)} Å`,
+    });
+  }
+  if (measureMode.value && measure.value.angleDeg != null) {
+    items.push({
+      label: t('viewer.inspect.angle'),
+      content: `${fmt(measure.value.angleDeg)}°`,
+    });
+  }
+  return items;
+});
 
 /** --- Responsive placement (desktop: left, mobile: bottom) --- */
 const isMobile = ref(false);
@@ -313,15 +319,8 @@ const resizeDrag = createPointerDragWithPullToRefreshBlock({
     startH = resizeMode === 'mobile' ? mobileHeight.value : desktopHeight.value;
   },
   onMove: (e) => {
-    // Cancel default panning while dragging (important on mobile Firefox).
-    try {
-      e.preventDefault();
-      e.stopPropagation();
-    }
-    catch {
-      // ignore
-    }
-
+    // Keep pointermove passive to avoid browser warnings.
+    // 保持 pointermove 被动监听，避免浏览器警告。
     if (placement.value === 'left') {
       if (resizeMode === 'height') {
         const dy = e.clientY - startY;
@@ -707,11 +706,6 @@ function fmt(v: number | null | undefined): string {
   font-size: 12px;
   color: var(--ant-color-text);
   font-family: ui-monospace, SFMono-Regular, SFMono, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-}
-
-/* list item spacing */
-.atom-item :deep(.ant-list-item) {
-  padding: 6px 0;
 }
 
 .atom-inspector__measureHint {

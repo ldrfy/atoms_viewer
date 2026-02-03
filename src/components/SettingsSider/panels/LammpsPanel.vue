@@ -74,7 +74,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
-import { QuestionCircleOutlined } from '@ant-design/icons-vue';
+import { QuestionCircleOutlined } from '@antdv-next/icons';
 
 import { useI18n } from 'vue-i18n';
 

@@ -1,5 +1,5 @@
 <template>
-  <a-config-provider :theme="{ algorithm: antdAlgorithm }">
+  <a-config-provider :theme="{ algorithm: antdAlgorithm }" :locale="antdLocale">
     <a-layout class="root">
       <!-- 手动打开设置：不改变折叠项 -->
       <TopHear
@@ -42,7 +42,9 @@ import SettingsSider from './components/SettingsSider';
 import TopHear from './components/TopHear';
 import EmptyPage from './pages/EmptyPage.vue';
 import type { ViewerSettings, OpenSettingsPayload } from './lib/viewer/settings';
-import { theme as antdTheme, message, Modal } from 'ant-design-vue';
+import { theme as antdTheme, message, Modal, ConfigProvider } from 'antdv-next';
+import zhCN from 'antdv-next/locale/zh_CN';
+import enUS from 'antdv-next/locale/en_US';
 import { isDark, applyThemeToDom, setThemeMode, getThemeMode } from './theme/mode';
 import type { LoadRequest } from './pages/types';
 import type { SampleManifestItem } from './lib/structure/types';
@@ -64,7 +66,10 @@ const ViewerPage = defineAsyncComponent(() => import('./pages/ViewerPage.vue'));
 const antdAlgorithm = computed(() =>
   isDark.value ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm,
 );
-const { t } = useI18n();
+const { t, locale } = useI18n();
+// AntD 语言包与 i18n 语言同步
+// Sync AntD locale with i18n locale
+const antdLocale = computed(() => (locale.value === 'zh-CN' ? zhCN : enUS));
 
 const settingsOpen = ref(false);
 let saveSettingsTimer: number | null = null;
@@ -118,6 +123,9 @@ watch(
 
 watchEffect(() => {
   applyThemeToDom(isDark.value);
+  // 同步 AntD 全局主题，确保静态弹窗跟随主题
+  // Sync AntD global theme so static modals follow theme
+  ConfigProvider.config({ theme: { algorithm: antdAlgorithm.value } });
 });
 
 message.config({ duration: 4 });

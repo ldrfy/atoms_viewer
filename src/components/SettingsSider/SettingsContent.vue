@@ -36,54 +36,10 @@
         v-model:active-key="activeKeyProxy"
         ghost
         class="settings-collapse"
-        expand-icon-position="end"
-      >
-        <a-collapse-panel
-          v-for="p in panels"
-          :key="p.key"
-        >
-          <template #header>
-            <span class="settings-panel-header">
-              <span class="settings-panel-header-main">
-                <component :is="p.icon" class="settings-panel-icon" />
-                <a-typography-text strong>
-                  {{ t(p.headerKey) }}
-                </a-typography-text>
-                <span
-                  class="settings-panel-indicator"
-                  :class="{ 'settings-panel-indicator--inactive': !isPanelDirty(p.key) }"
-                >
-                  <span class="settings-panel-dirty" aria-hidden="true" />
-                  <template v-if="isPanelDirty(p.key) && hasPanelReset(p.key)">
-                    <a-tooltip
-                      :title="t('settings.panel.resetPanelButton')"
-                    >
-                      <a-popconfirm
-                        :title="t('settings.panel.resetPanelConfirm')"
-                        :ok-text="t('common.confirm')"
-                        :cancel-text="t('common.cancel')"
-                        @confirm.stop="resetPanel(p.key)"
-                      >
-                        <a-button
-                          type="text"
-                          size="small"
-                          class="settings-panel-reset-button"
-                          :aria-label="t('settings.panel.resetPanelButton')"
-                          :title="t('settings.panel.resetPanelButton')"
-                          @click.stop
-                        >
-                          <ReloadOutlined />
-                        </a-button>
-                      </a-popconfirm>
-                    </a-tooltip>
-                  </template>
-                </span>
-              </span>
-            </span>
-          </template>
-          <component :is="p.comp" />
-        </a-collapse-panel>
-      </a-collapse>
+        expand-icon-placement="end"
+        :items="collapseItems"
+        :label-render="renderCollapseLabel"
+      />
 
       <div class="settings-clear-storage settings-gap-top-md">
         <a-space direction="vertical" class="settings-full-width">
@@ -111,7 +67,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, provide, reactive, watch, nextTick, onMounted, onBeforeUnmount } from 'vue';
+import { computed, provide, reactive, watch, nextTick, onMounted, onBeforeUnmount, h } from 'vue';
 import { useI18n } from 'vue-i18n';
 import {
   AppstoreOutlined,
@@ -124,8 +80,8 @@ import {
   SlidersOutlined,
   SwapOutlined,
   SyncOutlined,
-} from '@ant-design/icons-vue';
-import { Modal } from 'ant-design-vue';
+} from '@antdv-next/icons';
+import { Button, Modal, Popconfirm, Tooltip, TypographyText, type CollapseProps } from 'antdv-next';
 
 import FilesPanel from './panels/FilesPanel.vue';
 import LayersPanel from './panels/LayersPanel.vue';
@@ -157,6 +113,7 @@ import { getVisualStylePreset } from '../../lib/viewer/visualStyles';
 import { PANEL_KEYS, PANEL_HEADER_KEYS } from '../../lib/viewer/panelKeys';
 import { applyDefaultSettings } from '../../lib/viewer/settingsActions';
 import { saveSettingsToStorage } from '../../lib/viewer/settingsStorage';
+import { setThemeMode } from '../../theme/mode';
 
 const props = withDefaults(
   defineProps<{
@@ -386,6 +343,91 @@ const panels = computed(() =>
     : basePanels.filter(p => p.key !== PANEL_KEYS.lammps),
 );
 
+// 折叠面板 items：使用新版 API 构造标题与重置按钮
+// Collapse panel items: build headers & reset action via items API
+const panelMap = computed(() =>
+  Object.fromEntries(panels.value.map(p => [p.key, p])),
+);
+
+const collapseItems = computed<NonNullable<CollapseProps['items']>>(() =>
+  panels.value.map(p => ({
+    key: p.key,
+    label: t(p.headerKey),
+    children: h(p.comp),
+  })),
+);
+
+// 自定义标题渲染，恢复原有图标/重置按钮
+// Custom label render to keep icon + reset button
+const renderCollapseLabel = ({ item }: { item: any; index: number }) => {
+  const p = panelMap.value[item.key];
+  if (!p) return item.label;
+
+  const iconVNode = h(p.icon, { class: 'settings-panel-icon' });
+  const titleVNode = h(
+    TypographyText,
+    { strong: true },
+    () => t(p.headerKey),
+  );
+
+  const resetVNode
+    = isPanelDirty(p.key) && hasPanelReset(p.key)
+      ? h(
+        Tooltip,
+        { title: t('settings.panel.resetPanelButton') },
+        {
+          default: () =>
+            h(
+              Popconfirm,
+              {
+                title: t('settings.panel.resetPanelConfirm'),
+                onConfirm: (ev?: Event) => {
+                  ev?.stopPropagation?.();
+                  resetPanel(p.key);
+                },
+                onClick: (ev: Event) => ev.stopPropagation(),
+              },
+              {
+                default: () =>
+                  h(
+                    Button,
+                    {
+                      'type': 'text',
+                      'size': 'small',
+                      'class': 'settings-panel-reset-button',
+                      'aria-label': t('settings.panel.resetPanelButton'),
+                      'title': t('settings.panel.resetPanelButton'),
+                      'onClick': (ev: Event) => ev.stopPropagation(),
+                    },
+                    { default: () => h(ReloadOutlined) },
+                  ),
+              },
+            ),
+        },
+      )
+      : null;
+
+  return h('span', { class: 'settings-panel-header' }, [
+    h('span', { class: 'settings-panel-header-main' }, [
+      iconVNode,
+      titleVNode,
+      h(
+        'span',
+        {
+          class: [
+            'settings-panel-indicator',
+            { 'settings-panel-indicator--inactive': !isPanelDirty(p.key) },
+          ],
+        },
+        [
+          h('span', { 'class': 'settings-panel-dirty', 'aria-hidden': 'true' }),
+          resetVNode,
+        ],
+      ),
+    ]),
+  ]);
+};
+
 const activeKeyProxy = computed<string[]>({
   get: () => props.activeKey,
   set: (v: unknown) => {
@@ -432,6 +474,9 @@ async function applyDefaultSettingsRoutine(): Promise<void> {
     replaceSettings,
     nextTick,
   });
+  // 同步主题模式到全局状态
+  // Sync theme mode to global state
+  setThemeMode(next.other.themeMode);
   saveSettingsToStorage(next);
   notifyClearStorageUi?.();
 }

@@ -18,7 +18,7 @@
         <!-- ===== 桌面端 ===== -->
         <template v-if="!isMobile">
           <!-- 语言 -->
-          <a-dropdown trigger="click" placement="bottomLeft">
+          <a-dropdown :trigger="['click']" placement="bottomLeft" :menu="localeMenu">
             <a-button
               type="text"
               class="btn-icon"
@@ -27,17 +27,6 @@
             >
               <GlobalOutlined />
             </a-button>
-
-            <template #overlay>
-              <a-menu
-                :selected-keys="[curLocaleProxy]"
-                @click="(e: MenuInfo) => onSelectLocale(String(e.key))"
-              >
-                <a-menu-item v-for="item in localeItems" :key="item.key">
-                  {{ item.label }}
-                </a-menu-item>
-              </a-menu>
-            </template>
           </a-dropdown>
 
           <!-- GitHub -->
@@ -91,65 +80,50 @@
 
     <!-- ===== 移动端 Drawer ===== -->
     <a-drawer
+      class="tophear-drawer"
       placement="top"
-      height="auto"
+      size="default"
+      :content-wrapper-style="drawerContentStyle"
+      :body-style="drawerBodyStyle"
       :open="mobileOpen"
       :closable="false"
       @close="closeDrawer"
     >
-      <a-collapse v-model:active-key="activeKey" accordion ghost>
-        <!-- 语言 -->
-        <a-collapse-panel key="locale">
-          <template #header>
-            <span class="collapse-header">
-              {{ t("viewer.locale.title") }}
-              <span class="collapse-value">
-                {{ currentLocaleItem?.label }}
-              </span>
-            </span>
-          </template>
-
-          <a-radio-group v-model:value="curLocaleProxy" class="lang_radio_group" @change="closeDrawer">
-            <a-radio
-              v-for="item in localeItems"
-              :key="item.key"
-              :value="item.key"
-              class="lang-radio-item"
-            >
-              {{ item.label }}
-            </a-radio>
-          </a-radio-group>
-        </a-collapse-panel>
-      </a-collapse>
+      <a-collapse
+        v-model:active-key="activeKey"
+        accordion
+        ghost
+        :items="collapseItems"
+      />
 
       <a-space direction="vertical" class="drawer-links">
         <a-space class="drawer-links-row" :size="16">
-          <a-typography-text class="plain-click" @click="openGithub">
+          <a-button type="text" class="drawer-link-btn" @click="openGithub">
             <GithubOutlined />
             <span class="drawer-link-text">GitHub</span>
-          </a-typography-text>
+          </a-button>
 
-          <a-typography-text class="plain-click" @click="openDocs">
+          <a-button type="text" class="drawer-link-btn" @click="openDocs">
             <QuestionCircleOutlined />
             <span class="drawer-link-text">{{ t('viewer.links.docs') }}</span>
-          </a-typography-text>
+          </a-button>
         </a-space>
 
-        <a-typography-text class="plain-click" @click="openSettings">
+        <a-button type="text" class="drawer-link-btn drawer-links-single" @click="openSettings">
           <SettingOutlined />
           <span class="drawer-link-text">
             {{ t("settings.title") }}
           </span>
-        </a-typography-text>
+        </a-button>
       </a-space>
     </a-drawer>
   </div>
 </template>
 
 <script setup lang="ts">
-import type { MenuInfo } from 'ant-design-vue/es/menu/src/interface';
+import type { MenuEmits, MenuProps } from 'antdv-next';
 
-import { computed, ref } from 'vue';
+import { computed, ref, h } from 'vue';
 import { useI18n } from 'vue-i18n';
 import {
   HomeOutlined,
@@ -158,13 +132,16 @@ import {
   MenuOutlined,
   GithubOutlined,
   QuestionCircleOutlined,
-} from '@ant-design/icons-vue';
-import { Grid } from 'ant-design-vue';
+} from '@antdv-next/icons';
+import { Radio, RadioGroup, useBreakpoint } from 'antdv-next';
+
+type MenuInfo = Parameters<MenuEmits['click']>[0];
 
 import {
   SUPPORT_LOCALES,
   getLocaleSelfName,
   setLocale,
+  getLocale,
   type SupportLocale,
 } from '../../i18n';
 import { APP_DISPLAY_NAME, APP_GITHUB_URL, APP_DOCS_URL } from '../../lib/appMeta';
@@ -183,12 +160,28 @@ const emit = defineEmits<{
   (e: 'go-home'): void;
 }>();
 
-const { t, locale } = useI18n();
+const { t } = useI18n();
 
 /* ===== 响应式断点 ===== */
-const { useBreakpoint } = Grid;
 const screens = useBreakpoint();
-const isMobile = computed(() => screens.value.lg === false);
+const isMobile = computed(() => screens.value ? screens.value.lg === false : false);
+
+// 用户选择的语言（区分 system 与实际解析语言）
+// User-selected locale (distinguish "system" from resolved locale)
+const storedLocale = ref<SupportLocale>(getLocale());
+
+// 抽屉高度跟随内容（顶部抽屉默认会撑满）
+// Drawer height follows content (top placement defaults to full height)
+const drawerContentStyle = computed(() => ({
+  height: 'auto',
+}));
+
+// 抽屉内容区最大高度与滚动
+// Drawer body max height and scrolling
+const drawerBodyStyle = computed(() => ({
+  maxHeight: 'calc(100vh - 24px)',
+  overflow: 'auto',
+}));
 
 /* ===== Drawer 状态 ===== */
 const mobileOpen = ref(false);
@@ -196,8 +189,9 @@ const activeKey = ref<string | undefined>(undefined);
 
 /* ===== locale（关键：绑定到 vue-i18n 的响应式 locale）===== */
 const curLocaleProxy = computed<SupportLocale>({
-  get: () => locale.value as SupportLocale,
+  get: () => storedLocale.value,
   set: (v) => {
+    storedLocale.value = v;
     setLocale(v); // 你的封装：通常会更新 i18n.locale + 本地存储
   },
 });
@@ -212,6 +206,53 @@ const localeItems = computed(() =>
 const currentLocaleItem = computed(() =>
   localeItems.value.find(i => i.key === curLocaleProxy.value),
 );
+
+// Desktop dropdown menu for locale picker.
+// 桌面端语言下拉菜单配置。
+const localeMenu = computed<MenuProps>(() => ({
+  items: localeItems.value.map(item => ({
+    key: item.key,
+    label: item.label,
+  })),
+  selectedKeys: [curLocaleProxy.value],
+  onClick: (e: MenuInfo) => onSelectLocale(String(e.key)),
+}));
+
+// 折叠项：移动端语言选择
+// Collapse items: mobile locale picker
+const collapseItems = computed(() => {
+  const header = h('span', { class: 'collapse-header' }, [
+    h('span', { class: 'collapse-title' }, t('viewer.locale.title')),
+    h('span', { class: 'collapse-value' }, currentLocaleItem.value?.label ?? ''),
+  ]);
+
+  const radios = h(
+    RadioGroup,
+    {
+      'class': 'lang_radio_group',
+      'value': curLocaleProxy.value,
+      'onUpdate:value': (val: SupportLocale) => {
+        curLocaleProxy.value = val;
+        closeDrawer();
+      },
+    },
+    () => localeItems.value.map(item =>
+      h(Radio, {
+        key: item.key,
+        value: item.key,
+        class: 'lang-radio-item',
+      }, () => item.label),
+    ),
+  );
+
+  return [
+    {
+      key: 'locale',
+      label: header,
+      children: radios,
+    },
+  ];
+});
 
 /* ===== 行为 ===== */
 function closeDrawer() {
@@ -251,7 +292,11 @@ function onClickBrand(): void {
     inset: 0 0 auto 0;
     z-index: 50;
     pointer-events: none;
-    padding: 12px;
+    padding:
+        calc(12px + env(safe-area-inset-top))
+        calc(12px + env(safe-area-inset-right))
+        12px
+        calc(12px + env(safe-area-inset-left));
 }
 
 .tophear-inner {
@@ -284,17 +329,6 @@ function onClickBrand(): void {
     pointer-events: auto;
     display: flex;
     align-items: center;
-}
-
-.collapse-header {
-    display: flex;
-    justify-content: space-between;
-    width: 100%;
-}
-
-.collapse-value {
-    opacity: 0.6;
-    font-size: 12px;
 }
 
 .action-item {
@@ -344,6 +378,45 @@ function onClickBrand(): void {
 }
 
 .drawer-link-text {
-    margin-left: 8px;
+    margin-left: 12px;
+}
+
+.drawer-link-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.collapse-value {
+    margin-left: auto;
+}
+
+.collapse-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+}
+
+.drawer-links-single {
+    width: 100%;
+    justify-content: center;
+}
+
+.tophear-drawer .ant-drawer-body {
+    padding:
+        calc(16px + env(safe-area-inset-top))
+        calc(16px + env(safe-area-inset-right))
+        calc(16px + env(safe-area-inset-bottom))
+        calc(16px + env(safe-area-inset-left));
+}
+
+.tophear-drawer .ant-drawer-content-wrapper {
+    height: fit-content !important;
+}
+
+.tophear-drawer .ant-drawer-body {
+    max-height: calc(100vh - 24px);
+    overflow: auto;
 }
 </style>

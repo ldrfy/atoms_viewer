@@ -1,7 +1,7 @@
 // src/components/ViewerStage/logic/viewerLoader.ts
 import { reactive, ref } from 'vue';
 import type { Ref } from 'vue';
-import { message } from 'ant-design-vue';
+import { message } from 'antdv-next';
 
 import type {
   ViewerSettings,
@@ -20,6 +20,7 @@ import { type ColorMapRecord } from '../colorMap';
 import { normalizeViewPresets } from '../../../lib/viewer/viewPresets';
 import { computeMd5ForArrayBuffer } from '../../../lib/file/md5';
 import type { LayerSourceInfo } from '../../../lib/viewer/sessionTypes';
+import { readSessionCacheSizeMap } from '../../../lib/viewer/sessionStorage';
 
 import { parseStructure, toForcedFilename } from '../../../lib/structure/parse';
 import type { ParseMode, ParseInfo } from '../../../lib/structure/parse';
@@ -81,6 +82,8 @@ export function createViewerLoader(deps: {
     format: '',
     atomCount: 0,
     frameCount: 1,
+    fileSize: null,
+    storedSize: null,
     success: true,
     errorMsg: '',
     errorSeq: 0,
@@ -133,12 +136,26 @@ export function createViewerLoader(deps: {
   function updateParseInfo(
     model: StructureModel,
     displayFileName: string,
+    reason: RenderReason,
+    sourceMeta?: LayerSourceInfo,
   ): void {
     parseInfo.fileName = displayFileName;
     parseInfo.format = model.source?.format ?? 'unknown';
     parseInfo.atomCount = model.atoms.length;
     parseInfo.frameCount
       = model.frames && model.frames.length > 0 ? model.frames.length : 1;
+    // 记录文件大小与压缩大小（来自 sourceMeta）
+    // Record file sizes from sourceMeta
+    if (sourceMeta) {
+      parseInfo.fileSize = Number.isFinite(sourceMeta.size) ? sourceMeta.size! : null;
+      parseInfo.storedSize = Number.isFinite(sourceMeta.storedSize)
+        ? sourceMeta.storedSize!
+        : null;
+    }
+    else if (reason === 'load') {
+      parseInfo.fileSize = null;
+      parseInfo.storedSize = null;
+    }
   }
 
   function handleLammpsTypeMapAndSettings(
@@ -225,7 +242,7 @@ export function createViewerLoader(deps: {
       deps.hasAnimation,
     );
 
-    updateParseInfo(model, fileName);
+    updateParseInfo(model, fileName, reason, opts?.sourceMeta);
 
     const fmt = model.source?.format ?? '';
     const atoms0
@@ -522,10 +539,13 @@ export function createViewerLoader(deps: {
     const buf = await res.arrayBuffer();
     const text = textDecoder.decode(buf);
     const md5 = computeMd5ForArrayBuffer(buf);
+    const storedSizeMap = readSessionCacheSizeMap();
+    const cachedStoredSize = storedSizeMap[md5];
     const cacheRemote = deps.shouldCacheRemote?.() ?? false;
     const sourceMeta: LayerSourceInfo = {
       md5,
       size: buf.byteLength,
+      storedSize: Number.isFinite(cachedStoredSize) ? cachedStoredSize : undefined,
       fileName: displayName,
       url,
       type: 'url',
@@ -566,6 +586,7 @@ export function createViewerLoader(deps: {
     try {
       deps.stopPlay();
       deps.inspectCtx.clear();
+      const storedSizeMap = readSessionCacheSizeMap();
 
       let okCount = 0;
       let lastOkName = '';
@@ -578,10 +599,12 @@ export function createViewerLoader(deps: {
           const buf = await res.arrayBuffer();
           const text = textDecoder.decode(buf);
           const md5 = computeMd5ForArrayBuffer(buf);
+          const cachedStoredSize = storedSizeMap[md5];
           const cacheRemote = deps.shouldCacheRemote?.() ?? false;
           const sourceMeta: LayerSourceInfo = {
             md5,
             size: buf.byteLength,
+            storedSize: Number.isFinite(cachedStoredSize) ? cachedStoredSize : undefined,
             fileName: displayName,
             url: item.url,
             type: 'url',
@@ -672,6 +695,7 @@ export function createViewerLoader(deps: {
     try {
       deps.stopPlay();
       deps.inspectCtx.clear();
+      const storedSizeMap = readSessionCacheSizeMap();
 
       let okCount = 0;
       let lastOkName = '';
@@ -688,12 +712,14 @@ export function createViewerLoader(deps: {
           const buf = await f.arrayBuffer();
           const text = textDecoder.decode(buf);
           const md5 = computeMd5ForArrayBuffer(buf);
+          const cachedStoredSize = storedSizeMap[md5];
           lastRawText = text;
           lastRawFileName = f.name;
 
           const sourceMeta: LayerSourceInfo = {
             md5,
             size: f.size,
+            storedSize: Number.isFinite(cachedStoredSize) ? cachedStoredSize : undefined,
             fileName: f.name,
             mime: f.type,
             type: 'file',

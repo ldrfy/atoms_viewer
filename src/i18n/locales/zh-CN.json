@@ -1,411 +1,412 @@
 {
-    "LDR Atoms Viewer": "兰朵儿原子查看器",
+  "LDR Atoms Viewer": "兰朵儿原子查看器",
+  "locale": {
+    "selfName": "中文"
+  },
+  "common": {
+    "error": "错误",
+    "delete": "删除",
+    "confirm": "确认",
+    "cancel": "取消",
+    "close": "关闭",
+    "menu": "菜单",
+    "resize": "调整大小",
+    "collapse": "收起"
+  },
+  "net": {
+    "timeout": "请求超时"
+  },
+  "viewer": {
+    "play": {
+      "pause": "暂停",
+      "start": "播放",
+      "fps": "帧率",
+      "fpsLabel": "播放帧率",
+      "frameIndex": "帧序号",
+      "timestep": "时间步 {value}",
+      "noNote": "本模型无注释"
+    },
+    "record": {
+      "bg": "背景",
+      "bgTransparent": "透明",
+      "bgReset": "恢复透明",
+      "delay": "延迟录制",
+      "countdown": "倒计时",
+      "start": "录制",
+      "stop": "结束",
+      "resume": "恢复",
+      "pause": "暂停",
+      "selectHint": "拖拽画框；画完后可拖动/拉伸微调；点击确认开始录制",
+      "selectCancel": "取消",
+      "selectConfirm": "确认录制"
+    },
+    "parse": {
+      "notice": "请手动选择解析方式",
+      "mode": "解析方式",
+      "format": "格式",
+      "file": "文件",
+      "atoms": "原子数",
+      "frames": "帧数",
+      "modeOptions": {
+        "auto": "自动（推荐）",
+        "xyz": "XYZ",
+        "pdb": "PDB",
+        "mol": "MOL",
+        "sdf": "SDF",
+        "lammpsdump": "LAMMPS dump（轨迹）",
+        "lammpsdata": "LAMMPS data（read_data）"
+      },
+      "reparseSuccess": "已按 {format} 重新解析",
+      "reparseFailed": "重新解析失败：{reason}",
+      "fileSize": "文件大小",
+      "storedSize": "压缩后大小"
+    },
+    "theme": {
+      "title": "主题",
+      "mode": {
+        "system": "系统",
+        "light": "浅色",
+        "dark": "深色"
+      },
+      "bgMismatchTitle": "背景对比度",
+      "bgMismatch": "当前使用的{theme}主题与背景颜色对比度过低，文字可能不可读。\n请留意右上角图标及左上角/左下角文字是否可见。\n可在“设置-其他设置”里关闭此提示。",
+      "bgMismatchThemeLight": "浅色",
+      "bgMismatchThemeDark": "深色",
+      "bgMismatchKeep": "保持当前选择的主题",
+      "bgMismatchRestore": "恢复之前的主题",
+      "bgMismatchKeepTip": "已保持当前主题。可在“设置-清理本地设置”以恢复默认。"
+    },
     "locale": {
-        "selfName": "中文"
+      "system": "跟随系统",
+      "title": "语言"
     },
-    "common": {
-        "error": "错误",
-        "delete": "删除",
-        "confirm": "确认",
-        "cancel": "取消",
-        "close": "关闭",
-        "menu": "菜单",
-        "resize": "调整大小",
-        "collapse": "收起"
+    "links": {
+      "github": "GitHub",
+      "docs": "文档"
     },
-    "net": {
-        "timeout": "请求超时"
+    "empty": {
+      "title": "拖拽文件到这里",
+      "subtitle": "或直接选择文件，“{action}”按钮可以加载内置模型",
+      "pickFile": "选择文件",
+      "preloadDefault": "加载样例",
+      "samples": {
+        "loading": "加载中…",
+        "loadFailed": "加载失败：{error}（已切换到内置样例）",
+        "empty": "无可用样例"
+      },
+      "footer": {
+        "localOnly": "所有数据均在本地计算与渲染，不会上传或收集任何信息。",
+        "copyright": "版权所有 © {years} {author}"
+      }
     },
-    "viewer": {
-        "play": {
-            "pause": "暂停",
-            "start": "播放",
-            "fps": "帧率",
-            "fpsLabel": "播放帧率",
-            "frameIndex": "帧序号",
-            "timestep": "时间步 {value}"
-        },
-        "record": {
-            "bg": "背景",
-            "bgTransparent": "透明",
-            "bgReset": "恢复透明",
-            "delay": "延迟录制",
-            "countdown": "倒计时",
-            "start": "录制",
-            "stop": "结束",
-            "resume": "恢复",
-            "pause": "暂停",
-            "selectHint": "拖拽画框；画完后可拖动/拉伸微调；点击确认开始录制",
-            "selectCancel": "取消",
-            "selectConfirm": "确认录制"
-        },
-        "parse": {
-            "notice": "请手动选择解析方式",
-            "mode": "解析方式",
-            "format": "格式",
-            "file": "文件",
-            "atoms": "原子数",
-            "frames": "帧数",
-            "modeOptions": {
-                "auto": "自动（推荐）",
-                "xyz": "XYZ",
-                "pdb": "PDB",
-                "mol": "MOL",
-                "sdf": "SDF",
-                "lammpsdump": "LAMMPS dump（轨迹）",
-                "lammpsdata": "LAMMPS data（read_data）"
-            },
-            "reparseSuccess": "已按 {format} 重新解析",
-            "reparseFailed": "重新解析失败：{reason}"
-        },
-        "theme": {
-            "title": "主题",
-            "mode": {
-                "system": "系统",
-                "light": "浅色",
-                "dark": "深色"
-            },
-            "bgMismatchTitle": "背景对比度",
-            "bgMismatch": "当前使用的{theme}主题与背景颜色对比度过低，文字可能不可读。\n请留意右上角图标及左上角/左下角文字是否可见。\n可在“设置-其他设置”里关闭此提示。",
-            "bgMismatchThemeLight": "浅色",
-            "bgMismatchThemeDark": "深色",
-            "bgMismatchKeep": "保持当前选择的主题",
-            "bgMismatchRestore": "恢复之前的主题",
-            "bgMismatchKeepTip": "已保持当前主题。可在“设置-清理本地设置”以恢复默认。"
-        },
-        "locale": {
-            "system": "跟随系统",
-            "title": "语言"
-        },
-        "links": {
-            "github": "GitHub",
-            "docs": "文档"
-        },
-        "empty": {
-            "title": "拖拽文件到这里",
-            "subtitle": "或直接选择文件，“{action}”按钮可以加载内置模型",
-            "pickFile": "选择文件",
-            "preloadDefault": "加载样例",
-            "samples": {
-                "loading": "加载中…",
-                "loadFailed": "加载失败：{error}（已切换到内置样例）",
-                "empty": "无可用样例"
-            },
-            "footer": {
-                "localOnly": "所有数据均在本地计算与渲染，不会上传或收集任何信息。",
-                "copyright": "版权所有 © {years} {author}"
-            }
-        },
-        "export": {
-            "pngSuccess": "已导出图片",
-            "pngSuccessTransparent": "已导出图片（透明背景）",
-            "pngSuccessSolid": "已导出图片（非透明背景）",
-            "scaleCapped": "导出缩放已自动从 {requested} 降到 {used}（受限于 GPU 最大尺寸 {limit}px）。",
-            "tryLowerScale": "导出失败，建议降低导出倍率后重试。",
-            "fail": "导出失败：{reason}",
-            "selectHint": "拖拽画框；画完后可拖动/拉伸微调；点击确认导出图片",
-            "selectCancel": "取消",
-            "selectConfirm": "确认导出"
-        },
-        "lammps": {
-            "mappingMissing": "存在未配置的 LAMMPS type→元素映射（E 占位），请在设置中补全以获得正确颜色/半径/键推断。"
-        },
-        "inspect": {
-            "title": "原子检查",
-            "measureMode": "测量模式（多选 2 点/3 点）",
-            "clear": "清空",
-            "hint": "点击原子以查看信息；开启测量模式可累积选择（最多 3 个）。",
-            "distance": "距离",
-            "angle": "夹角",
-            "orderHint": "按选择顺序计算：∠(1–2–3)，顶点为第 2 个点。"
-        },
-        "pan": {
-            "up": "上移",
-            "down": "下移",
-            "left": "左移",
-            "right": "右移",
-            "center": "复位到中心",
-            "sideLeft": "左",
-            "sideRight": "右",
-            "sideSingle": "单视图"
-        },
-        "settings": {
-            "modifiedHint": "检测到当前模型存在修改过的设置，已打开相关面板。"
-        },
-        "view": {
-            "snapSplit": "吸附 50%"
-        },
-        "autoRotate": {
-            "enabledHint": "自动旋转已开启。临时关闭：设置-自动旋转-启用；永久关闭：设置-其他设置-载入模型后自动旋转。",
-            "disabledHint": "检测到相关设置已展开，已停止自动旋转。"
-        },
-        "session": {
-            "restoreTitle": "恢复上次会话？",
-            "restoreContent": "检测到之前的模型和设置，是否恢复？",
-            "restoreConfirm": "恢复",
-            "restoreMissing": "未找到可恢复的模型缓存，请重新导入。"
-        }
+    "export": {
+      "pngSuccess": "已导出图片",
+      "pngSuccessTransparent": "已导出图片（透明背景）",
+      "pngSuccessSolid": "已导出图片（非透明背景）",
+      "scaleCapped": "导出缩放已自动从 {requested} 降到 {used}（受限于 GPU 最大尺寸 {limit}px）。",
+      "tryLowerScale": "导出失败，建议降低导出倍率后重试。",
+      "fail": "导出失败：{reason}",
+      "selectHint": "拖拽画框；画完后可拖动/拉伸微调；点击确认导出图片",
+      "selectCancel": "取消",
+      "selectConfirm": "确认导出"
+    },
+    "lammps": {
+      "mappingMissing": "存在未配置的 LAMMPS type→元素映射（E 占位），请在设置中补全以获得正确颜色/半径/键推断。"
+    },
+    "inspect": {
+      "title": "原子检查",
+      "measureMode": "测量模式（多选 2 点/3 点）",
+      "clear": "清空",
+      "hint": "点击原子以查看信息；开启测量模式可累积选择（最多 3 个）。",
+      "distance": "距离",
+      "angle": "夹角",
+      "orderHint": "按选择顺序计算：∠(1–2–3)，顶点为第 2 个点。"
+    },
+    "pan": {
+      "up": "上移",
+      "down": "下移",
+      "left": "左移",
+      "right": "右移",
+      "center": "复位到中心",
+      "sideLeft": "左",
+      "sideRight": "右",
+      "sideSingle": "单视图"
     },
     "settings": {
-        "title": "设置",
-            "clearSettings": "清空设置",
-            "clearStorage": "清空设置与模型缓存",
-            "clearStorageConfirmTitle": "确认清空设置与模型缓存？",
-            "clearStorageConfirmBody": "将清空本地保存的设置与模型缓存，并恢复默认值。",
-            "clearSettingsConfirmTitle": "确认清空设置？",
-            "clearSettingsConfirmBody": "设置将恢复到默认值。",
-            "clearStorageHint": "如遇显示异常或参数不同步，可尝试清空设置。",
-        "storageUsage": "本地存储占用：{used} / {total}",
-        "storageUsageOnly": "本地存储占用：{used}",
-        "storageUsageDetail": "设置 {local} · 模型缓存 {cache}",
-        "storageUsageUnknown": "本地存储占用：未知",
-        "exportSettings": "导出设置",
-        "importSettings": "导入设置",
-        "exportSuccess": "设置已导出",
-        "importSuccess": "设置已导入",
-        "importing": "正在导入…",
-        "importFailed": "导入失败，文件格式不正确。",
-        "buildTime": "构建部署时间：",
-        "buildTimeUnknown": "未知",
-            "panel": {
-                "resetPanelButton": "恢复面板默认",
-                "resetPanelConfirm": "确认恢复该面板默认设置？",
-                "view": {
-                "header": "视图控制",
-                "viewPresets": "视角选择",
-                "viewPresetsHint": "可勾选 1 个视角显示单视图，或勾选 2 个视角显示双视图（左右并排）。",
-                "viewPresetsNeedOne": "至少选择一个视角（无法取消最后一个）。",
-                "viewPresetFront": "正视图",
-                "viewPresetSide": "侧视图",
-                "viewPresetTop": "俯视图",
-                "dualViewDistance": "视距",
-                "rotation": "旋转",
-                "dualViewSplit": "左右比例",
-                "dualViewSplitHint": "调整左侧（正视）与右侧（侧视）的宽度比例。",
-                "perspective": "是否透视",
-                "rotX": "X 轴旋转",
-                "rotY": "Y 轴旋转",
-                "rotZ": "Z 轴旋转",
-                "resetPose": "回到旋转前",
-                "resetView": "恢复原始视距"
-            },
-            "rotation": {
-                "header": "自动旋转",
-                "enable": "启用",
-                "mode": "旋转轴预设",
-                "speed": "旋转速度 (°/s)",
-                "speedHint": "速度可单独调节：旋转类型只决定旋转轴（方向）。",
-                "pauseOnInteract": "交互时暂停",
-                "resumeDelay": "恢复延迟 (ms)",
-                "reset": "恢复自动旋转默认值",
-                "presets": {
-                    "off": {
-                        "name": "关闭",
-                        "hint": "不进行自动旋转"
-                    },
-                    "diag": {
-                        "name": "斜轴（通用）",
-                        "hint": "常用的等轴视角斜轴方向"
-                    },
-                    "y": {
-                        "name": "绕 Y 轴",
-                        "hint": "绕 Y 轴旋转（经典展示）"
-                    },
-                    "x": {
-                        "name": "绕 X 轴",
-                        "hint": "绕 X 轴旋转"
-                    },
-                    "z": {
-                        "name": "绕 Z 轴",
-                        "hint": "绕 Z 轴旋转"
-                    },
-                    "diagXY": {
-                        "name": "XY 平面对角",
-                        "hint": "绕 XY 平面对角方向旋转"
-                    },
-                    "diagYZ": {
-                        "name": "YZ 平面对角",
-                        "hint": "绕 YZ 平面对角方向旋转"
-                    },
-                    "diagXZ": {
-                        "name": "XZ 平面对角",
-                "hint": "绕 XZ 平面对角方向旋转"
-                    },
-                    "space": {
-                        "name": "空间对角",
-                        "hint": "绕 (1,1,1) 方向旋转"
-                    },
-                    "tilt": {
-                        "name": "倾斜轴",
-                        "hint": "略倾斜的旋转轴，通常观感较好"
-                    }
-                }
-            },
-            "lammps": {
-                "header": "LAMMPS映射",
-                "alert": "当 LAMMPS dump 以及 LAMMPS data 只提供 type（数字）时，需要在这里指定 type 对应元素符号，用于颜色/半径/键推断与稳定显示。",
-                "currentLayer": "当前图层",
-                "applyAll": "同时修改所有图层",
-                "mapLabel": "type id → 元素符号（支持搜索）",
-                "typePlaceholder": "type",
-                "elementPlaceholder": "元素（如 C / O / Fe）",
-                "addMapping": "添加映射",
-                "apply": "实施生效",
-                "undo": "撤销",
-                "clear": "清空",
-                "clearConfirm": "确定清空所有映射吗？",
-                "hint": "建议 dump 输出包含 id、type、x y z。若每帧顺序不固定，解析端会按 id 排序以保证动画不抖动。"
-            },
-            "files": {
-                "header": "文件导出",
-                "openFile": "打开文件",
-                "openFileHint": "你也可以将文件拖拽到画面中加载。新加载的模型会作为新图层加入，并默认隐藏旧图层。",
-                "export": {
-                    "header": "导出图片",
-                    "scaleLabel": "导出倍率",
-                    "button": "导出图片",
-                    "selectButton": "选择范围导出",
-                    "transparent": "透明背景",
-                    "hint": "倍率越高越清晰，文件越大、导出越慢。",
-                    "format": {
-                        "png": "PNG（清晰无损）",
-                        "webp": "WebP（文件更小）",
-                        "jpg": "JPG（兼容性好）"
-                    }
-                },
-                "format": {
-                    "header": "格式转换",
-                    "button": "导出",
-                    "success": "格式转换已导出"
-                },
-                "project": {
-                    "header": "模型打包",
-                    "export": "导出压缩包",
-                    "import": "导入压缩包",
-                    "cacheRemote": "缓存远程模型用于导出/恢复",
-                    "hint": "压缩包会包含 config.json；未缓存的远程模型将按 URL 重新下载。用于复现当前状态与导出图片效果。"
-                },
-                "config": {
-                    "header": "设置备份",
-                    "exportFull": "导出完整设置（包含默认值）"
-                }
-            },
-            "scope": {
-                "currentLayerLabel": "当前图层",
-                "options": {
-                    "current": "仅选中图层",
-                    "visible": "仅可见图层",
-                    "all": "所有图层"
-                }
-                ,
-                "selectPlaceholder": "请选择作用范围"
-                ,
-                "effectRangeLabel": "生效范围"
-            },
-            "layers": {
-                "header": "图层管理",
-                "noViewer": "当前没有可用的 Viewer 实例。",
-                "empty": "尚未加载任何模型。",
-                "meta": "{atoms} 原子 · {frames} 帧",
-                "visible": "显示图层",
-                "showAll": "显示全部",
-                "hideAll": "隐藏全部",
-                "sort": {
-                    "timeAsc": "时间 ↑",
-                    "timeDesc": "时间 ↓",
-                    "nameAsc": "文件名 ↑",
-                    "nameDesc": "文件名 ↓"
-                },
-                "hint": "点击一行可设为当前图层，用于单独设置颜色或模型细节；右侧开关控制显示/隐藏。",
-                "deleteConfirm": "确定删除此图层吗？"
-            },
-                "other": {
-                    "header": "其他设置",
-                    "axes": "坐标轴",
-                    "recordFps": "录制帧率 (fps)",
-                    "recordFpsHint": "录制输出的目标帧率；常用 30 / 60。",
-                    "refreshBondsOnPlayLabel": "原子连接",
-                    "refreshBondsOnPlay": "播放时原子连接每帧刷新",
-                    "keepActiveLayerOnHideLabel": "选中状态",
-                    "keepActiveLayerOnHide": "隐藏图层时保持原子选中状态",
-                    "panStep": "平移步长",
-                    "selectionColorLabel": "高亮颜色",
-                    "selectionColorHint": "用于选中原子的光晕、连线与填充区域。",
-                    "selectionColorReset": "恢复默认选中高亮颜色",
-                    "selectionColorResetTooltip": "恢复内置的选中高亮颜色。",
-                    "backgroundColor": "背景颜色",
-                    "atomRoughness": "原子球材质粗糙度",
-                    "visualStyle": "渲染风格",
-                    "visualStyleDefault": "默认",
-                    "visualStyleJmol": "Jmol 风格",
-                    "visualStyleHint": "切换配色与原子粗细预设。",
-                    "themeReadabilityLabel": "可读性",
-                    "themeReadabilityCheckOnOpen": "打开模型时检查主题可读性",
-                    "modelLightIntensity": "模型灯光亮度",
-                    "reset": "恢复其他默认值"
-                },
-            "colors": {
-                "header": "原子颜色",
-                "alert": "修改颜色后，需要点击“刷新显示”才会应用到模型。",
-                "currentLayer": "当前图层",
-                "applyAll": "同时修改所有图层",
-                "mapLabel": "颜色映射（十六进制）与透明度",
-                "opacity": "透明度",
-                "apply": "实施生效",
-                "hexPlaceholder": "例如 #FF8800",
-                "colorPickerLabel": "{key} 颜色",
-                "invalidHex": "颜色格式无效，请输入 #RRGGBB 或 #RGB。",
-                "reset": "恢复默认",
-                "resetTooltip": "恢复为该元素的内置默认颜色。",
-                "hint": "提示：若该图层存在 typeId（如 LAMMPS），将按元素+typeId 显示为 C.1、C.2…；否则按元素显示。",
-                "empty": "当前图层暂无可编辑的原子类型。"
-            },
-            "details": {
-                "header": "模型细节",
-                "alert": "以下设置按图层保存，开启“同时修改所有图层”可一次广播到全部图层。",
-                "currentLayer": "当前图层",
-                "applyAll": "同时修改所有图层",
-                "representation": "表现方式",
-                "repr": {
-                    "ballAndStick": "球棍模型",
-                    "stick": "棍棒模型",
-                    "wireframe": "线框模型",
-                    "spacefill": "球模型（空间填充）",
-                    "points": "点模型",
-                    "custom": "自定义"
-                },
-                "bonds": "显示键",
-                "bondFactor": "键长阈值系数（bondFactor）",
-                "bondFactorHint": "用于推断键合：cutoff = (r_i + r_j) × bondFactor，数值越大越容易生成键。",
-                "bondRadius": "键粗细",
-                "atomSize": "原子大小",
-                "sphereSegments": "球体细分",
-                "modelLightIntensity": "模型灯光亮度",
-                "atomRoughness": "原子球材质粗糙度",
-                "reset": "恢复图层外观默认值",
-                "sphereSegmentsHint": "数值越大越圆滑，但渲染开销越高。"
-            }
-        }
+      "modifiedHint": "检测到当前模型存在修改过的设置，已打开相关面板。"
     },
-    "errors": {
-        "parseIntFailed": "无法解析整数：{value}",
-        "lammpsDump": {
-            "unexpectedHeader": "LAMMPS dump 解析失败：期望 \"{expected}\"，实际为 \"{actual}\"",
-            "badBoxBoundsLine": "无法解析 BOX BOUNDS 行：{line}",
-            "missingAtomsSection": "LAMMPS dump 解析失败：缺少 ITEM: ATOMS 段。",
-            "missingTypeColumn": "LAMMPS dump：ATOMS 列缺少 \"type\"。columns={columns}",
-            "missingCoordsColumns": "LAMMPS dump：找不到坐标列（x y z 或 xs ys zs）。columns={columns}",
-            "noFrames": "LAMMPS dump 解析失败：未读取到任何帧（ITEM: TIMESTEP）。"
-        },
-        "lammpsData": {
-            "missingAtomsSection": "LAMMPS data 解析失败：文件 {fileName} 缺少 \"Atoms\" 段"
-        },
-        "pdb": {
-            "noAtomRecords": "PDB 文件中未找到 ATOM/HETATM 记录。"
-        },
-        "xyz": {
-            "noFrames": "XYZ 解析失败：未读取到任何帧。",
-            "inconsistentAtomCountPerFrame": "XYZ 多帧解析失败：每一帧原子数必须一致。"
-        }
+    "view": {
+      "snapSplit": "吸附 50%"
+    },
+    "autoRotate": {
+      "enabledHint": "自动旋转已开启。临时关闭：设置-自动旋转-启用；永久关闭：设置-其他设置-载入模型后自动旋转。",
+      "disabledHint": "检测到相关设置已展开，已停止自动旋转。"
+    },
+    "session": {
+      "restoreTitle": "恢复上次会话？",
+      "restoreContent": "检测到之前的模型和设置，是否恢复？",
+      "restoreConfirm": "恢复",
+      "restoreMissing": "未找到可恢复的模型缓存，请重新导入。"
     }
+  },
+  "settings": {
+    "title": "设置",
+    "clearSettings": "清空设置",
+    "clearStorage": "清空设置与模型缓存",
+    "clearStorageConfirmTitle": "确认清空设置与模型缓存？",
+    "clearStorageConfirmBody": "将清空本地保存的设置与模型缓存，并恢复默认值。",
+    "clearSettingsConfirmTitle": "确认清空设置？",
+    "clearSettingsConfirmBody": "设置将恢复到默认值。",
+    "clearStorageHint": "如遇显示异常或参数不同步，可尝试清空设置。",
+    "storageUsage": "本地存储占用：{used} / {total}",
+    "storageUsageOnly": "本地存储占用：{used}",
+    "storageUsageDetail": "设置 {local} · 模型缓存 {cache}",
+    "storageUsageUnknown": "本地存储占用：未知",
+    "exportSettings": "导出设置",
+    "importSettings": "导入设置",
+    "exportSuccess": "设置已导出",
+    "importSuccess": "设置已导入",
+    "importing": "正在导入…",
+    "importFailed": "导入失败，文件格式不正确。",
+    "buildTime": "构建部署时间：",
+    "buildTimeUnknown": "未知",
+    "panel": {
+      "resetPanelButton": "恢复面板默认",
+      "resetPanelConfirm": "确认恢复该面板默认设置？",
+      "view": {
+        "header": "视图控制",
+        "viewPresets": "视角选择",
+        "viewPresetsHint": "可勾选 1 个视角显示单视图，或勾选 2 个视角显示双视图（左右并排）。",
+        "viewPresetsNeedOne": "至少选择一个视角（无法取消最后一个）。",
+        "viewPresetFront": "正视图",
+        "viewPresetSide": "侧视图",
+        "viewPresetTop": "俯视图",
+        "dualViewDistance": "视距",
+        "rotation": "旋转",
+        "dualViewSplit": "左右比例",
+        "dualViewSplitHint": "调整左侧（正视）与右侧（侧视）的宽度比例。",
+        "perspective": "是否透视",
+        "rotX": "X 轴旋转",
+        "rotY": "Y 轴旋转",
+        "rotZ": "Z 轴旋转",
+        "resetPose": "回到旋转前",
+        "resetView": "恢复原始视距"
+      },
+      "rotation": {
+        "header": "自动旋转",
+        "enable": "启用",
+        "mode": "旋转轴预设",
+        "speed": "旋转速度 (°/s)",
+        "speedHint": "速度可单独调节：旋转类型只决定旋转轴（方向）。",
+        "pauseOnInteract": "交互时暂停",
+        "resumeDelay": "恢复延迟 (ms)",
+        "reset": "恢复自动旋转默认值",
+        "presets": {
+          "off": {
+            "name": "关闭",
+            "hint": "不进行自动旋转"
+          },
+          "diag": {
+            "name": "斜轴（通用）",
+            "hint": "常用的等轴视角斜轴方向"
+          },
+          "y": {
+            "name": "绕 Y 轴",
+            "hint": "绕 Y 轴旋转（经典展示）"
+          },
+          "x": {
+            "name": "绕 X 轴",
+            "hint": "绕 X 轴旋转"
+          },
+          "z": {
+            "name": "绕 Z 轴",
+            "hint": "绕 Z 轴旋转"
+          },
+          "diagXY": {
+            "name": "XY 平面对角",
+            "hint": "绕 XY 平面对角方向旋转"
+          },
+          "diagYZ": {
+            "name": "YZ 平面对角",
+            "hint": "绕 YZ 平面对角方向旋转"
+          },
+          "diagXZ": {
+            "name": "XZ 平面对角",
+            "hint": "绕 XZ 平面对角方向旋转"
+          },
+          "space": {
+            "name": "空间对角",
+            "hint": "绕 (1,1,1) 方向旋转"
+          },
+          "tilt": {
+            "name": "倾斜轴",
+            "hint": "略倾斜的旋转轴，通常观感较好"
+          }
+        }
+      },
+      "lammps": {
+        "header": "LAMMPS映射",
+        "alert": "当 LAMMPS dump 以及 LAMMPS data 只提供 type（数字）时，需要在这里指定 type 对应元素符号，用于颜色/半径/键推断与稳定显示。",
+        "currentLayer": "当前图层",
+        "applyAll": "同时修改所有图层",
+        "mapLabel": "type id → 元素符号（支持搜索）",
+        "typePlaceholder": "type",
+        "elementPlaceholder": "元素（如 C / O / Fe）",
+        "addMapping": "添加映射",
+        "apply": "实施生效",
+        "undo": "撤销",
+        "clear": "清空",
+        "clearConfirm": "确定清空所有映射吗？",
+        "hint": "建议 dump 输出包含 id、type、x y z。若每帧顺序不固定，解析端会按 id 排序以保证动画不抖动。"
+      },
+      "files": {
+        "header": "文件导出",
+        "openFile": "打开文件",
+        "openFileHint": "你也可以将文件拖拽到画面中加载。新加载的模型会作为新图层加入，并默认隐藏旧图层。",
+        "export": {
+          "header": "导出图片",
+          "scaleLabel": "导出倍率",
+          "button": "导出图片",
+          "selectButton": "选择范围导出",
+          "transparent": "透明背景",
+          "hint": "倍率越高越清晰，文件越大、导出越慢。",
+          "format": {
+            "png": "PNG（清晰无损）",
+            "webp": "WebP（文件更小）",
+            "jpg": "JPG（兼容性好）"
+          }
+        },
+        "format": {
+          "header": "格式转换",
+          "button": "导出",
+          "success": "格式转换已导出"
+        },
+        "project": {
+          "header": "模型打包",
+          "export": "导出压缩包",
+          "import": "导入压缩包",
+          "cacheRemote": "缓存远程模型用于导出/恢复",
+          "hint": "压缩包会包含 config.json；未缓存的远程模型将按 URL 重新下载。用于复现当前状态与导出图片效果。"
+        },
+        "config": {
+          "header": "设置备份",
+          "exportFull": "导出完整设置（包含默认值）"
+        }
+      },
+      "scope": {
+        "currentLayerLabel": "当前图层",
+        "options": {
+          "current": "仅选中图层",
+          "visible": "仅可见图层",
+          "all": "所有图层"
+        },
+        "selectPlaceholder": "请选择作用范围",
+        "effectRangeLabel": "生效范围"
+      },
+      "layers": {
+        "header": "图层管理",
+        "noViewer": "当前没有可用的 Viewer 实例。",
+        "empty": "尚未加载任何模型。",
+        "meta": "{atoms} 原子 · {frames} 帧",
+        "visible": "显示图层",
+        "showAll": "显示全部",
+        "hideAll": "隐藏全部",
+        "sort": {
+          "timeAsc": "时间 ↑",
+          "timeDesc": "时间 ↓",
+          "nameAsc": "文件名 ↑",
+          "nameDesc": "文件名 ↓"
+        },
+        "hint": "点击一行可设为当前图层，用于单独设置颜色或模型细节；右侧开关控制显示/隐藏。",
+        "deleteConfirm": "确定删除此图层吗？"
+      },
+      "other": {
+        "header": "其他设置",
+        "axes": "坐标轴",
+        "recordFps": "录制帧率 (fps)",
+        "recordFpsHint": "录制输出的目标帧率；常用 30 / 60。",
+        "refreshBondsOnPlayLabel": "原子连接",
+        "refreshBondsOnPlay": "播放时原子连接每帧刷新",
+        "keepActiveLayerOnHideLabel": "选中状态",
+        "keepActiveLayerOnHide": "隐藏图层时保持原子选中状态",
+        "panStep": "平移步长",
+        "selectionColorLabel": "高亮颜色",
+        "selectionColorHint": "用于选中原子的光晕、连线与填充区域。",
+        "selectionColorReset": "恢复默认选中高亮颜色",
+        "selectionColorResetTooltip": "恢复内置的选中高亮颜色。",
+        "backgroundColor": "背景颜色",
+        "atomRoughness": "原子球材质粗糙度",
+        "visualStyle": "渲染风格",
+        "visualStyleDefault": "默认",
+        "visualStyleJmol": "Jmol 风格",
+        "visualStyleHint": "切换配色与原子粗细预设。",
+        "themeReadabilityLabel": "可读性",
+        "themeReadabilityCheckOnOpen": "打开模型时检查主题可读性",
+        "modelLightIntensity": "模型灯光亮度",
+        "reset": "恢复其他默认值"
+      },
+      "colors": {
+        "header": "原子颜色",
+        "alert": "修改颜色后，需要点击“刷新显示”才会应用到模型。",
+        "currentLayer": "当前图层",
+        "applyAll": "同时修改所有图层",
+        "mapLabel": "颜色映射（十六进制）与透明度",
+        "opacity": "透明度",
+        "apply": "实施生效",
+        "hexPlaceholder": "例如 #FF8800",
+        "colorPickerLabel": "{key} 颜色",
+        "invalidHex": "颜色格式无效，请输入 #RRGGBB 或 #RGB。",
+        "reset": "恢复默认",
+        "resetTooltip": "恢复为该元素的内置默认颜色。",
+        "hint": "提示：若该图层存在 typeId（如 LAMMPS），将按元素+typeId 显示为 C.1、C.2…；否则按元素显示。",
+        "empty": "当前图层暂无可编辑的原子类型。"
+      },
+      "details": {
+        "header": "模型细节",
+        "alert": "以下设置按图层保存，开启“同时修改所有图层”可一次广播到全部图层。",
+        "currentLayer": "当前图层",
+        "applyAll": "同时修改所有图层",
+        "representation": "表现方式",
+        "repr": {
+          "ballAndStick": "球棍模型",
+          "stick": "棍棒模型",
+          "wireframe": "线框模型",
+          "spacefill": "球模型（空间填充）",
+          "points": "点模型",
+          "custom": "自定义"
+        },
+        "bonds": "显示键",
+        "bondFactor": "键长阈值系数（bondFactor）",
+        "bondFactorHint": "用于推断键合：cutoff = (r_i + r_j) × bondFactor，数值越大越容易生成键。",
+        "bondRadius": "键粗细",
+        "atomSize": "原子大小",
+        "sphereSegments": "球体细分",
+        "modelLightIntensity": "模型灯光亮度",
+        "atomRoughness": "原子球材质粗糙度",
+        "reset": "恢复图层外观默认值",
+        "sphereSegmentsHint": "数值越大越圆滑，但渲染开销越高。"
+      }
+    }
+  },
+  "errors": {
+    "parseIntFailed": "无法解析整数：{value}",
+    "lammpsDump": {
+      "unexpectedHeader": "LAMMPS dump 解析失败：期望 \"{expected}\"，实际为 \"{actual}\"",
+      "badBoxBoundsLine": "无法解析 BOX BOUNDS 行：{line}",
+      "missingAtomsSection": "LAMMPS dump 解析失败：缺少 ITEM: ATOMS 段。",
+      "missingTypeColumn": "LAMMPS dump：ATOMS 列缺少 \"type\"。columns={columns}",
+      "missingCoordsColumns": "LAMMPS dump：找不到坐标列（x y z 或 xs ys zs）。columns={columns}",
+      "noFrames": "LAMMPS dump 解析失败：未读取到任何帧（ITEM: TIMESTEP）。"
+    },
+    "lammpsData": {
+      "missingAtomsSection": "LAMMPS data 解析失败：文件 {fileName} 缺少 \"Atoms\" 段"
+    },
+    "pdb": {
+      "noAtomRecords": "PDB 文件中未找到 ATOM/HETATM 记录。"
+    },
+    "xyz": {
+      "noFrames": "XYZ 解析失败：未读取到任何帧。",
+      "inconsistentAtomCountPerFrame": "XYZ 多帧解析失败：每一帧原子数必须一致。"
+    }
+  }
 }

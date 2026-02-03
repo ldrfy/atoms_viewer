@@ -1,4 +1,3 @@
-import JSZip from 'jszip';
 import { buildExportFilename } from '../file/filename';
 import { APP_BUILD_TIME, APP_VERSION } from '../appMeta';
 import type { ViewerSettings, DetailsSettingsGroup } from './settings';
@@ -167,6 +166,7 @@ export async function buildProjectZip(params: {
   layersSortBy?: LayerSortBy;
   activeLayerId?: string | null;
 }): Promise<{ blob: Blob; filename: string }> {
+  const { default: JSZip } = await import('jszip');
   const {
     settings,
     layers,
@@ -224,6 +224,7 @@ function guessMd5FromName(name: string): string | undefined {
 }
 
 export async function parseProjectZip(file: File | Blob): Promise<ParsedProjectZip> {
+  const { default: JSZip } = await import('jszip');
   const zip = await JSZip.loadAsync(file);
   const configEntry = zip.file(/config\.json$/i)[0];
   let snapshot: SessionSnapshot | undefined;

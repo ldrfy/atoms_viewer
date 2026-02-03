@@ -1,6 +1,6 @@
 // src/components/ViewerStage/logic/viewerExportPng.ts
 import * as THREE from 'three';
-import { message } from 'ant-design-vue';
+import { message } from 'antdv-next';
 import { cropCanvasByAlpha, downloadBlob } from '../../../lib/image/cropPng';
 import { buildExportFilename } from '../../../lib/file/filename';
 import type { CropBox } from '../recording';

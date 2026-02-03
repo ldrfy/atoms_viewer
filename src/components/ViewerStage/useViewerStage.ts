@@ -2,7 +2,7 @@
 import { onBeforeUnmount, onMounted, ref, computed, watch } from 'vue';
 import type { Ref, ComponentPublicInstance, ComputedRef } from 'vue';
 import * as THREE from 'three';
-import { message } from 'ant-design-vue';
+import { message } from 'antdv-next';
 
 import type {
   ViewerSettings,
@@ -61,7 +61,7 @@ import { buildSettingsSnapshot, parseProjectZip } from '../../lib/viewer/project
 import { mergeCategorizedSettings } from '../../lib/viewer/sessionTemplates';
 import { computeMd5ForArrayBuffer } from '../../lib/file/md5';
 import { buildExportFilename } from '../../lib/file/filename';
-import { saveSessionToStorage, clearSessionStorage } from '../../lib/viewer/sessionStorage';
+import { saveSessionToStorage, clearSessionStorage, readSessionCacheSizeMap } from '../../lib/viewer/sessionStorage';
 import { setThemeMode } from '../../theme/mode';
 import { exportStructureText, type StructureExportFormat } from '../../lib/structure/export';
 import { writeUrlListParam } from '../../lib/urlParams';
@@ -532,6 +532,15 @@ export function useViewerStage(
     () => inspectHelper.rehydrateFromSettings(),
   );
 
+  watch(
+    () => activeLayerId.value,
+    () => {
+      // 同步解析信息，包含文件大小
+      // Sync parse info including file sizes
+      syncUiFromRuntime();
+    },
+  );
+
   const activeLayerColorMap = computed<ColorMapRecord>(() => {
     return (runtimeTick.value, runtime?.activeColorMap.value ?? {});
   });
@@ -736,6 +745,32 @@ export function useViewerStage(
     if (sig === lastSessionSignature) return;
     lastSessionSignature = sig;
     await saveSessionToStorage(snapshot, sources);
+    // 同步缓存后的压缩大小到图层来源
+    // Sync cached compressed sizes into layer sources
+    syncStoredSizesFromCache();
+  }
+
+  function syncStoredSizesFromCache(): void {
+    if (!runtime) return;
+    const sizeMap = readSessionCacheSizeMap();
+    if (!sizeMap || Object.keys(sizeMap).length === 0) return;
+    let changed = false;
+    for (const layer of runtime.layers.value ?? []) {
+      const md5 = layer.source?.md5;
+      if (!md5) continue;
+      const cachedSize = sizeMap[md5];
+      if (!Number.isFinite(cachedSize)) continue;
+      if (layer.source?.storedSize === cachedSize) continue;
+      layer.source = {
+        ...(layer.source ?? {}),
+        storedSize: cachedSize,
+      };
+      changed = true;
+    }
+    if (changed) {
+      runtimeTick.value += 1;
+      syncUiFromRuntime();
+    }
   }
 
   function scheduleSessionSave(reason: 'settings' | 'layers' = 'layers'): void {
@@ -1313,6 +1348,14 @@ export function useViewerStage(
       loader.parseInfo.format = layer.sourceFormat ?? loader.parseInfo.format;
       loader.parseInfo.atomCount = layer.atomCount;
       loader.parseInfo.frameCount = layer.frameCount;
+      // 同步文件大小信息到解析面板
+      // Sync file size info into parse panel
+      loader.parseInfo.fileSize = Number.isFinite(layer.source?.size)
+        ? Number(layer.source?.size)
+        : null;
+      loader.parseInfo.storedSize = Number.isFinite(layer.source?.storedSize)
+        ? Number(layer.source?.storedSize)
+        : null;
     }
   }
 

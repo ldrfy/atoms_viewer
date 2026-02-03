@@ -1,6 +1,6 @@
 // src/components/ViewerStage/recording.ts
 import { computed, ref, type ComputedRef, type Ref } from 'vue';
-import { message } from 'ant-design-vue';
+import { message } from 'antdv-next';
 import type { ThreeStage } from '../../lib/three/stage';
 import { buildExportFilename } from '../../lib/file/filename';
 import { clampNumber } from '../../lib/utils/number';

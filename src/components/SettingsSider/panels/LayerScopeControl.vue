@@ -1,6 +1,5 @@
 <template>
   <a-row
-    class="settings-gap-top-sm"
     align="middle"
     :gutter="8"
   >

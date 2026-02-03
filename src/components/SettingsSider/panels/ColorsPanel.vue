@@ -2,7 +2,7 @@
   <a-form layout="vertical">
     <LayerScopeControl v-model:scope="scope" />
 
-    <a-form-item class="settings-gap-top-md">
+    <a-form-item>
       <a-row align="middle" justify="space-between" class="settings-gap-bottom-sm">
         <a-col>
           <a-typography-text>
@@ -30,6 +30,10 @@
             </a-tag>
           </a-col>
 
+          <a-col :span="3">
+            →
+          </a-col>
+
           <a-col>
             <a-space :size="6" align="center">
               <a-tooltip
@@ -47,35 +51,11 @@
                 </a-button>
               </a-tooltip>
 
-              <input
-                class="color-picker"
-                type="color"
+              <a-color-picker
+                size="small"
+                show-text
                 :value="colorPickerValue(getDraftHexValue(key))"
-                :aria-label="t('settings.panel.colors.colorPickerLabel', { key })"
-                :title="t('settings.panel.colors.colorPickerLabel', { key })"
-                @input="onColorPickerChange(key, ($event as any).target?.value)"
-              >
-              <a-input
-                class="settings-col-compact"
-
-                :value="getHexInputValue(key)"
-                :placeholder="t('settings.panel.colors.hexPlaceholder')"
-                :aria-label="t('settings.panel.colors.hexPlaceholder')"
-                :title="t('settings.panel.colors.hexPlaceholder')"
-                @input="onColorHexInput(key, ($event as any).target?.value)"
-                @change="onColorHexChange(key, ($event as any).target?.value)"
-              />
-              <a-input-number
-                style="width: 96px;"
-                :value="getDraftOpacityValue(key)"
-                :min="0"
-                :max="100"
-                :step="1"
-                addon-after="%"
-                :aria-label="t('settings.panel.colors.opacity')"
-                :title="t('settings.panel.colors.opacity')"
-                @update:value="onOpacityChange(key, $event)"
-                @change="onOpacityChange(key, $event)"
+                @change="(value: unknown, css: unknown) => onColorPickerChange(key, value, css)"
               />
             </a-space>
           </a-col>
@@ -101,10 +81,9 @@
 </template>
 
 <script setup lang="ts">
-import { ReloadOutlined, QuestionCircleOutlined } from '@ant-design/icons-vue';
+import { ReloadOutlined, QuestionCircleOutlined } from '@antdv-next/icons';
 
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
-import { message } from 'ant-design-vue';
 import { useI18n } from 'vue-i18n';
 
 import { viewerApiRef } from '../../../lib/viewer/bridge';
@@ -132,29 +111,6 @@ const draftColorMap = ref<ColorMapRecord>({});
 // Temporary cache for manual hex inputs, avoiding automatic resets.
 // 缓存手动十六进制输入，避免自动重置。
 const hexInputValues = ref<Record<string, string>>({});
-
-// Try cached input first, falling back to the draft hex value for display.
-// 先使用缓存的输入，若无则回退到草稿十六进制值。
-function getHexInputValue(key: string): string {
-  return hexInputValues.value[key] ?? getDraftHexValue(key);
-}
-
-// Update the cached hex input for a specific key.
-// 更新特定键的缓存十六进制输入。
-function setHexInputValue(key: string, value: string): void {
-  const next = { ...hexInputValues.value };
-  next[key] = value;
-  hexInputValues.value = next;
-}
-
-// Clear the cached hex input for a key after syncing.
-// 在同步后清理该键的缓存输入。
-function clearHexInputValue(key: string): void {
-  if (!(key in hexInputValues.value)) return;
-  const next = { ...hexInputValues.value };
-  delete next[key];
-  hexInputValues.value = next;
-}
 
 // Reset all cached inputs when the draft map refreshes.
 // 草稿映射刷新时清空所有缓存输入。
@@ -271,9 +227,13 @@ function isKeyCustom(key: string, map?: ColorMapRecord): boolean {
 function normalizeHexColor(input: unknown): string | null {
   const s = String(input ?? '').trim();
   if (!s) return null;
-  const m = s.match(/^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/);
+  const m = s.match(/^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/);
   if (!m) return null;
   let hex = m[1]!.toUpperCase();
+  // Drop alpha channel if provided.
+  // 若包含透明度通道，丢弃透明度。
+  if (hex.length === 4) hex = hex.slice(0, 3);
+  if (hex.length === 8) hex = hex.slice(0, 6);
   if (hex.length === 3) hex = hex.split('').map(ch => ch + ch).join('');
   return `#${hex}`;
 }
@@ -295,37 +255,36 @@ function onResetColor(key: string): void {
   patchDraftColor(key, def, 1);
 }
 
-function onColorHexChange(key: string, v: unknown): void {
-  const hex = normalizeHexColor(v);
-  if (!hex) {
-    message.error(t('settings.panel.colors.invalidHex'));
-    return;
-  }
-  const alpha = getDraftAlphaValue(key);
-  patchDraftColor(key, hex, alpha);
-  clearHexInputValue(key);
-}
-
-// Cache manual hex typing so the field doesn't reset mid-edit.
-// 缓存手动输入的十六进制，避免输入过程中被重置。
-function onColorHexInput(key: string, v: unknown): void {
-  if (!key) return;
-  setHexInputValue(key, String(v ?? ''));
-}
-
-function onColorPickerChange(key: string, v: unknown): void {
-  const hex = normalizeHexColor(v);
+function onColorPickerChange(key: string, value: unknown, css: unknown): void {
+  const { hex, alpha } = resolveColorPayload(value, css);
   if (!hex) return;
-  const alpha = getDraftAlphaValue(key);
-  patchDraftColor(key, hex, alpha);
+  const nextAlpha = alpha ?? getDraftAlphaValue(key);
+  patchDraftColor(key, hex, nextAlpha);
 }
 
-function onOpacityChange(key: string, v: unknown): void {
-  const percent = normalizeOpacityInput(v);
-  if (percent == null) return;
-  const alpha = percent / 100;
-  const hex = getDraftHexValue(key);
-  patchDraftColor(key, hex, alpha);
+// Resolve color picker payload to a CSS color string.
+// 将颜色选择器回调解析为 CSS 颜色字符串。
+function resolveColorCssString(value: unknown, css: unknown): string {
+  const hexString = (value as any)?.toHexString?.();
+  if (typeof hexString === 'string' && hexString.trim()) return hexString.trim();
+  if (typeof css === 'string' && css.trim()) return css.trim();
+  const hex = (value as any)?.toHex?.();
+  if (typeof hex === 'string' && hex.trim()) return `#${hex.trim()}`;
+  return String(value ?? '').trim();
+}
+
+// Resolve color picker payload to hex + alpha.
+// 解析颜色选择器回调得到 hex + 透明度。
+function resolveColorPayload(
+  value: unknown,
+  css: unknown,
+): { hex: string | null; alpha: number | null } {
+  const hex = normalizeHexColor(resolveColorCssString(value, css));
+  const rawAlpha = (value as any)?.toRgb?.()?.a;
+  const alpha = Number.isFinite(rawAlpha)
+    ? Math.min(1, Math.max(0, Number(rawAlpha)))
+    : null;
+  return { hex, alpha };
 }
 
 const isApplyDisabled = computed(() => (
@@ -362,27 +321,6 @@ function getDraftAlphaValue(key: string): number {
   const raw = draftColorMap.value[key] ?? '';
   const parsed = parseColorValue(raw);
   return parsed?.alpha ?? 1;
-}
-
-function getDraftOpacityValue(key: string): number {
-  return Math.round(getDraftAlphaValue(key) * 100);
-}
-
-function clampOpacityPercent(v: number): number {
-  return Math.max(0, Math.min(100, Math.floor(v)));
-}
-
-function normalizeOpacityInput(v: unknown): number | null {
-  if (v == null || v === '') return null;
-  if (typeof v === 'string') {
-    const raw = String(v ?? '').replace('%', '').trim();
-    const parsed = Number(raw);
-    return clampOpacityPercent(parsed);
-  }
-  if (Number.isFinite(v as number)) {
-    return clampOpacityPercent(Number(v));
-  }
-  return null;
 }
 
 const { registerPanelReset } = useSettingsSiderResetContext();

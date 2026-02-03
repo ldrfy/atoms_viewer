@@ -2,7 +2,7 @@
   <div v-if="hasModelOrParseError" class="parse-inline">
     <a-popover
       v-model:open="open"
-      trigger="click"
+      :trigger="['click']"
       placement="bottomLeft"
       :overlay-class-name="'parse-popover'"
       :destroy-tooltip-on-hide="true"
@@ -35,26 +35,8 @@
               :column="1"
               class="parse-desc"
               bordered
-            >
-              <a-descriptions-item :label="t('viewer.parse.format')">
-                <a-tag>{{ ctx.parseInfo.format || "-" }}</a-tag>
-              </a-descriptions-item>
-
-              <a-descriptions-item :label="t('viewer.parse.file')">
-                <span class="parse-filename">{{ ctx.parseInfo.fileName || "-" }}</span>
-              </a-descriptions-item>
-
-              <a-descriptions-item :label="t('viewer.parse.atoms')">
-                {{ ctx.parseInfo.atomCount }}
-              </a-descriptions-item>
-
-              <a-descriptions-item
-                v-if="(ctx.parseInfo.frameCount ?? 0) > 1"
-                :label="t('viewer.parse.frames')"
-              >
-                {{ ctx.parseInfo.frameCount }}
-              </a-descriptions-item>
-            </a-descriptions>
+              :items="parseDescItems"
+            />
           </a-space>
         </div>
       </template>
@@ -72,11 +54,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, unref, watch } from 'vue';
+import { computed, ref, unref, watch, h } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { Tag } from 'antdv-next';
 import type { ParseMode } from '../../../lib/structure/parse';
 import { buildParseModeOptions } from '../../../lib/structure/parseOptions';
-import { ExclamationCircleOutlined } from '@ant-design/icons-vue';
+import { ExclamationCircleOutlined } from '@antdv-next/icons';
 
 import type { ParseCtx } from '../ctx';
 
@@ -95,6 +78,55 @@ const parseModeModel = computed<ParseMode>({
 });
 
 const parseModeOptions = computed(() => buildParseModeOptions(t));
+
+function formatBytes(size: number | null | undefined): string {
+  // 文件大小格式化
+  // Format file size
+  if (size == null || !Number.isFinite(size)) return '-';
+  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+  let val = Math.max(0, Number(size));
+  let idx = 0;
+  while (val >= 1024 && idx < units.length - 1) {
+    val /= 1024;
+    idx += 1;
+  }
+  const text = idx === 0 ? `${Math.round(val)}` : val.toFixed(2);
+  return `${text} ${units[idx]}`;
+}
+
+// 解析信息描述项
+// Parse info description items.
+const parseDescItems = computed(() => {
+  const items = [
+    {
+      label: t('viewer.parse.format'),
+      content: h(Tag, null, { default: () => props.ctx.parseInfo.format || '-' }),
+    },
+    {
+      label: t('viewer.parse.file'),
+      content: h('span', { class: 'parse-filename' }, props.ctx.parseInfo.fileName || '-'),
+    },
+    {
+      label: t('viewer.parse.fileSize'),
+      content: formatBytes(props.ctx.parseInfo.fileSize),
+    },
+    {
+      label: t('viewer.parse.storedSize'),
+      content: formatBytes(props.ctx.parseInfo.storedSize),
+    },
+    {
+      label: t('viewer.parse.atoms'),
+      content: props.ctx.parseInfo.atomCount,
+    },
+  ];
+  if ((props.ctx.parseInfo.frameCount ?? 0) > 1) {
+    items.push({
+      label: t('viewer.parse.frames'),
+      content: props.ctx.parseInfo.frameCount,
+    });
+  }
+  return items;
+});
 
 /** 解析出错时自动打开 popover（原来在 index.vue 的 watch） */
 watch(

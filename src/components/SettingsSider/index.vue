@@ -298,14 +298,8 @@ const mobileResizeDrag = createPointerDragWithPullToRefreshBlock({
     startH = mobileHeight.value;
   },
   onMove: (e) => {
-    try {
-      e.preventDefault();
-      e.stopPropagation();
-    }
-    catch {
-      // ignore
-    }
-
+    // Keep pointermove passive to avoid browser warnings.
+    // 保持 pointermove 被动监听，避免浏览器警告。
     const dy = startY - e.clientY;
     const maxH = Math.floor(window.innerHeight * 0.8);
     mobileHeight.value = clampNumber(startH + dy, 260, maxH);
@@ -334,14 +328,8 @@ const desktopResizeDrag = createPointerDragWithPullToRefreshBlock({
     desktopStartW = desktopWidth.value;
   },
   onMove: (e) => {
-    try {
-      e.preventDefault();
-      e.stopPropagation();
-    }
-    catch {
-      // ignore
-    }
-
+    // Keep pointermove passive to avoid browser warnings.
+    // 保持 pointermove 被动监听，避免浏览器警告。
     const dx = desktopStartX - e.clientX;
     desktopWidth.value = clampDesktopWidth(desktopStartW + dx);
     saveNumber('settingsDrawer.desktopWidth', desktopWidth.value);

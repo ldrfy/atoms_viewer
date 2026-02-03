@@ -7,7 +7,7 @@
  *
  * Mobile Firefox can still trigger pull-to-refresh unless we:
  * - lock page scroll via body { position: fixed; top: -scrollY }
- * - add document-level (capture) touchstart/touchmove listeners with passive:false
+ * - add document-level (capture) touchmove listeners with passive:false
  * - temporarily set html/body overscrollBehaviorY + touchAction
  *
  * 在移动端 Firefox 中，需要：
@@ -60,6 +60,12 @@ declare global {
   interface Window {
     __lavPtrBlock?: GlobalPtrBlockState;
   }
+}
+
+function isMobileFirefox(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  const ua = navigator.userAgent || '';
+  return /Firefox/i.test(ua) && /Mobile|Android|Tablet/i.test(ua);
 }
 
 function ensureState(): GlobalPtrBlockState | null {
@@ -118,30 +124,20 @@ function applyBlock(state: GlobalPtrBlockState): void {
   (html.style as any).overscrollBehaviorY = 'none';
   (html.style as any).touchAction = 'none';
 
-  // Document-level blockers (capture + passive:false) are the most reliable for mobile Firefox.
-  state.touchStartBlocker = (ev: TouchEvent) => {
-    if (!window.__lavPtrBlock || window.__lavPtrBlock.count <= 0) return;
-    if (ev.cancelable) {
-      ev.preventDefault();
-      ev.stopPropagation();
-    }
-  };
-  document.addEventListener('touchstart', state.touchStartBlocker, {
-    passive: false,
-    capture: true,
-  });
-
-  state.touchMoveBlocker = (ev: TouchEvent) => {
-    if (!window.__lavPtrBlock || window.__lavPtrBlock.count <= 0) return;
-    if (ev.cancelable) {
-      ev.preventDefault();
-      ev.stopPropagation();
-    }
-  };
-  document.addEventListener('touchmove', state.touchMoveBlocker, {
-    passive: false,
-    capture: true,
-  });
+  // 仅在移动端 Firefox 再挂 touchmove 监听；其他环境依赖 touch-action/overscrollBehavior，避免 Chrome 非 passive 警告。
+  if (isMobileFirefox()) {
+    state.touchMoveBlocker = (ev: TouchEvent) => {
+      if (!window.__lavPtrBlock || window.__lavPtrBlock.count <= 0) return;
+      if (ev.cancelable) {
+        ev.preventDefault();
+        ev.stopPropagation();
+      }
+    };
+    document.addEventListener('touchmove', state.touchMoveBlocker, {
+      passive: false,
+      capture: true,
+    });
+  }
 }
 
 function removeBlock(state: GlobalPtrBlockState): void {
@@ -151,10 +147,6 @@ function removeBlock(state: GlobalPtrBlockState): void {
   html.classList.remove('resizing');
   body.classList.remove('resizing');
 
-  if (state.touchStartBlocker) {
-    document.removeEventListener('touchstart', state.touchStartBlocker as any, true);
-    state.touchStartBlocker = null;
-  }
   if (state.touchMoveBlocker) {
     document.removeEventListener('touchmove', state.touchMoveBlocker as any, true);
     state.touchMoveBlocker = null;
@@ -232,7 +224,9 @@ export function createPointerDragWithPullToRefreshBlock(
     }
 
     if (typeof window !== 'undefined') {
-      window.addEventListener('pointermove', handleMove, { passive: false });
+      // No preventDefault here; keep passive to avoid scroll-blocking warning.
+      // 这里不阻止默认行为，使用被动监听避免滚动警告。
+      window.addEventListener('pointermove', handleMove, { passive: true });
       window.addEventListener('pointerup', stop, { passive: true });
       window.addEventListener('pointercancel', stop, { passive: true });
       window.addEventListener('lostpointercapture', stop as any, { passive: true });

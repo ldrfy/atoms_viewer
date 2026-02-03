@@ -10,14 +10,11 @@
         <ParseInfoPopover :ctx="parseCtx" />
       </a-col>
 
-      <a-col v-if="frameNoteText" flex="auto" class="anim-note">
+      <a-col flex="auto" class="anim-note">
         <a-tooltip :title="frameNoteText" overlay-class-name="anim-note-tooltip">
-          <a-typography-text
-            type="secondary"
-            ellipsis
-            :content="frameNoteText"
-            style="font-size: 12px;"
-          />
+          <a-typography-text type="secondary" ellipsis style="font-size: 12px;">
+            {{ frameNoteText }}
+          </a-typography-text>
         </a-tooltip>
       </a-col>
     </a-row>
@@ -46,7 +43,6 @@
       <a-col flex="none" class="anim-col-compact">
         <a-input-number
           v-model:value="frameIndexModel"
-          size="small"
           :aria-label="t('viewer.play.frameIndex')"
           :title="t('viewer.play.frameIndex')"
           :min="1"
@@ -71,7 +67,6 @@
           <a-input-number
             v-model:value="fpsModel"
             class="anim-field-input"
-            size="small"
             :aria-label="t('viewer.play.fps')"
             :title="t('viewer.play.fps')"
             :min="RECORD_FPS_MIN"
@@ -100,7 +95,6 @@
             <a-input-number
               v-model:value="recordFpsModel"
               class="anim-field-input"
-              size="small"
               :aria-label="t('settings.panel.other.recordFps')"
               :title="t('settings.panel.other.recordFps')"
               :min="RECORD_FPS_MIN"
@@ -177,13 +171,15 @@ const frameCountMax = computed(() => Math.max(1, props.ctx.frameCount.value));
 const frameMeta = computed(() => unref(props.ctx.frameMeta));
 const frameNoteText = computed(() => {
   const meta = frameMeta.value;
-  if (!meta) return '';
+  // 无注释时显示占位文案
+  // Show placeholder when no note is available
+  if (!meta) return t('viewer.play.noNote');
   const parts: string[] = [];
   if (Number.isFinite(meta.timestep)) {
     parts.push(t('viewer.play.timestep', { value: meta.timestep }));
   }
   if (meta.comment) parts.push(meta.comment);
-  return parts.join(' · ');
+  return parts.length ? parts.join(' · ') : t('viewer.play.noNote');
 });
 const parseCtx = computed(() => props.parseCtx);
 
@@ -323,7 +319,6 @@ const recordFpsModel = computed<number>({
     min-width: 0;
     /* 允许压缩 */
 }
-
 
 /* 为了 fps 和 bg 两行左侧对齐：给 label 固定宽度 */
 .anim-field-label {

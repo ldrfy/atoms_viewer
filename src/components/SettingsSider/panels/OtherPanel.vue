@@ -36,27 +36,17 @@
             </a-tooltip>
 
             <!-- picker -->
-            <div class="color-picker-wrap" :class="{ 'is-transparent': isBgTransparent }">
-              <input
-                class="color-picker"
-                type="color"
-                :value="bgColorPickerValue(bgColorModel)"
-                :aria-label="t('settings.panel.other.backgroundColor')"
-                :title="t('settings.panel.other.backgroundColor')"
-                @input="onBgColorPickerChange(($event as any).target?.value)"
-              >
-              <div v-if="isBgTransparent" class="color-picker-transparent" aria-hidden="true" />
-            </div>
-
-            <!-- hex -->
-            <a-input
-              class="settings-col-compact"
-              :value="bgHexValue"
-              :placeholder="bgHexPlaceholder"
+            <a-color-picker
+              size="small"
+              show-text
+              disabled-alpha
+              :value="isBgTransparent ? '#00000000' : bgColorPickerValue(bgColorModel)"
               :aria-label="t('settings.panel.other.backgroundColor')"
               :title="t('settings.panel.other.backgroundColor')"
-              @change="onBgColorHexChange(($event as any).target?.value)"
+              @change="(value: unknown, css: unknown) => onBgColorPickerChange(resolveColorCssString(value, css))"
             />
+
+            <!-- hex removed -->
           </a-space>
         </a-col>
       </a-row>
@@ -180,20 +170,15 @@
               </a-button>
             </a-tooltip>
 
-            <input
-              class="color-picker"
-              type="color"
+            <a-color-picker
+              size="small"
+              show-text
+              disabled-alpha
+
               :value="colorPickerValue(selectionHighlightColorModel)"
-              @input="onSelectionColorPickerChange(($event as any).target?.value)"
-            >
-            <a-input
-              class="settings-col-compact"
-              :value="selectionHighlightColorModel"
-              :placeholder="t('settings.panel.colors.hexPlaceholder')"
-              :aria-label="t('settings.panel.colors.hexPlaceholder')"
-              :title="t('settings.panel.colors.hexPlaceholder')"
-              @change="onSelectionColorHexChange(($event as any).target?.value)"
+              @change="(value: unknown, css: unknown) => onSelectionColorPickerChange(resolveColorCssString(value, css))"
             />
+            <!-- hex removed -->
           </a-space>
         </a-col>
       </a-row>
@@ -230,10 +215,10 @@
 </template>
 
 <script setup lang="ts">
-import { ReloadOutlined } from '@ant-design/icons-vue';
+import { ReloadOutlined } from '@antdv-next/icons';
 import { computed, onBeforeUnmount } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { message } from 'ant-design-vue';
+import { message } from 'antdv-next';
 
 import { useSettingsSiderContext } from '../useSettingsSiderContext';
 import {
@@ -289,10 +274,6 @@ const bgColorModel = computed<string>({
 });
 
 const isBgTransparent = computed(() => settings.value.other.backgroundTransparent);
-const bgHexValue = computed(() => (isBgTransparent.value ? '' : bgColorModel.value));
-const bgHexPlaceholder = computed(() =>
-  isBgTransparent.value ? t('viewer.record.bgTransparent') : t('settings.panel.colors.hexPlaceholder'),
-);
 
 function resetBgToTransparent(): void {
   patchSettings({
@@ -307,28 +288,19 @@ function bgColorPickerValue(v: string): string {
   return normalizeHexColor(v) ?? DEFAULT_SETTINGS.other.backgroundColor;
 }
 
-function onBgColorPickerChange(v: unknown): void {
-  const next = normalizeHexColor(v);
-  if (!next) {
-    message.error(t('settings.panel.colors.invalidHex'));
-    return;
-  }
-  patchSettings({
-    other: {
-      backgroundColor: next,
-      backgroundColorMode: 'custom',
-      backgroundTransparent: false,
-    },
-  });
+// Resolve color picker payload to a CSS color string.
+// 将颜色选择器回调解析为 CSS 颜色字符串。
+function resolveColorCssString(value: unknown, css: unknown): string {
+  const hexString = (value as any)?.toHexString?.();
+  if (typeof hexString === 'string' && hexString.trim()) return hexString.trim();
+  if (typeof css === 'string' && css.trim()) return css.trim();
+  const hex = (value as any)?.toHex?.();
+  if (typeof hex === 'string' && hex.trim()) return `#${hex.trim()}`;
+  return String(value ?? '').trim();
 }
 
-function onBgColorHexChange(v: unknown): void {
-  const raw = String(v ?? '').trim();
-  if (!raw) {
-    resetBgToTransparent();
-    return;
-  }
-  const next = normalizeHexColor(raw);
+function onBgColorPickerChange(v: unknown): void {
+  const next = normalizeHexColor(v);
   if (!next) {
     message.error(t('settings.panel.colors.invalidHex'));
     return;
@@ -424,8 +396,16 @@ const visualStyleOptions = computed(() =>
 function normalizeHexColor(v: unknown): string | null {
   if (v == null) return null;
   const s = String(v).trim();
-  if (/^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(s)) return s;
-  return null;
+  if (!s) return null;
+  const m = s.match(/^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/);
+  if (!m) return null;
+  let hex = m[1]!;
+  // Drop alpha channel if provided.
+  // 若包含透明度通道，丢弃透明度。
+  if (hex.length === 4) hex = hex.slice(0, 3);
+  if (hex.length === 8) hex = hex.slice(0, 6);
+  if (hex.length === 3) hex = hex.split('').map(ch => ch + ch).join('');
+  return `#${hex}`;
 }
 
 function colorPickerValue(v: string): string {
@@ -435,15 +415,6 @@ function colorPickerValue(v: string): string {
 function onSelectionColorPickerChange(v: unknown): void {
   const next = normalizeHexColor(v);
   if (!next) return;
-  selectionHighlightColorModel.value = next;
-}
-
-function onSelectionColorHexChange(v: unknown): void {
-  const next = normalizeHexColor(v);
-  if (!next) {
-    message.error(t('settings.panel.colors.invalidHex'));
-    return;
-  }
   selectionHighlightColorModel.value = next;
 }
 

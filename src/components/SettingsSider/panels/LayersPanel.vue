@@ -14,22 +14,15 @@
       :message="t('settings.panel.layers.empty')"
     />
 
-    <div v-else class="settings-gap-top-sm">
+    <div v-else>
       <a-space :size="8" class="settings-full-width">
         <a-select
           size="small"
           :disabled="layerList.length < 2"
           :value="sortValue"
+          :options="sortOptions"
           @change="onSortChange"
-        >
-          <a-select-option
-            v-for="opt in sortOptions"
-            :key="opt.value"
-            :value="opt.value"
-          >
-            {{ opt.label }}
-          </a-select-option>
-        </a-select>
+        />
         <a-tooltip :title="t('settings.panel.files.openFileHint')">
           <a-button
             type="text"
@@ -58,7 +51,7 @@
           </a-button>
         </a-tooltip>
       </a-space>
-      <a-divider class="settings-divider" />
+      <a-divider style="margin-top: 8px; margin-bottom: 8px;" />
 
       <div class="layers-list">
         <div
@@ -94,8 +87,6 @@
 
               <a-popconfirm
                 :title="t('settings.panel.layers.deleteConfirm')"
-                :ok-text="t('common.delete')"
-                :cancel-text="t('common.cancel')"
                 placement="left"
                 @confirm="onDeleteLayer(l.id)"
               >
@@ -103,7 +94,6 @@
                   type="text"
                   size="small"
                   danger
-                  :title="t('common.delete')"
                 >
                   <DeleteOutlined />
                 </a-button>
@@ -117,7 +107,7 @@
 </template>
 
 <script setup lang="ts">
-import { DeleteOutlined, QuestionCircleOutlined, FolderOpenOutlined, EyeOutlined, EyeInvisibleOutlined } from '@ant-design/icons-vue';
+import { DeleteOutlined, QuestionCircleOutlined, FolderOpenOutlined, EyeOutlined, EyeInvisibleOutlined } from '@antdv-next/icons';
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { viewerApiRef } from '../../../lib/viewer/bridge';

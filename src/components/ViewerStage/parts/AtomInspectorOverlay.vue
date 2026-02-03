@@ -110,7 +110,7 @@
                   >
                     <a-row align="middle" :gutter="[8, 0]" style="width: 100%">
                       <a-col flex="28px">
-                        <a-tag color="blue" class="atom-index-tag">
+                        <a-tag color="green" variant="outlined">
                           {{ index + 1 }}
                         </a-tag>
                       </a-col>
@@ -122,9 +122,9 @@
                               <a-typography-text strong>
                                 {{ item.element }}
                               </a-typography-text>
-                              <div class="atom-idx">
+                              <a-typography-text type="secondary">
                                 idx={{ item.atomIndex }}
-                              </div>
+                              </a-typography-text>
                             </a-space>
                             <a-typography-text>
                               x={{ fmt(item.position?.[0]) }},
@@ -153,17 +153,17 @@
 
               <!-- Fixed footer: measures -->
               <div class="atom-inspector__footer">
-                <a-divider v-if="measureMode && measure.distance12 != null" class="atom-inspector__divider" />
+                <a-divider v-if="measureMode && measure.distance12 != null" />
 
                 <a-descriptions size="small" :column="1" :items="measureItems" />
 
-                <a-typography-text
-                  v-if="measureMode && selected.length > 1"
-                  type="secondary"
-                  class="atom-inspector__measureHint"
-                >
-                  {{ t('viewer.inspect.orderHint') }}
-                </a-typography-text>
+                <!-- 提示文案包一层容器，确保上下间距稳定生效。 -->
+                <!-- Wrap hint text with a container so vertical spacing is applied reliably. -->
+                <div v-if="measureMode && selected.length > 1" class="atom-inspector__measureHint">
+                  <a-typography-text type="secondary">
+                    {{ t('viewer.inspect.orderHint') }}
+                  </a-typography-text>
+                </div>
               </div>
             </div>
           </div>
@@ -691,10 +691,6 @@ function fmt(v: number | null | undefined): string {
   flex: 0 0 auto;
 }
 
-.atom-inspector__divider {
-  margin: 10px 0;
-}
-
 .atom-item {
   padding: 6px 0;
   border-bottom: 1px solid var(--ant-color-border-secondary);
@@ -704,76 +700,9 @@ function fmt(v: number | null | undefined): string {
   border-bottom: none;
 }
 
-.atom-row {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-}
-
-.atom-index-tag {
-  min-width: 28px;
-  text-align: center;
-  margin: 0;
-}
-
-.atom-idx {
-  margin-left: 8px;
-  opacity: 0.55;
-  font-size: 12px;
-  opacity: 0.75;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.atom-left-col {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  flex: 0 0 auto;
-}
-
-.atom-right-col {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.atom-remove-btn {
-  margin: 0;
-  padding: 0;
-  color: var(--ant-color-text-tertiary);
-}
-
-.atom-element {
-  font-size: 15px;
-  line-height: 1.1;
-  white-space: nowrap;
-}
-
-.atom-main {
-  flex: 1;
-  min-width: 0;
-}
-
-.atom-layer {
-  font-size: 12px;
-  margin-left: 10px;
-}
-
-.atom-coord {
-  display: block;
-  padding: 2px 6px;
-  border-radius: 6px;
-  background: var(--ant-color-fill-secondary);
-  font-size: 12px;
-  color: var(--ant-color-text);
-  font-family: ui-monospace, SFMono-Regular, SFMono, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-}
-
 .atom-inspector__measureHint {
   display: block;
-  margin-top: 6px;
+  margin-top: 12px;
+  margin-bottom: 12px;
 }
 </style>

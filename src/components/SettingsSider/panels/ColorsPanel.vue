@@ -25,7 +25,7 @@
       <div v-for="(key, idx) in colorKeys" :key="`${key}-${idx}`" class="settings-gap-bottom-sm">
         <a-row :gutter="0" justify="space-between" align="middle">
           <a-col>
-            <a-tag style="margin-left: 8px;" :bordered="false" color="success">
+            <a-tag style="margin-left: 8px;" color="success" variant="outlined">
               {{ key }}
             </a-tag>
           </a-col>

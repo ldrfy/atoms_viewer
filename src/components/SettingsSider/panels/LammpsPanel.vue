@@ -31,7 +31,7 @@
           <a-col :span="0.5" />
 
           <a-col :span="3">
-            <a-tag color="processing">
+            <a-tag color="processing" variant="outlined">
               {{ typeId }}
             </a-tag>
           </a-col>

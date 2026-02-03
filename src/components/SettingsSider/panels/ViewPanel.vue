@@ -64,7 +64,7 @@
           <a-col :span="0.5" />
 
           <a-col>
-            <a-tag color="processing">
+            <a-tag color="processing" variant="outlined">
               X
             </a-tag>
           </a-col>
@@ -95,7 +95,7 @@
           <a-col :span="0.5" />
 
           <a-col>
-            <a-tag color="processing">
+            <a-tag color="processing" variant="outlined">
               Y
             </a-tag>
           </a-col>
@@ -127,7 +127,7 @@
           <a-col :span="0.5" />
 
           <a-col>
-            <a-tag color="processing">
+            <a-tag color="processing" variant="outlined">
               Z
             </a-tag>
           </a-col>

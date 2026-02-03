@@ -297,9 +297,22 @@
     touch-action: pan-y;
     /* 明确允许纵向滚动手势 */
     scrollbar-width: thin;
-    scrollbar-color: rgba(120, 120, 120, 0.35) transparent;
+    scrollbar-color: rgba(120, 120, 120, 0.25) transparent;
+}
+.settings-body::-webkit-scrollbar {
+    width: 8px;
 }
 
+.settings-body::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.settings-body::-webkit-scrollbar-thumb {
+    background-color: rgba(120, 120, 120, 0.25);
+    border-radius: 999px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+}
 
 .settings-gap-top-sm {
     margin-top: 8px;
@@ -362,20 +375,6 @@
     margin-bottom: 2px;
 }
 
-.settings-body::-webkit-scrollbar {
-    width: 8px;
-}
-
-.settings-body::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-.settings-body::-webkit-scrollbar-thumb {
-    background-color: rgba(120, 120, 120, 0.35);
-    border-radius: 999px;
-    border: 2px solid transparent;
-    background-clip: padding-box;
-}
 
 
 /* While resizing the bottom-sheet, suppress overscroll (Chrome/Android) */

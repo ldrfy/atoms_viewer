@@ -64,7 +64,7 @@
                 </a-typography-text>
               </div>
 
-              <a-space size="small">
+              <a-space size="small" class="atom-inspector__actions">
                 <a-tooltip :title="t('viewer.inspect.measureMode')">
                   <a-switch
                     v-model:checked="measureMode"
@@ -74,9 +74,32 @@
                   />
                 </a-tooltip>
 
-                <a-button size="small" :disabled="selected.length === 0" @click="clear">
-                  {{ t('viewer.inspect.clear') }}
-                </a-button>
+                <a-tooltip :title="t('viewer.inspect.selectAll')">
+                  <a-button
+                    size="small"
+                    :type="isAllChecked ? 'primary' : 'default'"
+                    :disabled="selected.length === 0"
+                    :aria-label="t('viewer.inspect.selectAll')"
+                    :title="t('viewer.inspect.selectAll')"
+                    @click="toggleSelectAll"
+                  >
+                    <CheckOutlined />
+                  </a-button>
+                </a-tooltip>
+
+                <a-tooltip
+                  :title="t('viewer.inspect.deleteHint')"
+                  :overlay-style="{ pointerEvents: 'none' }"
+                >
+                  <a-button
+                    size="small"
+                    danger
+                    :disabled="checkedKeys.size === 0"
+                    @click="removeChecked"
+                  >
+                    <DeleteOutlined />
+                  </a-button>
+                </a-tooltip>
 
                 <a-button
                   type="text"
@@ -102,23 +125,31 @@
             <div v-else class="atom-inspector__content">
               <!-- Scrollable list -->
               <div class="atom-inspector__list">
-                <a-space direction="vertical" :size="4" style="width: 100%">
+                <a-space direction="vertical" :size="4">
                   <div
                     v-for="(item, index) in selected"
                     :key="item.atomIndex ?? index"
                     class="atom-item"
                   >
-                    <a-row align="middle" :gutter="[8, 0]" style="width: 100%">
-                      <a-col flex="28px">
+                    <a-row :gutter="16" align="middle">
+                      <a-col />
+                      <a-col>
+                        <a-checkbox
+                          :checked="isItemChecked(item)"
+                          @change="onItemChecked(item, $event.target.checked)"
+                        />
+                      </a-col>
+
+                      <a-col>
                         <a-tag color="green" variant="outlined">
                           {{ index + 1 }}
                         </a-tag>
                       </a-col>
 
-                      <a-col flex="auto">
+                      <a-col>
                         <a-popover :trigger="['click']" :content="buildTooltip(item)" placement="topLeft">
-                          <a-space direction="vertical" :size="4" style="width: 100%">
-                            <a-space align="center" :size="12" wrap>
+                          <a-space direction="vertical" :size="4">
+                            <a-space wrap>
                               <a-typography-text strong>
                                 {{ item.element }}
                               </a-typography-text>
@@ -133,18 +164,6 @@
                             </a-typography-text>
                           </a-space>
                         </a-popover>
-                      </a-col>
-
-                      <a-col flex="32px" style="text-align: right">
-                        <a-button
-                          type="text"
-                          size="small"
-                          aria-label="remove"
-                          title="remove"
-                          @click="removeAt(index)"
-                        >
-                          <DeleteOutlined />
-                        </a-button>
                       </a-col>
                     </a-row>
                   </div>
@@ -184,6 +203,7 @@
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
 import { useI18n } from 'vue-i18n';
 import {
+  CheckOutlined,
   DeleteOutlined,
   DownOutlined,
   LeftOutlined,
@@ -204,8 +224,80 @@ const enabled = props.ctx.enabled;
 const measureMode = props.ctx.measureMode;
 const selected = props.ctx.selected;
 const measure = props.ctx.measure;
-const clear = props.ctx.clear;
-const removeAt = props.ctx.removeAt;
+
+// 选中删除缓存键
+// Selected deletion cache key.
+const checkedKeys = ref<Set<string>>(new Set());
+
+function buildItemKey(item: { layerId: string; atomIndex: number }): string {
+  // 选中项唯一键
+  // Unique key for a selection item.
+  return `${item.layerId}:${item.atomIndex}`;
+}
+
+function isItemChecked(item: { layerId: string; atomIndex: number }): boolean {
+  return checkedKeys.value.has(buildItemKey(item));
+}
+
+function onItemChecked(
+  item: { layerId: string; atomIndex: number },
+  checked: boolean,
+): void {
+  const next = new Set(checkedKeys.value);
+  const key = buildItemKey(item);
+  if (checked) next.add(key);
+  else next.delete(key);
+  checkedKeys.value = next;
+}
+
+function removeChecked(): void {
+  // 批量删除选中原子
+  // Bulk remove selected atoms.
+  const delKeys = checkedKeys.value;
+  if (delKeys.size === 0) return;
+  selected.value = selected.value.filter(item => !delKeys.has(buildItemKey(item)));
+  checkedKeys.value = new Set();
+}
+
+const totalSelectableCount = computed(() => {
+  const keys = new Set<string>();
+  for (const item of selected.value) {
+    keys.add(buildItemKey(item));
+  }
+  return keys.size;
+});
+
+const isAllChecked = computed(() =>
+  totalSelectableCount.value > 0
+  && checkedKeys.value.size === totalSelectableCount.value,
+);
+
+function toggleSelectAll(): void {
+  // 全选/取消全选
+  // Toggle select all / clear all.
+  if (isAllChecked.value) {
+    checkedKeys.value = new Set();
+    return;
+  }
+  const next = new Set<string>();
+  for (const item of selected.value) {
+    next.add(buildItemKey(item));
+  }
+  checkedKeys.value = next;
+}
+
+watch(
+  () => selected.value,
+  (list) => {
+    const existing = new Set(list.map(item => buildItemKey(item)));
+    const next = new Set<string>();
+    for (const key of checkedKeys.value) {
+      if (existing.has(key)) next.add(key);
+    }
+    if (next.size !== checkedKeys.value.size) checkedKeys.value = next;
+  },
+  { deep: true },
+);
 
 const visible = computed(() => enabled.value);
 
@@ -546,9 +638,27 @@ function fmt(v: number | null | undefined): string {
 .atom-inspector-mini-fade-leave-to {
   opacity: 0;
 }
-</style>
 
-<style scoped>
+.atom-inspector__list {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(120, 120, 120, 0.25) transparent;
+}
+
+.atom-inspector__list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.atom-inspector__list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.atom-inspector__list::-webkit-scrollbar-thumb {
+  background-color: rgba(120, 120, 120, 0.25);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
 /* Mobile grab handle (resize hotzone) */
 .atom-inspector__grab {
   padding: 10px 0 6px;
@@ -579,26 +689,10 @@ function fmt(v: number | null | undefined): string {
   touch-action: none;
 }
 
-.atom-inspector__resizer.is-right {
-  right: 0;
-  top: 0;
-  bottom: 0;
-  width: 8px;
-  cursor: col-resize;
-}
-
 .atom-inspector__resizer.is-bottom {
   left: 0;
   right: 0;
   top: 0;
-  height: 8px;
-  cursor: row-resize;
-}
-
-.atom-inspector__resizer.is-bottom-edge {
-  left: 0;
-  right: 0;
-  bottom: 0;
   height: 8px;
   cursor: row-resize;
 }
@@ -668,23 +762,8 @@ function fmt(v: number | null | undefined): string {
   padding-right: 4px;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(120, 120, 120, 0.35) transparent;
-}
-
-.atom-inspector__list::-webkit-scrollbar {
-  width: 8px;
-}
-
-.atom-inspector__list::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.atom-inspector__list::-webkit-scrollbar-thumb {
-  background-color: rgba(120, 120, 120, 0.35);
-  border-radius: 999px;
-  border: 2px solid transparent;
-  background-clip: padding-box;
+  touch-action: pan-y;
+  scrollbar-gutter: stable;
 }
 
 .atom-inspector__footer {

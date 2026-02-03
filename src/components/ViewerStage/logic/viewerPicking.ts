@@ -8,6 +8,8 @@ import { normalizeViewPresets } from '../../../lib/viewer/viewPresets';
 import { MANUAL_ROTATION_SYNC_INTERVAL_MS } from '../../../lib/viewer/constants';
 import type { Atom } from '../../../lib/structure/types';
 import type { AnyCamera } from '../../../lib/three/camera';
+import { makeTextLabel } from '../../../lib/three/labels2d';
+import type { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 
 import type { ThreeStage } from '../../../lib/three/stage';
 import type { ModelRuntime } from '../modelRuntime';
@@ -51,6 +53,12 @@ export function createViewerPickingController(deps: RenderDeps) {
   // selection visuals (reused meshes for highlight/measure lines).
   // 选中高亮与测量线共用几何体，避免频繁创建对象。
   let selectionGroup: THREE.Group | null = null;
+  // 选中编号标签组
+  // Selection index label group.
+  let labelGroup: THREE.Group | null = null;
+  // 选中编号标签缓存
+  // Selection index label cache.
+  const labelNodes: Array<CSS2DObject | null> = [];
   let markerMesh: THREE.InstancedMesh | null = null;
   let markerCapacity = 0;
   let markerGeometry: THREE.SphereGeometry | null = null;
@@ -138,6 +146,11 @@ export function createViewerPickingController(deps: RenderDeps) {
     selectionGroup.name = 'atom-selection';
     stage.modelGroup.add(selectionGroup);
 
+    labelGroup = new THREE.Group();
+    labelGroup.name = 'atom-selection-labels';
+    labelGroup.visible = false;
+    selectionGroup.add(labelGroup);
+
     markerGeometry = new THREE.SphereGeometry(1, 18, 18);
     markerMaterial = new THREE.MeshBasicMaterial({
       color: new THREE.Color(0xffd400),
@@ -194,6 +207,22 @@ export function createViewerPickingController(deps: RenderDeps) {
     selectionGroup.add(fillMesh);
   }
 
+  function ensureSelectionLabel(idx: number, text: string): CSS2DObject {
+    // 确保选中编号标签存在并同步文本
+    // Ensure selection index label exists and syncs text.
+    let label = labelNodes[idx] ?? null;
+    if (!label) {
+      label = makeTextLabel(text, 'atom-selection-label');
+      labelNodes[idx] = label;
+      labelGroup?.add(label);
+    }
+    else {
+      const el = label.element as HTMLElement | undefined;
+      if (el && el.textContent !== text) el.textContent = text;
+    }
+    return label;
+  }
+
   function updateSelectionVisuals(): void {
     const stage = deps.getStage();
     if (!stage) return;
@@ -220,12 +249,16 @@ export function createViewerPickingController(deps: RenderDeps) {
     markerMesh.visible = false;
     lineMesh.visible = false;
     fillMesh.visible = false;
+    if (labelGroup) labelGroup.visible = false;
 
     if (sel.length === 0 || selectionVisuals.length === 0) {
       markerMesh.count = 0;
       markerMesh.instanceMatrix.needsUpdate = true;
       lineMesh.count = 0;
       lineMesh.instanceMatrix.needsUpdate = true;
+      for (const label of labelNodes) {
+        if (label) label.visible = false;
+      }
       requestRedraw();
       return;
     }
@@ -252,7 +285,11 @@ export function createViewerPickingController(deps: RenderDeps) {
 
     for (let i = 0; i < count; i += 1) {
       const v = selectionVisuals[i];
-      if (!v) continue;
+      if (!v) {
+        const label = labelNodes[i];
+        if (label) label.visible = false;
+        continue;
+      }
 
       v.mesh.getMatrixAt(v.instanceId, tmpMat);
       tmpPos.setFromMatrixPosition(tmpMat);
@@ -276,10 +313,20 @@ export function createViewerPickingController(deps: RenderDeps) {
       visibleCount += 1;
 
       pts.push(tmpPos.clone());
+
+      const label = ensureSelectionLabel(i, String(i + 1));
+      const labelOffset = Math.max(0.05, r * 1.6);
+      label.position.set(tmpPos.x, tmpPos.y + labelOffset, tmpPos.z);
+      label.visible = true;
     }
     markerMesh.count = visibleCount;
     markerMesh.visible = visibleCount > 0;
     markerMesh.instanceMatrix.needsUpdate = true;
+    if (labelGroup) labelGroup.visible = visibleCount > 0;
+    for (let i = count; i < labelNodes.length; i += 1) {
+      const label = labelNodes[i];
+      if (label) label.visible = false;
+    }
 
     const runtime = deps.getRuntime();
     const display = runtime?.activeDisplaySettings?.value;

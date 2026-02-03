@@ -380,6 +380,21 @@ function showThemeMismatchConfirm(preferred: 'light' | 'dark'): void {
     z-index: 30;
 }
 
+.atom-selection-label {
+    transform: translate(-50%, -100%);
+    padding: 1px 5px;
+    border-radius: 10px;
+    font-size: 11px;
+    line-height: 1.2;
+    font-weight: 600;
+    color: #fff;
+    background: rgba(0, 0, 0, 0.65);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    white-space: nowrap;
+    pointer-events: none;
+    user-select: none;
+}
+
 /* 无模型：左上角项目名 */
 
 /* While resizing overlay panels, suppress browser pull-to-refresh / overscroll */

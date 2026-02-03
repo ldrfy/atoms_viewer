@@ -76,6 +76,13 @@
         box-shadow 200ms ease;
 }
 
+/* 移动端拖拽调高时禁用几何过渡，防止手势跟手发黏。 */
+/* Disable geometry transition during mobile resize drag so the panel follows finger smoothly. */
+.settings-drawer.settings-sheet.settings-sheet-resizing {
+    transition: none;
+    will-change: height;
+}
+
 /* Apply blur surface to:
    - Desktop fixed panel
    - Mobile Teleport bottom sheet panel */
@@ -106,6 +113,31 @@
     display: flex;
     flex-direction: column;
     -webkit-overflow-scrolling: touch;
+    contain: layout paint;
+}
+
+.settings-sheet-drag-shell {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    pointer-events: none;
+}
+
+.settings-sheet-drag-shell__grab {
+    padding: 10px 0 6px;
+    display: flex;
+    justify-content: center;
+}
+
+.settings-content.settings-content--suspended {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    visibility: hidden;
+    pointer-events: none;
+    content-visibility: hidden;
 }
 
 /* Mobile sheet open/close motion */
@@ -225,6 +257,17 @@
     left: 0;
     width: 10px;
     cursor: ew-resize;
+    touch-action: none;
+}
+
+.settings-sheet-resizer {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: -6px;
+    height: 28px;
+    z-index: 3;
+    cursor: row-resize;
     touch-action: none;
 }
 

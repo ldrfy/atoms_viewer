@@ -1,7 +1,9 @@
 # Project Memory (Codex)
 
 ## Project Context
-- 
+- antdv-next
+- vue
+- vite
 
 ## Commands
 - dev:

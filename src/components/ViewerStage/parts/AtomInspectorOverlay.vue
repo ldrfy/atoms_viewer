@@ -23,6 +23,7 @@
       <div
         v-show="visible && !collapsed"
         class="atom-inspector-panel"
+        :class="{ 'atom-inspector-panel--resizing': isResizing }"
         :style="panelStyle"
       >
         <!-- Resize handle -->
@@ -34,7 +35,10 @@
           @pointerdown.prevent="onResizeStart('mobile', $event)"
         />
 
-        <div class="atom-inspector-panel__inner">
+        <div
+          class="atom-inspector-panel__inner"
+          :class="{ 'atom-inspector-panel__inner--suspended': isResizing }"
+        >
           <!-- Header (glass title bar) -->
           <div class="atom-inspector__header">
             <!-- Mobile only: grab handle (same UX as SettingsSider settings-grab) -->
@@ -162,6 +166,13 @@
                 </a-typography-text>
               </div>
             </div>
+          </div>
+        </div>
+        <!-- 交互期轻量壳层：完全冻结内容显示但保留组件状态。 -->
+        <!-- Lightweight shell during interaction: freeze visual content while preserving component state. -->
+        <div v-if="isResizing" class="atom-inspector-drag-shell">
+          <div class="atom-inspector-drag-shell__grab">
+            <div class="atom-inspector__grab-bar" />
           </div>
         </div>
       </div>
@@ -301,6 +312,14 @@ let startY = 0;
 let startW = 0;
 let startH = 0;
 let resizeMode: 'width' | 'height' | 'mobile' = 'width';
+// 交互期冻结重内容渲染，降低大列表拖拽卡顿。
+// Freeze heavy content during resize interaction to reduce jank with large selected lists.
+const isResizing = ref(false);
+// 拖拽过程中只记录脏标记，结束后再一次性持久化，避免频繁 localStorage 写入。
+// During drag, mark dirty only and persist once on release to avoid frequent localStorage writes.
+let desktopWidthDirty = false;
+let desktopHeightDirty = false;
+let mobileHeightDirty = false;
 const resizeDrag = createPointerDragWithPullToRefreshBlock({
   shouldBlockPullToRefresh: () => placement.value === 'bottom',
   onStart: (e) => {
@@ -317,6 +336,7 @@ const resizeDrag = createPointerDragWithPullToRefreshBlock({
     startY = e.clientY;
     startW = desktopWidth.value;
     startH = resizeMode === 'mobile' ? mobileHeight.value : desktopHeight.value;
+    isResizing.value = true;
   },
   onMove: (e) => {
     // Keep pointermove passive to avoid browser warnings.
@@ -327,22 +347,39 @@ const resizeDrag = createPointerDragWithPullToRefreshBlock({
         const topPx = Math.max(12, Math.floor(window.innerHeight * 0.18));
         const maxH = Math.max(220, window.innerHeight - topPx - 12);
         desktopHeight.value = clampNumber(startH + dy, 220, maxH);
-        saveNumber('atomInspector.desktopHeight', desktopHeight.value);
+        desktopHeightDirty = true;
       }
       else {
         // drag handle on right edge: dragging right increases width
         const dx = e.clientX - startX;
         const maxW = Math.floor(window.innerWidth * 0.7);
         desktopWidth.value = clampNumber(startW + dx, 320, Math.max(320, maxW));
-        saveNumber('atomInspector.desktopWidth', desktopWidth.value);
+        desktopWidthDirty = true;
       }
     }
     else {
       // bottom panel: dragging up increases height
+      // 移动端最大高度与设置面板保持一致（80vh）。
+      // Keep mobile max height aligned with Settings panel (80vh).
       const dy = startY - e.clientY;
-      const maxH = Math.floor(window.innerHeight * 0.7);
+      const maxH = Math.floor(window.innerHeight * 0.8);
       mobileHeight.value = clampNumber(startH + dy, 200, Math.max(200, maxH));
+      mobileHeightDirty = true;
+    }
+  },
+  onEnd: () => {
+    isResizing.value = false;
+    if (desktopWidthDirty) {
+      saveNumber('atomInspector.desktopWidth', desktopWidth.value);
+      desktopWidthDirty = false;
+    }
+    if (desktopHeightDirty) {
+      saveNumber('atomInspector.desktopHeight', desktopHeight.value);
+      desktopHeightDirty = false;
+    }
+    if (mobileHeightDirty) {
       saveNumber('atomInspector.mobileHeight', mobileHeight.value);
+      mobileHeightDirty = false;
     }
   },
 });
@@ -354,6 +391,7 @@ function onResizeStart(mode: 'width' | 'height' | 'mobile', e: PointerEvent) {
 
 function onResizeEnd() {
   resizeDrag.stop();
+  isResizing.value = false;
 }
 onBeforeUnmount(() => onResizeEnd());
 
@@ -409,6 +447,7 @@ function fmt(v: number | null | undefined): string {
 }
 
 .atom-inspector-panel {
+  position: relative;
   background: var(--atom-inspector-bg);
   backdrop-filter: blur(var(--atom-inspector-blur));
   -webkit-backdrop-filter: blur(var(--atom-inspector-blur));
@@ -418,6 +457,11 @@ function fmt(v: number | null | undefined): string {
   display: flex;
   flex-direction: column;
   pointer-events: auto;
+}
+
+.atom-inspector-panel.atom-inspector-panel--resizing {
+  transition: none;
+  will-change: width, height;
 }
 
 .atom-inspector-panel.is-bottom {
@@ -431,6 +475,25 @@ function fmt(v: number | null | undefined): string {
   display: flex;
   flex-direction: column;
   min-height: 0;
+}
+
+.atom-inspector-panel__inner.atom-inspector-panel__inner--suspended {
+  visibility: hidden;
+  pointer-events: none;
+  content-visibility: hidden;
+}
+
+.atom-inspector-drag-shell {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  display: flex;
+  justify-content: center;
+}
+
+.atom-inspector-drag-shell__grab {
+  padding-top: 10px;
 }
 
 /* Mini collapsed handle (also glass) */
@@ -582,6 +645,7 @@ function fmt(v: number | null | undefined): string {
   font-size: 12px;
   flex: 1;
   min-height: 0;
+  position: relative;
   display: flex;
   flex-direction: column;
 }

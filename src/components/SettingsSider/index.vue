@@ -19,9 +19,19 @@
     >
       <div
         v-show="openModel"
+        ref="panelElRef"
         :class="panelClassName"
         :style="panelStyle"
       >
+        <!-- 移动端顶部热区：优先捕获下拉手势，避免误触浏览器下拉刷新。 -->
+        <!-- Mobile top hotzone: capture resize pull first to avoid accidental browser pull-to-refresh. -->
+        <div
+          v-if="drawerPlacement === 'bottom'"
+          class="settings-sheet-resizer"
+          role="separator"
+          aria-label="resize"
+          @pointerdown.prevent="onResizeStart"
+        />
         <div
           v-if="drawerPlacement === 'right'"
           class="settings-resizer"
@@ -29,9 +39,19 @@
           aria-label="resize"
           @pointerdown.prevent="onDesktopResizeStart"
         />
+        <!-- 移动端拖拽过程中显示轻量壳层，但不卸载真实内容，避免状态/滚动位置丢失。 -->
+        <!-- Show a lightweight shell while resizing on mobile, but keep real content mounted to preserve state/scroll. -->
+        <div v-if="drawerPlacement === 'bottom' && isMobileResizing" class="settings-sheet-drag-shell">
+          <div class="settings-sheet-drag-shell__grab">
+            <div class="settings-grab-bar" />
+          </div>
+        </div>
         <SettingsContent
           v-model:active-key="activeKeyModel"
           :show-grab="drawerPlacement === 'bottom'"
+          :class="{
+            'settings-content--suspended': drawerPlacement === 'bottom' && isMobileResizing,
+          }"
           @close="onCloseClick"
           @resize-start="onResizeStart"
         />
@@ -280,6 +300,29 @@ function onPanelAfterLeave(): void {
 let startY = 0;
 let startH = 0;
 let mobileHeightDirty = false;
+// 移动端是否正在拖拽调高，拖拽中关闭过渡动画避免“卡顿感”。
+// Whether mobile height resize is active; disable transitions while dragging to avoid jank.
+const isMobileResizing = ref(false);
+// 面板根节点：拖拽时直接写入内联高度，绕过频繁响应式重算。
+// Panel root element: write inline height during drag to bypass frequent reactive recalculation.
+const panelElRef = ref<HTMLElement | null>(null);
+// 拖拽预览高度（仅用于拖拽过程中的临时渲染）。
+// Preview height used only during drag rendering.
+let mobilePreviewHeight: number | null = null;
+let mobileResizeRafId: number | null = null;
+
+function flushMobilePreviewHeight(): void {
+  if (!panelElRef.value || mobilePreviewHeight == null) return;
+  panelElRef.value.style.height = `${mobilePreviewHeight}px`;
+}
+
+function scheduleMobilePreviewHeight(): void {
+  if (mobileResizeRafId != null) return;
+  mobileResizeRafId = window.requestAnimationFrame(() => {
+    mobileResizeRafId = null;
+    flushMobilePreviewHeight();
+  });
+}
 let desktopStartX = 0;
 let desktopStartW = 0;
 const mobileResizeDrag = createPointerDragWithPullToRefreshBlock({
@@ -296,16 +339,30 @@ const mobileResizeDrag = createPointerDragWithPullToRefreshBlock({
 
     startY = e.clientY;
     startH = mobileHeight.value;
+    mobilePreviewHeight = startH;
+    flushMobilePreviewHeight();
+    isMobileResizing.value = true;
   },
   onMove: (e) => {
     // Keep pointermove passive to avoid browser warnings.
     // 保持 pointermove 被动监听，避免浏览器警告。
     const dy = startY - e.clientY;
     const maxH = Math.floor(window.innerHeight * 0.8);
-    mobileHeight.value = clampNumber(startH + dy, 260, maxH);
+    mobilePreviewHeight = clampNumber(startH + dy, 260, maxH);
+    scheduleMobilePreviewHeight();
     mobileHeightDirty = true;
   },
   onEnd: () => {
+    isMobileResizing.value = false;
+    if (mobileResizeRafId != null) {
+      window.cancelAnimationFrame(mobileResizeRafId);
+      mobileResizeRafId = null;
+    }
+    if (mobilePreviewHeight != null) {
+      mobileHeight.value = mobilePreviewHeight;
+      mobilePreviewHeight = null;
+    }
+    if (panelElRef.value) panelElRef.value.style.height = '';
     // Persist once on release to avoid synchronous storage writes on every move.
     if (mobileHeightDirty) {
       saveNumber('settingsDrawer.mobileHeight', mobileHeight.value);
@@ -343,6 +400,13 @@ function onResizeStart(e: PointerEvent): void {
 
 function onResizeEnd(): void {
   mobileResizeDrag.stop();
+  isMobileResizing.value = false;
+  if (mobileResizeRafId != null) {
+    window.cancelAnimationFrame(mobileResizeRafId);
+    mobileResizeRafId = null;
+  }
+  mobilePreviewHeight = null;
+  if (panelElRef.value) panelElRef.value.style.height = '';
 }
 
 function onClearStorage(): void {
@@ -418,12 +482,17 @@ const mobileSheetStyle = computed(() => {
   const top = freezeTopPx.value != null
     ? freezeTopPx.value
     : Math.max(0, vh - mobileHeight.value);
+  // 拖拽过程中尽量只改 height（固定 bottom），减少复杂内容导致的重排卡顿。
+  // During drag, prefer changing height only (keep bottom fixed) to reduce reflow jank with heavy content.
+  const isResizing = isMobileResizing.value;
   return {
     position: 'fixed',
     zIndex: 1000,
     left: 0,
     right: 0,
-    top: `${top}px`,
+    ...(freezeTopPx.value != null && !isResizing
+      ? { top: `${top}px`, bottom: 'auto' }
+      : { top: 'auto', bottom: 0 }),
     height: `${mobileHeight.value}px`,
     borderRadius: '14px 14px 0 0',
     overflow: 'hidden',
@@ -438,8 +507,9 @@ const panelStyle = computed(() => {
 });
 
 const panelClassName = computed(() => {
+  const resizingClass = isMobileResizing.value ? 'settings-sheet-resizing' : '';
   return drawerPlacement.value === 'bottom'
-    ? 'settings-drawer settings-sheet settings-drawer--bottom'
+    ? `settings-drawer settings-sheet ${resizingClass}`.trim()
     : 'settings-drawer settings-sider-fixed';
 });
 

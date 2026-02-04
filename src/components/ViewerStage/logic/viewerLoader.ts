@@ -214,8 +214,6 @@ export function createViewerLoader(deps: {
     const runtime = deps.getRuntime();
     if (!stage || !runtime) return null;
 
-    if (reason === 'load') deps.inspectCtx.clear();
-
     const forcedName = toForcedFilename(fileName, parseMode.value);
 
     const model = parseStructure(text, forcedName, {
@@ -325,7 +323,6 @@ export function createViewerLoader(deps: {
 
     try {
       deps.stopPlay();
-      deps.inspectCtx.clear();
       renderFromText(lastRawText, lastRawFileName, 'reparse');
     }
     catch (err) {
@@ -341,8 +338,6 @@ export function createViewerLoader(deps: {
     if (!stage || !runtime) return;
     if (!deps.hasModel.value) return;
     if (!runtime.hasAnyTypeId()) return;
-
-    deps.inspectCtx.clear();
 
     const tStart = performance.now();
     if (!deps.isLoading.value) {
@@ -585,7 +580,6 @@ export function createViewerLoader(deps: {
 
     try {
       deps.stopPlay();
-      deps.inspectCtx.clear();
       const storedSizeMap = readSessionCacheSizeMap();
 
       let okCount = 0;
@@ -694,7 +688,6 @@ export function createViewerLoader(deps: {
 
     try {
       deps.stopPlay();
-      deps.inspectCtx.clear();
       const storedSizeMap = readSessionCacheSizeMap();
 
       let okCount = 0;

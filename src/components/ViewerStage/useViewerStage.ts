@@ -1229,7 +1229,6 @@ export function useViewerStage(
         return;
       }
 
-      inspectCtx.clear();
       runtime.clearModel();
       layerSourceStore.clear();
 
@@ -1367,12 +1366,11 @@ export function useViewerStage(
 
   function setLayerVisible(id: string, visible: boolean): void {
     if (!runtime) return;
-    const wasActive = runtime.activeLayerId.value === id;
     // Keep active selection when hiding a layer, if enabled.
     // 若启用，则隐藏图层时保留选中状态。
     const keepActiveOnHide = settingsRef.value.other.keepActiveLayerOnHide ?? false;
     runtime.setLayerVisible(id, visible);
-    if (!visible && wasActive && keepActiveOnHide) {
+    if (!visible && keepActiveOnHide) {
       runtime.setActiveLayer(id);
     }
     runtimeTick.value += 1;
@@ -1487,7 +1485,6 @@ export function useViewerStage(
     if (!runtime) return;
     runtime.resetAllLayersTypeMapToDefaults(opts);
     syncUiFromRuntime();
-    inspectCtx.clear();
     scheduleSessionSave('layers');
     // 立即持久化 LAMMPS 默认映射恢复。
     // Persist LAMMPS default mapping reset immediately.
@@ -1498,7 +1495,6 @@ export function useViewerStage(
     if (!runtime) return;
     runtime.applyTypeMapToAllLayers(map);
     syncUiFromRuntime();
-    inspectCtx.clear();
     scheduleSessionSave('layers');
     // 立即持久化批量映射应用结果。
     // Persist bulk mapping application immediately.
@@ -1509,7 +1505,6 @@ export function useViewerStage(
     if (!runtime) return;
     runtime.applyTypeMapToVisibleLayers(map);
     syncUiFromRuntime();
-    inspectCtx.clear();
     scheduleSessionSave('layers');
     void persistSessionSnapshot();
   }
@@ -1560,7 +1555,13 @@ export function useViewerStage(
 
   function removeLayer(id: string): void {
     if (!runtime) return;
-    inspectCtx.clear();
+    // 删除图层时仅移除该图层的选中项。
+    // When removing a layer, drop only selections from that layer.
+    const nextSelected = inspectCtx.selected.value.filter(item => item.layerId !== id);
+    if (nextSelected.length !== inspectCtx.selected.value.length) {
+      inspectCtx.selected.value = nextSelected;
+      picking.rebuildSelectionVisualsFromSelected();
+    }
     runtime.removeLayer(id);
     layerSourceStore.delete(id);
     syncUiFromRuntime();

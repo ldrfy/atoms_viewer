@@ -132,9 +132,9 @@
                     class="atom-item"
                   >
                     <a-row :gutter="16" align="middle">
-                      <a-col />
                       <a-col>
                         <a-checkbox
+                          style="margin-left: 8px;"
                           :checked="isItemChecked(item)"
                           @change="onItemChecked(item, $event.target.checked)"
                         />
@@ -154,7 +154,7 @@
                                 {{ item.element }}
                               </a-typography-text>
                               <a-typography-text type="secondary">
-                                {{ t('viewer.inspect.atomIndex') }}={{ item.atomIndex + 1 }}
+                                {{ item.atomIndex + 1 }}
                               </a-typography-text>
                             </a-space>
                             <a-typography-text>

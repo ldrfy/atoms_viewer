@@ -10,6 +10,7 @@
         <a-button
           size="small"
           type="text"
+          class="btn-icon"
           :aria-label="t('viewer.pan.up')"
           :title="t('viewer.pan.up')"
           @click="handlePan('up')"
@@ -19,6 +20,7 @@
         <span />
         <a-button
           size="small"
+          class="btn-icon"
           type="text"
           :aria-label="t('viewer.pan.left')"
           :title="t('viewer.pan.left')"
@@ -28,6 +30,7 @@
         </a-button>
         <a-button
           size="small"
+          class="btn-icon"
           type="text"
           :aria-label="isPanned ? t('viewer.pan.center') + '（已平移）' : t('viewer.pan.center')"
           :title="isPanned ? t('viewer.pan.center') + '（已平移）' : t('viewer.pan.center')"
@@ -37,6 +40,7 @@
         </a-button>
         <a-button
           size="small"
+          class="btn-icon"
           type="text"
           :aria-label="t('viewer.pan.right')"
           :title="t('viewer.pan.right')"
@@ -47,6 +51,7 @@
         <span />
         <a-button
           size="small"
+          class="btn-icon"
           type="text"
           :aria-label="t('viewer.pan.down')"
           :title="t('viewer.pan.down')"

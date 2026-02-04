@@ -161,14 +161,10 @@ watch(
 
 /* 把手按钮 */
 .parse-handle {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
     width: 20px;
     height: 20px;
     padding: 0;
-    font-size: 12px;
-    line-height: 1;
+    font-size: 13px;
 }
 
 /* Popover 容器的宽度控制：桌面固定，手机不溢出 */

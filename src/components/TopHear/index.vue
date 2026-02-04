@@ -21,7 +21,7 @@
           <a-dropdown :trigger="['click']" placement="bottomLeft" :menu="localeMenu">
             <a-button
               type="text"
-              class="btn-icon"
+              class="btn-icon btn-icon-top"
               aria-label="language"
               :title="t('viewer.locale.title')"
             >
@@ -32,7 +32,7 @@
           <!-- GitHub -->
           <a-button
             type="text"
-            class="btn-icon"
+            class="btn-icon btn-icon-top"
             aria-label="github"
             :title="t('viewer.links.github')"
             @click="openGithub"
@@ -43,7 +43,7 @@
           <!-- 文档 -->
           <a-button
             type="text"
-            class="btn-icon"
+            class="btn-icon btn-icon-top"
             aria-label="docs"
             :title="t('viewer.links.docs')"
             @click="openDocs"
@@ -54,7 +54,7 @@
           <!-- 设置 -->
           <a-button
             type="text"
-            class="btn-icon"
+            class="btn-icon btn-icon-top"
             aria-label="settings"
             :title="t('settings.title')"
             @click="emit('open-settings')"
@@ -83,8 +83,7 @@
       class="tophear-drawer"
       placement="top"
       size="default"
-      :content-wrapper-style="drawerContentStyle"
-      :body-style="drawerBodyStyle"
+      :styles="{ wrapper: drawerContentStyle, body: drawerBodyStyle }"
       :open="mobileOpen"
       :closable="false"
       @close="closeDrawer"
@@ -313,7 +312,7 @@ function onClickBrand(): void {
     font-size: 20px;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 12px;
     padding: 0 8px;
 }
 
@@ -418,5 +417,9 @@ function onClickBrand(): void {
 .tophear-drawer .ant-drawer-body {
     max-height: calc(100vh - 24px);
     overflow: auto;
+}
+
+.btn-icon-top{
+    font-size: 20px;
 }
 </style>

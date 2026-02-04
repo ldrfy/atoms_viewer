@@ -31,9 +31,8 @@ body {
 }
 
 /* 只显示icon的ant-btn模仿vitepress效果 */
-.ant-btn.btn-icon {
-    font-size: 20px;
-
+/* 配合  type="text" */
+.btn-icon {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -41,11 +40,19 @@ body {
     line-height: 1;
 }
 
-.ant-btn.btn-icon:hover {
-    background-color: var(--ant-control-item-bg-hover);
+.btn-icon.ant-btn-text:hover,
+.btn-icon.ant-btn-text:focus,
+.btn-icon.ant-btn-text:focus-visible,
+.btn-icon.ant-btn-text:active,
+.btn-icon.ant-btn-text:not(:disabled):hover,
+.btn-icon.ant-btn-text:not(:disabled):active,
+.btn-icon.ant-btn-text:not(:disabled):focus,
+.btn-icon.ant-btn-text:not(:disabled):focus-visible {
+    background-color: transparent !important;
+    box-shadow: none !important;
 }
 
-.ant-btn.btn-icon .anticon {
+.btn-icon .anticon {
     opacity: 0.7;
     transition: opacity 0.15s ease, color 0.15s ease;
 
@@ -56,7 +63,7 @@ body {
     /* override Ant icon baseline shift */
 }
 
-.ant-btn.btn-icon:hover .anticon {
+.btn-icon:hover .anticon {
     opacity: 1;
     color: var(--ant-color-text);
 }

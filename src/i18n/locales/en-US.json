@@ -122,7 +122,6 @@
       "deleteSelected": "Delete selected",
       "deleteHint": "Long press a selected atom in the view to delete it.",
       "hint": "Click an atom to inspect; enable measure mode to accumulate selections (up to 3).",
-      "atomIndex": "Index",
       "distance": "Distance",
       "angle": "Angle",
       "orderHint": "Computed in selection order: ∠(1–2–3) with point 2 as the vertex."

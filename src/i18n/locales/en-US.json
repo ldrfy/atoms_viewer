@@ -327,8 +327,12 @@
       "other": {
         "refreshBondsOnPlayLabel": "Bond refresh",
         "refreshBondsOnPlay": "Refresh bonds each frame while playing",
+        "refreshBondsOnPlayOn": "Refresh bonds every frame while playing (slower).",
+        "refreshBondsOnPlayOff": "Keep current bonds while playing (faster).",
         "keepActiveLayerOnHideLabel": "Selection",
         "keepActiveLayerOnHide": "Keep atom selection when hiding a layer",
+        "keepActiveLayerOnHideOn": "Keep selection highlight when a layer is hidden.",
+        "keepActiveLayerOnHideOff": "Hiding a layer only hides its selection display.",
         "header": "Other",
         "axes": "Axes",
         "recordFps": "Recording FPS",

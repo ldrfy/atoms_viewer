@@ -129,23 +129,7 @@
         </a-col>
       </a-row>
       <a-typography-text type="secondary" class="settings-text-secondary">
-        {{ t('settings.panel.other.refreshBondsOnPlay') }}
-      </a-typography-text>
-    </a-form-item>
-
-    <a-form-item>
-      <a-row justify="space-between" align="middle">
-        <a-col>{{ t('settings.panel.other.keepActiveLayerOnHideLabel') }}</a-col>
-        <a-col>
-          <a-switch
-            v-model:checked="keepActiveLayerOnHideModel"
-            :aria-label="t('settings.panel.other.keepActiveLayerOnHide')"
-            :title="t('settings.panel.other.keepActiveLayerOnHide')"
-          />
-        </a-col>
-      </a-row>
-      <a-typography-text type="secondary" class="settings-text-secondary">
-        {{ t('settings.panel.other.keepActiveLayerOnHide') }}
+        {{ refreshBondsOnPlayHint }}
       </a-typography-text>
     </a-form-item>
 
@@ -174,7 +158,6 @@
               size="small"
               show-text
               disabled-alpha
-
               :value="colorPickerValue(selectionHighlightColorModel)"
               @change="(value: unknown, css: unknown) => onSelectionColorPickerChange(resolveColorCssString(value, css))"
             />
@@ -184,6 +167,22 @@
       </a-row>
       <a-typography-text type="secondary" class="settings-text-secondary">
         {{ t('settings.panel.other.selectionColorHint') }}
+      </a-typography-text>
+    </a-form-item>
+
+    <a-form-item>
+      <a-row justify="space-between" align="middle">
+        <a-col>{{ t('settings.panel.other.keepActiveLayerOnHideLabel') }}</a-col>
+        <a-col>
+          <a-switch
+            v-model:checked="keepActiveLayerOnHideModel"
+            :aria-label="t('settings.panel.other.keepActiveLayerOnHide')"
+            :title="t('settings.panel.other.keepActiveLayerOnHide')"
+          />
+        </a-col>
+      </a-row>
+      <a-typography-text type="secondary" class="settings-text-secondary">
+        {{ keepActiveLayerOnHideHint }}
       </a-typography-text>
     </a-form-item>
 
@@ -249,12 +248,28 @@ const refreshBondsOnPlayModel = computed({
   set: (v: boolean) => patchSettings({ other: { refreshBondsOnPlay: v } }),
 });
 
+// 播放时原子连接提示文案（按开关状态）。
+// Hint for bond refresh based on toggle state.
+const refreshBondsOnPlayHint = computed(() =>
+  refreshBondsOnPlayModel.value
+    ? t('settings.panel.other.refreshBondsOnPlayOn')
+    : t('settings.panel.other.refreshBondsOnPlayOff'),
+);
+
 // Keep active selection when hiding a layer.
 // 隐藏图层时保留选中状态。
 const keepActiveLayerOnHideModel = computed({
   get: () => settings.value.other.keepActiveLayerOnHide ?? false,
   set: (v: boolean) => patchSettings({ other: { keepActiveLayerOnHide: v } }),
 });
+
+// 隐藏图层选中提示文案（按开关状态）。
+// Hint for selection persistence based on toggle state.
+const keepActiveLayerOnHideHint = computed(() =>
+  keepActiveLayerOnHideModel.value
+    ? t('settings.panel.other.keepActiveLayerOnHideOn')
+    : t('settings.panel.other.keepActiveLayerOnHideOff'),
+);
 
 const panStepScaleModel = computed({
   get: () => settings.value.other.panStepScale ?? DEFAULT_SETTINGS.other.panStepScale,

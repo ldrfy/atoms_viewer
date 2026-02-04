@@ -81,7 +81,7 @@ import {
   SwapOutlined,
   SyncOutlined,
 } from '@antdv-next/icons';
-import { Button, Modal, Popconfirm, Tooltip, TypographyText, type CollapseProps } from 'antdv-next';
+import { Badge, Button, Modal, Popconfirm, Tooltip, TypographyText, type CollapseProps } from 'antdv-next';
 
 import FilesPanel from './panels/FilesPanel.vue';
 import LayersPanel from './panels/LayersPanel.vue';
@@ -183,91 +183,106 @@ onBeforeUnmount(() => {
   window.removeEventListener('atoms-viewer:session-saved', onSessionSaved);
 });
 
-const filesDirty = computed(() => {
+// 文件面板修改计数。
+// Dirty count for Files panel.
+const filesDirtyCount = computed(() => {
   const exportScale = settings.value.files.exportPngScale ?? DEFAULT_SETTINGS.files.exportPngScale;
   const exportTransparent = settings.value.files.exportPngTransparent ?? DEFAULT_SETTINGS.files.exportPngTransparent;
   const exportImageFormat = settings.value.files.exportImageFormat ?? DEFAULT_SETTINGS.files.exportImageFormat;
   const cacheRemoteOnExport = settings.value.files.cacheRemoteOnExport ?? DEFAULT_SETTINGS.files.cacheRemoteOnExport;
-  return (
-    exportScale !== DEFAULT_SETTINGS.files.exportPngScale
-    || exportTransparent !== DEFAULT_SETTINGS.files.exportPngTransparent
-    || exportImageFormat !== DEFAULT_SETTINGS.files.exportImageFormat
-    || cacheRemoteOnExport !== DEFAULT_SETTINGS.files.cacheRemoteOnExport
-  );
+  let count = 0;
+  if (exportScale !== DEFAULT_SETTINGS.files.exportPngScale) count += 1;
+  if (exportTransparent !== DEFAULT_SETTINGS.files.exportPngTransparent) count += 1;
+  if (exportImageFormat !== DEFAULT_SETTINGS.files.exportImageFormat) count += 1;
+  if (cacheRemoteOnExport !== DEFAULT_SETTINGS.files.cacheRemoteOnExport) count += 1;
+  return count;
 });
-const layersDirty = computed(() => (viewerApi.value?.layers.value.length ?? 0) > 1);
+// 图层面板修改计数（额外图层数）。
+// Dirty count for Layers panel (extra layers).
+const layersDirtyCount = computed(() => {
+  const count = (viewerApi.value?.layers.value.length ?? 0) - 1;
+  return Math.max(0, count);
+});
 
-const detailsDirty = computed(() => {
+// 细节面板修改计数。
+// Dirty count for Details panel.
+const detailsDirtyCount = computed(() => {
   const cur = viewerApi.value?.activeLayerDisplay?.value ?? DEFAULT_DETAILS;
   const styleBase = getVisualStylePreset(
     settings.value.other.visualStyle ?? DEFAULT_SETTINGS.other.visualStyle,
   ).display;
-  return (
-    cur.representation !== DEFAULT_DETAILS.representation
-    || cur.atomScale !== styleBase.atomScale
-    || cur.showBonds !== DEFAULT_DETAILS.showBonds
-    || cur.sphereSegments !== DEFAULT_DETAILS.sphereSegments
-    || cur.bondFactor !== styleBase.bondFactor
-    || cur.bondRadius !== styleBase.bondRadius
-    || cur.atomRoughness !== styleBase.atomRoughness
-  );
+  let count = 0;
+  if (cur.representation !== DEFAULT_DETAILS.representation) count += 1;
+  if (cur.atomScale !== styleBase.atomScale) count += 1;
+  if (cur.showBonds !== DEFAULT_DETAILS.showBonds) count += 1;
+  if (cur.sphereSegments !== DEFAULT_DETAILS.sphereSegments) count += 1;
+  if (cur.bondFactor !== styleBase.bondFactor) count += 1;
+  if (cur.bondRadius !== styleBase.bondRadius) count += 1;
+  if (cur.atomRoughness !== styleBase.atomRoughness) count += 1;
+  return count;
 });
 
-const viewDirty = computed(() => {
+// 视角面板修改计数。
+// Dirty count for View panel.
+const viewDirtyCount = computed(() => {
   const defaultDistance = Number.isFinite(settings.value.view.initialDualViewDistance)
     ? (settings.value.view.initialDualViewDistance as number)
     : DEFAULT_SETTINGS.view.dualViewDistance;
-  return (
-    settings.value.view.orthographic !== DEFAULT_SETTINGS.view.orthographic
-    || !arraysEqual(settings.value.view.viewPresets, DEFAULT_SETTINGS.view.viewPresets)
-    || settings.value.view.dualViewSplit !== DEFAULT_SETTINGS.view.dualViewSplit
-    || (settings.value.view.dualViewDistance ?? defaultDistance) !== defaultDistance
-    || settings.value.view.rotationDeg.x !== 0
-    || settings.value.view.rotationDeg.y !== 0
-    || settings.value.view.rotationDeg.z !== 0
-  );
+  let count = 0;
+  if (settings.value.view.orthographic !== DEFAULT_SETTINGS.view.orthographic) count += 1;
+  if (!arraysEqual(settings.value.view.viewPresets, DEFAULT_SETTINGS.view.viewPresets)) count += 1;
+  if (settings.value.view.dualViewSplit !== DEFAULT_SETTINGS.view.dualViewSplit) count += 1;
+  if ((settings.value.view.dualViewDistance ?? defaultDistance) !== defaultDistance) count += 1;
+  if (settings.value.view.rotationDeg.x !== 0) count += 1;
+  if (settings.value.view.rotationDeg.y !== 0) count += 1;
+  if (settings.value.view.rotationDeg.z !== 0) count += 1;
+  return count;
 });
 
-const rotationDirty = computed(() => {
+// 旋转面板修改计数。
+// Dirty count for Rotation panel.
+const rotationDirtyCount = computed(() => {
   const cur = settings.value.rotation;
   const def = DEFAULT_SETTINGS.rotation;
-  return (
-    !!cur.enabled !== !!def.enabled
-    || cur.presetId !== def.presetId
-    || cur.speedDegPerSec !== def.speedDegPerSec
-    || !!cur.pauseOnInteract !== !!def.pauseOnInteract
-    || cur.resumeDelayMs !== def.resumeDelayMs
-  );
+  let count = 0;
+  if (!!cur.enabled !== !!def.enabled) count += 1;
+  if (cur.presetId !== def.presetId) count += 1;
+  if (cur.speedDegPerSec !== def.speedDegPerSec) count += 1;
+  if (!!cur.pauseOnInteract !== !!def.pauseOnInteract) count += 1;
+  if (cur.resumeDelayMs !== def.resumeDelayMs) count += 1;
+  return count;
 });
 
-const otherDirty = computed(() => {
+// 其他面板修改计数。
+// Dirty count for Other panel.
+const otherDirtyCount = computed(() => {
   const styleBase = getVisualStylePreset(
     settings.value.other.visualStyle ?? DEFAULT_SETTINGS.other.visualStyle,
   ).display;
-  return (
-    settings.value.other.showAxes !== DEFAULT_SETTINGS.other.showAxes
-    || settings.value.other.refreshBondsOnPlay !== DEFAULT_SETTINGS.other.refreshBondsOnPlay
-    || settings.value.other.keepActiveLayerOnHide !== DEFAULT_SETTINGS.other.keepActiveLayerOnHide
-    || settings.value.other.panStepScale !== DEFAULT_SETTINGS.other.panStepScale
-    || settings.value.other.themeMode !== DEFAULT_SETTINGS.other.themeMode
-    || settings.value.other.visualStyle !== DEFAULT_SETTINGS.other.visualStyle
-    || settings.value.other.modelLightIntensity !== styleBase.modelLightIntensity
-    || settings.value.other.backgroundColor !== DEFAULT_SETTINGS.other.backgroundColor
-    || settings.value.other.backgroundColorMode !== DEFAULT_SETTINGS.other.backgroundColorMode
-    || settings.value.other.backgroundTransparent !== DEFAULT_SETTINGS.other.backgroundTransparent
-    || settings.value.other.selectionHighlightColor !== DEFAULT_SETTINGS.other.selectionHighlightColor
-    || (settings.value.other.themeReadabilityCheckOnOpen ?? true)
-      !== (DEFAULT_SETTINGS.other.themeReadabilityCheckOnOpen ?? true)
-  );
+  let count = 0;
+  if (settings.value.other.showAxes !== DEFAULT_SETTINGS.other.showAxes) count += 1;
+  if (settings.value.other.refreshBondsOnPlay !== DEFAULT_SETTINGS.other.refreshBondsOnPlay) count += 1;
+  if (settings.value.other.keepActiveLayerOnHide !== DEFAULT_SETTINGS.other.keepActiveLayerOnHide) count += 1;
+  if (settings.value.other.panStepScale !== DEFAULT_SETTINGS.other.panStepScale) count += 1;
+  if (settings.value.other.themeMode !== DEFAULT_SETTINGS.other.themeMode) count += 1;
+  if (settings.value.other.visualStyle !== DEFAULT_SETTINGS.other.visualStyle) count += 1;
+  if (settings.value.other.modelLightIntensity !== styleBase.modelLightIntensity) count += 1;
+  if (settings.value.other.backgroundColor !== DEFAULT_SETTINGS.other.backgroundColor) count += 1;
+  if (settings.value.other.backgroundColorMode !== DEFAULT_SETTINGS.other.backgroundColorMode) count += 1;
+  if (settings.value.other.backgroundTransparent !== DEFAULT_SETTINGS.other.backgroundTransparent) count += 1;
+  if (settings.value.other.selectionHighlightColor !== DEFAULT_SETTINGS.other.selectionHighlightColor) count += 1;
+  if ((settings.value.other.themeReadabilityCheckOnOpen ?? true)
+    !== (DEFAULT_SETTINGS.other.themeReadabilityCheckOnOpen ?? true)) count += 1;
+  return count;
 });
 
 provide(settingsSiderDerivedContextKey, {
-  filesDirty,
-  layersDirty,
-  viewDirty,
-  rotationDirty,
-  otherDirty,
-  detailsDirty,
+  filesDirty: computed(() => filesDirtyCount.value > 0),
+  layersDirty: computed(() => layersDirtyCount.value > 0),
+  viewDirty: computed(() => viewDirtyCount.value > 0),
+  rotationDirty: computed(() => rotationDirtyCount.value > 0),
+  otherDirty: computed(() => otherDirtyCount.value > 0),
+  detailsDirty: computed(() => detailsDirtyCount.value > 0),
 });
 
 function arraysEqual(a: unknown, b: unknown): boolean {
@@ -277,24 +292,25 @@ function arraysEqual(a: unknown, b: unknown): boolean {
   return arrA.every((v, i) => v === arrB[i]);
 }
 
-const colorsDirty = computed(() => {
+// 颜色面板修改计数。
+// Dirty count for Colors panel.
+const colorsDirtyCount = computed(() => {
   const visualStyle = settings.value.other.visualStyle ?? DEFAULT_SETTINGS.other.visualStyle;
   const expected = visualStyle === 'default'
     ? {}
     : { ...getVisualStylePreset(visualStyle).colorMapTemplate };
   const layerRecord = viewerApi.value?.activeLayerColorMap?.value ?? {};
-  let layerDirty = false;
+  let count = 0;
   for (const [key, value] of Object.entries(layerRecord)) {
     const { element } = parseColorMapKey(key);
     if (!element) continue;
     const base = expected[element] ?? getElementColorHex(element);
     const curColor = String(value ?? '').trim().toUpperCase();
     if (curColor && curColor !== String(base).trim().toUpperCase()) {
-      layerDirty = true;
-      break;
+      count += 1;
     }
   }
-  return layerDirty;
+  return count;
 });
 
 function hasCustomTypeMap(): boolean {
@@ -307,16 +323,43 @@ function isTypeMapApplied(): boolean {
   return !!viewerApi.value?.activeLayerTypeMapApplied?.value;
 }
 
+// LAMMPS 面板修改计数。
+// Dirty count for LAMMPS panel.
+const lammpsDirtyCount = computed(() => {
+  const map = viewerApi.value?.activeLayerTypeMap?.value ?? {};
+  const typeIds = viewerApi.value?.activeLayerTypeIds?.value ?? [];
+  if (typeIds.length === 0) return 0;
+  let count = 0;
+  for (const tid0 of typeIds) {
+    const tid = Math.max(1, Math.floor(Number(tid0)));
+    if (!Number.isFinite(tid)) continue;
+    const val = String(map[String(tid)] ?? '').trim();
+    if (!val) continue;
+    if (val.toUpperCase() === 'E') continue;
+    count += 1;
+  }
+  if (!isTypeMapApplied() || hasCustomTypeMap()) {
+    return Math.max(count, 1);
+  }
+  return count;
+});
+
+// 统一获取面板修改计数。
+// Get dirty count per panel.
+function getPanelDirtyCount(key: string): number {
+  if (key === PANEL_KEYS.files) return filesDirtyCount.value;
+  if (key === PANEL_KEYS.layers) return layersDirtyCount.value;
+  if (key === PANEL_KEYS.colors) return colorsDirtyCount.value;
+  if (key === PANEL_KEYS.lammps) return lammpsDirtyCount.value;
+  if (key === PANEL_KEYS.details) return detailsDirtyCount.value;
+  if (key === PANEL_KEYS.view) return viewDirtyCount.value;
+  if (key === PANEL_KEYS.rotation) return rotationDirtyCount.value;
+  if (key === PANEL_KEYS.other) return otherDirtyCount.value;
+  return 0;
+}
+
 function isPanelDirty(key: string): boolean {
-  if (key === PANEL_KEYS.files) return filesDirty.value;
-  if (key === PANEL_KEYS.layers) return layersDirty.value;
-  if (key === PANEL_KEYS.colors) return colorsDirty.value;
-  if (key === PANEL_KEYS.lammps) return !isTypeMapApplied() || hasCustomTypeMap();
-  if (key === PANEL_KEYS.details) return detailsDirty.value;
-  if (key === PANEL_KEYS.view) return viewDirty.value;
-  if (key === PANEL_KEYS.rotation) return rotationDirty.value;
-  if (key === PANEL_KEYS.other) return otherDirty.value;
-  return false;
+  return getPanelDirtyCount(key) > 0;
 }
 
 function hasPanelReset(key: string): boolean {
@@ -407,6 +450,7 @@ const renderCollapseLabel = ({ item }: { item: any; index: number }) => {
       )
       : null;
 
+  const dirtyCount = getPanelDirtyCount(p.key);
   return h('span', { class: 'settings-panel-header' }, [
     h('span', { class: 'settings-panel-header-main' }, [
       iconVNode,
@@ -416,11 +460,20 @@ const renderCollapseLabel = ({ item }: { item: any; index: number }) => {
         {
           class: [
             'settings-panel-indicator',
-            { 'settings-panel-indicator--inactive': !isPanelDirty(p.key) },
+            { 'settings-panel-indicator--inactive': dirtyCount === 0 },
           ],
         },
         [
-          h('span', { 'class': 'settings-panel-dirty', 'aria-hidden': 'true' }),
+          dirtyCount > 0
+            ? h(Badge, {
+              count: dirtyCount,
+              overflowCount: 99,
+              showZero: false,
+              color: 'blue',
+              offset: [-5, -6],
+              class: 'settings-panel-badge',
+            })
+            : null,
           resetVNode,
         ],
       ),

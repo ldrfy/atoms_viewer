@@ -402,12 +402,12 @@ body.resizing {
     font-size: 16px;
 }
 
-.settings-panel-dirty {
-    width: 6px;
-    height: 6px;
-    border-radius: 999px;
-    background: var(--ant-colorPrimary, #1677ff);
-    box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.15);
+.settings-panel-badge .ant-badge-count {
+    font-size: 8px;
+    min-width: 12px;
+    height: 12px;
+    line-height: 12px;
+    padding: 0;
 }
 
 .settings-panel-indicator {
@@ -441,7 +441,7 @@ body.resizing {
     transform: translateX(0);
 }
 
-.settings-panel-indicator--inactive .settings-panel-dirty,
+.settings-panel-indicator--inactive .settings-panel-badge,
 .settings-panel-indicator--inactive .settings-panel-reset-button {
     opacity: 0;
     pointer-events: none;

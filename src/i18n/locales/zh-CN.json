@@ -160,7 +160,7 @@
     "clearStorageConfirmTitle": "确认清空设置与模型缓存？",
     "clearStorageConfirmBody": "将清空本地保存的设置与模型缓存，并恢复默认值。",
     "clearSettingsConfirmTitle": "确认清空设置？",
-    "clearSettingsConfirmBody": "设置将恢复到默认值。",
+    "clearSettingsConfirmBody": "设置将恢复到默认值，并清除当前载入图层的设置与原子选中状态。",
     "clearStorageHint": "如遇显示异常或参数不同步，可尝试清空设置。",
     "storageUsage": "本地存储占用：{used} / {total}",
     "storageUsageOnly": "本地存储占用：{used}",
@@ -309,7 +309,6 @@
       },
       "layers": {
         "header": "图层管理",
-        "noViewer": "当前没有可用的 Viewer 实例。",
         "empty": "尚未加载任何模型。",
         "meta": "{atoms} 原子 · {frames} 帧",
         "visible": "显示图层",

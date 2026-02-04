@@ -1,105 +1,98 @@
 <template>
   <a-space direction="vertical" :size="8" class="settings-full-width">
-    <a-alert
-      v-if="!viewerApi"
-      type="info"
-      show-icon
-      :message="t('settings.panel.layers.noViewer')"
-    />
-
-    <a-alert
-      v-else-if="layerList.length === 0"
-      type="info"
-      show-icon
-      :message="t('settings.panel.layers.empty')"
-    />
-
-    <div v-else>
-      <a-space :size="8" class="settings-full-width">
-        <a-select
-          size="small"
-          :disabled="layerList.length < 2"
-          :value="sortValue"
-          :options="sortOptions"
-          @change="onSortChange"
-        />
-        <a-tooltip :title="t('settings.panel.files.openFileHint')">
-          <a-button
-            type="text"
-            :aria-label="t('settings.panel.files.openFile')"
-            @click="onOpenFile"
-          >
-            <FolderOpenOutlined />
-          </a-button>
-        </a-tooltip>
-        <a-tooltip :title="toggleAllLabel">
-          <a-button
-            type="text"
-            :disabled="layerList.length === 0"
-            :aria-label="toggleAllLabel"
-            @click="onToggleAllVisible"
-          >
-            <component :is="allVisible ? EyeInvisibleOutlined : EyeOutlined" />
-          </a-button>
-        </a-tooltip>
-        <a-tooltip :title="t('settings.panel.layers.hint')">
-          <a-button
-            type="text"
-            :aria-label="t('settings.panel.layers.hint')"
-          >
-            <QuestionCircleOutlined />
-          </a-button>
-        </a-tooltip>
-      </a-space>
-      <a-divider style="margin-top: 8px; margin-bottom: 8px;" />
-
-      <div class="layers-list">
-        <div
-          v-for="l in layerList"
-          :key="l.id"
-          class="layer-row"
-          :class="{ active: l.id === activeLayerId }"
-          @click="onSetActive(l.id)"
+    <a-space :size="8">
+      <a-select
+        size="small"
+        :disabled="layerList.length < 2"
+        :value="sortValue"
+        :options="sortOptions"
+        @change="onSortChange"
+      />
+      <a-tooltip :title="t('settings.panel.files.openFileHint')">
+        <a-button
+          type="text"
+          :aria-label="t('settings.panel.files.openFile')"
+          :disabled="!viewerApi"
+          @click="onOpenFile"
         >
-          <div class="layer-left">
-            <a-radio :checked="l.id === activeLayerId" />
-          </div>
+          <FolderOpenOutlined />
+        </a-button>
+      </a-tooltip>
+      <a-tooltip :title="toggleAllLabel">
+        <a-button
+          type="text"
+          :disabled="layerList.length === 0"
+          :aria-label="toggleAllLabel"
+          @click="onToggleAllVisible"
+        >
+          <component :is="allVisible ? EyeInvisibleOutlined : EyeOutlined" />
+        </a-button>
+      </a-tooltip>
+      <a-tooltip :title="t('settings.panel.layers.hint')">
+        <a-button
+          type="text"
+          :aria-label="t('settings.panel.layers.hint')"
+        >
+          <QuestionCircleOutlined />
+        </a-button>
+      </a-tooltip>
+    </a-space>
+    <a-divider style="margin-top: 2px; margin-bottom: 8px;" />
 
-          <div class="layer-main">
-            <div class="layer-name" :title="layerPrimaryText(l)">
-              {{ layerPrimaryText(l) }}
-            </div>
-            <div class="layer-meta" :title="layerSecondaryText(l)">
-              {{ layerSecondaryText(l) }}
-            </div>
-          </div>
+    <div class="layers-list">
+      <a-alert
+        v-if="layerList.length === 0"
+        type="info"
+        show-icon
+        :message="t('settings.panel.layers.empty')"
+      />
 
-          <div class="layer-right" @click.stop>
-            <a-space direction="vertical" align="center" :size="2">
+      <div
+        v-for="l in layerList"
+        v-else
+        :key="l.id"
+        class="layer-row"
+        :class="{ active: l.id === activeLayerId }"
+        @click="onSetActive(l.id)"
+      >
+        <div class="layer-left">
+          <a-radio :checked="l.id === activeLayerId" />
+        </div>
+
+        <div class="layer-main">
+          <div class="layer-name" :title="layerPrimaryText(l)">
+            {{ layerPrimaryText(l) }}
+          </div>
+          <div class="layer-meta" :title="layerSecondaryText(l)">
+            {{ layerSecondaryText(l) }}
+          </div>
+        </div>
+
+        <div class="layer-right" @click.stop>
+          <a-space direction="vertical" align="center" :size="2">
+            <a-button
+              :type="l.visible ? 'link' : 'text'"
+              size="small"
+              :title="t('settings.panel.layers.visible')"
+              @click="onToggleLayer(l.id, !l.visible)"
+            >
+              <component :is="l.visible ? EyeOutlined : EyeInvisibleOutlined" />
+            </a-button>
+
+            <a-popconfirm
+              :title="t('settings.panel.layers.deleteConfirm')"
+              placement="left"
+              @confirm="onDeleteLayer(l.id)"
+            >
               <a-button
-                :type="l.visible ? 'link' : 'text'"
+                type="text"
                 size="small"
-                :title="t('settings.panel.layers.visible')"
-                @click="onToggleLayer(l.id, !l.visible)"
+                danger
               >
-                <component :is="l.visible ? EyeOutlined : EyeInvisibleOutlined" />
+                <DeleteOutlined />
               </a-button>
-
-              <a-popconfirm
-                :title="t('settings.panel.layers.deleteConfirm')"
-                placement="left"
-                @confirm="onDeleteLayer(l.id)"
-              >
-                <a-button
-                  type="text"
-                  size="small"
-                  danger
-                >
-                  <DeleteOutlined />
-                </a-button>
-              </a-popconfirm>
-            </a-space>
-          </div>
+            </a-popconfirm>
+          </a-space>
         </div>
       </div>
     </div>

@@ -160,7 +160,7 @@
     "clearStorageConfirmTitle": "Clear settings & model cache?",
     "clearStorageConfirmBody": "This removes saved settings and cached models, then restores defaults.",
     "clearSettingsConfirmTitle": "Clear settings?",
-    "clearSettingsConfirmBody": "Restores defaults.",
+    "clearSettingsConfirmBody": "Restores defaults and clears settings and atom selections for currently loaded layers.",
     "clearStorageHint": "If the display looks wrong or settings get out of sync, try clearing settings.",
     "storageUsage": "Local storage usage: {used} / {total}",
     "storageUsageOnly": "Local storage usage: {used}",
@@ -309,7 +309,6 @@
       },
       "layers": {
         "header": "Layers Manage",
-        "noViewer": "Viewer is not available.",
         "empty": "No models loaded yet.",
         "meta": "{atoms} atoms · {frames} frames",
         "visible": "Show layer",

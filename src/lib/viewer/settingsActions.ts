@@ -75,6 +75,8 @@ export async function applyDefaultSettings(params: {
       bondFactor: DEFAULT_DETAILS.bondFactor,
       bondRadius: DEFAULT_DETAILS.bondRadius,
       atomRoughness: DEFAULT_DETAILS.atomRoughness,
+      showAtomIndex: DEFAULT_DETAILS.showAtomIndex,
+      showElementSymbol: DEFAULT_DETAILS.showElementSymbol,
     },
     { applyToAll: true },
   );

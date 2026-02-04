@@ -395,6 +395,21 @@ function showThemeMismatchConfirm(preferred: 'light' | 'dark'): void {
     user-select: none;
 }
 
+.atom-all-label {
+    transform: translate(-50%, -100%);
+    padding: 1px 4px;
+    border-radius: 8px;
+    font-size: 10px;
+    line-height: 1.1;
+    font-weight: 600;
+    color: #fff;
+    background: rgba(0, 0, 0, 0.45);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    white-space: nowrap;
+    pointer-events: none;
+    user-select: none;
+}
+
 /* 无模型：左上角项目名 */
 
 /* While resizing overlay panels, suppress browser pull-to-refresh / overscroll */

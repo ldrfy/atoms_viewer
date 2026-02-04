@@ -122,6 +122,7 @@
       "deleteSelected": "删除选中",
       "deleteHint": "长按图中选中原子可以单个删除",
       "hint": "点击原子以查看信息；开启测量模式可累积选择（最多 3 个）。",
+      "atomIndex": "编号",
       "distance": "距离",
       "angle": "夹角",
       "orderHint": "按选择顺序计算：∠(1–2–3)，顶点为第 2 个点。"
@@ -175,7 +176,7 @@
     "buildTime": "构建部署时间：",
     "buildTimeUnknown": "未知",
     "panel": {
-      "resetPanelButton": "恢复面板默认",
+      "resetPanelButton": "恢复此面板默认",
       "resetPanelConfirm": "确认恢复该面板默认设置？",
       "view": {
         "header": "视图控制",
@@ -391,7 +392,11 @@
         "modelLightIntensity": "模型灯光亮度",
         "atomRoughness": "原子球材质粗糙度",
         "reset": "恢复图层外观默认值",
-        "sphereSegmentsHint": "数值越大越圆滑，但渲染开销越高。"
+        "sphereSegmentsHint": "数值越大越圆滑，但渲染开销越高。",
+        "showAtomIndex": "显示原子编号",
+        "showAtomIndexHint": "按模型中的原子顺序显示编号（从 1 开始）。",
+        "showElementSymbol": "显示元素符号",
+        "showElementSymbolHint": "显示 C / H / O 等元素符号。"
       }
     }
   },

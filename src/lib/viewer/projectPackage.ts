@@ -69,6 +69,12 @@ function pruneLayerSnapshot(
   if (details.atomRoughness != null && details.atomRoughness !== DEFAULT_DETAILS.atomRoughness) {
     nextDetails.atomRoughness = details.atomRoughness;
   }
+  if (details.showAtomIndex != null && details.showAtomIndex !== DEFAULT_DETAILS.showAtomIndex) {
+    nextDetails.showAtomIndex = details.showAtomIndex;
+  }
+  if (details.showElementSymbol != null && details.showElementSymbol !== DEFAULT_DETAILS.showElementSymbol) {
+    nextDetails.showElementSymbol = details.showElementSymbol;
+  }
   if (Object.keys(nextDetails).length > 0) out.details = nextDetails as LayerSnapshot['details'];
 
   const lammps = layer.lammps?.data ?? {};

@@ -279,6 +279,7 @@ export function createViewerPickingController(deps: RenderDeps) {
     }
 
     let visibleCount = 0;
+    let labelVisibleCount = 0;
     markerMesh.count = 0;
     markerMesh.visible = false;
     tmpQuat.identity();
@@ -314,15 +315,37 @@ export function createViewerPickingController(deps: RenderDeps) {
 
       pts.push(tmpPos.clone());
 
-      const label = ensureSelectionLabel(i, String(i + 1));
-      const labelOffset = Math.max(0.05, r * 1.6);
-      label.position.set(tmpPos.x, tmpPos.y + labelOffset, tmpPos.z);
-      label.visible = true;
+      const item = sel[i];
+      if (!item) {
+        const label = labelNodes[i];
+        if (label) label.visible = false;
+        continue;
+      }
+      const runtime = deps.getRuntime();
+      const display = runtime?.getLayerDisplayById?.(item.layerId) ?? DEFAULT_DETAILS;
+      const labelParts: string[] = [];
+      const shouldSuppress = display.showElementSymbol || display.showAtomIndex;
+      if (!shouldSuppress) {
+        if (display.showElementSymbol) labelParts.push(item.element ?? 'E');
+        labelParts.push(String((item.atomIndex ?? 0) + 1));
+      }
+      const labelText = labelParts.join(' ');
+      if (labelText) {
+        const label = ensureSelectionLabel(i, labelText);
+        const labelOffset = Math.max(0.05, r * 1.6);
+        label.position.set(tmpPos.x, tmpPos.y + labelOffset, tmpPos.z);
+        label.visible = true;
+        labelVisibleCount += 1;
+      }
+      else {
+        const label = labelNodes[i];
+        if (label) label.visible = false;
+      }
     }
     markerMesh.count = visibleCount;
     markerMesh.visible = visibleCount > 0;
     markerMesh.instanceMatrix.needsUpdate = true;
-    if (labelGroup) labelGroup.visible = visibleCount > 0;
+    if (labelGroup) labelGroup.visible = labelVisibleCount > 0;
     for (let i = count; i < labelNodes.length; i += 1) {
       const label = labelNodes[i];
       if (label) label.visible = false;

@@ -63,6 +63,8 @@ export type DetailsSettingsGroup = {
   bondFactor: number;
   bondRadius: number;
   atomRoughness: number;
+  showAtomIndex: boolean;
+  showElementSymbol: boolean;
 };
 
 export const DEFAULT_DETAILS: DetailsSettingsGroup = {
@@ -73,6 +75,8 @@ export const DEFAULT_DETAILS: DetailsSettingsGroup = {
   bondFactor: 1.05,
   bondRadius: 0.1,
   atomRoughness: 0.35,
+  showAtomIndex: false,
+  showElementSymbol: false,
 };
 
 // 分组默认值（与设置面板分类一致）

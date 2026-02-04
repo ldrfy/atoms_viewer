@@ -18,6 +18,7 @@ import { getVisualStylePreset } from '../../lib/viewer/visualStyles';
 
 import type { ThreeStage } from '../../lib/three/stage';
 import { makeTextLabel } from '../../lib/three/labels2d';
+import type { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 import { removeAndDisposeInstancedMeshes } from '../../lib/three/dispose';
 import {
   applyAtomScaleToMeshes,
@@ -81,6 +82,12 @@ function normalizeLayerDisplay(
     bondFactor,
     bondRadius,
     atomRoughness: Math.min(1, Math.max(0, atomRoughness)),
+    showAtomIndex: typeof patch.showAtomIndex === 'boolean'
+      ? patch.showAtomIndex
+      : base.showAtomIndex,
+    showElementSymbol: typeof patch.showElementSymbol === 'boolean'
+      ? patch.showElementSymbol
+      : base.showElementSymbol,
   };
 }
 
@@ -102,6 +109,8 @@ type LayerInternal = {
   info: ModelLayerInfo;
   model: StructureModel;
   group: THREE.Group;
+  atomLabelGroup?: THREE.Group;
+  atomLabelNodes?: Array<CSS2DObject | null>;
 
   atomMeshes: THREE.InstancedMesh[];
   bondMeshes: THREE.InstancedMesh[];
@@ -330,6 +339,7 @@ export type ModelRuntime = {
   onTypeMapChanged: () => void;
   onColorMapChanged: (opts?: { applyToAll?: boolean }) => void;
   getLayerSnapshots: () => LayerSnapshot[];
+  getLayerDisplayById: (layerId: string) => DetailsSettingsGroup | null;
   applyLayerSnapshots: (
     snaps: LayerSnapshot[],
   ) => void;
@@ -402,6 +412,7 @@ export function createModelRuntime(args: {
 
   const centerTmp = new THREE.Vector3();
   const centerTmp2 = new THREE.Vector3();
+  const labelCenterTmp = new THREE.Vector3();
   const matTmp = new THREE.Matrix4();
 
   // ---- Camera clipping (near/far) guard for multi-layer display ----
@@ -650,6 +661,11 @@ export function createModelRuntime(args: {
     return a ? getLayerDisplay(a) : null;
   }
 
+  function getLayerDisplayById(layerId: string): DetailsSettingsGroup | null {
+    const layer = layerMap.get(layerId);
+    return layer ? getLayerDisplay(layer) : null;
+  }
+
   function syncHasModelFlag(): void {
     hasModel.value = layers.value.length > 0;
   }
@@ -727,6 +743,115 @@ export function createModelRuntime(args: {
     };
   }
 
+  function ensureAtomLabelGroup(layer: LayerInternal): THREE.Group {
+    if (!layer.atomLabelGroup) {
+      const group = new THREE.Group();
+      group.name = 'atom-labels';
+      group.visible = false;
+      layer.atomLabelGroup = group;
+      layer.atomLabelNodes = [];
+      layer.group.add(group);
+    }
+    return layer.atomLabelGroup;
+  }
+
+  function ensureAtomLabel(
+    layer: LayerInternal,
+    idx: number,
+    text: string,
+  ): CSS2DObject {
+    const nodes = layer.atomLabelNodes ?? [];
+    let label = nodes[idx] ?? null;
+    if (!label) {
+      label = makeTextLabel(text, 'atom-all-label');
+      nodes[idx] = label;
+      layer.atomLabelNodes = nodes;
+      ensureAtomLabelGroup(layer).add(label);
+    }
+    else {
+      const el = label.element as HTMLElement | undefined;
+      if (el && el.textContent !== text) el.textContent = text;
+    }
+    return label;
+  }
+
+  function updateAtomLabelsForLayer(layer: LayerInternal): void {
+    const display = getLayerDisplay(layer);
+    const showIndex = display.showAtomIndex;
+    const showElement = display.showElementSymbol;
+    const group = ensureAtomLabelGroup(layer);
+
+    if (!showIndex && !showElement) {
+      group.visible = false;
+      if (layer.atomLabelNodes) {
+        for (const node of layer.atomLabelNodes) {
+          if (node) node.visible = false;
+        }
+      }
+      return;
+    }
+
+    const rawAtoms = layer.currentFrameAtoms
+      ?? (layer.model.frames?.[layer.frameIndex] ?? layer.model.atoms);
+    if (!rawAtoms || rawAtoms.length === 0) {
+      group.visible = false;
+      return;
+    }
+
+    const displayAtoms = getDisplayAtoms(layer, rawAtoms).atoms;
+    const mappedAtoms = getMappedAtomsForCurrentFrame(layer);
+    const count = Math.min(displayAtoms.length, mappedAtoms.length);
+    if (count <= 0) {
+      group.visible = false;
+      return;
+    }
+
+    const c = computeMeanCenterInto(displayAtoms, labelCenterTmp);
+    const dx = c.x - layer.baseCenter.x;
+    const dy = c.y - layer.baseCenter.y;
+    const dz = c.z - layer.baseCenter.z;
+
+    let visibleCount = 0;
+    for (let i = 0; i < count; i += 1) {
+      const pos = displayAtoms[i]?.position;
+      if (!pos) {
+        const label = layer.atomLabelNodes?.[i] ?? null;
+        if (label) label.visible = false;
+        continue;
+      }
+
+      const element = mappedAtoms[i]?.element ?? 'E';
+      const parts: string[] = [];
+      if (showElement) parts.push(element);
+      if (showIndex) parts.push(String(i + 1));
+      const text = parts.join(' ');
+      if (!text) {
+        const label = layer.atomLabelNodes?.[i] ?? null;
+        if (label) label.visible = false;
+        continue;
+      }
+
+      const label = ensureAtomLabel(layer, i, text);
+      const r = getSphereBaseRadiusByElement(element, atomSizeFactor) * display.atomScale;
+      const offset = Math.max(0.05, r * 1.4);
+      label.position.set(
+        pos[0] - dx,
+        pos[1] - dy + offset,
+        pos[2] - dz,
+      );
+      label.visible = true;
+      visibleCount += 1;
+    }
+
+    group.visible = visibleCount > 0;
+    if (layer.atomLabelNodes) {
+      for (let i = count; i < layer.atomLabelNodes.length; i += 1) {
+        const label = layer.atomLabelNodes[i];
+        if (label) label.visible = false;
+      }
+    }
+  }
+
   function disposeLayer(layer: LayerInternal): void {
     removeAndDisposeInstancedMeshes(layer.group, layer.atomMeshes);
     removeAndDisposeInstancedMeshes(layer.group, layer.bondMeshes);
@@ -734,6 +859,12 @@ export function createModelRuntime(args: {
     layer.bondMeshes = [];
     layer.lastBondSegCount = 0;
     layer.bondFactorUsed = NaN;
+
+    if (layer.atomLabelGroup) {
+      layer.group.remove(layer.atomLabelGroup);
+      layer.atomLabelGroup = undefined;
+      layer.atomLabelNodes = undefined;
+    }
 
     // best-effort dispose remaining children (if any)
     disposeGroupChildren(layer.group);
@@ -1112,6 +1243,7 @@ export function createModelRuntime(args: {
     // Store a model whose frame[0] uses mapped atoms for rendering (keep raw for reparse logic elsewhere)
     // We do not mutate the original model; we only render with mapped atoms.
     rebuildVisualsForLayer(layer, mappedFirstAtoms);
+    updateAtomLabelsForLayer(layer);
 
     // Show it
     layer.info.visible = true;
@@ -1201,6 +1333,7 @@ export function createModelRuntime(args: {
     active.colorKeys = buildColorMapKeysFromAtoms(mappedFirstAtoms, active.hasAnyTypeId);
 
     rebuildVisualsForLayer(active, mappedFirstAtoms);
+    updateAtomLabelsForLayer(active);
 
     // keep visible
     active.info.visible = true;
@@ -1361,6 +1494,7 @@ export function createModelRuntime(args: {
       centerTmp: centerTmp,
       matTmp,
     });
+    updateAtomLabelsForLayer(active);
 
     if (opts?.refreshBonds) {
       // Safety: rebuilding bonds every frame can be O(N^2) if the cutoff is large,
@@ -1624,6 +1758,7 @@ export function createModelRuntime(args: {
     // keep last selection per layer for export/restore (visuals handled elsewhere)
 
     rebuildVisualsForLayer(layer, mapped);
+    updateAtomLabelsForLayer(layer);
 
     const atomChanged
       = Math.abs(prevDisplay.atomScale - nextDisplay.atomScale) > 1e-6
@@ -1751,6 +1886,7 @@ export function createModelRuntime(args: {
 
     // atom mesh colors depend on element => must rebuild
     rebuildVisualsForLayer(active, mapped);
+    updateAtomLabelsForLayer(active);
 
     applyShowAxes();
 
@@ -1808,6 +1944,7 @@ export function createModelRuntime(args: {
       layer.colorKeys = buildColorMapKeysFromAtoms(mapped, layer.hasAnyTypeId);
 
       rebuildVisualsForLayer(layer, mapped);
+      updateAtomLabelsForLayer(layer);
       anyChanged = true;
     }
 
@@ -1946,6 +2083,7 @@ export function createModelRuntime(args: {
       );
       layer.colorKeys = buildColorMapKeysFromAtoms(mapped, layer.hasAnyTypeId);
       rebuildVisualsForLayer(layer, mapped);
+      updateAtomLabelsForLayer(layer);
     }
 
     if (!anyChanged) return;
@@ -2070,6 +2208,7 @@ export function createModelRuntime(args: {
     let atomScaleChanged = false;
     let bondsChanged = false;
     let surfaceChanged = false;
+    let labelsChanged = false;
 
     for (const l of targets) {
       const prev = getLayerDisplay(l);
@@ -2083,15 +2222,22 @@ export function createModelRuntime(args: {
           || Math.abs(prev.bondRadius - next.bondRadius) > 1e-6;
       const surfaceChangedForLayer
         = Math.abs(prev.atomRoughness - next.atomRoughness) > 1e-6;
+      const labelChangedForLayer
+        = prev.showAtomIndex !== next.showAtomIndex
+          || prev.showElementSymbol !== next.showElementSymbol;
       l.display = next;
       atomScaleChanged = atomScaleChanged || atomChanged;
       bondsChanged = bondsChanged || bondChanged;
       surfaceChanged = surfaceChanged || surfaceChangedForLayer;
+      labelsChanged = labelsChanged || labelChangedForLayer;
     }
 
     if (atomScaleChanged) applyAtomScale();
     if (bondsChanged) applyShowBonds();
     if (surfaceChanged) applyLayerSurfaceSettings(targets);
+    if (labelsChanged || atomScaleChanged || bondsChanged) {
+      for (const l of targets) updateAtomLabelsForLayer(l);
+    }
 
     syncActiveDisplay();
   }
@@ -2393,6 +2539,7 @@ export function createModelRuntime(args: {
     visibleCustomColors,
 
     getLayerSnapshots,
+    getLayerDisplayById,
     setLayerInspectSelection,
     getLayerInspectSelection,
 

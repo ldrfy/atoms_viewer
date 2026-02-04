@@ -200,8 +200,8 @@ const filesDirtyCount = computed(() => {
 // 图层面板修改计数（额外图层数）。
 // Dirty count for Layers panel (extra layers).
 const layersDirtyCount = computed(() => {
-  const count = (viewerApi.value?.layers.value.length ?? 0) - 1;
-  return Math.max(0, count);
+  const count = viewerApi.value?.layers.value.length ?? 0;
+  return count > 1 ? count : 0;
 });
 
 // 细节面板修改计数。
@@ -219,6 +219,8 @@ const detailsDirtyCount = computed(() => {
   if (cur.bondFactor !== styleBase.bondFactor) count += 1;
   if (cur.bondRadius !== styleBase.bondRadius) count += 1;
   if (cur.atomRoughness !== styleBase.atomRoughness) count += 1;
+  if (cur.showAtomIndex !== DEFAULT_DETAILS.showAtomIndex) count += 1;
+  if (cur.showElementSymbol !== DEFAULT_DETAILS.showElementSymbol) count += 1;
   return count;
 });
 

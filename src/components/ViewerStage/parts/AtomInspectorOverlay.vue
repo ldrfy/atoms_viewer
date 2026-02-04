@@ -154,7 +154,7 @@
                                 {{ item.element }}
                               </a-typography-text>
                               <a-typography-text type="secondary">
-                                idx={{ item.atomIndex }}
+                                {{ t('viewer.inspect.atomIndex') }}={{ item.atomIndex + 1 }}
                               </a-typography-text>
                             </a-space>
                             <a-typography-text>

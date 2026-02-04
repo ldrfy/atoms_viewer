@@ -122,6 +122,7 @@
       "deleteSelected": "Delete selected",
       "deleteHint": "Long press a selected atom in the view to delete it.",
       "hint": "Click an atom to inspect; enable measure mode to accumulate selections (up to 3).",
+      "atomIndex": "Index",
       "distance": "Distance",
       "angle": "Angle",
       "orderHint": "Computed in selection order: ∠(1–2–3) with point 2 as the vertex."
@@ -175,7 +176,7 @@
     "buildTime": "Built at:",
     "buildTimeUnknown": "Unknown",
     "panel": {
-      "resetPanelButton": "Reset panel defaults",
+      "resetPanelButton": "Reset the panel defaults",
       "resetPanelConfirm": "Reset this panel to defaults?",
       "view": {
         "header": "View Control",
@@ -392,7 +393,11 @@
         "modelLightIntensity": "Model light intensity",
         "atomRoughness": "Atom material roughness",
         "reset": "Reset layer appearance",
-        "sphereSegmentsHint": "Higher values look smoother but are slower to render."
+        "sphereSegmentsHint": "Higher values look smoother but are slower to render.",
+        "showAtomIndex": "Show atom index",
+        "showAtomIndexHint": "Show atom order in the model (starting from 1).",
+        "showElementSymbol": "Show element symbols",
+        "showElementSymbolHint": "Show element symbols like C / H / O."
       }
     }
   },

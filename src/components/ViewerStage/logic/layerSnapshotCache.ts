@@ -68,3 +68,5 @@ export function getLayerSnapshotFromCache(md5?: string): LayerSnapshot | null {
   const cache = loadLayerSnapshotCache();
   return cache[md5]?.snapshot ?? null;
 }
+
+//

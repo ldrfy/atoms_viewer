@@ -63,6 +63,10 @@ export async function applyDefaultSettings(params: {
 
   if (!viewerApi) return nextSettings;
 
+  // 清空当前选中，保留缓存选中。
+  // Clear current selections only; keep cached selections.
+  viewerApi.clearSelections();
+
   viewerApi.setActiveLayerDisplay(
     {
       atomScale: DEFAULT_DETAILS.atomScale,

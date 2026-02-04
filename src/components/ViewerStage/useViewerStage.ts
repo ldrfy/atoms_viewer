@@ -163,6 +163,8 @@ type ViewerStageBridgeApi = {
   ) => void;
   /** 将当前显示参数应用到所有可见图层 */
   setVisibleLayersDisplay: (patch: Partial<DetailsSettingsGroup>) => void;
+  /** 清空当前选中 */
+  clearSelections: () => void;
   /** 立即应用视角/视距相关设置 */
   applyViewFromSettings: (overrides?: Partial<ViewerSettings>) => void;
   /** 暂停设置同步（避免短时间内相互覆盖） */
@@ -285,6 +287,8 @@ type ViewerStageBindings = {
   ) => void;
   /** 将当前显示参数应用到所有可见图层 */
   setVisibleLayersDisplay: (patch: Partial<DetailsSettingsGroup>) => void;
+  /** 清空当前选中（可选清理缓存选中） */
+  clearSelections: (opts?: { clearCached?: boolean }) => void;
   /** 立即应用视角/视距相关设置 */
   applyViewFromSettings: (overrides?: Partial<ViewerSettings>) => void;
   /** 平移模型（屏幕方向） */
@@ -1312,6 +1316,18 @@ export function useViewerStage(
     }
   }
 
+  // 清空当前已加载图层的选中。
+  // Clear selections for loaded layers only.
+  function clearSelections(): void {
+    if (!runtime) return;
+    inspectCtx.selected.value = [];
+    for (const layer of runtime.layers.value) {
+      runtime.setLayerInspectSelection?.(layer.id, []);
+    }
+    picking.rebuildSelectionVisualsFromSelected();
+    scheduleSessionSave('layers');
+  }
+
   async function importProjectPackage(file: File): Promise<void> {
     try {
       const parsed = await parseProjectZip(file);
@@ -2041,6 +2057,7 @@ export function useViewerStage(
     activeLayerDisplay,
     setActiveLayerDisplay,
     setVisibleLayersDisplay,
+    clearSelections,
     applyViewFromSettings,
     suspendSettingsSync: (ms = 200) => settingsSync.suspend(ms),
     visibleCustomColors,
@@ -2142,6 +2159,7 @@ export function useViewerStage(
     activeLayerDisplay,
     setActiveLayerDisplay,
     setVisibleLayersDisplay,
+    clearSelections,
     applyViewFromSettings,
     panModel,
     panTargetSide,

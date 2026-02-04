@@ -121,6 +121,8 @@ export type ViewerPublicApi = {
   applyLayerSnapshots: (
     snaps: import('./sessionTypes').LayerSnapshot[],
   ) => Promise<void>;
+  /** Clear current selections. */
+  clearSelections: () => void;
   /** Get layer source blobs/metadata for export/session restore. */
   getLayerSources: () => Promise<import('./sessionTypes').LayerSourceData[]>;
   /** Apply a full session snapshot (settings + layers), optionally with bundled files. */

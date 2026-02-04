@@ -321,14 +321,12 @@ export function createViewerPickingController(deps: RenderDeps) {
         if (label) label.visible = false;
         continue;
       }
-      const runtime = deps.getRuntime();
-      const display = runtime?.getLayerDisplayById?.(item.layerId) ?? DEFAULT_DETAILS;
       const labelParts: string[] = [];
-      const shouldSuppress = display.showElementSymbol || display.showAtomIndex;
-      if (!shouldSuppress) {
-        if (display.showElementSymbol) labelParts.push(item.element ?? 'E');
-        labelParts.push(String((item.atomIndex ?? 0) + 1));
-      }
+      // 选中标签强制显示元素符号 + 原子编号
+      // Selection labels always show element symbol + atom index.
+      const elementSymbol = (item.element ?? 'E').trim() || 'E';
+      const atomIndexLabel = String((item.atomIndex ?? 0) + 1);
+      labelParts.push(elementSymbol, atomIndexLabel);
       const labelText = labelParts.join(' ');
       if (labelText) {
         const label = ensureSelectionLabel(i, labelText);

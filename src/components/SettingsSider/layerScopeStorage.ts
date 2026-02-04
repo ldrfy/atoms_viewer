@@ -16,8 +16,8 @@ const LEGACY_FLAG_MAP: Record<PanelScopeKey, keyof ReturnType<typeof readApplyAl
 };
 
 const DEFAULT_SCOPES: Record<PanelScopeKey, LayerScope> = {
-  colors: 'all',
-  details: 'all',
+  colors: 'current',
+  details: 'current',
   lammps: 'current',
 };
 

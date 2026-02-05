@@ -37,6 +37,7 @@ import { useI18n } from 'vue-i18n';
 
 import { viewerApiRef } from '../../../lib/viewer/bridge';
 import type { LayerScope } from '../layerScopeStorage';
+import { formatLayerDisplayName } from '../../../lib/viewer/layerDisplayName';
 
 const props = defineProps<{
   scope: LayerScope;
@@ -63,7 +64,9 @@ const activeLayerInfo = computed(() => {
 });
 // 当前激活图层名（用于省略展示与点击弹出完整内容）。
 // Active layer name for ellipsis display and click popover content.
-const activeLayerName = computed(() => activeLayerInfo.value?.name ?? '-');
+const activeLayerName = computed(() =>
+  formatLayerDisplayName(activeLayerInfo.value, layerList.value),
+);
 
 const scopeOptions = computed(() => ([
   { value: 'current', label: t('settings.panel.scope.options.current') },

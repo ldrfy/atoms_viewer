@@ -41,7 +41,6 @@ declare module 'vue' {
     ATag: typeof import('antdv-next')['Tag']
     AtomInspectorOverlay: typeof import('./src/components/ViewerStage/parts/AtomInspectorOverlay.vue')['default']
     ATooltip: typeof import('antdv-next')['Tooltip']
-    ATypographyParagraph: typeof import('antdv-next')['TypographyParagraph']
     ATypographyText: typeof import('antdv-next')['TypographyText']
     ColorsPanel: typeof import('./src/components/SettingsSider/panels/ColorsPanel.vue')['default']
     DetailsPanel: typeof import('./src/components/SettingsSider/panels/DetailsPanel.vue')['default']

@@ -6,6 +6,7 @@ import { DEFAULT_DETAILS, type ViewerSettings } from '../../../lib/viewer/settin
 import type { SettingsPatch } from '../../../lib/viewer/mergeSettings';
 import { normalizeViewPresets } from '../../../lib/viewer/viewPresets';
 import { MANUAL_ROTATION_SYNC_INTERVAL_MS } from '../../../lib/viewer/constants';
+import { formatLayerDisplayName } from '../../../lib/viewer/layerDisplayName';
 import type { Atom } from '../../../lib/structure/types';
 import type { AnyCamera } from '../../../lib/three/camera';
 import { makeTextLabel } from '../../../lib/three/labels2d';
@@ -132,9 +133,7 @@ export function createViewerPickingController(deps: RenderDeps) {
   function getLayerLabel(layerId: string): string {
     const runtime = deps.getRuntime();
     const info = runtime?.layers.value.find(l => l.id === layerId) ?? null;
-    const name = String(info?.name ?? '').trim();
-    const file = String(info?.source?.fileName ?? '').trim();
-    return file || name || layerId;
+    return formatLayerDisplayName(info, runtime?.layers.value ?? []);
   }
 
   function ensureSelectionVisuals(): void {

@@ -104,6 +104,7 @@ import { DeleteOutlined, QuestionCircleOutlined, FolderOpenOutlined, EyeOutlined
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { viewerApiRef } from '../../../lib/viewer/bridge';
+import { formatLayerDisplayName } from '../../../lib/viewer/layerDisplayName';
 
 const { t } = useI18n();
 
@@ -129,9 +130,7 @@ const sortOptions = computed(() => ([
  * - Fall back to source file name.
  */
 function layerPrimaryText(l: any): string {
-  const name = String(l?.name ?? '').trim();
-  const file = String(l?.source?.fileName ?? '').trim();
-  return name || file || String(l?.id ?? '');
+  return formatLayerDisplayName(l, layerList.value);
 }
 
 /**

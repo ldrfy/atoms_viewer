@@ -1,5 +1,6 @@
 import type { ComputedRef } from 'vue';
 import type { InspectSelectionItem } from '../../../lib/viewer/settings';
+import { formatLayerDisplayName } from '../../../lib/viewer/layerDisplayName';
 import type { InspectCtx } from '../ctx/inspect';
 import type { ModelRuntime } from '../modelRuntime';
 
@@ -19,9 +20,7 @@ export function createInspectSelectionHelper(deps: InspectSelectionHelperDeps) {
   function getLayerLabel(layerId: string): string {
     const runtime = deps.runtime();
     const info = runtime?.layers.value.find(l => l.id === layerId) ?? null;
-    const file = String(info?.source?.fileName ?? '').trim();
-    const name = String(info?.name ?? '').trim();
-    return file || name || layerId;
+    return formatLayerDisplayName(info, runtime?.layers.value ?? []);
   }
 
   // 生成选中列表签名，避免无意义重复同步。

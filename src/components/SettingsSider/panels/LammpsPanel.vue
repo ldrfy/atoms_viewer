@@ -1,75 +1,56 @@
 <template>
-  <a-form layout="vertical">
+  <a-space direction="vertical" :size="12" class="settings-full-width">
     <LayerScopeControl v-model:scope="scope" />
 
-    <a-form-item class="settings-gap-top-md">
-      <a-row align="middle" justify="space-between" class="settings-gap-bottom-sm">
-        <a-col>
-          <a-typography-text>
-            {{ t('settings.panel.lammps.mapLabel') }}
-          </a-typography-text>
-        </a-col>
-        <a-col flex="1" class="header-right">
-          <a-tooltip :title="t('settings.panel.lammps.alert')" placement="left">
-            <a-button
-              variant="link"
-              color="default"
-              :title="t('settings.panel.lammps.alert')"
-            >
-              <QuestionCircleOutlined />
-            </a-button>
-          </a-tooltip>
-        </a-col>
-      </a-row>
-
-      <div
-        v-for="(typeId, idx) in activeLayerTypeIds"
-        :key="`${typeId}-${idx}`"
-        class="settings-gap-bottom-sm"
-      >
-        <a-row align="middle" :gutter="8">
-          <a-col :span="0.5" />
-
-          <a-col :span="3">
-            <a-tag color="processing" variant="outlined">
-              {{ typeId }}
-            </a-tag>
-          </a-col>
-          <a-col :span="1" />
-
-          <a-col :span="3">
-            →
-          </a-col>
-
-          <a-col :span="16">
-            <a-select
-              show-search
-              :title="t('settings.panel.lammps.elementPlaceholder')"
-              :value="draftMap[String(typeId)] || 'E'"
-              :options="atomicOptions"
-              :filter-option="filterAtomicOption"
-              @change="onLammpsElementChange(idx, $event)"
-            />
-          </a-col>
-        </a-row>
-      </div>
-
-      <div class="settings-gap-top-sm">
+    <a-flex align="center" justify="space-between">
+      <a-typography-text>
+        {{ t('settings.panel.lammps.mapLabel') }}
+      </a-typography-text>
+      <a-tooltip :title="t('settings.panel.lammps.alert')" placement="left">
         <a-button
-          block
-          type="primary"
-          :disabled="!hasAnyLayer"
-          @click="onApplyTypeMap"
+          variant="link"
+          color="default"
         >
-          {{ t('settings.panel.lammps.apply') }}
+          <QuestionCircleOutlined />
         </a-button>
-      </div>
+      </a-tooltip>
+    </a-flex>
 
-      <a-typography-text type="secondary" class="settings-text-secondary-tight">
+    <a-flex
+      v-for="(typeId, idx) in activeLayerTypeIds"
+      :key="`${typeId}-${idx}`"
+      :gap="32"
+      align="center"
+      class="settings-full-width"
+    >
+      <a-tag color="processing" variant="outlined">
+        {{ typeId }}
+      </a-tag>
+      <a-typography-text>→</a-typography-text>
+      <a-select
+        show-search
+        style="flex: 1; min-width: 0;"
+        :value="draftMap[String(typeId)] || 'E'"
+        :options="atomicOptions"
+        :filter-option="filterAtomicOption"
+        @change="onLammpsElementChange(idx, $event)"
+      />
+    </a-flex>
+    <a-space direction="vertical" :size="5">
+      <a-button
+        block
+        type="primary"
+        :disabled="!hasAnyLayer"
+        @click="onApplyTypeMap"
+      >
+        {{ t('settings.panel.lammps.apply') }}
+      </a-button>
+
+      <a-typography-text type="secondary">
         {{ t('settings.panel.lammps.hint') }}
       </a-typography-text>
-    </a-form-item>
-  </a-form>
+    </a-space>
+  </a-space>
 </template>
 
 <script setup lang="ts">
@@ -150,6 +131,3 @@ function onApplyTypeMap(): void {
 }
 
 </script>
-<style scoped lang="css">
-
-</style>

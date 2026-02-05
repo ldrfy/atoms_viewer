@@ -31,7 +31,6 @@
           v-if="placement === 'bottom'"
           class="atom-inspector__resizer is-bottom"
           role="separator"
-          aria-label="resize"
           @pointerdown.prevent="onResizeStart('mobile', $event)"
         />
 
@@ -45,7 +44,6 @@
             <div
               v-if="placement === 'bottom'"
               class="atom-inspector__grab"
-              aria-label="resize"
               :title="t('common.resize')"
               role="button"
               tabindex="0"
@@ -69,7 +67,6 @@
                   <a-switch
                     v-model:checked="measureMode"
                     size="small"
-                    :aria-label="t('viewer.inspect.measureMode')"
                     :title="t('viewer.inspect.measureMode')"
                   />
                 </a-tooltip>
@@ -79,7 +76,6 @@
                     size="small"
                     :type="isAllChecked ? 'primary' : 'default'"
                     :disabled="selected.length === 0"
-                    :aria-label="t('viewer.inspect.selectAll')"
                     :title="t('viewer.inspect.selectAll')"
                     @click="toggleSelectAll"
                   >
@@ -104,7 +100,6 @@
                 <a-button
                   type="text"
                   size="small"
-                  aria-label="collapse"
                   :title="t('common.collapse')"
                   @click="collapsed = true"
                 >

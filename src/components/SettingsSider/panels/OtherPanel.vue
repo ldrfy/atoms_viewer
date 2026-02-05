@@ -1,220 +1,85 @@
 <template>
-  <a-form layout="vertical">
-    <a-form-item>
-      <a-row justify="space-between" align="middle" :gutter="8">
-        <a-col :span="8">
-          {{ t('viewer.theme.title') }}
-        </a-col>
-        <a-col :flex="1">
-          <a-segmented v-model:value="themeModeModel" block :options="themeSegmentOptions" />
-        </a-col>
-      </a-row>
-    </a-form-item>
-
-    <a-form-item>
-      <a-row :gutter="8" justify="space-between" align="middle">
-        <!-- 左侧 label -->
-        <a-col>
-          {{ t('settings.panel.other.backgroundColor') }}
-        </a-col>
-
-        <!-- 右侧：三个控件成组，整体靠右 -->
-        <a-col>
-          <a-space :size="6" align="center">
-            <!-- reset（建议用 v-show 占位，避免 input 跳动） -->
-            <a-tooltip :title="t('viewer.record.bgReset')">
-              <a-button
-                v-show="!isBgTransparent"
-                type="text"
-                size="small"
-                :aria-label="t('viewer.record.bgReset')"
-                :title="t('viewer.record.bgReset')"
-                @click="resetBgToTransparent"
-              >
-                <ReloadOutlined />
-              </a-button>
-            </a-tooltip>
-
-            <!-- picker -->
-            <a-color-picker
-              size="small"
-              show-text
-              disabled-alpha
-              :value="isBgTransparent ? '#00000000' : bgColorPickerValue(bgColorModel)"
-              :aria-label="t('settings.panel.other.backgroundColor')"
-              :title="t('settings.panel.other.backgroundColor')"
-              @change="(value: unknown, css: unknown) => onBgColorPickerChange(resolveColorCssString(value, css))"
-            />
-
-            <!-- hex removed -->
-          </a-space>
-        </a-col>
-      </a-row>
-    </a-form-item>
-
-    <a-form-item>
-      <a-row justify="space-between" align="middle">
-        <a-col>{{ t('settings.panel.other.themeReadabilityLabel') }}</a-col>
-        <a-col>
-          <a-switch
-            v-model:checked="themeReadabilityCheckOnOpenModel"
-            :aria-label="t('settings.panel.other.themeReadabilityCheckOnOpen')"
-            :title="t('settings.panel.other.themeReadabilityCheckOnOpen')"
-          />
-        </a-col>
-      </a-row>
-      <a-typography-text type="secondary" class="settings-text-secondary">
-        {{ t('settings.panel.other.themeReadabilityCheckOnOpen') }}
+  <a-space direction="vertical" :size="12" class="settings-full-width">
+    <a-flex :gap="8" align="center" class="settings-full-width">
+      <a-typography-text style="min-width: 84px;">
+        {{ t('viewer.theme.title') }}
       </a-typography-text>
-    </a-form-item>
+      <a-segmented
+        v-model:value="themeModeModel"
+        style="flex: 1; min-width: 0;"
+        block
+        :options="themeSegmentOptions"
+      />
+    </a-flex>
 
-    <a-form-item>
-      <a-row justify="space-between" align="middle">
-        <a-col :span="8">
-          {{ t('settings.panel.other.visualStyle') }}
-        </a-col>
-        <a-col />        <a-col flex="1">
-          <a-select v-model:value="visualStyleModel" :options="visualStyleOptions" />
-        </a-col>
-      </a-row>
+    <SettingColorPickerField
+      :label="t('settings.panel.other.backgroundColor')"
+      :show-reset="!isBgTransparent"
+      :reset-tooltip="t('viewer.record.bgReset')"
+      :value="isBgTransparent ? '#00000000' : bgColorPickerValue(bgColorModel)"
+      @reset="resetBgToTransparent"
+      @change="(value: unknown, css: unknown) => onBgColorPickerChange(resolveColorCssString(value, css))"
+    />
 
-      <a-typography-text type="secondary" class="settings-text-secondary">
-        {{ t('settings.panel.other.visualStyleHint') }}
-      </a-typography-text>
-    </a-form-item>
+    <SettingSwitchField
+      v-model:checked="themeReadabilityCheckOnOpenModel"
+      :label="t('settings.panel.other.themeReadabilityLabel')"
+      :hint="t('settings.panel.other.themeReadabilityCheckOnOpen')"
+    />
 
-    <a-form-item :label="t('settings.panel.details.modelLightIntensity')">
-      <a-row :gutter="8" align="middle">
-        <a-col :flex="1">
-          <a-slider
-            v-model:value="modelLightIntensityModel"
-            :min="MODEL_LIGHT_INTENSITY_MIN"
-            :max="MODEL_LIGHT_INTENSITY_MAX"
-            :step="0.05"
-          />
-        </a-col>
-        <a-col>
-          <a-input-number
-            v-model:value="modelLightIntensityModel"
-            class="settings-col-compact"
+    <SettingSelectField
+      v-model:value="visualStyleModel"
+      :label="t('settings.panel.other.visualStyle')"
+      :hint="t('settings.panel.other.visualStyleHint')"
+      :options="visualStyleOptions"
+    />
 
-            :aria-label="t('settings.panel.details.modelLightIntensity')"
-            :title="t('settings.panel.details.modelLightIntensity')"
-            :min="MODEL_LIGHT_INTENSITY_MIN"
-            :max="MODEL_LIGHT_INTENSITY_MAX"
-            :step="0.05"
-          />
-        </a-col>
-      </a-row>
-    </a-form-item>
+    <SettingSliderField
+      v-model:value="modelLightIntensityModel"
+      :label="t('settings.panel.details.modelLightIntensity')"
+      :min="MODEL_LIGHT_INTENSITY_MIN"
+      :max="MODEL_LIGHT_INTENSITY_MAX"
+      :slider-step="0.05"
+    />
 
-    <a-form-item>
-      <a-row justify="space-between" align="middle">
-        <a-col>{{ t('settings.panel.other.axes') }}</a-col>
-        <a-col>
-          <a-switch v-model:checked="showAxesModel" :aria-label="t('settings.panel.other.axes')" :title="t('settings.panel.other.axes')" />
-        </a-col>
-      </a-row>
-    </a-form-item>
+    <SettingSwitchField
+      v-model:checked="showAxesModel"
+      :label="t('settings.panel.other.axes')"
+    />
 
-    <a-form-item>
-      <a-row justify="space-between" align="middle">
-        <a-col>{{ t('settings.panel.other.refreshBondsOnPlayLabel') }}</a-col>
-        <a-col>
-          <a-switch
-            v-model:checked="refreshBondsOnPlayModel"
-            :aria-label="t('settings.panel.other.refreshBondsOnPlay')"
-            :title="t('settings.panel.other.refreshBondsOnPlay')"
-          />
-        </a-col>
-      </a-row>
-      <a-typography-text type="secondary" class="settings-text-secondary">
-        {{ refreshBondsOnPlayHint }}
-      </a-typography-text>
-    </a-form-item>
+    <SettingSwitchField
+      v-model:checked="refreshBondsOnPlayModel"
+      :label="t('settings.panel.other.refreshBondsOnPlayLabel')"
+      :hint="refreshBondsOnPlayHint"
+    />
 
-    <a-form-item>
-      <a-row :gutter="8" justify="space-between" align="middle">
-        <a-col>{{ t('settings.panel.other.selectionColorLabel') }}</a-col>
+    <SettingColorPickerField
+      :label="t('settings.panel.other.selectionColorLabel')"
+      :hint="t('settings.panel.other.selectionColorHint')"
+      :show-reset="selectionHighlightColorIsCustom"
+      :reset-tooltip="t('settings.panel.other.selectionColorResetTooltip')"
+      :value="colorPickerValue(selectionHighlightColorModel)"
+      @reset="resetSelectionHighlightColor"
+      @change="(value: unknown, css: unknown) => onSelectionColorPickerChange(resolveColorCssString(value, css))"
+    />
 
-        <a-col>
-          <a-space :size="6" align="center">
-            <a-tooltip
-              v-if="selectionHighlightColorIsCustom"
-              :title="t('settings.panel.other.selectionColorResetTooltip')"
-            >
-              <a-button
-                type="text"
-                size="small"
-                :aria-label="t('settings.panel.other.selectionColorReset')"
-                :title="t('settings.panel.other.selectionColorResetTooltip')"
-                @click="resetSelectionHighlightColor"
-              >
-                <ReloadOutlined />
-              </a-button>
-            </a-tooltip>
+    <SettingSwitchField
+      v-model:checked="keepActiveLayerOnHideModel"
+      :label="t('settings.panel.other.keepActiveLayerOnHideLabel')"
+      :hint="keepActiveLayerOnHideHint"
+    />
 
-            <a-color-picker
-              size="small"
-              show-text
-              disabled-alpha
-              :value="colorPickerValue(selectionHighlightColorModel)"
-              @change="(value: unknown, css: unknown) => onSelectionColorPickerChange(resolveColorCssString(value, css))"
-            />
-            <!-- hex removed -->
-          </a-space>
-        </a-col>
-      </a-row>
-      <a-typography-text type="secondary" class="settings-text-secondary">
-        {{ t('settings.panel.other.selectionColorHint') }}
-      </a-typography-text>
-    </a-form-item>
-
-    <a-form-item>
-      <a-row justify="space-between" align="middle">
-        <a-col>{{ t('settings.panel.other.keepActiveLayerOnHideLabel') }}</a-col>
-        <a-col>
-          <a-switch
-            v-model:checked="keepActiveLayerOnHideModel"
-            :aria-label="t('settings.panel.other.keepActiveLayerOnHide')"
-            :title="t('settings.panel.other.keepActiveLayerOnHide')"
-          />
-        </a-col>
-      </a-row>
-      <a-typography-text type="secondary" class="settings-text-secondary">
-        {{ keepActiveLayerOnHideHint }}
-      </a-typography-text>
-    </a-form-item>
-
-    <a-form-item :label="t('settings.panel.other.panStep')">
-      <a-row :gutter="8" align="middle">
-        <a-col :flex="1">
-          <a-slider
-            v-model:value="panStepScaleModel"
-            :min="PAN_STEP_MIN"
-            :max="PAN_STEP_MAX"
-            :step="PAN_STEP_STEP"
-          />
-        </a-col>
-        <a-col>
-          <a-input-number
-            v-model:value="panStepScaleModel"
-            class="settings-col-compact"
-
-            :aria-label="t('settings.panel.other.panStep')"
-            :title="t('settings.panel.other.panStep')"
-            :min="PAN_STEP_MIN"
-            :max="PAN_STEP_MAX"
-            :step="PAN_STEP_STEP"
-          />
-        </a-col>
-      </a-row>
-    </a-form-item>
-  </a-form>
+    <SettingSliderField
+      v-model:value="panStepScaleModel"
+      :label="t('settings.panel.other.panStep')"
+      :min="PAN_STEP_MIN"
+      :max="PAN_STEP_MAX"
+      :slider-step="PAN_STEP_STEP"
+    />
+  </a-space>
 </template>
 
 <script setup lang="ts">
-import { ReloadOutlined } from '@antdv-next/icons';
 import { computed, onBeforeUnmount } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { message } from 'antdv-next';
@@ -230,6 +95,10 @@ import { getThemeMode, setThemeMode, type ThemeMode } from '../../../theme/mode'
 import { getVisualStylePreset, VISUAL_STYLE_PRESETS } from '../../../lib/viewer/visualStyles';
 import { PANEL_KEYS } from '../../../lib/viewer/panelKeys';
 import { useSettingsSiderResetContext } from '../useSettingsSiderResetContext';
+import SettingColorPickerField from '../parts/SettingColorPickerField.vue';
+import SettingSelectField from '../parts/SettingSelectField.vue';
+import SettingSliderField from '../parts/SettingSliderField.vue';
+import SettingSwitchField from '../parts/SettingSwitchField.vue';
 
 const { t } = useI18n();
 const { settings, patchSettings } = useSettingsSiderContext();

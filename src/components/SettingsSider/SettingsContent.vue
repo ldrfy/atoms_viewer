@@ -1,12 +1,10 @@
 <template>
-  <div class="settings-content">
-    <div class="settings-header">
+  <a-flex vertical class="settings-content">
+    <a-flex vertical class="settings-header">
       <!-- Mobile only: grab handle -->
       <div
         v-if="showGrab"
         class="settings-grab"
-        aria-label="resize"
-        :title="t('common.resize')"
         role="button"
         tabindex="0"
         @pointerdown.stop.prevent="onResizeStart"
@@ -14,7 +12,7 @@
         <div class="settings-grab-bar" />
       </div>
 
-      <div class="settings-header-row">
+      <a-flex align="center" justify="space-between" class="settings-header-row">
         <a-typography-text strong>
           {{ t('settings.title') }}
         </a-typography-text>
@@ -23,48 +21,42 @@
           variant="link"
           color="default"
           size="small"
-          aria-label="close"
-          :title="t('common.close')"
           @click="emit('close')"
         >
           <CloseOutlined />
         </a-button>
-      </div>
-    </div>
+      </a-flex>
+    </a-flex>
 
-    <div class="settings-body">
+    <a-flex vertical class="settings-body">
       <a-collapse
         v-model:active-key="activeKeyProxy"
-        ghost
         class="settings-collapse"
+        ghost
         expand-icon-placement="end"
         :items="collapseItems"
         :label-render="renderCollapseLabel"
       />
 
-      <div class="settings-clear-storage settings-gap-top-md">
-        <a-space direction="vertical" class="settings-full-width">
-          <a-button
-            block
-            danger
-            @click="onClearSettings"
-          >
-            {{ t('settings.clearSettings') }}
-          </a-button>
-        </a-space>
-        <a-typography-text type="secondary" class="settings-text-secondary">
+      <a-flex vertical gap="small" style="padding: 16px 12px;">
+        <a-button
+          block
+          danger
+          @click="onClearSettings"
+        >
+          {{ t('settings.clearSettings') }}
+        </a-button>
+        <a-typography-text type="secondary">
           {{ t('settings.clearStorageHint') }}
         </a-typography-text>
-        <!-- Dev tip: use the browser console to inspect cache/storage sizes via `localStorage.getItem('settings')` or `localStorage.getItem('atomsViewer.layerSnapshotCache.v1')`. -->
-      </div>
-    </div>
+      </a-flex>
+      <!-- Dev tip: use the browser console to inspect cache/storage sizes via `localStorage.getItem('settings')` or `localStorage.getItem('atomsViewer.layerSnapshotCache.v1')`. -->
+    </a-flex>
 
-    <div class="settings-footer">
-      <a-typography-text type="secondary" class="settings-text-secondary settings-build-text">
-        v{{ APP_VERSION }} · {{ t('settings.buildTime') }} {{ buildTimeText }}
-      </a-typography-text>
-    </div>
-  </div>
+    <a-typography-text type="secondary" class="settings-footer  settings-build-text">
+      v{{ APP_VERSION }} · {{ t('settings.buildTime') }} {{ buildTimeText }}
+    </a-typography-text>
+  </a-flex>
 </template>
 
 <script setup lang="ts">
@@ -76,13 +68,12 @@ import {
   CloseOutlined,
   EyeOutlined,
   FolderOpenOutlined,
-  ReloadOutlined,
   SettingOutlined,
   SlidersOutlined,
   SwapOutlined,
   SyncOutlined,
 } from '@antdv-next/icons';
-import { Badge, Button, Modal, Popconfirm, Tooltip, TypographyText, type CollapseProps } from 'antdv-next';
+import { Modal, type CollapseProps } from 'antdv-next';
 
 import FilesPanel from './panels/FilesPanel.vue';
 import LayersPanel from './panels/LayersPanel.vue';
@@ -92,6 +83,7 @@ import LammpsPanel from './panels/LammpsPanel.vue';
 import ColorsPanel from './panels/ColorsPanel.vue';
 import DetailsPanel from './panels/DetailsPanel.vue';
 import OtherPanel from './panels/OtherPanel.vue';
+import CollapsePanelLabel from './parts/CollapsePanelLabel.vue';
 import {
   countUnknownElementMappingForTypeIds,
   DEFAULT_SETTINGS,
@@ -386,79 +378,18 @@ const renderCollapseLabel = ({ item }: { item: any; index: number }) => {
   const p = panelMap.value[item.key];
   if (!p) return item.label;
 
-  const iconVNode = h(p.icon, { class: 'settings-panel-icon' });
-  const titleVNode = h(
-    TypographyText,
-    { strong: true },
-    () => t(p.headerKey),
-  );
-
-  const resetVNode
-    = isPanelDirty(p.key) && hasPanelReset(p.key)
-      ? h(
-        Tooltip,
-        { title: t('settings.panel.resetPanelButton') },
-        {
-          default: () =>
-            h(
-              Popconfirm,
-              {
-                title: t('settings.panel.resetPanelConfirm'),
-                onConfirm: (ev?: Event) => {
-                  ev?.stopPropagation?.();
-                  resetPanel(p.key);
-                },
-                onClick: (ev: Event) => ev.stopPropagation(),
-              },
-              {
-                default: () =>
-                  h(
-                    Button,
-                    {
-                      variant: 'link',
-                      color: 'default',
-                      size: 'small',
-                      class: 'settings-panel-reset-button',
-                      title: t('settings.panel.resetPanelButton'),
-                      onClick: (ev: Event) => ev.stopPropagation(),
-                    },
-                    { default: () => h(ReloadOutlined) },
-                  ),
-              },
-            ),
-        },
-      )
-      : null;
-
   const dirtyCount = getPanelDirtyCount(p.key);
-  return h('span', { class: 'settings-panel-header' }, [
-    h('span', { class: 'settings-panel-header-main' }, [
-      iconVNode,
-      titleVNode,
-      h(
-        'span',
-        {
-          class: [
-            'settings-panel-indicator',
-            { 'settings-panel-indicator--inactive': dirtyCount === 0 },
-          ],
-        },
-        [
-          dirtyCount > 0
-            ? h(Badge, {
-              count: dirtyCount,
-              overflowCount: 99,
-              showZero: false,
-              color: 'blue',
-              offset: [-5, -6],
-              class: 'settings-panel-badge',
-            })
-            : null,
-          resetVNode,
-        ],
-      ),
-    ]),
-  ]);
+  // 标题渲染拆分到独立组件，减少当前文件复杂度。
+  // Move label rendering to a dedicated component to reduce complexity here.
+  return h(CollapsePanelLabel, {
+    icon: p.icon,
+    title: t(p.headerKey),
+    dirtyCount,
+    showReset: isPanelDirty(p.key) && hasPanelReset(p.key),
+    resetTooltip: t('settings.panel.resetPanelButton'),
+    resetConfirmText: t('settings.panel.resetPanelConfirm'),
+    onReset: () => resetPanel(p.key),
+  });
 };
 
 const activeKeyProxy = computed<string[]>({

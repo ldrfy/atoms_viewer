@@ -7,7 +7,6 @@
           color="default"
           class="brand-btn"
           :class="{ clickable: props.canGoHome }"
-          aria-label="home"
           @click="onClickBrand"
         >
           <HomeOutlined v-if="props.canGoHome" />
@@ -24,7 +23,6 @@
               variant="link"
               color="default"
               class="btn-icon-top"
-              aria-label="language"
               :title="t('viewer.locale.title')"
             >
               <GlobalOutlined />
@@ -36,7 +34,6 @@
             variant="link"
             color="default"
             class="btn-icon-top"
-            aria-label="github"
             :title="t('viewer.links.github')"
             @click="openGithub"
           >
@@ -59,7 +56,6 @@
             variant="link"
             color="default"
             class="btn-icon-top"
-            aria-label="settings"
             :title="t('settings.title')"
             @click="emit('open-settings')"
           >
@@ -72,7 +68,6 @@
           <a-button
             variant="link"
             color="default"
-            aria-label="menu"
             :title="t('common.menu')"
             @click="mobileOpen = true"
           >
@@ -388,17 +383,6 @@ function onClickBrand(): void {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-}
-
-.collapse-value {
-    margin-left: auto;
-}
-
-.collapse-header {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    width: 100%;
 }
 
 .drawer-links-single {

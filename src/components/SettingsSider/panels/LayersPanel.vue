@@ -1,5 +1,5 @@
 <template>
-  <a-space direction="vertical" :size="8" class="settings-full-width">
+  <a-space direction="vertical" class="settings-full-width">
     <a-row
       align="middle"
       :gutter="8"
@@ -40,7 +40,6 @@
           <a-tooltip :title="t('settings.panel.layers.hint')">
             <a-button
               type="text"
-              :aria-label="t('settings.panel.layers.hint')"
             >
               <QuestionCircleOutlined />
             </a-button>
@@ -50,41 +49,56 @@
     </a-row>
     <a-divider style="margin-top: 2px; margin-bottom: 8px;" />
 
-    <div class="layers-list">
-      <a-alert
-        v-if="layerList.length === 0"
-        type="info"
-        show-icon
-        :message="t('settings.panel.layers.empty')"
-      />
+    <a-alert
+      v-if="layerList.length === 0"
+      type="info"
+      show-icon
+      :message="t('settings.panel.layers.empty')"
+    />
 
-      <div
+    <a-space
+      v-else
+      direction="vertical"
+      :size="8"
+      class="settings-full-width"
+    >
+      <a-card
         v-for="l in layerList"
-        v-else
         :key="l.id"
-        class="layer-row"
-        :class="{ active: l.id === activeLayerId }"
+        size="small"
+        :style="layerItemStyle(l.id === activeLayerId)"
+        :body-style="{ padding: '8px 10px' }"
         @click="onSetActive(l.id)"
       >
-        <div class="layer-left">
+        <a-flex :gap="8" align="center" class="settings-full-width">
           <a-radio :checked="l.id === activeLayerId" />
-        </div>
 
-        <div class="layer-main">
-          <div class="layer-name" :title="layerPrimaryText(l)">
-            {{ layerPrimaryText(l) }}
-          </div>
-          <div class="layer-meta" :title="layerSecondaryText(l)">
-            {{ layerSecondaryText(l) }}
-          </div>
-        </div>
+          <a-space direction="vertical" :size="0" style="flex: 1; min-width: 0;">
+            <a-typography-text
+              strong
+              :ellipsis="{ tooltip: false }"
+              :title="layerPrimaryText(l)"
+            >
+              {{ layerPrimaryText(l) }}
+            </a-typography-text>
+            <a-typography-text
+              type="secondary"
+              :ellipsis="{ tooltip: false }"
+              :title="layerSecondaryText(l)"
+            >
+              {{ layerSecondaryText(l) }}
+            </a-typography-text>
+          </a-space>
 
-        <div class="layer-right" @click.stop>
-          <a-space direction="vertical" align="center" :size="2">
+          <a-space
+            direction="vertical"
+            align="center"
+            :size="2"
+            @click.stop
+          >
             <a-button
               :type="l.visible ? 'link' : 'text'"
               size="small"
-              :title="t('settings.panel.layers.visible')"
               @click="onToggleLayer(l.id, !l.visible)"
             >
               <component :is="l.visible ? EyeOutlined : EyeInvisibleOutlined" />
@@ -104,9 +118,9 @@
               </a-button>
             </a-popconfirm>
           </a-space>
-        </div>
-      </div>
-    </div>
+        </a-flex>
+      </a-card>
+    </a-space>
   </a-space>
 </template>
 
@@ -134,6 +148,17 @@ const sortOptions = computed(() => ([
   { value: 'name,ASC', label: t('settings.panel.layers.sort.nameAsc') },
   { value: 'name,DESC', label: t('settings.panel.layers.sort.nameDesc') },
 ]));
+
+// 图层项样式，尽量复用 Ant 列表并只保留激活态差异。
+// Layer item style keeps Ant List base behavior and only adds active-state difference.
+function layerItemStyle(active: boolean): Record<string, string> {
+  return {
+    borderRadius: '10px',
+    cursor: 'pointer',
+    outline: active ? '1px solid var(--ant-colorPrimary, #1677ff)' : 'none',
+    background: active ? 'rgba(22, 119, 255, 0.1)' : 'transparent',
+  };
+}
 
 /**
  * Primary text shown for a layer.

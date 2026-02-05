@@ -1,216 +1,84 @@
 <template>
-  <a-form layout="vertical">
+  <a-space direction="vertical" :size="12" class="settings-full-width">
     <LayerScopeControl v-model:scope="scope" />
 
-    <a-form-item>
-      <a-row class="settings-gap-top-sm" align="middle" :gutter="8">
-        <a-col :span="8">
-          <a-typography-text>
-            {{ t('settings.panel.details.representation') }}
-          </a-typography-text>
-        </a-col>
-        <a-col :span="16">
-          <a-select
-            v-model:value="representationModel"
-            :options="representationOptions"
-            :disabled="controlsDisabled"
-          />
-        </a-col>
-      </a-row>
-    </a-form-item>
+    <SettingSelectField
+      v-model:value="representationModel"
+      :label="t('settings.panel.details.representation')"
+      :options="representationOptions"
+      :disabled="controlsDisabled"
+    />
 
-    <a-form-item>
-      <a-row justify="space-between" align="middle">
-        <a-col>{{ t('settings.panel.details.bonds') }}</a-col>
-        <a-col>
-          <a-switch
-            v-model:checked="showBondsModel"
-            :disabled="controlsDisabled"
-            :aria-label="t('settings.panel.details.bonds')"
-            :title="t('settings.panel.details.bonds')"
-          />
-        </a-col>
-      </a-row>
-    </a-form-item>
+    <SettingSwitchField
+      v-model:checked="showBondsModel"
+      :label="t('settings.panel.details.bonds')"
+      :disabled="controlsDisabled"
+    />
 
-    <a-form-item
+    <SettingSliderField
       v-if="showBondsModel"
+      v-model:value="bondRadiusModel"
       :label="t('settings.panel.details.bondRadius')"
-    >
-      <a-row :gutter="8" align="middle">
-        <a-col :flex="1">
-          <a-slider
-            v-model:value="bondRadiusModel"
-            :min="BOND_RADIUS_MIN"
-            :max="BOND_RADIUS_MAX"
-            :step="0.01"
-            :disabled="controlsDisabled || !showBondsModel"
-          />
-        </a-col>
-        <a-col>
-          <a-input-number
-            v-model:value="bondRadiusModel"
-            class="settings-col-compact"
+      :min="BOND_RADIUS_MIN"
+      :max="BOND_RADIUS_MAX"
+      :slider-step="0.01"
+      :disabled="controlsDisabled || !showBondsModel"
+    />
+    <SettingSliderField
+      v-if="showBondsModel"
+      v-model:value="bondFactorModel"
+      :label="t('settings.panel.details.bondFactor')"
+      :hint="t('settings.panel.details.bondFactorHint')"
+      :min="BOND_FACTOR_MIN"
+      :max="BOND_FACTOR_MAX"
+      :slider-step="0.01"
+      :disabled="controlsDisabled || !showBondsModel"
+    />
 
-            :aria-label="t('settings.panel.details.bondRadius')"
-            :title="t('settings.panel.details.bondRadius')"
-            :min="BOND_RADIUS_MIN"
-            :max="BOND_RADIUS_MAX"
-            :step="0.01"
-            :disabled="controlsDisabled || !showBondsModel"
-          />
-        </a-col>
-      </a-row>
-    </a-form-item>
+    <SettingSliderField
+      v-model:value="atomScaleModel"
+      :label="t('settings.panel.details.atomSize')"
+      :min="ATOM_SCALE_MIN"
+      :max="ATOM_SCALE_MAX"
+      :slider-step="0.01"
+      :disabled="controlsDisabled"
+    />
 
-    <a-form-item v-if="showBondsModel" :label="t('settings.panel.details.bondFactor')">
-      <a-row :gutter="8" align="middle">
-        <a-col :flex="1">
-          <a-slider
-            v-model:value="bondFactorModel"
-            :min="BOND_FACTOR_MIN"
-            :max="BOND_FACTOR_MAX"
-            :step="0.01"
-            :disabled="controlsDisabled || !showBondsModel"
-          />
-        </a-col>
-        <a-col>
-          <a-input-number
-            v-model:value="bondFactorModel"
-            class="settings-col-compact"
+    <SettingSliderField
+      v-model:value="atomRoughnessModel"
+      :label="t('settings.panel.details.atomRoughness')"
+      :min="ATOM_ROUGHNESS_MIN"
+      :max="ATOM_ROUGHNESS_MAX"
+      :slider-step="0.05"
+      :input-step="0.05"
+      :precision="2"
+      :disabled="controlsDisabled"
+    />
 
-            :aria-label="t('settings.panel.details.bondFactor')"
-            :title="t('settings.panel.details.bondFactor')"
-            :min="BOND_FACTOR_MIN"
-            :max="BOND_FACTOR_MAX"
-            :step="0.01"
-            :disabled="controlsDisabled || !showBondsModel"
-          />
-        </a-col>
-      </a-row>
-      <a-typography-text type="secondary" class="settings-text-secondary">
-        {{ t('settings.panel.details.bondFactorHint') }}
-      </a-typography-text>
-    </a-form-item>
+    <SettingSliderField
+      v-model:value="sphereSegmentsModel"
+      :label="t('settings.panel.details.sphereSegments')"
+      :hint="t('settings.panel.details.sphereSegmentsHint')"
+      :min="SPHERE_SEGMENTS_MIN"
+      :max="SPHERE_SEGMENTS_MAX"
+      :slider-step="1"
+      :disabled="controlsDisabled"
+    />
 
-    <a-form-item :label="t('settings.panel.details.atomSize')">
-      <a-row :gutter="8" align="middle">
-        <a-col :flex="1">
-          <a-slider
-            v-model:value="atomScaleModel"
-            :min="ATOM_SCALE_MIN"
-            :max="ATOM_SCALE_MAX"
-            :step="0.01"
-            :disabled="controlsDisabled"
-          />
-        </a-col>
-        <a-col>
-          <a-input-number
-            v-model:value="atomScaleModel"
-            class="settings-col-compact"
+    <SettingSwitchField
+      v-model:checked="showAtomIndexModel"
+      :label="t('settings.panel.details.showAtomIndex')"
+      :hint="t('settings.panel.details.showAtomIndexHint')"
+      :disabled="controlsDisabled"
+    />
 
-            :aria-label="t('settings.panel.details.atomSize')"
-            :title="t('settings.panel.details.atomSize')"
-            :min="ATOM_SCALE_MIN"
-            :max="ATOM_SCALE_MAX"
-            :step="0.01"
-            :disabled="controlsDisabled"
-          />
-        </a-col>
-      </a-row>
-    </a-form-item>
-
-    <a-form-item :label="t('settings.panel.details.atomRoughness')">
-      <a-row :gutter="8" align="middle">
-        <a-col :flex="1">
-          <a-slider
-            v-model:value="atomRoughnessModel"
-            :min="ATOM_ROUGHNESS_MIN"
-            :max="ATOM_ROUGHNESS_MAX"
-            :step="0.05"
-            :disabled="controlsDisabled"
-          />
-        </a-col>
-        <a-col>
-          <a-input-number
-            v-model:value="atomRoughnessModel"
-            class="settings-col-compact"
-
-            :aria-label="t('settings.panel.details.atomRoughness')"
-            :title="t('settings.panel.details.atomRoughness')"
-            :min="ATOM_ROUGHNESS_MIN"
-            :max="ATOM_ROUGHNESS_MAX"
-            :step="0.05"
-            :disabled="controlsDisabled"
-          />
-        </a-col>
-      </a-row>
-    </a-form-item>
-
-    <a-form-item :label="t('settings.panel.details.sphereSegments')">
-      <a-row :gutter="8" align="middle">
-        <a-col :flex="1">
-          <a-slider
-            v-model:value="sphereSegmentsModel"
-            :min="SPHERE_SEGMENTS_MIN"
-            :max="SPHERE_SEGMENTS_MAX"
-            :step="1"
-            :disabled="controlsDisabled"
-          />
-        </a-col>
-        <a-col>
-          <a-input-number
-            v-model:value="sphereSegmentsModel"
-            class="settings-col-compact"
-
-            :aria-label="t('settings.panel.details.sphereSegments')"
-            :title="t('settings.panel.details.sphereSegments')"
-            :min="SPHERE_SEGMENTS_MIN"
-            :max="SPHERE_SEGMENTS_MAX"
-            :step="1"
-            :disabled="controlsDisabled"
-          />
-        </a-col>
-      </a-row>
-
-      <a-typography-text type="secondary" class="settings-text-secondary">
-        {{ t('settings.panel.details.sphereSegmentsHint') }}
-      </a-typography-text>
-    </a-form-item>
-    <a-form-item>
-      <a-row justify="space-between" align="middle">
-        <a-col>{{ t('settings.panel.details.showAtomIndex') }}</a-col>
-        <a-col>
-          <a-switch
-            v-model:checked="showAtomIndexModel"
-            :aria-label="t('settings.panel.details.showAtomIndex')"
-            :title="t('settings.panel.details.showAtomIndex')"
-            :disabled="controlsDisabled"
-          />
-        </a-col>
-      </a-row>
-      <a-typography-text type="secondary" class="settings-text-secondary">
-        {{ t('settings.panel.details.showAtomIndexHint') }}
-      </a-typography-text>
-    </a-form-item>
-
-    <a-form-item>
-      <a-row justify="space-between" align="middle">
-        <a-col>{{ t('settings.panel.details.showElementSymbol') }}</a-col>
-        <a-col>
-          <a-switch
-            v-model:checked="showElementSymbolModel"
-            :aria-label="t('settings.panel.details.showElementSymbol')"
-            :title="t('settings.panel.details.showElementSymbol')"
-            :disabled="controlsDisabled"
-          />
-        </a-col>
-      </a-row>
-      <a-typography-text type="secondary" class="settings-text-secondary">
-        {{ t('settings.panel.details.showElementSymbolHint') }}
-      </a-typography-text>
-    </a-form-item>
-  </a-form>
+    <SettingSwitchField
+      v-model:checked="showElementSymbolModel"
+      :label="t('settings.panel.details.showElementSymbol')"
+      :hint="t('settings.panel.details.showElementSymbolHint')"
+      :disabled="controlsDisabled"
+    />
+  </a-space>
 </template>
 
 <script setup lang="ts">
@@ -220,6 +88,9 @@ import { DEFAULT_DETAILS, type DetailsSettingsGroup, type RepresentationId } fro
 import { viewerApiRef } from '../../../lib/viewer/bridge';
 import { useSettingsSiderContext } from '../useSettingsSiderContext';
 import LayerScopeControl from './LayerScopeControl.vue';
+import SettingSelectField from '../parts/SettingSelectField.vue';
+import SettingSliderField from '../parts/SettingSliderField.vue';
+import SettingSwitchField from '../parts/SettingSwitchField.vue';
 import { useLayerScope } from '../useLayerScope';
 import { useSettingsSiderResetContext } from '../useSettingsSiderResetContext';
 import { PANEL_KEYS } from '../../../lib/viewer/panelKeys';

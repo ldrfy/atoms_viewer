@@ -46,7 +46,6 @@
       <a-col flex="none" style="width: 96px;">
         <a-input-number
           v-model:value="frameIndexModel"
-          :aria-label="t('viewer.play.frameIndex')"
           :title="t('viewer.play.frameIndex')"
           :min="1"
           :max="frameCountMax"
@@ -77,7 +76,6 @@
           </a-typography-text>
           <a-input-number
             v-model:value="fpsModel"
-            :aria-label="t('viewer.play.fps')"
             :title="t('viewer.play.fps')"
             :min="RECORD_FPS_MIN"
             :max="RECORD_FPS_MAX"
@@ -120,7 +118,6 @@
             </a-typography-text>
             <a-input-number
               v-model:value="recordFpsModel"
-              :aria-label="t('settings.panel.other.recordFps')"
               :title="t('settings.panel.other.recordFps')"
               :min="RECORD_FPS_MIN"
               :max="RECORD_FPS_MAX"

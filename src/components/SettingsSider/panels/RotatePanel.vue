@@ -1,113 +1,45 @@
 <template>
-  <a-form layout="vertical">
-    <a-form-item>
-      <a-row justify="space-between" align="middle">
-        <a-col>{{ t('settings.panel.rotation.enable') }}</a-col>
-        <a-col>
-          <a-switch
-            v-model:checked="autoRotateEnabledModel"
-            :aria-label="t('settings.panel.rotation.enable')"
-            :title="t('settings.panel.rotation.enable')"
-            :disabled="!hasAnyLayer"
-          />
-        </a-col>
-      </a-row>
-    </a-form-item>
+  <a-space direction="vertical" :size="12" class="settings-full-width">
+    <SettingSwitchField
+      v-model:checked="autoRotateEnabledModel"
+      :label="t('settings.panel.rotation.enable')"
+      :disabled="!hasAnyLayer"
+    />
 
-    <a-form-item>
-      <a-row justify="space-between" align="middle">
-        <a-col :span="8">
-          {{ t('settings.panel.rotation.mode') }}
-        </a-col>
-        <a-col />
-        <a-col flex="1">
-          <a-select
-            v-model:value="autoRotatePresetIdModel"
-            :options="autoRotatePresetOptions"
-            :disabled="!hasAnyLayer"
-          />
-        </a-col>
-      </a-row>
+    <SettingSelectField
+      v-model:value="autoRotatePresetIdModel"
+      :label="t('settings.panel.rotation.mode')"
+      :hint="currentAutoRotatePresetHint"
+      :options="autoRotatePresetOptions"
+      :disabled="!hasAnyLayer"
+    />
 
-      <a-typography-text type="secondary" class="settings-text-secondary">
-        {{ currentAutoRotatePresetHint }}
-      </a-typography-text>
-    </a-form-item>
+    <SettingSliderField
+      v-model:value="autoRotateSpeedModel"
+      :label="t('settings.panel.rotation.speed')"
+      :hint="t('settings.panel.rotation.speedHint')"
+      :min="AUTO_ROTATE_SPEED_MIN"
+      :max="AUTO_ROTATE_SPEED_MAX"
+      :slider-step="1"
+      :disabled="!hasAnyLayer"
+    />
 
-    <a-form-item :label="t('settings.panel.rotation.speed')">
-      <a-row :gutter="8" align="middle">
-        <a-col :flex="1">
-          <a-slider
-            v-model:value="autoRotateSpeedModel"
-            :min="AUTO_ROTATE_SPEED_MIN"
-            :max="AUTO_ROTATE_SPEED_MAX"
-            :step="1"
-            :disabled="!hasAnyLayer"
-          />
-        </a-col>
-        <a-col>
-          <a-input-number
-            v-model:value="autoRotateSpeedModel"
-            class="settings-col-compact"
+    <SettingSwitchField
+      v-model:checked="autoRotatePauseOnInteractModel"
+      :label="t('settings.panel.rotation.pauseOnInteract')"
+      :disabled="!hasAnyLayer"
+    />
 
-            :aria-label="t('settings.panel.rotation.speed')"
-            :title="t('settings.panel.rotation.speed')"
-            :min="AUTO_ROTATE_SPEED_MIN"
-            :max="AUTO_ROTATE_SPEED_MAX"
-            :step="1"
-            :disabled="!hasAnyLayer"
-          />
-        </a-col>
-      </a-row>
-      <a-typography-text type="secondary" class="settings-text-secondary">
-        {{ t('settings.panel.rotation.speedHint') }}
-      </a-typography-text>
-    </a-form-item>
-
-    <a-form-item>
-      <a-row justify="space-between" align="middle">
-        <a-col>{{ t('settings.panel.rotation.pauseOnInteract') }}</a-col>
-        <a-col>
-          <a-switch
-            v-model:checked="autoRotatePauseOnInteractModel"
-            :aria-label="t('settings.panel.rotation.pauseOnInteract')"
-            :title="t('settings.panel.rotation.pauseOnInteract')"
-            :disabled="!hasAnyLayer"
-          />
-        </a-col>
-      </a-row>
-    </a-form-item>
-
-    <a-form-item
+    <SettingSliderField
       v-if="autoRotatePauseOnInteractModel"
+      v-model:value="autoRotateResumeDelayMsModel"
       :label="t('settings.panel.rotation.resumeDelay')"
-    >
-      <a-row :gutter="8" align="middle">
-        <a-col :flex="1">
-          <a-slider
-            v-model:value="autoRotateResumeDelayMsModel"
-            :min="AUTO_ROTATE_RESUME_MIN"
-            :max="AUTO_ROTATE_RESUME_MAX"
-            :step="50"
-            :disabled="!hasAnyLayer"
-          />
-        </a-col>
-        <a-col>
-          <a-input-number
-            v-model:value="autoRotateResumeDelayMsModel"
-            class="settings-col-compact"
-
-            :aria-label="t('settings.panel.rotation.resumeDelay')"
-            :title="t('settings.panel.rotation.resumeDelay')"
-            :min="AUTO_ROTATE_RESUME_MIN"
-            :max="AUTO_ROTATE_RESUME_MAX"
-            :step="50"
-            :disabled="!hasAnyLayer"
-          />
-        </a-col>
-      </a-row>
-    </a-form-item>
-  </a-form>
+      :min="AUTO_ROTATE_RESUME_MIN"
+      :max="AUTO_ROTATE_RESUME_MAX"
+      :slider-step="50"
+      :disabled="!hasAnyLayer"
+    />
+  </a-space>
 </template>
 
 <script setup lang="ts">
@@ -128,6 +60,9 @@ import { PANEL_KEYS } from '../../../lib/viewer/panelKeys';
 
 import { useSettingsSiderContext } from '../useSettingsSiderContext';
 import { useSettingsSiderResetContext } from '../useSettingsSiderResetContext';
+import SettingSelectField from '../parts/SettingSelectField.vue';
+import SettingSliderField from '../parts/SettingSliderField.vue';
+import SettingSwitchField from '../parts/SettingSwitchField.vue';
 
 const { t } = useI18n();
 const { settings, patchSettings, hasAnyLayer } = useSettingsSiderContext();
@@ -150,7 +85,7 @@ const autoRotateEnabledModel = computed({
 
 const autoRotatePresetIdModel = computed({
   get: () => settings.value.rotation.presetId,
-  set: (v: string) => {
+  set: (v: string | number) => {
     const id = String(v);
     patchAutoRotate({ presetId: id as AutoRotatePresetId, enabled: true });
   },

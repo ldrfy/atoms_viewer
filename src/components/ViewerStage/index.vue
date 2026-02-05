@@ -52,7 +52,6 @@
       class="file-input"
       type="file"
       multiple
-      :aria-label="t('viewer.empty.pickFile')"
       :title="t('viewer.empty.pickFile')"
       accept=".xyz,.pdb,.mol,.sdf,.dump,.lammpstrj,.traj,.data,.lmp,.zip"
       @change="stage.onFilePicked"

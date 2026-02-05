@@ -16,7 +16,6 @@
           <a-space direction="vertical" :size="6" class="parse-full-width">
             <a-select
               v-model:value="parseModeModel"
-              :aria-label="t('viewer.parse.mode')"
               :title="t('viewer.parse.mode')"
               :options="parseModeOptions"
               class="parse-full-width"

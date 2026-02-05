@@ -31,13 +31,6 @@ body {
 }
 
 
-/* Ensure Collapse expand icon renders on the right when using icon-position-end */
-.ant-collapse-icon-position-end .ant-collapse-header {
-    flex-direction: row-reverse;
-}
-
-
-
 /*
   Global glass surface variables
   Used by Settings panel and Atom Inspector to keep translucency consistent.

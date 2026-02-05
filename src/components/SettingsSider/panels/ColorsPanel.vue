@@ -1,83 +1,69 @@
 <template>
-  <a-form layout="vertical">
+  <a-space direction="vertical" :size="12" class="settings-full-width">
     <LayerScopeControl v-model:scope="scope" />
 
-    <a-form-item>
-      <a-row align="middle" justify="space-between" class="settings-gap-bottom-sm">
-        <a-col>
-          <a-typography-text>
-            {{ t('settings.panel.colors.mapLabel') }}
-          </a-typography-text>
-        </a-col>
-        <a-col flex="1" class="header-right">
-          <a-tooltip :title="t('settings.panel.colors.alert')" placement="left">
-            <a-button
-              variant="link"
-              color="default"
-              :title="t('settings.panel.colors.alert')"
-            >
-              <QuestionCircleOutlined />
-            </a-button>
-          </a-tooltip>
-        </a-col>
-      </a-row>
-
-      <div v-for="(key, idx) in colorKeys" :key="`${key}-${idx}`" class="settings-gap-bottom-sm">
-        <a-row :gutter="0" justify="space-between" align="middle">
-          <a-col>
-            <a-tag style="margin-left: 8px;" color="success" variant="outlined">
-              {{ key }}
-            </a-tag>
-          </a-col>
-
-          <a-col :span="3">
-            →
-          </a-col>
-
-          <a-col>
-            <a-space :size="6" align="center">
-              <a-tooltip
-                v-if="isKeyCustom(key, draftColorMap)"
-                :title="t('settings.panel.colors.resetTooltip')"
-              >
-                <a-button
-                  type="text"
-                  size="small"
-                  :aria-label="t('settings.panel.colors.reset')"
-                  :title="t('settings.panel.colors.resetTooltip')"
-                  @click="onResetColor(key)"
-                >
-                  <ReloadOutlined />
-                </a-button>
-              </a-tooltip>
-
-              <a-color-picker
-                size="small"
-                show-text
-                :value="colorPickerValue(getDraftHexValue(key))"
-                @change="(value: unknown, css: unknown) => onColorPickerChange(key, value, css)"
-              />
-            </a-space>
-          </a-col>
-        </a-row>
-      </div>
-
-      <div class="settings-gap-top-sm">
+    <a-flex align="center" justify="space-between">
+      <a-typography-text>
+        {{ t('settings.panel.colors.mapLabel') }}
+      </a-typography-text>
+      <a-tooltip :title="t('settings.panel.colors.alert')" placement="left">
         <a-button
-          block
-          type="primary"
-          :disabled="isApplyDisabled"
-          @click="onApplyColorEdits"
+          variant="link"
+          color="default"
         >
-          {{ t('settings.panel.colors.apply') }}
+          <QuestionCircleOutlined />
         </a-button>
-      </div>
+      </a-tooltip>
+    </a-flex>
 
-      <a-typography-text type="secondary" class="settings-text-secondary-tight">
+    <a-flex
+      v-for="(key, idx) in colorKeys"
+      :key="`${key}-${idx}`"
+      align="center"
+      justify="space-between"
+      class="settings-full-width"
+      style="padding-inline: 8px;"
+    >
+      <a-tag color="success" variant="outlined">
+        {{ key }}
+      </a-tag>
+      <a-typography-text>→</a-typography-text>
+      <a-tooltip
+        v-if="isKeyCustom(key, draftColorMap)"
+        :title="t('settings.panel.colors.resetTooltip')"
+      >
+        <a-button
+          type="text"
+          size="small"
+          @click="onResetColor(key)"
+        >
+          <ReloadOutlined />
+        </a-button>
+      </a-tooltip>
+
+      <a-color-picker
+        size="small"
+        show-text
+        :value="colorPickerValue(getDraftHexValue(key))"
+        @change="(value: unknown, css: unknown) => onColorPickerChange(key, value, css)"
+      />
+    </a-flex>
+
+    <a-space direction="vertical" :size="5">
+      <a-button
+        block
+        type="primary"
+        :disabled="isApplyDisabled"
+        @click="onApplyColorEdits"
+      >
+        {{ t('settings.panel.colors.apply') }}
+      </a-button>
+
+      <a-typography-text type="secondary">
         {{ t('settings.panel.colors.hint') }}
       </a-typography-text>
-    </a-form-item>
-  </a-form>
+    </a-space>
+  </a-space>
 </template>
 
 <script setup lang="ts">

@@ -29,14 +29,12 @@
           v-if="drawerPlacement === 'bottom'"
           class="settings-sheet-resizer"
           role="separator"
-          aria-label="resize"
           @pointerdown.prevent="onResizeStart"
         />
         <div
           v-if="drawerPlacement === 'right'"
           class="settings-resizer"
           role="separator"
-          aria-label="resize"
           @pointerdown.prevent="onDesktopResizeStart"
         />
         <!-- 移动端拖拽过程中显示轻量壳层，但不卸载真实内容，避免状态/滚动位置丢失。 -->
@@ -439,7 +437,7 @@ const contentWrapperStyle = computed(() => {
       height: '100%',
       right: '0',
       left: 'auto',
-      borderRadius: '0',
+      borderRadius: '14px 0 0 14px',
       overflow: 'hidden',
       boxShadow: '0 12px 34px rgba(0,0,0,0.16)',
     } as Record<string, any>;

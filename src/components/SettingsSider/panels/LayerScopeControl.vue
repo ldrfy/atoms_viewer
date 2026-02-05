@@ -1,34 +1,29 @@
 <template>
-  <a-row
-    align="middle"
-    :gutter="8"
-  >
-    <a-col :span="8">
-      <a-typography-text>
+  <a-space direction="vertical" :size="8" class="settings-full-width">
+    <a-flex :gap="8" align="center" class="settings-full-width">
+      <a-typography-text style="min-width: 84px;">
         {{ t('settings.panel.scope.effectRangeLabel') }}
       </a-typography-text>
-    </a-col>
-    <a-col :span="16">
       <a-select
         v-model:value="scopeModel"
-        class="settings-full-width"
+        style="flex: 1; min-width: 0;"
         :options="scopeOptions"
         :placeholder="t('settings.panel.scope.selectPlaceholder')"
       />
-    </a-col>
-  </a-row>
+    </a-flex>
 
-  <a-divider style="margin-top: 8px;" plain>
-    <a-popover trigger="click" :content="activeLayerName">
-      <a-typography-text
-        type="secondary"
-        :ellipsis="{ tooltip: false }"
-        style="max-width: 28ch; cursor: pointer; "
-      >
-        {{ t('settings.panel.scope.currentLayerLabel') }}: {{ activeLayerName }}
-      </a-typography-text>
-    </a-popover>
-  </a-divider>
+    <a-divider style="margin: 0;" plain>
+      <a-popover trigger="click" :content="activeLayerName">
+        <a-typography-text
+          type="secondary"
+          :ellipsis="{ tooltip: false }"
+          style="max-width: 28ch; cursor: pointer;"
+        >
+          {{ t('settings.panel.scope.currentLayerLabel') }}: {{ activeLayerName }}
+        </a-typography-text>
+      </a-popover>
+    </a-divider>
+  </a-space>
 </template>
 
 <script setup lang="ts">

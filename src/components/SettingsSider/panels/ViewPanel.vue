@@ -1,167 +1,116 @@
 <template>
-  <a-form layout="vertical">
-    <a-form-item :label="viewPresetsLabel">
-      <div class="settings-center">
+  <a-space direction="vertical" :size="12" class="settings-full-width">
+    <a-space direction="vertical" :size="8" class="settings-full-width">
+      <a-space :size="6" align="center">
+        <a-typography-text>
+          {{ t('settings.panel.view.viewPresets') }}
+        </a-typography-text>
+        <a-tooltip :title="t('settings.panel.view.viewPresetsHint')" placement="left">
+          <a-button
+            variant="link"
+            color="default"
+            size="small"
+          >
+            <QuestionCircleOutlined />
+          </a-button>
+        </a-tooltip>
+      </a-space>
+      <a-flex justify="center">
         <a-checkbox-group
           :value="viewPresetsModel"
           :options="viewPresetOptions"
           :disabled="!hasAnyLayer"
           @change="onViewPresetsChange"
         />
-      </div>
-    </a-form-item>
+      </a-flex>
+    </a-space>
 
-    <a-form-item>
-      <a-row justify="space-between" align="middle">
-        <a-col>{{ t('settings.panel.view.perspective') }}</a-col>
-        <a-col>
-          <a-switch
-            v-model:checked="orthographicModel"
-            :aria-label="t('settings.panel.view.perspective')"
-            :title="t('settings.panel.view.perspective')"
-            :disabled="!hasAnyLayer"
-          />
-        </a-col>
-      </a-row>
-    </a-form-item>
+    <SettingSwitchField
+      v-model:checked="orthographicModel"
+      :label="t('settings.panel.view.perspective')"
+      :disabled="!hasAnyLayer"
+    />
 
-    <a-form-item
+    <a-space
       v-if="viewPresetsModel.length > 0"
-      :label="dualViewDistanceLabel"
+      direction="vertical"
+      :size="0"
+      class="settings-full-width"
     >
-      <a-row :gutter="8" align="middle">
-        <a-col :span="0.5" />
-
-        <a-col :flex="1">
-          <a-slider
-            v-model:value="dualViewDistanceModel"
-            :min="DUAL_VIEW_DISTANCE_MIN"
-            :max="dualViewDistanceMax"
-            :step="0.01"
-            :disabled="!hasAnyLayer"
-          />
-        </a-col>
-        <a-col>
-          <a-input-number
-            v-model:value="dualViewDistanceModel"
-            class="settings-col-compact"
-
-            :aria-label="t('settings.panel.view.dualViewDistance')"
-            :title="t('settings.panel.view.dualViewDistance')"
-            :min="DUAL_VIEW_DISTANCE_MIN"
-            :max="dualViewDistanceMax"
-            :step="0.01"
-            :precision="2"
-            :disabled="!hasAnyLayer"
-          />
-        </a-col>
-      </a-row>
-    </a-form-item>
-
-    <a-form-item :label="rotationLabel">
-      <a-space direction="vertical" :size="8" class="settings-full-width">
-        <a-row :gutter="8" align="middle">
-          <a-col :span="0.5" />
-
-          <a-col>
-            <a-tag color="processing" variant="outlined">
-              X
-            </a-tag>
-          </a-col>
-          <a-col :flex="1">
-            <a-slider
-              v-model:value="rotXModel"
-              :min="-180"
-              :max="180"
-              :step="0.1"
-              :disabled="!hasAnyLayer"
-            />
-          </a-col>
-          <a-col>
-            <a-input-number
-              v-model:value="rotXModel"
-              class="settings-col-compact"
-              :aria-label="t('settings.panel.view.rotX')"
-              :title="t('settings.panel.view.rotX')"
-              :min="-180"
-              :max="180"
-              :step="1"
-              :precision="1"
-              :disabled="!hasAnyLayer"
-            />
-          </a-col>
-        </a-row>
-        <a-row :gutter="8" align="middle">
-          <a-col :span="0.5" />
-
-          <a-col>
-            <a-tag color="processing" variant="outlined">
-              Y
-            </a-tag>
-          </a-col>
-          <a-col :flex="1">
-            <a-slider
-              v-model:value="rotYModel"
-              :min="-180"
-              :max="180"
-              :step="0.1"
-              :disabled="!hasAnyLayer"
-            />
-          </a-col>
-          <a-col>
-            <a-input-number
-              v-model:value="rotYModel"
-              class="settings-col-compact"
-
-              :aria-label="t('settings.panel.view.rotY')"
-              :title="t('settings.panel.view.rotY')"
-              :min="-180"
-              :max="180"
-              :step="1"
-              :precision="1"
-              :disabled="!hasAnyLayer"
-            />
-          </a-col>
-        </a-row>
-        <a-row :gutter="8" align="middle">
-          <a-col :span="0.5" />
-
-          <a-col>
-            <a-tag color="processing" variant="outlined">
-              Z
-            </a-tag>
-          </a-col>
-          <a-col :flex="1">
-            <a-slider
-              v-model:value="rotZModel"
-              :min="-180"
-              :max="180"
-              :step="0.1"
-              :disabled="!hasAnyLayer"
-            />
-          </a-col>
-          <a-col>
-            <a-input-number
-              v-model:value="rotZModel"
-              class="settings-col-compact"
-              :aria-label="t('settings.panel.view.rotZ')"
-              :title="t('settings.panel.view.rotZ')"
-              :min="-180"
-              :max="180"
-              :step="1"
-              :precision="1"
-              :disabled="!hasAnyLayer"
-            />
-          </a-col>
-        </a-row>
+      <a-space :size="6" align="center">
+        <a-typography-text>
+          {{ t('settings.panel.view.dualViewDistance') }}
+        </a-typography-text>
+        <a-tooltip
+          v-if="distanceDirty"
+          :title="t('settings.panel.view.resetView')"
+          placement="left"
+        >
+          <a-button
+            variant="link"
+            color="default"
+            size="small"
+            @click="resetDistance"
+          >
+            <ReloadOutlined />
+          </a-button>
+        </a-tooltip>
       </a-space>
-    </a-form-item>
-  </a-form>
+      <SettingSliderField
+        v-model:value="dualViewDistanceModel"
+        :min="DUAL_VIEW_DISTANCE_MIN"
+        :max="dualViewDistanceMax"
+        :slider-step="0.01"
+        :precision="2"
+        :disabled="!hasAnyLayer"
+      />
+    </a-space>
+
+    <a-space direction="vertical" :size="0" class="settings-full-width">
+      <a-space :size="6" align="center">
+        <a-typography-text>
+          {{ t('settings.panel.view.rotation') }}
+        </a-typography-text>
+        <a-tooltip
+          v-if="rotationDirty"
+          :title="t('settings.panel.view.resetPose')"
+          placement="left"
+        >
+          <a-button
+            variant="link"
+            color="default"
+            size="small"
+            @click="resetPose"
+          >
+            <ReloadOutlined />
+          </a-button>
+        </a-tooltip>
+      </a-space>
+      <SettingSliderField
+        v-for="axis in rotationAxes"
+        :key="axis.key"
+        :value="rotationValue(axis.key)"
+        :min="-180"
+        :max="180"
+        :slider-step="0.1"
+        :input-step="1"
+        :precision="1"
+        :disabled="!hasAnyLayer"
+        @update:value="(v: number) => onRotationAxisChange(axis.key, v)"
+      >
+        <template #prefix>
+          <a-tag color="processing" variant="outlined" style="margin-left: 5px;">
+            {{ axis.label }}
+          </a-tag>
+        </template>
+      </SettingSliderField>
+    </a-space>
+  </a-space>
 </template>
 
 <script setup lang="ts">
-import { computed, h, ref, watch, onBeforeUnmount } from 'vue';
-import { Button, Space, Tooltip, message } from 'antdv-next';
+import { computed, ref, watch, onBeforeUnmount } from 'vue';
+import { message } from 'antdv-next';
 import { QuestionCircleOutlined, ReloadOutlined } from '@antdv-next/icons';
 import { useI18n } from 'vue-i18n';
 import { normalizeViewPresets, type ViewPreset } from '../../../lib/viewer/viewPresets';
@@ -170,76 +119,11 @@ import { DEFAULT_DISPLAY } from '../../../lib/viewer/settings';
 import { useSettingsSiderContext } from '../useSettingsSiderContext';
 import { PANEL_KEYS } from '../../../lib/viewer/panelKeys';
 import { useSettingsSiderResetContext } from '../useSettingsSiderResetContext';
+import SettingSliderField from '../parts/SettingSliderField.vue';
+import SettingSwitchField from '../parts/SettingSwitchField.vue';
 
 const { t } = useI18n();
 const { settings, patchSettings, hasAnyLayer } = useSettingsSiderContext();
-
-// Build FormItem label VNodes for antdv-next (label slot removed).
-// 为 antdv-next 构建 FormItem label 的 VNode（已移除 label slot）。
-function buildFormItemLabel(
-  text: string,
-  action?: {
-    title: string;
-    ariaLabel: string;
-    onClick?: () => void;
-    icon: any;
-    show?: boolean;
-    size?: 'small' | 'middle' | 'large';
-  },
-  tooltipPlacement: 'left' | 'right' | 'top' | 'bottom' = 'left',
-) {
-  const children = [
-    h('span', text),
-  ];
-
-  if (action) {
-    const showAction = action.show ?? true;
-    // 更紧凑的图标按钮样式（用于 label 右侧操作按钮）。
-    // Compact icon-button style for label-side action buttons.
-    const compactActionStyle = {
-      minWidth: '20px',
-      height: '20px',
-      paddingInline: '4px',
-      paddingBlock: '0',
-      fontSize: '12px',
-      lineHeight: '1',
-      display: 'inline-flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      verticalAlign: 'middle',
-    };
-    const buttonNode = h(
-      Button,
-      {
-        'variant': 'link',
-        'color': 'default',
-        'size': action.size ?? 'small',
-        'aria-label': action.ariaLabel,
-        'title': action.title,
-        'onClick': action.onClick,
-        'style': showAction
-          ? compactActionStyle
-          : { ...compactActionStyle, visibility: 'hidden', pointerEvents: 'none' },
-        'tabIndex': showAction ? undefined : -1,
-      },
-      () => h(action.icon),
-    );
-
-    if (showAction) {
-      const tooltipNode = h(
-        Tooltip,
-        { title: action.title, placement: tooltipPlacement },
-        () => buttonNode,
-      );
-      children.push(tooltipNode);
-    }
-    else {
-      children.push(buttonNode);
-    }
-  }
-
-  return h(Space, { size: 6, align: 'center' }, () => children);
-}
 
 const viewPresetOptions = computed(() => [
   { label: t('settings.panel.view.viewPresetFront'), value: 'front' as const },
@@ -249,17 +133,6 @@ const viewPresetOptions = computed(() => [
 
 // Controlled selection (max two, min one)
 const viewPresetsModel = ref<ViewPreset[]>(['front']);
-
-// View presets label (text + hint).
-// 视角预设 label（文本 + 提示）。
-const viewPresetsLabel = computed(() => buildFormItemLabel(
-  t('settings.panel.view.viewPresets'),
-  {
-    title: t('settings.panel.view.viewPresetsHint'),
-    ariaLabel: t('settings.panel.view.viewPresetsHint'),
-    icon: QuestionCircleOutlined,
-  },
-));
 
 function syncViewPresetsFromSettings(): void {
   const cur = normalizeViewPresets(settings.value.view.viewPresets);
@@ -333,19 +206,6 @@ const distanceDirty = computed(() => {
   return Math.abs(cur - def) > 1e-6;
 });
 
-// Dual view distance label (text + reset when dirty).
-// 双视图间距 label（文本 + 脏数据时重置）。
-const dualViewDistanceLabel = computed(() => buildFormItemLabel(
-  t('settings.panel.view.dualViewDistance'),
-  {
-    title: t('settings.panel.view.resetView'),
-    ariaLabel: t('settings.panel.view.resetView'),
-    onClick: resetDistance,
-    icon: ReloadOutlined,
-    show: distanceDirty.value,
-  },
-));
-
 function resetDistance(): void {
   patchSettings({ view: { dualViewDistance: getDefaultDistance() } });
 }
@@ -355,33 +215,24 @@ const rotationDirty = computed(() => {
   return Math.abs(r.x) > 1e-6 || Math.abs(r.y) > 1e-6 || Math.abs(r.z) > 1e-6;
 });
 
-// Rotation label (text + reset when dirty).
-// 旋转 label（文本 + 脏数据时重置）。
-const rotationLabel = computed(() => buildFormItemLabel(
-  t('settings.panel.view.rotation'),
-  {
-    title: t('settings.panel.view.resetPose'),
-    ariaLabel: t('settings.panel.view.resetPose'),
-    onClick: resetPose,
-    icon: ReloadOutlined,
-    show: rotationDirty.value,
-  },
-));
+type RotationAxisKey = 'x' | 'y' | 'z';
+const rotationAxes: Array<{ key: RotationAxisKey; label: 'X' | 'Y' | 'Z' }> = [
+  { key: 'x', label: 'X' },
+  { key: 'y', label: 'Y' },
+  { key: 'z', label: 'Z' },
+];
 
-const rotXModel = computed({
-  get: () => settings.value.view.rotationDeg.x,
-  set: (v: number) => patchSettings({ view: { rotationDeg: { x: v } } }),
-});
+// 统一读取旋转轴值，供循环渲染使用。
+// Unified axis value getter for loop rendering.
+function rotationValue(axis: RotationAxisKey): number {
+  return settings.value.view.rotationDeg[axis];
+}
 
-const rotYModel = computed({
-  get: () => settings.value.view.rotationDeg.y,
-  set: (v: number) => patchSettings({ view: { rotationDeg: { y: v } } }),
-});
-
-const rotZModel = computed({
-  get: () => settings.value.view.rotationDeg.z,
-  set: (v: number) => patchSettings({ view: { rotationDeg: { z: v } } }),
-});
+// 统一写入旋转轴值，减少重复 computed 模型。
+// Unified axis setter to avoid repeated computed models.
+function onRotationAxisChange(axis: RotationAxisKey, value: number): void {
+  patchSettings({ view: { rotationDeg: { [axis]: value } } });
+}
 
 function resetPose(): void {
   patchSettings({ view: { rotationDeg: { x: 0, y: 0, z: 0 } } });

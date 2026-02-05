@@ -269,7 +269,6 @@
         "openFileHint": "You can also drag & drop a file onto the canvas. New loads are added as layers and previous layers are hidden by default.",
         "export": {
           "header": "Export image",
-          "scaleLabel": "Export scale",
           "button": "Export image",
           "transparent": "Transparent background",
           "selectButton": "Select Range Export",

@@ -269,7 +269,6 @@
         "openFileHint": "你也可以将文件拖拽到画面中加载。新加载的模型会作为新图层加入，并默认隐藏旧图层。",
         "export": {
           "header": "导出图片",
-          "scaleLabel": "导出倍率",
           "button": "导出图片",
           "selectButton": "选择范围导出",
           "transparent": "透明背景",

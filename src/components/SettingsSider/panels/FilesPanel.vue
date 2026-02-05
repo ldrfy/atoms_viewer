@@ -1,166 +1,162 @@
 <template>
-  <a-form layout="vertical">
-    <a-form-item>
-      <a-divider style="margin-top: 0;">
-        <a-typography-text type="secondary">
-          {{ t('settings.panel.files.export.header') }}
-        </a-typography-text>
-      </a-divider>
+  <a-space direction="vertical" class="settings-full-width">
+    <a-divider style="margin: 0;">
+      <a-typography-text type="secondary">
+        {{ t('settings.panel.files.export.header') }}
+      </a-typography-text>
+    </a-divider>
 
-      <!-- 倍率 + 透明：同一行，两端对齐（移动端更紧凑） -->
-      <a-checkbox v-model:checked="exportTransparent">
-        {{ t('settings.panel.files.export.transparent') }}
-      </a-checkbox>
-      <div class="export-row settings-gap-top-sm">
+    <!-- 倍率 + 透明：同一行，两端对齐（移动端更紧凑） -->
+    <a-checkbox v-model:checked="exportTransparent">
+      {{ t('settings.panel.files.export.transparent') }}
+    </a-checkbox>
+
+    <a-row :gutter="8" align="middle">
+      <a-col :span="12">
         <a-tooltip :title="t('settings.panel.files.export.hint')">
           <a-input-number
             v-model:value="exportScale"
-            style="width: 72px"
-            :aria-label="t('settings.panel.files.export.scaleLabel')"
-            :title="t('settings.panel.files.export.scaleLabel')"
+            style="width: 100%;"
             :min="1"
             :max="20"
             :step="0.5"
             :precision="1"
           />
         </a-tooltip>
+      </a-col>
+      <a-col :span="12">
         <a-select
           v-model:value="exportImageFormat"
+          style="width: 100%;"
           :options="exportImageFormatOptions"
-          style="flex: 1; min-width: 0;"
         />
-      </div>
+      </a-col>
+    </a-row>
 
-      <a-row :gutter="8" class="settings-gap-top-sm" align="middle">
-        <a-col :span="12">
-          <a-button
-            block
-            type="primary"
-            :loading="exportingPng"
-            :disabled="!hasAnyLayer || exportingPng"
-            @click="onExport"
-          >
-            {{ t('settings.panel.files.export.button') }}
-          </a-button>
-        </a-col>
-        <a-col :span="12">
-          <a-button
-            block
-            :disabled="!hasAnyLayer"
-            @click="onExportSelect"
-          >
-            {{ t('settings.panel.files.export.selectButton') }}
-          </a-button>
-        </a-col>
-      </a-row>
-    </a-form-item>
+    <a-row :gutter="8" align="middle">
+      <a-col :span="12">
+        <a-button
+          block
+          type="primary"
+          :loading="exportingPng"
+          :disabled="!hasAnyLayer || exportingPng"
+          @click="onExport"
+        >
+          {{ t('settings.panel.files.export.button') }}
+        </a-button>
+      </a-col>
+      <a-col :span="12">
+        <a-button
+          block
+          :disabled="!hasAnyLayer"
+          @click="onExportSelect"
+        >
+          {{ t('settings.panel.files.export.selectButton') }}
+        </a-button>
+      </a-col>
+    </a-row>
 
-    <a-form-item>
-      <a-divider style="margin-top: 0;">
-        <a-typography-text type="secondary">
-          {{ t('settings.panel.files.project.header') }}
-        </a-typography-text>
-      </a-divider>
-
-      <a-checkbox v-model:checked="cacheRemoteModel">
-        {{ t('settings.panel.files.project.cacheRemote') }}
-      </a-checkbox>
-
-      <a-row :gutter="8" align="middle" class="settings-gap-top-sm">
-        <a-col :span="12">
-          <a-button
-            type="primary"
-            block
-            :loading="exportingProject"
-            :disabled="!hasAnyLayer || exportingProject"
-            @click="onExportProject"
-          >
-            {{ t('settings.panel.files.project.export') }}
-          </a-button>
-        </a-col>
-        <a-col :span="12">
-          <a-button block @click="onImportProject">
-            {{ t('settings.panel.files.project.import') }}
-          </a-button>
-        </a-col>
-      </a-row>
-
-      <a-typography-text type="secondary" class="settings-text-secondary">
-        {{ t('settings.panel.files.project.hint') }}
+    <a-divider style="margin: 0;">
+      <a-typography-text type="secondary">
+        {{ t('settings.panel.files.project.header') }}
       </a-typography-text>
+    </a-divider>
 
-      <input
-        ref="projectInputRef"
-        type="file"
-        accept=".zip,application/zip"
-        hidden
-        @change="onProjectFilePicked"
-      >
-    </a-form-item>
+    <a-checkbox v-model:checked="cacheRemoteModel">
+      {{ t('settings.panel.files.project.cacheRemote') }}
+    </a-checkbox>
 
-    <a-form-item>
-      <a-divider style="margin-top: 0;">
-        <a-typography-text type="secondary">
-          {{ t('settings.panel.files.config.header') }}
-        </a-typography-text>
-      </a-divider>
+    <a-row :gutter="8" align="middle">
+      <a-col :span="12">
+        <a-button
+          type="primary"
+          block
+          :loading="exportingProject"
+          :disabled="!hasAnyLayer || exportingProject"
+          @click="onExportProject"
+        >
+          {{ t('settings.panel.files.project.export') }}
+        </a-button>
+      </a-col>
+      <a-col :span="12">
+        <a-button block @click="onImportProject">
+          {{ t('settings.panel.files.project.import') }}
+        </a-button>
 
-      <a-checkbox v-model:checked="exportFullSettings">
-        {{ t('settings.panel.files.config.exportFull') }}
-      </a-checkbox>
+        <input
+          ref="projectInputRef"
+          type="file"
+          accept=".zip,application/zip"
+          hidden
+          @change="onProjectFilePicked"
+        >
+      </a-col>
+    </a-row>
 
-      <a-row :gutter="8" class="settings-gap-top-sm">
-        <a-col :span="12">
-          <a-button
-            type="primary"
-            block
-            @click="onExportSettings"
-          >
-            {{ t('settings.exportSettings') }}
-          </a-button>
-        </a-col>
-        <a-col :span="12">
-          <a-button block @click="onImportSettings">
-            {{ t('settings.importSettings') }}
-          </a-button>
-        </a-col>
-      </a-row>
-      <input
-        ref="settingsImportInputRef"
-        type="file"
-        accept="application/json,.json"
-        hidden
-        @change="onImportFile"
-      >
-    </a-form-item>
+    <a-typography-text type="secondary">
+      {{ t('settings.panel.files.project.hint') }}
+    </a-typography-text>
 
-    <a-form-item>
-      <a-divider style="margin-top: 0;">
-        <a-typography-text type="secondary">
-          {{ t('settings.panel.files.format.header') }}
-        </a-typography-text>
-      </a-divider>
+    <a-divider style="margin: 0;">
+      <a-typography-text type="secondary">
+        {{ t('settings.panel.files.config.header') }}
+      </a-typography-text>
+    </a-divider>
 
-      <a-row :gutter="8" align="middle" style="margin-top: 12px;">
-        <a-col :span="12">
-          <a-select
-            v-model:value="exportFormatModel"
-            :options="exportFormatOptions"
-          />
-        </a-col>
-        <a-col :span="12">
-          <a-button
-            block
-            type="primary"
-            :disabled="!hasAnyLayer"
-            @click="onExportStructure"
-          >
-            {{ t('settings.panel.files.format.button') }}
-          </a-button>
-        </a-col>
-      </a-row>
-    </a-form-item>
-  </a-form>
+    <a-checkbox v-model:checked="exportFullSettings">
+      {{ t('settings.panel.files.config.exportFull') }}
+    </a-checkbox>
+
+    <a-row :gutter="8">
+      <a-col :span="12">
+        <a-button
+          type="primary"
+          block
+          @click="onExportSettings"
+        >
+          {{ t('settings.exportSettings') }}
+        </a-button>
+      </a-col>
+      <a-col :span="12">
+        <a-button block @click="onImportSettings">
+          {{ t('settings.importSettings') }}
+        </a-button>
+        <input
+          ref="settingsImportInputRef"
+          type="file"
+          accept="application/json,.json"
+          hidden
+          @change="onImportFile"
+        >
+      </a-col>
+    </a-row>
+
+    <a-divider style="margin: 0;">
+      <a-typography-text type="secondary">
+        {{ t('settings.panel.files.format.header') }}
+      </a-typography-text>
+    </a-divider>
+
+    <a-row :gutter="8" align="middle">
+      <a-col :span="12">
+        <a-select
+          v-model:value="exportFormatModel"
+          style="width: 100%;"
+          :options="exportFormatOptions"
+        />
+      </a-col>
+      <a-col :span="12">
+        <a-button
+          block
+          type="primary"
+          :disabled="!hasAnyLayer"
+          @click="onExportStructure"
+        >
+          {{ t('settings.panel.files.format.button') }}
+        </a-button>
+      </a-col>
+    </a-row>
+  </a-space>
 </template>
 
 <script setup lang="ts">

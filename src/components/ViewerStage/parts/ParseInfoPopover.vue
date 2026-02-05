@@ -42,9 +42,9 @@
       </template>
 
       <a-button
-        class="btn-icon parse-handle"
-        type="text"
-        :aria-label="t('viewer.parse.mode')"
+        class="parse-handle"
+        variant="link"
+        color="default"
         :title="t('viewer.parse.mode')"
       >
         <ExclamationCircleOutlined />

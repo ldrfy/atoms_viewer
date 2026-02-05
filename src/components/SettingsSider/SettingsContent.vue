@@ -20,7 +20,8 @@
         </a-typography-text>
 
         <a-button
-          type="text"
+          variant="link"
+          color="default"
           size="small"
           aria-label="close"
           :title="t('common.close')"
@@ -414,12 +415,12 @@ const renderCollapseLabel = ({ item }: { item: any; index: number }) => {
                   h(
                     Button,
                     {
-                      'type': 'text',
-                      'size': 'small',
-                      'class': 'settings-panel-reset-button',
-                      'aria-label': t('settings.panel.resetPanelButton'),
-                      'title': t('settings.panel.resetPanelButton'),
-                      'onClick': (ev: Event) => ev.stopPropagation(),
+                      variant: 'link',
+                      color: 'default',
+                      size: 'small',
+                      class: 'settings-panel-reset-button',
+                      title: t('settings.panel.resetPanelButton'),
+                      onClick: (ev: Event) => ev.stopPropagation(),
                     },
                     { default: () => h(ReloadOutlined) },
                   ),

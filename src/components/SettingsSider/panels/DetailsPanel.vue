@@ -3,40 +3,6 @@
     <LayerScopeControl v-model:scope="scope" />
 
     <a-form-item>
-      <a-row justify="space-between" align="middle">
-        <a-col>{{ t('settings.panel.details.showAtomIndex') }}</a-col>
-        <a-col>
-          <a-switch
-            v-model:checked="showAtomIndexModel"
-            :aria-label="t('settings.panel.details.showAtomIndex')"
-            :title="t('settings.panel.details.showAtomIndex')"
-            :disabled="controlsDisabled"
-          />
-        </a-col>
-      </a-row>
-      <a-typography-text type="secondary" class="settings-text-secondary">
-        {{ t('settings.panel.details.showAtomIndexHint') }}
-      </a-typography-text>
-    </a-form-item>
-
-    <a-form-item>
-      <a-row justify="space-between" align="middle">
-        <a-col>{{ t('settings.panel.details.showElementSymbol') }}</a-col>
-        <a-col>
-          <a-switch
-            v-model:checked="showElementSymbolModel"
-            :aria-label="t('settings.panel.details.showElementSymbol')"
-            :title="t('settings.panel.details.showElementSymbol')"
-            :disabled="controlsDisabled"
-          />
-        </a-col>
-      </a-row>
-      <a-typography-text type="secondary" class="settings-text-secondary">
-        {{ t('settings.panel.details.showElementSymbolHint') }}
-      </a-typography-text>
-    </a-form-item>
-
-    <a-form-item>
       <a-row class="settings-gap-top-sm" align="middle" :gutter="8">
         <a-col :span="8">
           <a-typography-text>
@@ -209,6 +175,39 @@
 
       <a-typography-text type="secondary" class="settings-text-secondary">
         {{ t('settings.panel.details.sphereSegmentsHint') }}
+      </a-typography-text>
+    </a-form-item>
+    <a-form-item>
+      <a-row justify="space-between" align="middle">
+        <a-col>{{ t('settings.panel.details.showAtomIndex') }}</a-col>
+        <a-col>
+          <a-switch
+            v-model:checked="showAtomIndexModel"
+            :aria-label="t('settings.panel.details.showAtomIndex')"
+            :title="t('settings.panel.details.showAtomIndex')"
+            :disabled="controlsDisabled"
+          />
+        </a-col>
+      </a-row>
+      <a-typography-text type="secondary" class="settings-text-secondary">
+        {{ t('settings.panel.details.showAtomIndexHint') }}
+      </a-typography-text>
+    </a-form-item>
+
+    <a-form-item>
+      <a-row justify="space-between" align="middle">
+        <a-col>{{ t('settings.panel.details.showElementSymbol') }}</a-col>
+        <a-col>
+          <a-switch
+            v-model:checked="showElementSymbolModel"
+            :aria-label="t('settings.panel.details.showElementSymbol')"
+            :title="t('settings.panel.details.showElementSymbol')"
+            :disabled="controlsDisabled"
+          />
+        </a-col>
+      </a-row>
+      <a-typography-text type="secondary" class="settings-text-secondary">
+        {{ t('settings.panel.details.showElementSymbolHint') }}
       </a-typography-text>
     </a-form-item>
   </a-form>

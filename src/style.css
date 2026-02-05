@@ -30,43 +30,6 @@ body {
     max-width: none;
 }
 
-/* 只显示icon的ant-btn模仿vitepress效果 */
-/* 配合  type="text" */
-.btn-icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-
-    line-height: 1;
-}
-
-.btn-icon.ant-btn-text:hover,
-.btn-icon.ant-btn-text:focus,
-.btn-icon.ant-btn-text:focus-visible,
-.btn-icon.ant-btn-text:active,
-.btn-icon.ant-btn-text:not(:disabled):hover,
-.btn-icon.ant-btn-text:not(:disabled):active,
-.btn-icon.ant-btn-text:not(:disabled):focus,
-.btn-icon.ant-btn-text:not(:disabled):focus-visible {
-    background-color: transparent !important;
-    box-shadow: none !important;
-}
-
-.btn-icon .anticon {
-    opacity: 0.7;
-    transition: opacity 0.15s ease, color 0.15s ease;
-
-    display: inline-flex;
-    align-items: center;
-    line-height: 1;
-    vertical-align: 0;
-    /* override Ant icon baseline shift */
-}
-
-.btn-icon:hover .anticon {
-    opacity: 1;
-    color: var(--ant-color-text);
-}
 
 /* Ensure Collapse expand icon renders on the right when using icon-position-end */
 .ant-collapse-icon-position-end .ant-collapse-header {

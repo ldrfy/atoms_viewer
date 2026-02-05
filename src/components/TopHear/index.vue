@@ -3,8 +3,9 @@
     <div class="tophear-inner">
       <div class="top-left-bar">
         <a-button
-          type="text"
-          class="brand-btn btn-icon"
+          variant="link"
+          color="default"
+          class="brand-btn"
           :class="{ clickable: props.canGoHome }"
           aria-label="home"
           @click="onClickBrand"
@@ -20,8 +21,9 @@
           <!-- 语言 -->
           <a-dropdown :trigger="['click']" placement="bottomLeft" :menu="localeMenu">
             <a-button
-              type="text"
-              class="btn-icon btn-icon-top"
+              variant="link"
+              color="default"
+              class="btn-icon-top"
               aria-label="language"
               :title="t('viewer.locale.title')"
             >
@@ -31,8 +33,9 @@
 
           <!-- GitHub -->
           <a-button
-            type="text"
-            class="btn-icon btn-icon-top"
+            variant="link"
+            color="default"
+            class="btn-icon-top"
             aria-label="github"
             :title="t('viewer.links.github')"
             @click="openGithub"
@@ -42,9 +45,9 @@
 
           <!-- 文档 -->
           <a-button
-            type="text"
-            class="btn-icon btn-icon-top"
-            aria-label="docs"
+            variant="link"
+            color="default"
+            class="btn-icon-top"
             :title="t('viewer.links.docs')"
             @click="openDocs"
           >
@@ -53,8 +56,9 @@
 
           <!-- 设置 -->
           <a-button
-            type="text"
-            class="btn-icon btn-icon-top"
+            variant="link"
+            color="default"
+            class="btn-icon-top"
             aria-label="settings"
             :title="t('settings.title')"
             @click="emit('open-settings')"
@@ -66,8 +70,8 @@
         <!-- ===== 移动端 ===== -->
         <template v-else>
           <a-button
-            type="text"
-            class="btn-icon"
+            variant="link"
+            color="default"
             aria-label="menu"
             :title="t('common.menu')"
             @click="mobileOpen = true"

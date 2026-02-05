@@ -194,15 +194,32 @@ function buildFormItemLabel(
 
   if (action) {
     const showAction = action.show ?? true;
+    // 更紧凑的图标按钮样式（用于 label 右侧操作按钮）。
+    // Compact icon-button style for label-side action buttons.
+    const compactActionStyle = {
+      minWidth: '20px',
+      height: '20px',
+      paddingInline: '4px',
+      paddingBlock: '0',
+      fontSize: '12px',
+      lineHeight: '1',
+      display: 'inline-flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      verticalAlign: 'middle',
+    };
     const buttonNode = h(
       Button,
       {
-        'type': 'text',
-        'size': action.size ?? 'middle',
+        'variant': 'link',
+        'color': 'default',
+        'size': action.size ?? 'small',
         'aria-label': action.ariaLabel,
         'title': action.title,
         'onClick': action.onClick,
-        'style': showAction ? undefined : { visibility: 'hidden', pointerEvents: 'none' },
+        'style': showAction
+          ? compactActionStyle
+          : { ...compactActionStyle, visibility: 'hidden', pointerEvents: 'none' },
         'tabIndex': showAction ? undefined : -1,
       },
       () => h(action.icon),
@@ -325,7 +342,6 @@ const dualViewDistanceLabel = computed(() => buildFormItemLabel(
     ariaLabel: t('settings.panel.view.resetView'),
     onClick: resetDistance,
     icon: ReloadOutlined,
-    size: 'small',
     show: distanceDirty.value,
   },
 ));
@@ -348,7 +364,6 @@ const rotationLabel = computed(() => buildFormItemLabel(
     ariaLabel: t('settings.panel.view.resetPose'),
     onClick: resetPose,
     icon: ReloadOutlined,
-    size: 'small',
     show: rotationDirty.value,
   },
 ));

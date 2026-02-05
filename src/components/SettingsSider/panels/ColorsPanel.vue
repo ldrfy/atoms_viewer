@@ -12,8 +12,8 @@
         <a-col flex="1" class="header-right">
           <a-tooltip :title="t('settings.panel.colors.alert')" placement="left">
             <a-button
-              type="text"
-              :aria-label="t('settings.panel.colors.alert')"
+              variant="link"
+              color="default"
               :title="t('settings.panel.colors.alert')"
             >
               <QuestionCircleOutlined />

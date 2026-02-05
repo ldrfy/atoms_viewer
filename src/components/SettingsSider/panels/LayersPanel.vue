@@ -1,42 +1,53 @@
 <template>
   <a-space direction="vertical" :size="8" class="settings-full-width">
-    <a-space :size="8">
-      <a-select
-        size="small"
-        :disabled="layerList.length < 2"
-        :value="sortValue"
-        :options="sortOptions"
-        @change="onSortChange"
-      />
-      <a-tooltip :title="t('settings.panel.files.openFileHint')">
-        <a-button
-          type="text"
-          :aria-label="t('settings.panel.files.openFile')"
-          :disabled="!viewerApi"
-          @click="onOpenFile"
-        >
-          <FolderOpenOutlined />
-        </a-button>
-      </a-tooltip>
-      <a-tooltip :title="toggleAllLabel">
-        <a-button
-          type="text"
-          :disabled="layerList.length === 0"
-          :aria-label="toggleAllLabel"
-          @click="onToggleAllVisible"
-        >
-          <component :is="allVisible ? EyeInvisibleOutlined : EyeOutlined" />
-        </a-button>
-      </a-tooltip>
-      <a-tooltip :title="t('settings.panel.layers.hint')">
-        <a-button
-          type="text"
-          :aria-label="t('settings.panel.layers.hint')"
-        >
-          <QuestionCircleOutlined />
-        </a-button>
-      </a-tooltip>
-    </a-space>
+    <a-row
+      align="middle"
+      :gutter="8"
+      :wrap="false"
+      class="settings-full-width"
+    >
+      <a-col flex="auto">
+        <a-select
+          size="small"
+          style="max-width: 180px; width: 100%;"
+          :disabled="layerList.length < 2"
+          :value="sortValue"
+          :options="sortOptions"
+          @change="onSortChange"
+        />
+      </a-col>
+      <a-col flex="none">
+        <a-space :size="4">
+          <a-tooltip :title="t('settings.panel.files.openFileHint')">
+            <a-button
+              type="text"
+              :disabled="!viewerApi"
+              style="margin-left: 8px;"
+              @click="onOpenFile"
+            >
+              <FolderOpenOutlined />
+            </a-button>
+          </a-tooltip>
+          <a-tooltip :title="toggleAllLabel">
+            <a-button
+              type="text"
+              :disabled="layerList.length === 0"
+              @click="onToggleAllVisible"
+            >
+              <component :is="allVisible ? EyeInvisibleOutlined : EyeOutlined" />
+            </a-button>
+          </a-tooltip>
+          <a-tooltip :title="t('settings.panel.layers.hint')">
+            <a-button
+              type="text"
+              :aria-label="t('settings.panel.layers.hint')"
+            >
+              <QuestionCircleOutlined />
+            </a-button>
+          </a-tooltip>
+        </a-space>
+      </a-col>
+    </a-row>
     <a-divider style="margin-top: 2px; margin-bottom: 8px;" />
 
     <div class="layers-list">

@@ -24,7 +24,7 @@
     },
     "dependencies": {
         "@antdv-next/icons": "^1.0.0",
-        "antdv-next": "^1.0.0",
+        "antdv-next": "^1.0.1",
         "jszip": "^3.10.1",
         "spark-md5": "^3.0.2",
         "three": "^0.182.0",

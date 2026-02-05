@@ -18,10 +18,16 @@
     </a-col>
   </a-row>
 
-  <a-divider style="margin-top: 8px;">
-    <a-typography-text type="secondary">
-      {{ t('settings.panel.scope.currentLayerLabel') }}:{{ activeLayerInfo?.name ?? "-" }}
-    </a-typography-text>
+  <a-divider style="margin-top: 8px;" plain>
+    <a-popover trigger="click" :content="activeLayerName">
+      <a-typography-text
+        type="secondary"
+        :ellipsis="{ tooltip: false }"
+        style="max-width: 28ch; cursor: pointer; "
+      >
+        {{ t('settings.panel.scope.currentLayerLabel') }}: {{ activeLayerName }}
+      </a-typography-text>
+    </a-popover>
   </a-divider>
 </template>
 
@@ -55,6 +61,9 @@ const activeLayerInfo = computed(() => {
   if (!id) return null;
   return layerList.value.find(l => l.id === id) ?? null;
 });
+// 当前激活图层名（用于省略展示与点击弹出完整内容）。
+// Active layer name for ellipsis display and click popover content.
+const activeLayerName = computed(() => activeLayerInfo.value?.name ?? '-');
 
 const scopeOptions = computed(() => ([
   { value: 'current', label: t('settings.panel.scope.options.current') },

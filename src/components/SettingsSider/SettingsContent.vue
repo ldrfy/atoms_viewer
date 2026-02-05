@@ -92,9 +92,9 @@ import ColorsPanel from './panels/ColorsPanel.vue';
 import DetailsPanel from './panels/DetailsPanel.vue';
 import OtherPanel from './panels/OtherPanel.vue';
 import {
+  countUnknownElementMappingForTypeIds,
   DEFAULT_SETTINGS,
   DEFAULT_DETAILS,
-  hasUnknownElementMappingForTypeIds,
 } from '../../lib/viewer/settings';
 import { useSettingsSiderContext } from './useSettingsSiderContext';
 import { useSettingsSiderControlContext } from './useSettingsSiderControlContext';
@@ -315,35 +315,12 @@ const colorsDirtyCount = computed(() => {
   return count;
 });
 
-function hasCustomTypeMap(): boolean {
-  const map = viewerApi.value?.activeLayerTypeMap?.value ?? {};
-  const typeIds = viewerApi.value?.activeLayerTypeIds?.value ?? [];
-  return hasUnknownElementMappingForTypeIds(map, typeIds);
-}
-
-function isTypeMapApplied(): boolean {
-  return !!viewerApi.value?.activeLayerTypeMapApplied?.value;
-}
-
 // LAMMPS 面板修改计数。
 // Dirty count for LAMMPS panel.
 const lammpsDirtyCount = computed(() => {
   const map = viewerApi.value?.activeLayerTypeMap?.value ?? {};
   const typeIds = viewerApi.value?.activeLayerTypeIds?.value ?? [];
-  if (typeIds.length === 0) return 0;
-  let count = 0;
-  for (const tid0 of typeIds) {
-    const tid = Math.max(1, Math.floor(Number(tid0)));
-    if (!Number.isFinite(tid)) continue;
-    const val = String(map[String(tid)] ?? '').trim();
-    if (!val) continue;
-    if (val.toUpperCase() === 'E') continue;
-    count += 1;
-  }
-  if (!isTypeMapApplied() || hasCustomTypeMap()) {
-    return Math.max(count, 1);
-  }
-  return count;
+  return countUnknownElementMappingForTypeIds(map, typeIds);
 });
 
 // 统一获取面板修改计数。

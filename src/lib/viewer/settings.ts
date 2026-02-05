@@ -258,6 +258,27 @@ export function hasUnknownElementMappingForTypeIds(
 }
 
 /**
+ * 统计“本次 dump 出现的 typeId”中仍为未知映射（E/缺失）的数量。
+ *
+ * Count unresolved mappings ("E" or missing) for detected typeIds.
+ */
+export function countUnknownElementMappingForTypeIds(
+  map: LammpsTypeMapRecord,
+  typeIds: number[],
+): number {
+  if (typeIds.length === 0) return 0;
+  const source = map ?? {};
+  let count = 0;
+  for (const tid0 of typeIds) {
+    const tid = Math.max(1, Math.floor(tid0));
+    if (!Number.isFinite(tid)) continue;
+    const val = source[String(tid)];
+    if (isUnknownElement(val) || val == null || String(val).trim() === '') count += 1;
+  }
+  return count;
+}
+
+/**
  * 打开设置时可能携带的 payload
  * Payload for opening settings
  */

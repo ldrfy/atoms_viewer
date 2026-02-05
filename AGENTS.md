@@ -15,7 +15,7 @@
 - Keep code concise; prioritize simple, working implementations over broad compatibility
 
 ## Do / Don't
-- Do: 优先使用 antdv-next 的现成组件/能力，尽量不要自己手写 CSS 和自建组件（除非 ant 不满足需求）
+- Do: 优先使用 antdv-next 的现成组件/能力，尽量不要自己手写 CSS 和自建组件（除非 ant 不满足需求）、div和span
 - Do: 每次创建关键函数、关键变量、关键逻辑时，中英双文注释，并且中英分行，不要写一起
 - Don't:
 

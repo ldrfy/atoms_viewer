@@ -1,21 +1,22 @@
 <template>
   <div v-if="hasModelOrParseError" class="anim-bar">
     <a-row
-      v-if="hasModelOrParseError"
       :gutter="[6, 6]"
       align="middle"
       :wrap="false"
     >
-      <a-col flex="none" class="anim-note-icon">
+      <a-col flex="none">
         <ParseInfoPopover :ctx="parseCtx" />
       </a-col>
 
-      <a-col flex="auto" class="anim-note">
-        <a-tooltip :title="frameNoteText" overlay-class-name="anim-note-tooltip">
-          <a-typography-text type="secondary" ellipsis style="font-size: 12px;">
-            {{ frameNoteText }}
-          </a-typography-text>
-        </a-tooltip>
+      <a-col flex="auto">
+        <a-typography-text
+          type="secondary"
+          :ellipsis="{ tooltip: true }"
+          style="font-size: 12px;cursor: pointer; "
+        >
+          {{ frameNoteText }}
+        </a-typography-text>
       </a-col>
     </a-row>
 
@@ -27,20 +28,22 @@
       :wrap="false"
     >
       <a-col flex="none">
-        <span class="anim-frame-text">{{ frameIndexModel }} / {{ ctx.frameCount }}</span>
+        <a-typography-text style="min-width: 72px; text-align: right; font-variant-numeric: tabular-nums;">
+          {{ frameIndexModel }} / {{ ctx.frameCount }}
+        </a-typography-text>
       </a-col>
 
-      <a-col flex="auto" class="anim-col-min">
+      <a-col flex="auto" style="min-width: 0;">
         <a-slider
           v-model:value="frameIndexModel"
-          class="anim-slider"
+          style="width: 100%; min-width: 0;"
           :min="1"
           :max="frameCountMax"
           :step="1"
         />
       </a-col>
 
-      <a-col flex="none" class="anim-col-compact">
+      <a-col flex="none" style="width: 96px;">
         <a-input-number
           v-model:value="frameIndexModel"
           :aria-label="t('viewer.play.frameIndex')"
@@ -48,7 +51,7 @@
           :min="1"
           :max="frameCountMax"
           :step="1"
-          class="anim-input-full"
+          style="width: 100%;"
         />
       </a-col>
     </a-row>
@@ -61,24 +64,26 @@
       justify="space-between"
       :wrap="false"
     >
-      <a-col flex="auto" class="anim-col-min">
-        <div class="anim-field">
-          <span class="anim-field-label">{{ t("viewer.play.fpsLabel") }}</span>
+      <a-col flex="none">
+        <a-button type="primary" :style="actionButtonStyle" @click="ctx.togglePlay">
+          {{ isPlaying ? t("viewer.play.pause") : t("viewer.play.start") }}
+        </a-button>
+      </a-col>
+
+      <a-col flex="auto" style="min-width: 0;">
+        <a-space :size="6" align="center" style="min-width: 0; width: 100%; justify-content: flex-end;">
+          <a-typography-text type="secondary" style="white-space: nowrap;">
+            {{ t("viewer.play.fpsLabel") }}
+          </a-typography-text>
           <a-input-number
             v-model:value="fpsModel"
-            class="anim-field-input"
             :aria-label="t('viewer.play.fps')"
             :title="t('viewer.play.fps')"
             :min="RECORD_FPS_MIN"
             :max="RECORD_FPS_MAX"
+            style="width: 80px;"
           />
-        </div>
-      </a-col>
-
-      <a-col flex="none">
-        <a-button type="primary" class="anim-action-btn" @click="ctx.togglePlay">
-          {{ isPlaying ? t("viewer.play.pause") : t("viewer.play.start") }}
-        </a-button>
+        </a-space>
       </a-col>
     </a-row>
 
@@ -88,44 +93,11 @@
       align="middle"
       :wrap="false"
     >
-      <a-col flex="auto" class="anim-col-min">
-        <template v-if="!isRecording && !isRecordDelayActive">
-          <div class="anim-field">
-            <span class="anim-field-label">{{ t("settings.panel.other.recordFps") }}</span>
-            <a-input-number
-              v-model:value="recordFpsModel"
-              class="anim-field-input"
-              :aria-label="t('settings.panel.other.recordFps')"
-              :title="t('settings.panel.other.recordFps')"
-              :min="RECORD_FPS_MIN"
-              :max="RECORD_FPS_MAX"
-            />
-          </div>
-        </template>
-        <template v-else>
-          <div class="anim-field">
-            <a-tag v-if="isRecordDelayActive" color="orange" class="anim-rec-tag">
-              {{ t("viewer.record.countdown") }} {{ recordDelayText }}
-            </a-tag>
-            <a-tag v-else-if="isRecording" color="red" class="anim-rec-tag">
-              ● REC {{ recordTimeText }}
-            </a-tag>
-            <a-button
-              v-if="isRecording"
-              class="anim-action-btn anim-field-input"
-              @click="ctx.togglePause"
-            >
-              {{ isRecordPaused ? t("viewer.record.resume") : t("viewer.record.pause") }}
-            </a-button>
-          </div>
-        </template>
-      </a-col>
-
       <a-col flex="none">
         <a-button
           v-if="isRecordDelayActive"
           type="primary"
-          class="anim-action-btn"
+          :style="actionButtonStyle"
           @click="ctx.cancelRecordDelay"
         >
           {{ t("viewer.record.stop") }}
@@ -133,11 +105,46 @@
         <a-button
           v-else
           type="primary"
-          class="anim-action-btn"
+          :style="actionButtonStyle"
           @click="ctx.toggleRecord"
         >
           {{ isRecording ? t("viewer.record.stop") : t("viewer.record.start") }}
         </a-button>
+      </a-col>
+
+      <a-col flex="auto" style="min-width: 0;">
+        <template v-if="!isRecording && !isRecordDelayActive">
+          <a-space :size="6" align="center" style="min-width: 0; width: 100%; justify-content: flex-end;">
+            <a-typography-text type="secondary" style="white-space: nowrap;">
+              {{ t("settings.panel.other.recordFps") }}
+            </a-typography-text>
+            <a-input-number
+              v-model:value="recordFpsModel"
+              :aria-label="t('settings.panel.other.recordFps')"
+              :title="t('settings.panel.other.recordFps')"
+              :min="RECORD_FPS_MIN"
+              :max="RECORD_FPS_MAX"
+              style="width: 80px;"
+            />
+          </a-space>
+        </template>
+        <template v-else>
+          <a-space :size="6" align="center" style="min-width: 0; width: 100%; justify-content: flex-end;">
+            <a-tag v-if="isRecordDelayActive" color="orange">
+              {{ t("viewer.record.countdown") }} {{ recordDelayText }}
+            </a-tag>
+            <a-tag v-else-if="isRecording" color="red">
+              ● REC {{ recordTimeText }}
+            </a-tag>
+            <a-button
+              v-if="isRecording"
+              style="width: 80px; white-space: nowrap; display: inline-flex; justify-content: center;"
+              @click="ctx.togglePause"
+            >
+              {{ isRecordPaused ? t("viewer.record.resume") : t("viewer.record.pause") }}
+            </a-button>
+          </a-space>
+        </template>
       </a-col>
     </a-row>
   </div>
@@ -208,13 +215,27 @@ const recordFpsModel = computed<number>({
     props.ctx.patchSettings({ record: { frame_rate: v } });
   },
 });
+
+// 统一播放/录制主按钮宽度，取多语言文案中最长的一项。
+// Keep play/record primary buttons at the same width using the longest i18n label.
+const actionButtonStyle = computed<Record<string, string>>(() => {
+  const labels = [
+    t('viewer.play.start'),
+    t('viewer.play.pause'),
+    t('viewer.record.start'),
+    t('viewer.record.stop'),
+  ];
+  const maxChars = labels.reduce((m, text) => Math.max(m, Array.from(String(text ?? '')).length), 0);
+  return {
+    width: `${Math.max(8, maxChars + 2)}ch`,
+    whiteSpace: 'nowrap',
+    display: 'inline-flex',
+    justifyContent: 'center',
+  };
+});
 </script>
 
 <style>
-
-/* ===============================
-   动画控制条：不换行 & 不溢出
-   =============================== */
 .anim-bar {
     position: absolute;
     left: 12px;
@@ -232,126 +253,6 @@ const recordFpsModel = computed<number>({
     overflow: hidden;
 }
 
-/* 第一行/第二行/第三行：通用行容器 */
-.anim-row {
-    width: 100%;
-}
-
-/* 第一行：帧序号 + slider（flex） */
-.anim-left-full {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    min-width: 0;
-    /* 允许 slider 收缩 */
-}
-
-/* 第二/三行：两列布局（不换行时推荐用 a-row :wrap="false"，CSS 只做配合） */
-.anim-left {
-    min-width: 0;
-    display: flex;
-    align-items: center;
-}
-
-.anim-col-min {
-    min-width: 0;
-}
-
-.anim-col-compact {
-    width: 96px;
-}
-
-.anim-input-full {
-    width: 100%;
-}
-
-/* 右侧区域（当你用 a-space 包按钮时，这里主要负责不被撑爆） */
-.anim-right {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 8px;
-    max-width: 100%;
-}
-
-/* 帧序号 */
-.anim-frame-text {
-    min-width: 72px;
-    text-align: right;
-    font-variant-numeric: tabular-nums;
-}
-
-.anim-note {
-    min-width: 0;
-}
-
-.anim-note-icon {
-    display: inline-flex;
-    align-items: center;
-}
-
-.anim-note-tooltip .ant-tooltip-inner {
-    font-size: 12px;
-    line-height: 1.4;
-    padding: 6px 10px;
-    border-radius: 6px;
-    max-width: min(360px, 80vw);
-    white-space: normal;
-}
-
-/* slider：自适应宽度（不要固定像素宽） */
-.anim-slider {
-    width: 100%;
-    min-width: 0;
-}
-
-/* label 通用（原来的 anim-label 也保留） */
-.anim-label {
-    opacity: 0.85;
-}
-
-/* 左侧字段：label + 输入挨着，并允许整体被压缩 */
-.anim-field {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    /* “词”和输入框挨着：关键 */
-    min-width: 0;
-    /* 允许压缩 */
-}
-
-/* 为了 fps 和 bg 两行左侧对齐：给 label 固定宽度 */
-.anim-field-label {
-    width: 96px;
-    /* 需要更齐可以调 64~90 */
-    opacity: 0.85;
-    text-align: left;
-    white-space: nowrap;
-    flex: 0 0 auto;
-}
-
-/* fps 输入框宽度（紧凑） */
-.anim-field-input {
-    width: 80px;
-}
-
-/* 按钮文字不折行（不然会把高度撑得很怪） */
-.anim-action-btn {
-    white-space: nowrap;
-}
-
-.anim-inline-btn {
-    display: inline-flex;
-    align-items: center;
-    height: 32px;
-    padding: 0 6px;
-}
-
-/* REC tag */
-.anim-rec-tag {
-    margin-left: 2px;
-}
-
 @media (max-width: 768px) {
     .anim-bar {
         width: min(320px, calc(100vw - 24px - var(--pan-pad-width, 0px) - 8px));
@@ -366,22 +267,6 @@ const recordFpsModel = computed<number>({
         max-width: calc(100vw - 24px - var(--pan-pad-width, 0px) - 6px);
     }
 
-    .anim-frame-text {
-        min-width: 64px;
-    }
-
-    .anim-field-label {
-        width: 80px;
-    }
-
-    .anim-field-input {
-        width: 72px;
-    }
-
-    .color-hex {
-        max-width: 64px;
-        min-width: 0;
-    }
 }
 
 </style>

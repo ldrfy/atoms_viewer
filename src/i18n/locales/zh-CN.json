@@ -326,7 +326,7 @@
       "other": {
         "header": "其他设置",
         "axes": "坐标轴",
-        "recordFps": "录制帧率 (fps)",
+        "recordFps": "录制帧率",
         "recordFpsHint": "录制输出的目标帧率；常用 30 / 60。",
         "refreshBondsOnPlayLabel": "原子连接",
         "refreshBondsOnPlay": "播放时原子连接每帧刷新",

@@ -92,6 +92,7 @@ import SettingSelectField from '../parts/SettingSelectField.vue';
 import SettingSliderField from '../parts/SettingSliderField.vue';
 import SettingSwitchField from '../parts/SettingSwitchField.vue';
 import { useLayerScope } from '../useLayerScope';
+import { getDefaultLayerScope } from '../layerScopeStorage';
 import { useSettingsSiderResetContext } from '../useSettingsSiderResetContext';
 import { PANEL_KEYS } from '../../../lib/viewer/panelKeys';
 import {
@@ -254,7 +255,10 @@ const representationModel = computed<RepresentationId>({
 });
 
 function onResetDisplay(): void {
-  scope.value = 'all';
+  // 重置生效范围为默认值。
+  // Reset effect range to default.
+  const defaultScope = getDefaultLayerScope('details');
+  scope.value = defaultScope;
   patchDisplay({
     representation: DEFAULT_DETAILS.representation,
     atomScale: DEFAULT_DETAILS.atomScale,

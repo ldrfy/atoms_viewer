@@ -52,6 +52,7 @@ export type ViewerSettings = {
   view: DisplaySettingsGroup;
   pan: PanSettingsGroup;
   record: RecordSettingsGroup;
+  effectRange: EffectRangeSettingsGroup;
   other: OtherSettingsGroup;
 };
 
@@ -150,6 +151,22 @@ export const DEFAULT_LAMMPS: LammpsSettingsGroup = {
   data: {},
 };
 
+export type EffectRange = 'current' | 'visible' | 'all';
+// 生效范围设置（用于面板的作用域选择）。
+// Effect-range settings (scope selector per panel).
+export type EffectRangeSettingsGroup = {
+  colors: EffectRange;
+  details: EffectRange;
+  lammps: EffectRange;
+};
+// 默认生效范围。
+// Default effect ranges.
+export const DEFAULT_EFFECT_RANGE: EffectRangeSettingsGroup = {
+  colors: 'current',
+  details: 'current',
+  lammps: 'current',
+};
+
 // 图层播放状态（用于每层持久化）。
 // Per-layer playback state for persistence.
 export type LayerAnimState = {
@@ -218,6 +235,7 @@ export const DEFAULT_SETTINGS: ViewerSettings = {
   view: DEFAULT_DISPLAY,
   pan: DEFAULT_PAN,
   record: DEFAULT_RECORD,
+  effectRange: DEFAULT_EFFECT_RANGE,
   other: DEFAULT_OTHER,
 };
 

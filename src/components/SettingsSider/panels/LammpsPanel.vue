@@ -54,7 +54,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { computed, ref, watch, onBeforeUnmount } from 'vue';
 import { QuestionCircleOutlined } from '@antdv-next/icons';
 
 import { useI18n } from 'vue-i18n';
@@ -64,6 +64,9 @@ import { useSettingsSiderContext } from '../useSettingsSiderContext';
 import { ATOMIC_SYMBOL_LIST, normalizeElementSymbol } from '../../../lib/structure/chem';
 import LayerScopeControl from './LayerScopeControl.vue';
 import { useLayerScope } from '../useLayerScope';
+import { getDefaultLayerScope } from '../layerScopeStorage';
+import { useSettingsSiderResetContext } from '../useSettingsSiderResetContext';
+import { PANEL_KEYS } from '../../../lib/viewer/panelKeys';
 import type { LammpsTypeMapRecord } from '../../../lib/viewer/settings';
 
 const { t } = useI18n();
@@ -129,5 +132,28 @@ function onApplyTypeMap(): void {
   viewerApi.value?.setActiveLayerTypeMap?.(map);
   viewerApi.value?.refreshTypeMap?.();
 }
+
+function resetLammpsTypeMap(): void {
+  // 重置生效范围为默认值。
+  // Reset effect range to default.
+  const defaultScope = getDefaultLayerScope('lammps');
+  scope.value = defaultScope;
+  const typeIds = viewerApi.value?.activeLayerTypeIds?.value ?? [];
+  const nextMap: LammpsTypeMapRecord = {};
+  for (const tid0 of typeIds) {
+    const tid = Math.max(1, Math.floor(tid0));
+    if (!Number.isFinite(tid)) continue;
+    nextMap[String(tid)] = 'E';
+  }
+  draftMap.value = { ...nextMap };
+  viewerApi.value?.setActiveLayerTypeMap?.(nextMap);
+  viewerApi.value?.refreshTypeMap?.();
+}
+
+const { registerPanelReset } = useSettingsSiderResetContext();
+const unregisterLammpsReset = registerPanelReset(PANEL_KEYS.lammps, resetLammpsTypeMap);
+onBeforeUnmount(() => {
+  unregisterLammpsReset();
+});
 
 </script>

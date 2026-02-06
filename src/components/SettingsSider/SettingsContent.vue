@@ -204,7 +204,13 @@ const detailsDirtyCount = computed(() => {
   const styleBase = getVisualStylePreset(
     settings.value.other.visualStyle ?? DEFAULT_SETTINGS.other.visualStyle,
   ).display;
+  // 生效范围默认值（用于脏状态判断）。
+  // Default effect range (for dirty state).
+  const defaultEffectRange = DEFAULT_SETTINGS.effectRange;
   let count = 0;
+  // 生效范围变更也计入脏状态。
+  // Count effect-range changes as dirty.
+  if (settings.value.effectRange.details !== defaultEffectRange.details) count += 1;
   if (cur.representation !== DEFAULT_DETAILS.representation) count += 1;
   if (cur.atomScale !== styleBase.atomScale) count += 1;
   if (cur.showBonds !== DEFAULT_DETAILS.showBonds) count += 1;
@@ -295,7 +301,13 @@ const colorsDirtyCount = computed(() => {
     ? {}
     : { ...getVisualStylePreset(visualStyle).colorMapTemplate };
   const layerRecord = viewerApi.value?.activeLayerColorMap?.value ?? {};
+  // 生效范围默认值（用于脏状态判断）。
+  // Default effect range (for dirty state).
+  const defaultEffectRange = DEFAULT_SETTINGS.effectRange;
   let count = 0;
+  // 生效范围变更也计入脏状态。
+  // Count effect-range changes as dirty.
+  if (settings.value.effectRange.colors !== defaultEffectRange.colors) count += 1;
   for (const [key, value] of Object.entries(layerRecord)) {
     const { element } = parseColorMapKey(key);
     if (!element) continue;
@@ -313,7 +325,14 @@ const colorsDirtyCount = computed(() => {
 const lammpsDirtyCount = computed(() => {
   const map = viewerApi.value?.activeLayerTypeMap?.value ?? {};
   const typeIds = viewerApi.value?.activeLayerTypeIds?.value ?? [];
-  return countUnknownElementMappingForTypeIds(map, typeIds);
+  // 生效范围默认值（用于脏状态判断）。
+  // Default effect range (for dirty state).
+  const defaultEffectRange = DEFAULT_SETTINGS.effectRange;
+  const unknownCount = countUnknownElementMappingForTypeIds(map, typeIds);
+  // 生效范围变更也计入脏状态（+1）。
+  // Count effect-range changes as dirty (+1).
+  const scopeDirty = settings.value.effectRange.lammps !== defaultEffectRange.lammps ? 1 : 0;
+  return unknownCount + scopeDirty;
 });
 
 // 统一获取面板修改计数。

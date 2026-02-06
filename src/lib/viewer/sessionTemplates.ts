@@ -21,6 +21,7 @@ export function buildCategorizedSettings(
       panOffsetRight: { ...settings.pan.panOffsetRight },
     },
     record: { ...settings.record },
+    effectRange: { ...settings.effectRange },
     other: {
       ...settings.other,
     },
@@ -46,6 +47,7 @@ export function mergeCategorizedSettings(
       panOffsetRight: { ...DEFAULT_SETTINGS.pan.panOffsetRight },
     },
     record: { ...DEFAULT_SETTINGS.record },
+    effectRange: { ...DEFAULT_SETTINGS.effectRange },
     other: {
       ...DEFAULT_SETTINGS.other,
     },
@@ -100,6 +102,13 @@ export function mergeCategorizedSettings(
     base.record = {
       ...base.record,
       ...apply.record,
+    };
+  }
+
+  if (apply.effectRange) {
+    base.effectRange = {
+      ...base.effectRange,
+      ...apply.effectRange,
     };
   }
 
@@ -196,6 +205,12 @@ export function pruneDefaultSettings(
     if (diff) record.recordCropBox = { ...b };
   }
   if (Object.keys(record).length > 0) out.record = record as ViewerSettingsCategorized['record'];
+
+  const effectRange: Partial<ViewerSettingsCategorized['effectRange']> = {};
+  if (input.effectRange.colors !== d.effectRange.colors) effectRange.colors = input.effectRange.colors;
+  if (input.effectRange.details !== d.effectRange.details) effectRange.details = input.effectRange.details;
+  if (input.effectRange.lammps !== d.effectRange.lammps) effectRange.lammps = input.effectRange.lammps;
+  if (Object.keys(effectRange).length > 0) out.effectRange = effectRange as ViewerSettingsCategorized['effectRange'];
 
   const other: Partial<ViewerSettingsCategorized['other']> = {};
   if (input.other.themeMode !== d.other.themeMode) other.themeMode = input.other.themeMode;

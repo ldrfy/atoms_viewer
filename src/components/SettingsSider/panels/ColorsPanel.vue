@@ -81,6 +81,7 @@ import LayerScopeControl from './LayerScopeControl.vue';
 import { useLayerScope } from '../useLayerScope';
 import { PANEL_KEYS } from '../../../lib/viewer/panelKeys';
 import { useSettingsSiderResetContext } from '../useSettingsSiderResetContext';
+import { getDefaultLayerScope } from '../layerScopeStorage';
 
 import type { ColorMapRecord } from '../../ViewerStage/colorMap';
 
@@ -167,6 +168,10 @@ watch(
 );
 
 function resetColors(): void {
+  // 重置生效范围为默认值。
+  // Reset effect range to default.
+  const defaultScope = getDefaultLayerScope('colors');
+  scope.value = defaultScope;
   const keys = colorKeys.value;
   if (keys.length === 0) return;
   const api = viewerApi.value;

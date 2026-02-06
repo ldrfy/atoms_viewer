@@ -47,7 +47,7 @@ declare module 'vue' {
     DetailsPanel: typeof import('./src/components/SettingsSider/panels/DetailsPanel.vue')['default']
     FilesPanel: typeof import('./src/components/SettingsSider/panels/FilesPanel.vue')['default']
     LammpsPanel: typeof import('./src/components/SettingsSider/panels/LammpsPanel.vue')['default']
-    LayerScopeControl: typeof import('./src/components/SettingsSider/panels/LayerScopeControl.vue')['default']
+    LayerScopeControl: typeof import('./src/components/SettingsSider/parts/LayerScopeControl.vue')['default']
     LayersPanel: typeof import('./src/components/SettingsSider/panels/LayersPanel.vue')['default']
     ModelPanPad: typeof import('./src/components/ViewerStage/parts/ModelPanPad.vue')['default']
     OtherPanel: typeof import('./src/components/SettingsSider/panels/OtherPanel.vue')['default']

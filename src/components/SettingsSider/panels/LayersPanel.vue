@@ -1,10 +1,9 @@
 <template>
-  <a-space direction="vertical" class="settings-full-width">
+  <a-flex vertical gap="small">
     <a-row
       align="middle"
       :gutter="8"
       :wrap="false"
-      class="settings-full-width"
     >
       <a-col flex="auto">
         <a-select
@@ -56,12 +55,7 @@
       :message="t('settings.panel.layers.empty')"
     />
 
-    <a-space
-      v-else
-      direction="vertical"
-      :size="8"
-      class="settings-full-width"
-    >
+    <a-flex vertical gap="middle">
       <a-card
         v-for="l in layerList"
         :key="l.id"
@@ -70,7 +64,7 @@
         :body-style="{ padding: '8px 10px' }"
         @click="onSetActive(l.id)"
       >
-        <a-flex :gap="8" align="center" class="settings-full-width">
+        <a-flex :gap="8" align="center">
           <a-radio :checked="l.id === activeLayerId" />
 
           <a-space direction="vertical" :size="0" style="flex: 1; min-width: 0;">
@@ -83,6 +77,7 @@
             </a-typography-text>
             <a-typography-text
               type="secondary"
+              class="small-text"
               :ellipsis="{ tooltip: false }"
               :title="layerSecondaryText(l)"
             >
@@ -120,8 +115,8 @@
           </a-space>
         </a-flex>
       </a-card>
-    </a-space>
-  </a-space>
+    </a-flex>
+  </a-flex>
 </template>
 
 <script setup lang="ts">

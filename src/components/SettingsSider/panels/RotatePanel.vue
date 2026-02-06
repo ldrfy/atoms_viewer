@@ -1,5 +1,5 @@
 <template>
-  <a-space direction="vertical" :size="12" class="settings-full-width">
+  <a-flex vertical gap="middle">
     <SettingSwitchField
       v-model:checked="autoRotateEnabledModel"
       :label="t('settings.panel.rotation.enable')"
@@ -39,7 +39,7 @@
       :slider-step="50"
       :disabled="!hasAnyLayer"
     />
-  </a-space>
+  </a-flex>
 </template>
 
 <script setup lang="ts">

@@ -1,7 +1,7 @@
 <template>
-  <a-space direction="vertical" :size="12" class="settings-full-width">
-    <a-space direction="vertical" :size="8" class="settings-full-width">
-      <a-space :size="6" align="center">
+  <a-flex vertical gap="middle">
+    <a-flex vertical gap="small">
+      <a-space :size="6">
         <a-typography-text>
           {{ t('settings.panel.view.viewPresets') }}
         </a-typography-text>
@@ -23,7 +23,7 @@
           @change="onViewPresetsChange"
         />
       </a-flex>
-    </a-space>
+    </a-flex>
 
     <SettingSwitchField
       v-model:checked="orthographicModel"
@@ -31,11 +31,9 @@
       :disabled="!hasAnyLayer"
     />
 
-    <a-space
+    <a-flex
       v-if="viewPresetsModel.length > 0"
-      direction="vertical"
-      :size="0"
-      class="settings-full-width"
+      vertical
     >
       <a-space :size="0" align="center">
         <a-typography-text>
@@ -68,9 +66,9 @@
         :precision="2"
         :disabled="!hasAnyLayer"
       />
-    </a-space>
+    </a-flex>
 
-    <a-space direction="vertical" :size="0" class="settings-full-width">
+    <a-flex vertical gap="small">
       <a-space :size="0" align="center">
         <a-typography-text>
           {{ t('settings.panel.view.rotation') }}
@@ -112,8 +110,8 @@
           </a-tag>
         </template>
       </SettingSliderField>
-    </a-space>
-  </a-space>
+    </a-flex>
+  </a-flex>
 </template>
 
 <script setup lang="ts">

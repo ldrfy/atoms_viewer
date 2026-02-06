@@ -1,6 +1,6 @@
 <template>
-  <a-space direction="vertical" :size="12" class="settings-full-width">
-    <a-flex :gap="8" align="center" class="settings-full-width">
+  <a-flex vertical gap="middle">
+    <a-flex :gap="8" align="center">
       <a-typography-text style="min-width: 84px;">
         {{ t('viewer.theme.title') }}
       </a-typography-text>
@@ -76,7 +76,7 @@
       :max="PAN_STEP_MAX"
       :slider-step="PAN_STEP_STEP"
     />
-  </a-space>
+  </a-flex>
 </template>
 
 <script setup lang="ts">

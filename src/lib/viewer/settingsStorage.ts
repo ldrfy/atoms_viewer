@@ -69,15 +69,15 @@ export function saveSettingsToStorage(settings: ViewerSettings): void {
       },
       pan: {
         panOffset: { ...settings.pan.panOffset },
-      panOffsetLeft: { ...settings.pan.panOffsetLeft },
-      panOffsetRight: { ...settings.pan.panOffsetRight },
-    },
-    record: { ...settings.record },
-    effectRange: { ...settings.effectRange },
-    other: {
-      ...settings.other,
-    },
-  };
+        panOffsetLeft: { ...settings.pan.panOffsetLeft },
+        panOffsetRight: { ...settings.pan.panOffsetRight },
+      },
+      record: { ...settings.record },
+      effectRange: { ...settings.effectRange },
+      other: {
+        ...settings.other,
+      },
+    };
     localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(data));
   }
   catch {

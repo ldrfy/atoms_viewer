@@ -1,6 +1,6 @@
 <template>
-  <a-space direction="vertical" :size="8" class="settings-full-width">
-    <a-flex :gap="8" align="center" class="settings-full-width">
+  <a-flex vertical gap="small">
+    <a-flex gap="small" align="center">
       <a-typography-text style="min-width: 84px;">
         {{ t('settings.panel.scope.effectRangeLabel') }}
       </a-typography-text>
@@ -18,12 +18,13 @@
           type="secondary"
           :ellipsis="{ tooltip: false }"
           style="max-width: 28ch; cursor: pointer;"
+          class="small-text"
         >
           {{ t('settings.panel.scope.currentLayerLabel') }}: {{ activeLayerName }}
         </a-typography-text>
       </a-popover>
     </a-divider>
-  </a-space>
+  </a-flex>
 </template>
 
 <script setup lang="ts">

@@ -1,5 +1,5 @@
 <template>
-  <a-space direction="vertical" :size="12" class="settings-full-width">
+  <a-flex vertical gap="middle">
     <LayerScopeControl v-model:scope="scope" />
 
     <SettingSelectField
@@ -78,7 +78,7 @@
       :hint="t('settings.panel.details.showElementSymbolHint')"
       :disabled="controlsDisabled"
     />
-  </a-space>
+  </a-flex>
 </template>
 
 <script setup lang="ts">
@@ -87,7 +87,7 @@ import { useI18n } from 'vue-i18n';
 import { DEFAULT_DETAILS, type DetailsSettingsGroup, type RepresentationId } from '../../../lib/viewer/settings';
 import { viewerApiRef } from '../../../lib/viewer/bridge';
 import { useSettingsSiderContext } from '../useSettingsSiderContext';
-import LayerScopeControl from './LayerScopeControl.vue';
+import LayerScopeControl from '../parts/LayerScopeControl.vue';
 import SettingSelectField from '../parts/SettingSelectField.vue';
 import SettingSliderField from '../parts/SettingSliderField.vue';
 import SettingSwitchField from '../parts/SettingSwitchField.vue';

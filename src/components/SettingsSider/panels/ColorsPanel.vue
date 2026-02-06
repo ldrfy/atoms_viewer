@@ -1,5 +1,5 @@
 <template>
-  <a-space direction="vertical" :size="12" class="settings-full-width">
+  <a-flex vertical gap="middle">
     <LayerScopeControl v-model:scope="scope" />
 
     <a-flex align="center" justify="space-between">
@@ -21,7 +21,6 @@
       :key="`${key}-${idx}`"
       align="center"
       justify="space-between"
-      class="settings-full-width"
       style="padding-inline: 8px;"
     >
       <a-tag color="success" variant="outlined">
@@ -59,11 +58,11 @@
         {{ t('settings.panel.colors.apply') }}
       </a-button>
 
-      <a-typography-text type="secondary">
+      <a-typography-text type="secondary" class="small-text">
         {{ t('settings.panel.colors.hint') }}
       </a-typography-text>
     </a-space>
-  </a-space>
+  </a-flex>
 </template>
 
 <script setup lang="ts">
@@ -77,7 +76,7 @@ import { useSettingsSiderContext } from '../useSettingsSiderContext';
 import { formatColorValue, parseColorMapKey, parseColorValue } from '../../ViewerStage/colorMap';
 import { getElementColorHex } from '../../../lib/structure/chem';
 import { getVisualStylePreset } from '../../../lib/viewer/visualStyles';
-import LayerScopeControl from './LayerScopeControl.vue';
+import LayerScopeControl from '../parts/LayerScopeControl.vue';
 import { useLayerScope } from '../useLayerScope';
 import { PANEL_KEYS } from '../../../lib/viewer/panelKeys';
 import { useSettingsSiderResetContext } from '../useSettingsSiderResetContext';

@@ -1,5 +1,5 @@
 <template>
-  <a-space direction="vertical" :size="0" class="settings-full-width">
+  <a-flex vertical>
     <a-typography-text v-if="label">
       {{ label }}
     </a-typography-text>
@@ -24,10 +24,10 @@
       />
     </a-flex>
 
-    <a-typography-text v-if="hint" type="secondary">
+    <a-typography-text v-if="hint" type="secondary" class="small-text">
       {{ hint }}
     </a-typography-text>
-  </a-space>
+  </a-flex>
 </template>
 
 <script setup lang="ts">

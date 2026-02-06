@@ -46,14 +46,14 @@
         >
           {{ t('settings.clearSettings') }}
         </a-button>
-        <a-typography-text type="secondary">
+        <a-typography-text type="secondary" class="small-text">
           {{ t('settings.clearStorageHint') }}
         </a-typography-text>
       </a-flex>
       <!-- Dev tip: use the browser console to inspect cache/storage sizes via `localStorage.getItem('settings')` or `localStorage.getItem('atomsViewer.layerSnapshotCache.v1')`. -->
     </a-flex>
 
-    <a-typography-text type="secondary" class="settings-footer  settings-build-text">
+    <a-typography-text type="secondary" class="settings-footer  settings-build-text small-text">
       v{{ APP_VERSION }} · {{ t('settings.buildTime') }} {{ buildTimeText }}
     </a-typography-text>
   </a-flex>

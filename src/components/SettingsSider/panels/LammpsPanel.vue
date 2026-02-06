@@ -1,5 +1,5 @@
 <template>
-  <a-space direction="vertical" :size="12" class="settings-full-width">
+  <a-flex vertical gap="middle">
     <LayerScopeControl v-model:scope="scope" />
 
     <a-flex align="center" justify="space-between">
@@ -36,7 +36,7 @@
         @change="onLammpsElementChange(idx, $event)"
       />
     </a-flex>
-    <a-space direction="vertical" :size="5">
+    <a-flex vertical gap="small">
       <a-button
         block
         type="primary"
@@ -46,11 +46,11 @@
         {{ t('settings.panel.lammps.apply') }}
       </a-button>
 
-      <a-typography-text type="secondary">
+      <a-typography-text type="secondary" class="small-text">
         {{ t('settings.panel.lammps.hint') }}
       </a-typography-text>
-    </a-space>
-  </a-space>
+    </a-flex>
+  </a-flex>
 </template>
 
 <script setup lang="ts">
@@ -62,7 +62,7 @@ import { useI18n } from 'vue-i18n';
 import { viewerApiRef } from '../../../lib/viewer/bridge';
 import { useSettingsSiderContext } from '../useSettingsSiderContext';
 import { ATOMIC_SYMBOL_LIST, normalizeElementSymbol } from '../../../lib/structure/chem';
-import LayerScopeControl from './LayerScopeControl.vue';
+import LayerScopeControl from '../parts/LayerScopeControl.vue';
 import { useLayerScope } from '../useLayerScope';
 import { getDefaultLayerScope } from '../layerScopeStorage';
 import { useSettingsSiderResetContext } from '../useSettingsSiderResetContext';

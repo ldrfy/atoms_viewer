@@ -259,11 +259,6 @@
 }
 
 
-.settings-full-width {
-    width: 100%;
-}
-
-
 .settings-footer {
     flex: 0 0 auto;
     padding: 12px;
@@ -352,4 +347,10 @@
     .settings-drawer .ant-form-item-label>label {
         font-size: 13px;
     }
+}
+
+
+.small-text {
+    font-size: var(--ant-font-size-sm);
+    /* 通常为 12px */
 }

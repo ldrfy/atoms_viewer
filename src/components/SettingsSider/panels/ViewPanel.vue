@@ -37,19 +37,23 @@
       :size="0"
       class="settings-full-width"
     >
-      <a-space :size="6" align="center">
+      <a-space :size="0" align="center">
         <a-typography-text>
           {{ t('settings.panel.view.dualViewDistance') }}
         </a-typography-text>
         <a-tooltip
-          v-if="distanceDirty"
-          :title="t('settings.panel.view.resetView')"
+          :title="distanceDirty ? t('settings.panel.view.resetView') : ''"
+          :disabled="!distanceDirty"
           placement="left"
         >
           <a-button
             variant="link"
             color="default"
             size="small"
+            :style="{
+              fontSize: '12px',
+              visibility: distanceDirty ? 'visible' : 'hidden',
+            }"
             @click="resetDistance"
           >
             <ReloadOutlined />
@@ -67,19 +71,23 @@
     </a-space>
 
     <a-space direction="vertical" :size="0" class="settings-full-width">
-      <a-space :size="6" align="center">
+      <a-space :size="0" align="center">
         <a-typography-text>
           {{ t('settings.panel.view.rotation') }}
         </a-typography-text>
         <a-tooltip
-          v-if="rotationDirty"
-          :title="t('settings.panel.view.resetPose')"
+          :title="rotationDirty ? t('settings.panel.view.resetPose') : ''"
+          :disabled="!rotationDirty"
           placement="left"
         >
           <a-button
             variant="link"
             color="default"
             size="small"
+            :style="{
+              fontSize: '12px',
+              visibility: rotationDirty ? 'visible' : 'hidden',
+            }"
             @click="resetPose"
           >
             <ReloadOutlined />

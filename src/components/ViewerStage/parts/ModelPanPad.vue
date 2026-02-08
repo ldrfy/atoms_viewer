@@ -4,9 +4,14 @@
     class="pan-pad"
     :style="panelStyle"
   >
-    <a-space direction="vertical" size="small" class="pan-stack">
-      <div class="pan-pad-grid">
-        <span />
+    <a-row
+      :gutter="[6, 0]"
+      align="middle"
+      justify="center"
+      style="width: 114px; height: 114px;"
+    >
+      <a-col :span="8" />
+      <a-col :span="8" class="pan-col-cell">
         <a-button
           size="small"
           variant="link"
@@ -16,7 +21,10 @@
         >
           <CaretUpOutlined />
         </a-button>
-        <span />
+      </a-col>
+      <a-col :span="8" />
+
+      <a-col :span="8" class="pan-col-cell">
         <a-button
           size="small"
           variant="link"
@@ -26,16 +34,19 @@
         >
           <CaretLeftOutlined />
         </a-button>
+      </a-col>
+      <a-col :span="8" class="pan-col-cell">
         <a-button
           size="small"
           variant="link"
           color="default"
-
           :title="isPanned ? t('viewer.pan.center') + '（已平移）' : t('viewer.pan.center')"
           @click="handleReset"
         >
           <AimOutlined :class="{ 'pan-icon--active': isPanned }" />
         </a-button>
+      </a-col>
+      <a-col :span="8" class="pan-col-cell">
         <a-button
           size="small"
           variant="link"
@@ -45,7 +56,19 @@
         >
           <CaretRightOutlined />
         </a-button>
-        <span />
+      </a-col>
+
+      <a-col :span="8" class="pan-col-cell">
+        <a-typography-text
+          v-if="targetLabelSide === 'left'"
+          type="secondary"
+          class="pan-target-label"
+          ellipsis
+        >
+          {{ targetLabel }}
+        </a-typography-text>
+      </a-col>
+      <a-col :span="8" class="pan-col-cell">
         <a-button
           size="small"
           variant="link"
@@ -55,12 +78,18 @@
         >
           <CaretDownOutlined />
         </a-button>
-        <span />
-        <a-typography-text v-if="targetLabel" type="secondary" class="pan-target-label">
+      </a-col>
+      <a-col :span="8" class="pan-col-cell">
+        <a-typography-text
+          v-if="targetLabelSide === 'right'"
+          type="secondary"
+          class="pan-target-label"
+          ellipsis
+        >
           {{ targetLabel }}
         </a-typography-text>
-      </div>
-    </a-space>
+      </a-col>
+    </a-row>
   </div>
 </template>
 
@@ -102,6 +131,14 @@ function handleReset(): void {
 const targetLabel = computed(() => {
   if (props.targetSide === 'left') return t('viewer.pan.sideLeft');
   if (props.targetSide === 'right') return t('viewer.pan.sideRight');
+  return '';
+});
+
+// 中文：控制底部标签显示在哪一侧（左/右）
+// English: Control which side (left/right) the bottom label should appear on
+const targetLabelSide = computed<'left' | 'right' | ''>(() => {
+  if (props.targetSide === 'left') return 'left';
+  if (props.targetSide === 'right') return 'right';
   return '';
 });
 
@@ -168,28 +205,20 @@ onBeforeUnmount(() => {
   bottom: 12px;
 }
 
-.pan-stack {
-  align-items: center;
-}
-
-.pan-pad-grid {
-  display: grid;
-  grid-template-columns: repeat(3, auto);
-  grid-template-rows: repeat(3, auto);
-  gap: 6px;
-  align-items: center;
-  justify-items: center;
-  position: relative;
-}
-
 .pan-icon--active {
   color: var(--ant-primary-color, #1677ff);
 }
 
+.pan-col-cell {
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .pan-target-label {
-  position: absolute;
-  right: 12px;
-  bottom: 6px;
+  max-width: 30px;
+  text-align: center;
   font-size: 12px;
   line-height: 1;
 }

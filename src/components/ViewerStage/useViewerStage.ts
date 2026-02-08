@@ -14,6 +14,7 @@ import { hasUnknownElementMappingForTypeIds } from '../../lib/viewer/settings';
 import type { LayerSortBy, LayersSnapshot, LayerSnapshot } from '../../lib/viewer/sessionTypes';
 import type { FrameMeta } from '../../lib/structure/types';
 import type { SettingsPatch } from '../../lib/viewer/mergeSettings';
+import { normalizeElementSymbol } from '../../lib/structure/chem';
 
 import { useI18n } from 'vue-i18n';
 
@@ -33,9 +34,14 @@ import {
   type ModelLayerInfo,
 } from './modelRuntime';
 import type { ColorMapRecord } from './colorMap';
+import { parseColorMapRecord } from './colorMap';
 import { createLayerSourceStore } from './logic/sourceStore';
 import { createInspectSelectionHelper } from './logic/inspectSelectionHelper';
-import { getLayerSnapshotFromCache, saveLayerSnapshotCache } from './logic/layerSnapshotCache';
+import {
+  getLayerSnapshotFromCache,
+  getLatestLayerSnapshotFromCache,
+  saveLayerSnapshotCache,
+} from './logic/layerSnapshotCache';
 
 import { createInspectCtx, type InspectCtx } from './ctx/inspect';
 import { createRecordingController, type RecordingBindings, type CropBox } from './recording';
@@ -578,6 +584,93 @@ export function useViewerStage(
     activeLayerId,
   });
 
+  // 基于旧快照构建 LAMMPS 回退映射与颜色。
+  // Build LAMMPS fallback mapping and colors from previous snapshot.
+  function buildLammpsFallbackFromSnapshot(params: {
+    currentTypeIds: number[];
+    cachedMap: LammpsTypeMapRecord;
+    cachedColors: ColorMapRecord;
+  }): { typeMap: LammpsTypeMapRecord; colorMap: ColorMapRecord } | null {
+    const nextTypeIds = Array.from(new Set(
+      (params.currentTypeIds ?? [])
+        .map(v => Math.max(1, Math.floor(Number(v))))
+        .filter(v => Number.isFinite(v) && v > 0),
+    )).sort((a, b) => a - b);
+    if (nextTypeIds.length === 0) return null;
+
+    const cachedMap = params.cachedMap ?? {};
+    const cachedColors = parseColorMapRecord(params.cachedColors ?? {});
+    const oldEntries = Object.entries(cachedMap)
+      .map(([idRaw, elRaw]) => {
+        const id = Number(idRaw);
+        if (!Number.isFinite(id) || id <= 0) return null;
+        const element = normalizeElementSymbol(String(elRaw ?? '')) || 'E';
+        return { typeId: Math.floor(id), element };
+      })
+      .filter(Boolean) as Array<{ typeId: number; element: string }>;
+    if (oldEntries.length === 0) return null;
+    oldEntries.sort((a, b) => a.typeId - b.typeId);
+    const oldByTypeId = new Map(oldEntries.map(item => [item.typeId, item]));
+
+    const assigned = new Map<number, { element: string; oldTypeId?: number; oldElement?: string }>();
+    const usedOldTypeIds = new Set<number>();
+
+    // 优先按相同 typeId 命中，再按旧顺序补齐。
+    // Prefer exact typeId matches, then fill by previous order.
+    for (const tid of nextTypeIds) {
+      const match = oldByTypeId.get(tid);
+      if (!match) continue;
+      assigned.set(tid, {
+        element: match.element || 'E',
+        oldTypeId: match.typeId,
+        oldElement: match.element,
+      });
+      usedOldTypeIds.add(match.typeId);
+    }
+
+    let cursor = 0;
+    for (const tid of nextTypeIds) {
+      if (assigned.has(tid)) continue;
+      while (cursor < oldEntries.length && usedOldTypeIds.has(oldEntries[cursor]!.typeId)) {
+        cursor += 1;
+      }
+      if (cursor < oldEntries.length) {
+        const pick = oldEntries[cursor]!;
+        assigned.set(tid, {
+          element: pick.element || 'E',
+          oldTypeId: pick.typeId,
+          oldElement: pick.element,
+        });
+        usedOldTypeIds.add(pick.typeId);
+        cursor += 1;
+      }
+      else {
+        assigned.set(tid, { element: 'E' });
+      }
+    }
+
+    const nextTypeMap: LammpsTypeMapRecord = {};
+    const nextColorMap: ColorMapRecord = {};
+    for (const tid of nextTypeIds) {
+      const item = assigned.get(tid);
+      const element = normalizeElementSymbol(item?.element ?? '') || 'E';
+      nextTypeMap[String(tid)] = element;
+
+      const oldTypeId = item?.oldTypeId;
+      const oldElement = normalizeElementSymbol(item?.oldElement ?? '') || '';
+      if (!oldTypeId || !oldElement || oldElement === 'E') continue;
+
+      const oldKey = `${oldElement}.${oldTypeId}`;
+      const color = cachedColors[oldKey] ?? cachedColors[oldElement];
+      if (!color) continue;
+
+      const newKey = `${element}.${tid}`;
+      nextColorMap[newKey] = color;
+    }
+
+    return { typeMap: nextTypeMap, colorMap: nextColorMap };
+  }
+
   const layerSourceStore = {
     set(id: string, data: import('../../lib/viewer/sessionTypes').LayerSourceData): void {
       rawLayerSourceStore.set(id, data);
@@ -595,7 +688,41 @@ export function useViewerStage(
           runtimeTick.value += 1;
           syncUiFromRuntime();
           scheduleSessionSave('layers');
+          return;
         }
+
+        // LAMMPS 新模型无缓存时，回退到最近一次快照。
+        // Fallback to the latest snapshot for LAMMPS when no md5 cache exists.
+        const layerInfo = runtime.layers.value.find(l => l.id === id);
+        if (!layerInfo?.hasTypeId) return;
+
+        const latest = getLatestLayerSnapshotFromCache(data.md5);
+        if (!latest) return;
+        const latestMap = latest.lammps?.data ?? {};
+        if (Object.keys(latestMap).length === 0) return;
+
+        const curSnap = runtime.getLayerSnapshots().find(s => s.id === id);
+        const currentTypeIds = Object.keys(curSnap?.lammps?.data ?? {})
+          .map(v => Number(v))
+          .filter(v => Number.isFinite(v) && v > 0);
+        const fallback = buildLammpsFallbackFromSnapshot({
+          currentTypeIds,
+          cachedMap: latestMap,
+          cachedColors: latest.colors?.data ?? {},
+        });
+        if (!fallback) return;
+
+        const sanitized: LayerSnapshot = {
+          source: layerInfo.source ? { ...layerInfo.source } : { md5: data.md5 },
+          visible: true,
+          lammps: { data: fallback.typeMap },
+          colors: { data: fallback.colorMap },
+          details: latest.details ? { ...latest.details } : undefined,
+        };
+        runtime.applyLayerSnapshots([sanitized]);
+        runtimeTick.value += 1;
+        syncUiFromRuntime();
+        scheduleSessionSave('layers');
       }
     },
     get(id: string) {

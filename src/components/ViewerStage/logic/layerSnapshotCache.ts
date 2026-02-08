@@ -68,3 +68,21 @@ export function getLayerSnapshotFromCache(md5?: string): LayerSnapshot | null {
   const cache = loadLayerSnapshotCache();
   return cache[md5]?.snapshot ?? null;
 }
+
+// 读取最近一次保存的快照（可排除某个 md5）。
+// Read the latest saved snapshot (optionally excluding one md5).
+export function getLatestLayerSnapshotFromCache(excludeMd5?: string): LayerSnapshot | null {
+  const cache = loadLayerSnapshotCache();
+  let latest: LayerSnapshot | null = null;
+  let latestAt = -1;
+  for (const [md5, entry] of Object.entries(cache)) {
+    if (excludeMd5 && md5 === excludeMd5) continue;
+    const ts = Number(entry?.savedAt ?? -1);
+    if (!Number.isFinite(ts)) continue;
+    if (ts > latestAt && entry?.snapshot) {
+      latestAt = ts;
+      latest = entry.snapshot;
+    }
+  }
+  return latest;
+}

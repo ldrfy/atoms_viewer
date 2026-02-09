@@ -1,5 +1,5 @@
 <template>
-  <a-flex vertical gap="middle">
+  <a-flex vertical gap="small">
     <LayerScopeControl v-model:scope="scope" />
 
     <a-flex align="center" justify="space-between">
@@ -16,52 +16,57 @@
       </a-tooltip>
     </a-flex>
 
-    <a-flex
+    <a-row
       v-for="(key, idx) in colorKeys"
       :key="`${key}-${idx}`"
-      align="center"
-      justify="space-between"
+      align="middle"
       style="padding-inline: 8px;"
     >
-      <a-tag color="success" variant="outlined">
-        {{ key }}
-      </a-tag>
-      <a-typography-text>→</a-typography-text>
-      <a-tooltip
-        v-if="isKeyCustom(key, draftColorMap)"
-        :title="t('settings.panel.colors.resetTooltip')"
-      >
-        <a-button
-          type="text"
-          size="small"
-          @click="onResetColor(key)"
-        >
-          <ReloadOutlined />
-        </a-button>
-      </a-tooltip>
+      <a-col :span="8">
+        <a-tag color="success" variant="outlined">
+          {{ key }}
+        </a-tag>
+      </a-col>
+      <a-col :span="2" style="text-align: center;">
+        <a-typography-text>→</a-typography-text>
+      </a-col>
+      <a-col :span="14" style="text-align: right;">
+        <a-space align="center" :size="4">
+          <a-tooltip
+            v-if="isKeyCustom(key, draftColorMap)"
+            :title="t('settings.panel.colors.resetTooltip')"
+          >
+            <a-button
+              type="text"
+              size="small"
+              @click="onResetColor(key)"
+            >
+              <ReloadOutlined />
+            </a-button>
+          </a-tooltip>
+          <a-color-picker
+            size="small"
+            show-text
+            :value="colorPickerValue(getDraftHexValue(key))"
+            @change="(value: unknown, css: unknown) => onColorPickerChange(key, value, css)"
+          />
+        </a-space>
+      </a-col>
+    </a-row>
 
-      <a-color-picker
-        size="small"
-        show-text
-        :value="colorPickerValue(getDraftHexValue(key))"
-        @change="(value: unknown, css: unknown) => onColorPickerChange(key, value, css)"
-      />
-    </a-flex>
+    <a-button
+      block
+      type="primary"
+      :disabled="isApplyDisabled"
+      style="margin-top: 8px;"
+      @click="onApplyColorEdits"
+    >
+      {{ t('settings.panel.colors.apply') }}
+    </a-button>
 
-    <a-space direction="vertical" :size="5">
-      <a-button
-        block
-        type="primary"
-        :disabled="isApplyDisabled"
-        @click="onApplyColorEdits"
-      >
-        {{ t('settings.panel.colors.apply') }}
-      </a-button>
-
-      <a-typography-text type="secondary" class="small-text">
-        {{ t('settings.panel.colors.hint') }}
-      </a-typography-text>
-    </a-space>
+    <a-typography-text type="secondary" class="small-text">
+      {{ t('settings.panel.colors.hint') }}
+    </a-typography-text>
   </a-flex>
 </template>
 
@@ -208,6 +213,8 @@ function getBaseColorForKey(key: string): string {
   return getElementColorHex(element);
 }
 
+// Check whether current color differs from base color for a key.
+// 检查当前颜色是否与该 key 的默认颜色不同。
 function isKeyCustom(key: string, map?: ColorMapRecord): boolean {
   const base = getBaseColorForKey(key);
   const cur = String((map ?? colorMap.value)[key] ?? '').trim().toUpperCase();
@@ -240,9 +247,10 @@ function patchDraftColor(key: string, colorHex: string, alpha: number): void {
   draftColorMap.value = next;
 }
 
+// Reset color of a key back to element base color.
+// 将某个 key 的颜色重置为元素默认基色。
 function onResetColor(key: string): void {
-  const def = getBaseColorForKey(key);
-  patchDraftColor(key, def, 1);
+  patchDraftColor(key, getBaseColorForKey(key), 1);
 }
 
 function onColorPickerChange(key: string, value: unknown, css: unknown): void {

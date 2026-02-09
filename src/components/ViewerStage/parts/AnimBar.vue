@@ -1,5 +1,10 @@
 <template>
-  <div v-if="hasModelOrParseError" class="anim-bar">
+  <a-flex
+    v-if="hasModelOrParseError"
+    vertical
+    gap="small"
+    class="anim-bar"
+  >
     <a-row
       :gutter="[6, 6]"
       align="middle"
@@ -70,7 +75,12 @@
       </a-col>
 
       <a-col flex="auto" style="min-width: 0;">
-        <a-space :size="6" align="center" style="min-width: 0; width: 100%; justify-content: flex-end;">
+        <a-flex
+          align="center"
+          justify="flex-end"
+          :gap="6"
+          style="min-width: 0; width: 100%;"
+        >
           <a-typography-text type="secondary" style="white-space: nowrap;">
             {{ t("viewer.play.fpsLabel") }}
           </a-typography-text>
@@ -81,7 +91,7 @@
             :max="RECORD_FPS_MAX"
             style="width: 80px;"
           />
-        </a-space>
+        </a-flex>
       </a-col>
     </a-row>
 
@@ -112,7 +122,12 @@
 
       <a-col flex="auto" style="min-width: 0;">
         <template v-if="!isRecording && !isRecordDelayActive">
-          <a-space :size="6" align="center" style="min-width: 0; width: 100%; justify-content: flex-end;">
+          <a-flex
+            align="center"
+            justify="flex-end"
+            :gap="6"
+            style="min-width: 0; width: 100%;"
+          >
             <a-typography-text type="secondary" style="white-space: nowrap;">
               {{ t("settings.panel.other.recordFps") }}
             </a-typography-text>
@@ -123,10 +138,15 @@
               :max="RECORD_FPS_MAX"
               style="width: 80px;"
             />
-          </a-space>
+          </a-flex>
         </template>
         <template v-else>
-          <a-space :size="6" align="center" style="min-width: 0; width: 100%; justify-content: flex-end;">
+          <a-flex
+            align="center"
+            justify="flex-end"
+            :gap="6"
+            style="min-width: 0; width: 100%;"
+          >
             <a-tag v-if="isRecordDelayActive" color="orange">
               {{ t("viewer.record.countdown") }} {{ recordDelayText }}
             </a-tag>
@@ -140,11 +160,11 @@
             >
               {{ isRecordPaused ? t("viewer.record.resume") : t("viewer.record.pause") }}
             </a-button>
-          </a-space>
+          </a-flex>
         </template>
       </a-col>
     </a-row>
-  </div>
+  </a-flex>
 </template>
 
 <script setup lang="ts">
@@ -239,10 +259,6 @@ const actionButtonStyle = computed<Record<string, string>>(() => {
     bottom: 12px;
     z-index: 20;
     pointer-events: auto;
-
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
 
     /* 桌面不太宽 + 手机不超出横向宽度 */
     width: min(340px, calc(100vw - 24px));

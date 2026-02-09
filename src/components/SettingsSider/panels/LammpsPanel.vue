@@ -1,5 +1,5 @@
 <template>
-  <a-flex vertical gap="middle">
+  <a-flex vertical gap="small">
     <LayerScopeControl v-model:scope="scope" />
 
     <a-flex align="center" justify="space-between">
@@ -21,7 +21,7 @@
       :key="`${typeId}-${idx}`"
       :gap="32"
       align="center"
-      class="settings-full-width"
+      style="padding-inline: 8px;"
     >
       <a-tag color="processing" variant="outlined">
         {{ typeId }}
@@ -36,20 +36,20 @@
         @change="onLammpsElementChange(idx, $event)"
       />
     </a-flex>
-    <a-flex vertical gap="small">
-      <a-button
-        block
-        type="primary"
-        :disabled="!hasAnyLayer"
-        @click="onApplyTypeMap"
-      >
-        {{ t('settings.panel.lammps.apply') }}
-      </a-button>
 
-      <a-typography-text type="secondary" class="small-text">
-        {{ t('settings.panel.lammps.hint') }}
-      </a-typography-text>
-    </a-flex>
+    <a-button
+      block
+      type="primary"
+      style="margin-top: 8px;"
+      :disabled="!hasAnyLayer"
+      @click="onApplyTypeMap"
+    >
+      {{ t('settings.panel.lammps.apply') }}
+    </a-button>
+
+    <a-typography-text type="secondary" class="small-text">
+      {{ t('settings.panel.lammps.hint') }}
+    </a-typography-text>
   </a-flex>
 </template>
 

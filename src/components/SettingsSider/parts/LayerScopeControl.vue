@@ -1,5 +1,5 @@
 <template>
-  <a-flex vertical gap="small">
+  <a-flex vertical>
     <a-flex gap="small" align="center">
       <a-typography-text style="min-width: 84px;">
         {{ t('settings.panel.scope.effectRangeLabel') }}

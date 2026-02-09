@@ -55,13 +55,13 @@
       :message="t('settings.panel.layers.empty')"
     />
 
-    <a-flex vertical gap="middle">
+    <a-flex vertical gap="small">
       <a-card
         v-for="l in layerList"
         :key="l.id"
         size="small"
         :style="layerItemStyle(l.id === activeLayerId)"
-        :body-style="{ padding: '8px 10px' }"
+        :styles="{ body: { padding: '8px 10px' } }"
         @click="onSetActive(l.id)"
       >
         <a-flex :gap="8" align="center">

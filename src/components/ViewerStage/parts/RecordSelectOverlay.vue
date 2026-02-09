@@ -7,12 +7,12 @@
     @pointerup.prevent="ctx.onRecordOverlayUp"
     @pointercancel.prevent="ctx.onRecordOverlayCancel"
   >
-    <div class="record-select">
+    <a-flex vertical :gap="12" class="record-select">
       <div class="record-select-hint" @pointerdown.stop>
         {{ selectHint }}
       </div>
 
-      <div class="record-select-actions" @pointerdown.stop @pointerup.stop>
+      <a-flex class="record-select-actions" @pointerdown.stop @pointerup.stop>
         <a-space :size="8" align="center">
           <a-button :disabled="confirmLoading" @click="ctx.cancelRecordSelect">
             {{ selectCancelLabel }}
@@ -25,7 +25,7 @@
           >
             {{ selectConfirmLabel }}
           </a-button>
-          <div v-if="showDelayInput" class="record-delay">
+          <a-flex v-if="showDelayInput" align="center" :gap="6">
             <a-typography-text type="secondary">
               {{ t("viewer.record.delay") }}
             </a-typography-text>
@@ -35,15 +35,15 @@
               :min="0"
               :step="0.1"
               :precision="2"
-              class="record-delay-input"
+              style="width: 88px;"
             />
             <a-typography-text type="secondary">
               s
             </a-typography-text>
-          </div>
+          </a-flex>
         </a-space>
-      </div>
-    </div>
+      </a-flex>
+    </a-flex>
 
     <!-- 草稿框（可编辑） -->
     <div v-if="draftBox" class="record-draft-box" :style="draftStyle">
@@ -120,14 +120,10 @@ const draftStyle = computed<CSSProperties>(() => {
 
 .record-select {
     position: absolute;
-
-    display: flex;
-    flex-direction: column;
     margin-left: 12px;
     margin-top: 12px;
 }
 .record-select-hint {
-    margin-bottom: 12px;
     padding: 6px 10px;
     border-radius: 8px;
     background: rgba(0, 0, 0, 0.55);
@@ -140,16 +136,6 @@ const draftStyle = computed<CSSProperties>(() => {
 .record-select-actions {
     z-index: 55;
     pointer-events: auto;
-}
-
-.record-delay {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.record-delay-input {
-    width: 88px;
 }
 
 .record-select-box {

@@ -16,26 +16,32 @@
       </a-tooltip>
     </a-flex>
 
-    <a-flex
+    <a-row
       v-for="(typeId, idx) in activeLayerTypeIds"
       :key="`${typeId}-${idx}`"
-      :gap="32"
-      align="center"
+      align="middle"
       style="padding-inline: 8px;"
     >
-      <a-tag color="processing" variant="outlined">
-        {{ typeId }}
-      </a-tag>
-      <a-typography-text>→</a-typography-text>
-      <a-select
-        show-search
-        style="flex: 1; min-width: 0;"
-        :value="draftMap[String(typeId)] || 'E'"
-        :options="atomicOptions"
-        :filter-option="filterAtomicOption"
-        @change="onLammpsElementChange(idx, $event)"
-      />
-    </a-flex>
+      <a-col :span="8">
+        <a-tag color="processing" variant="outlined">
+          {{ typeId }}
+        </a-tag>
+      </a-col>
+      <a-col :span="2" style="text-align: center;">
+        <a-typography-text>→</a-typography-text>
+      </a-col>
+      <a-col :span="14" style="text-align: right;">
+        <a-select
+          show-search
+          size="small"
+          style="width: 120px;"
+          :value="draftMap[String(typeId)] || 'E'"
+          :options="atomicOptions"
+          :filter-option="filterAtomicOption"
+          @change="onLammpsElementChange(idx, $event)"
+        />
+      </a-col>
+    </a-row>
 
     <a-button
       block

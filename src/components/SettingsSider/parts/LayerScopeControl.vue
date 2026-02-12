@@ -1,16 +1,10 @@
 <template>
   <a-flex vertical>
-    <a-flex gap="small" align="center">
-      <a-typography-text style="min-width: 84px;">
-        {{ t('settings.panel.scope.effectRangeLabel') }}
-      </a-typography-text>
-      <a-select
-        v-model:value="scopeModel"
-        style="flex: 1; min-width: 0;"
-        :options="scopeOptions"
-        :placeholder="t('settings.panel.scope.selectPlaceholder')"
-      />
-    </a-flex>
+    <SettingSelectField
+      v-model:value="scopeModel"
+      :label="t('settings.panel.scope.effectRangeLabel')"
+      :options="scopeOptions"
+    />
 
     <a-divider style="margin: 0;" plain>
       <a-popover trigger="click" :content="activeLayerName">

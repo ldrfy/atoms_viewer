@@ -1,15 +1,11 @@
 <template>
-  <a-flex align="center" justify="space-between" class="settings-panel-header-main">
-    <a-flex align="center" :gap="8">
-      <component :is="icon" />
-      <a-typography-text strong>
-        {{ title }}
-      </a-typography-text>
-    </a-flex>
+  <a-flex gap="small" align="center">
+    <component :is="icon" />
+    <a-typography-text strong>
+      {{ title }}
+    </a-typography-text>
 
     <a-flex
-      align="center"
-      :gap="6"
       :class="[
         'settings-panel-indicator',
         { 'settings-panel-indicator--inactive': dirtyCount === 0 },
@@ -20,7 +16,6 @@
         :overflow-count="99"
         :show-zero="false"
         color="blue"
-        :offset="[0, 0]"
         class="settings-panel-badge"
       />
 

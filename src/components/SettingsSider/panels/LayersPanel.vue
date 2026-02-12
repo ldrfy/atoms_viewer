@@ -2,7 +2,6 @@
   <a-flex vertical gap="small">
     <a-flex align="center" justify="space-between">
       <a-select
-        size="small"
         style="max-width: 120px; width: 100%;"
         :disabled="layerList.length < 2"
         :value="sortValue"
@@ -46,67 +45,62 @@
       :message="t('settings.panel.layers.empty')"
     />
 
-    <a-flex vertical gap="small">
-      <a-card
-        v-for="l in layerList"
-        :key="l.id"
-        size="small"
-        :style="layerItemStyle(l.id === activeLayerId)"
-        :styles="{ body: { padding: '5px 10px' } }"
-        @click="onSetActive(l.id)"
-      >
-        <a-flex :gap="8" align="center">
-          <a-radio :checked="l.id === activeLayerId" />
+    <a-card
+      v-for="l in layerList"
+      :key="l.id"
+      :style="layerItemStyle(l.id === activeLayerId)"
+      :styles="{ body: { padding: '5px 8px 5px 10px' } }"
+      @click="onSetActive(l.id)"
+    >
+      <a-flex :gap="8" align="center">
+        <a-radio :checked="l.id === activeLayerId" />
 
-          <a-space direction="vertical" :size="0" style="flex: 1; min-width: 0;">
-            <a-typography-text
-              strong
-              :ellipsis="{ tooltip: false }"
-              :title="layerPrimaryText(l)"
-            >
-              {{ layerPrimaryText(l) }}
-            </a-typography-text>
-            <a-typography-text
-              type="secondary"
-              class="small-text"
-              :ellipsis="{ tooltip: false }"
-              :title="layerSecondaryText(l)"
-            >
-              {{ layerSecondaryText(l) }}
-            </a-typography-text>
-          </a-space>
+        <a-space direction="vertical" :size="0" style="flex: 1; min-width: 0;">
+          <a-typography-text
+            ellipsis
+            strong
+          >
+            {{ layerPrimaryText(l) }}
+          </a-typography-text>
+          <a-typography-text
+            ellipsis
+            type="secondary"
+            class="small-text"
+          >
+            {{ layerSecondaryText(l) }}
+          </a-typography-text>
+        </a-space>
 
-          <a-space
-            direction="vertical"
-            align="center"
-            :size="2"
-            @click.stop
+        <a-space
+          direction="vertical"
+          align="center"
+          :size="0"
+          @click.stop
+        >
+          <a-button
+            :type="l.visible ? 'link' : 'text'"
+            size="small"
+            @click="onToggleLayer(l.id, !l.visible)"
+          >
+            <component :is="l.visible ? EyeOutlined : EyeInvisibleOutlined" />
+          </a-button>
+
+          <a-popconfirm
+            :title="t('settings.panel.layers.deleteConfirm')"
+            placement="left"
+            @confirm="onDeleteLayer(l.id)"
           >
             <a-button
-              :type="l.visible ? 'link' : 'text'"
+              type="text"
               size="small"
-              @click="onToggleLayer(l.id, !l.visible)"
+              danger
             >
-              <component :is="l.visible ? EyeOutlined : EyeInvisibleOutlined" />
+              <DeleteOutlined />
             </a-button>
-
-            <a-popconfirm
-              :title="t('settings.panel.layers.deleteConfirm')"
-              placement="left"
-              @confirm="onDeleteLayer(l.id)"
-            >
-              <a-button
-                type="text"
-                size="small"
-                danger
-              >
-                <DeleteOutlined />
-              </a-button>
-            </a-popconfirm>
-          </a-space>
-        </a-flex>
-      </a-card>
-    </a-flex>
+          </a-popconfirm>
+        </a-space>
+      </a-flex>
+    </a-card>
   </a-flex>
 </template>
 
@@ -160,8 +154,6 @@ function layerPrimaryText(l: any): string {
  * Avoid showing the same file name twice (e.g. when l.name === l.source?.fileName).
  */
 function layerSecondaryText(l: any): string {
-  const name = String(l?.name ?? '').trim();
-  const file = String(l?.source?.fileName ?? '').trim();
   const atoms = Number.isFinite(l?.atomCount) ? Number(l.atomCount) : 0;
   const frames = Number.isFinite(l?.frameCount) ? Number(l.frameCount) : 0;
   const atomsText = new Intl.NumberFormat().format(atoms);
@@ -172,14 +164,23 @@ function layerSecondaryText(l: any): string {
   });
 
   const fmt = String(l?.sourceFormat ?? '').trim();
+  // 副标题仅显示格式与统计信息，不显示文件名。
+  // Secondary text only shows format and stats, without filename.
   const parts: string[] = [];
-
-  // If the layer has a user-friendly name, also show the source filename.
-  if (file && name && file !== name) parts.push(file);
-  if (fmt) parts.push(fmt.toUpperCase());
+  if (fmt) parts.push(layerFormatLabel(fmt));
   parts.push(meta);
 
   return parts.join(' · ');
+}
+
+// 统一格式显示名，避免 LAMMPS 只显示 DUMP/DATA。
+// Normalize format label so LAMMPS does not collapse to DUMP/DATA only.
+function layerFormatLabel(fmt: string): string {
+  const raw = String(fmt ?? '').trim();
+  const key = raw.toLowerCase();
+  if (['dump', 'lammpstrj', 'traj', 'lammpsdump', 'lammps-dump'].includes(key)) return 'LAMMPS-DUMP';
+  if (['data', 'lmp', 'lammpsdata', 'lammps-data'].includes(key)) return 'LAMMPS-DATA';
+  return raw.toUpperCase();
 }
 
 function onOpenFile(): void {

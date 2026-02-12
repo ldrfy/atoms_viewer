@@ -120,48 +120,36 @@
             <div v-else class="atom-inspector__content">
               <!-- Scrollable list -->
               <div class="atom-inspector__list">
-                <a-space direction="vertical" :size="4">
-                  <div
-                    v-for="(item, index) in selected"
-                    :key="item.atomIndex ?? index"
-                  >
-                    <a-row :gutter="16" align="middle">
-                      <a-col>
-                        <a-checkbox
-                          style="margin-left: 8px;"
-                          :checked="isItemChecked(item)"
-                          @change="onItemChecked(item, $event.target.checked)"
-                        />
-                      </a-col>
+                <a-flex
+                  v-for="(item, index) in selected"
+                  :key="item.atomIndex ?? index"
+                  gap="middle"
+                  align="center"
+                  style="padding: 5px;"
+                >
+                  <a-tag color="green" variant="outlined">
+                    {{ index + 1 }}
+                  </a-tag>
 
-                      <a-col>
-                        <a-tag color="green" variant="outlined">
-                          {{ index + 1 }}
-                        </a-tag>
-                      </a-col>
+                  <a-popover :trigger="['click']" :content="buildTooltip(item)" placement="topLeft">
+                    <a-space direction="vertical" :size="0" style="flex: 1; min-width: 0;">
+                      <a-typography-text strong>
+                        {{ item.element }} {{ item.atomIndex + 1 }}
+                      </a-typography-text>
 
-                      <a-col>
-                        <a-popover :trigger="['click']" :content="buildTooltip(item)" placement="topLeft">
-                          <a-flex vertical>
-                            <a-space wrap>
-                              <a-typography-text strong>
-                                {{ item.element }}
-                              </a-typography-text>
-                              <a-typography-text type="secondary">
-                                {{ item.atomIndex + 1 }}
-                              </a-typography-text>
-                            </a-space>
-                            <a-typography-text>
-                              x={{ fmt(item.position?.[0]) }},
-                              y={{ fmt(item.position?.[1]) }},
-                              z={{ fmt(item.position?.[2]) }}
-                            </a-typography-text>
-                          </a-flex>
-                        </a-popover>
-                      </a-col>
-                    </a-row>
-                  </div>
-                </a-space>
+                      <a-typography-text>
+                        x={{ fmt(item.position?.[0]) }},
+                        y={{ fmt(item.position?.[1]) }},
+                        z={{ fmt(item.position?.[2]) }}
+                      </a-typography-text>
+                    </a-space>
+                  </a-popover>
+
+                  <a-checkbox
+                    :checked="isItemChecked(item)"
+                    @change="onItemChecked(item, $event.target.checked)"
+                  />
+                </a-flex>
               </div>
 
               <!-- Fixed footer: measures -->

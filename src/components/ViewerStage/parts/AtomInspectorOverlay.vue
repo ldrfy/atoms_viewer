@@ -124,7 +124,6 @@
                   <div
                     v-for="(item, index) in selected"
                     :key="item.atomIndex ?? index"
-                    class="atom-item"
                   >
                     <a-row :gutter="16" align="middle">
                       <a-col>
@@ -143,7 +142,7 @@
 
                       <a-col>
                         <a-popover :trigger="['click']" :content="buildTooltip(item)" placement="topLeft">
-                          <a-space direction="vertical" :size="4">
+                          <a-flex vertical>
                             <a-space wrap>
                               <a-typography-text strong>
                                 {{ item.element }}
@@ -157,7 +156,7 @@
                               y={{ fmt(item.position?.[1]) }},
                               z={{ fmt(item.position?.[2]) }}
                             </a-typography-text>
-                          </a-space>
+                          </a-flex>
                         </a-popover>
                       </a-col>
                     </a-row>
@@ -763,15 +762,6 @@ function fmt(v: number | null | undefined): string {
 
 .atom-inspector__footer {
   flex: 0 0 auto;
-}
-
-.atom-item {
-  padding: 6px 0;
-  border-bottom: 1px solid var(--ant-color-border-secondary);
-}
-
-.atom-item:last-child {
-  border-bottom: none;
 }
 
 .atom-inspector__measureHint {

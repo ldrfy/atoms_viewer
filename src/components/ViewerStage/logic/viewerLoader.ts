@@ -73,6 +73,13 @@ export function createViewerLoader(deps: {
   };
   shouldCacheRemote?: () => boolean;
   rehydrateSelectionFromSettings?: () => void;
+  // Resolve cached LAMMPS type map for initial parse (typically by source md5).
+  // 解析前获取缓存的 LAMMPS 映射（通常按 source md5 命中）。
+  resolveCachedLammpsTypeMap?: (params: {
+    sourceMeta?: LayerSourceInfo;
+    fileName: string;
+    reason: RenderReason;
+  }) => LammpsTypeMapRecord | undefined;
 }) {
   const textDecoder = new TextDecoder();
   const parseMode = ref<ParseMode>('auto');
@@ -207,6 +214,7 @@ export function createViewerLoader(deps: {
       skipAutoFit?: boolean;
       forcedLayerId?: string;
       suppressLammpsWarning?: boolean;
+      suppressNotices?: boolean;
     },
   ): { frameCount: number; hasAnimation: boolean; layerId: string } | null {
     const stage = deps.getStage();
@@ -214,10 +222,17 @@ export function createViewerLoader(deps: {
     if (!stage || !runtime) return null;
 
     const forcedName = toForcedFilename(fileName, parseMode.value);
+    const cachedLammpsMap = reason === 'load'
+      ? (deps.resolveCachedLammpsTypeMap?.({
+          sourceMeta: opts?.sourceMeta,
+          fileName,
+          reason,
+        }) ?? {})
+      : {};
 
     const model = parseStructure(text, forcedName, {
       lammpsTypeToElement: buildLammpsTypeToElementMap(
-        reason === 'load' ? {} : DEFAULT_LAMMPS.data,
+        reason === 'load' ? cachedLammpsMap : DEFAULT_LAMMPS.data,
       ),
       lammpsSortById: true,
     });
@@ -400,7 +415,7 @@ export function createViewerLoader(deps: {
     );
   }
 
-  function focusSettingsToLayersOrLammps(): void {
+  function focusSettingsToLayersOrLammps(opts?: { suppressNotices?: boolean }): void {
     const runtime = deps.getRuntime();
     if (!deps.requestOpenSettings) return;
     const layerCount = runtime?.layers.value.length ?? 0;
@@ -420,10 +435,12 @@ export function createViewerLoader(deps: {
         focusKeys: Array.from(new Set(focusKeys)),
         open: true,
       });
-      message.info(
-        deps.t?.('viewer.settings.modifiedHint')
-        ?? '已检测到修改的设置，已打开相关面板。',
-      );
+      if (!opts?.suppressNotices) {
+        message.info(
+          deps.t?.('viewer.settings.modifiedHint')
+          ?? '已检测到修改的设置，已打开相关面板。',
+        );
+      }
       return;
     }
 
@@ -477,6 +494,7 @@ export function createViewerLoader(deps: {
       sourceMeta?: LayerSourceInfo;
       forcedLayerId?: string;
       suppressLammpsWarning?: boolean;
+      suppressNotices?: boolean;
     },
   ): Promise<string | null> {
     let info: { layerId: string } | null = null;
@@ -491,13 +509,16 @@ export function createViewerLoader(deps: {
         sourceMeta: opts?.sourceMeta,
         forcedLayerId: opts?.forcedLayerId,
         suppressLammpsWarning: opts?.suppressLammpsWarning,
+        suppressNotices: opts?.suppressNotices,
       });
 
       syncViewPresetAndDistanceOnModelLoad();
 
-      focusSettingsToLayersOrLammps();
+      focusSettingsToLayersOrLammps({ suppressNotices: opts?.suppressNotices });
 
-      message.success(`${((performance.now() - t0) / 1000).toFixed(2)} s`);
+      if (!opts?.suppressNotices) {
+        message.success(`${((performance.now() - t0) / 1000).toFixed(2)} s`);
+      }
       parseInfo.success = true;
       parseInfo.errorMsg = '';
     }
@@ -506,7 +527,9 @@ export function createViewerLoader(deps: {
       parseInfo.errorMsg = (err as Error).message;
       parseInfo.errorSeq += 1;
       console.error(err);
-      message.error(`${deps.t('viewer.parse.notice')}: ${parseInfo.errorMsg}`);
+      if (!opts?.suppressNotices) {
+        message.error(`${deps.t('viewer.parse.notice')}: ${parseInfo.errorMsg}`);
+      }
     }
 
     deps.isLoading.value = false;
@@ -521,7 +544,12 @@ export function createViewerLoader(deps: {
   async function loadUrl(
     url: string,
     fileName: string,
-    opts?: { hidePreviousLayers?: boolean; forcedLayerId?: string; suppressLammpsWarning?: boolean },
+    opts?: {
+      hidePreviousLayers?: boolean;
+      forcedLayerId?: string;
+      suppressLammpsWarning?: boolean;
+      suppressNotices?: boolean;
+    },
   ): Promise<void> {
     if (deps.isLoading.value) return;
     await loadInit();
@@ -553,6 +581,7 @@ export function createViewerLoader(deps: {
       sourceMeta,
       forcedLayerId: opts?.forcedLayerId,
       suppressLammpsWarning: opts?.suppressLammpsWarning,
+      suppressNotices: opts?.suppressNotices,
     });
 
     if (layerId) {
@@ -568,7 +597,11 @@ export function createViewerLoader(deps: {
 
   async function loadUrls(
     items: { url: string; fileName: string; forcedLayerId?: string }[],
-    opts?: { hidePreviousLayers?: boolean; suppressLammpsWarning?: boolean },
+    opts?: {
+      hidePreviousLayers?: boolean;
+      suppressLammpsWarning?: boolean;
+      suppressNotices?: boolean;
+    },
   ): Promise<void> {
     if (!deps.getStage() || !deps.getRuntime()) return;
     if (deps.isLoading.value) return;
@@ -614,6 +647,7 @@ export function createViewerLoader(deps: {
             sourceMeta,
             forcedLayerId: item.forcedLayerId,
             suppressLammpsWarning: opts?.suppressLammpsWarning,
+            suppressNotices: opts?.suppressNotices,
           });
 
           okCount += 1;
@@ -630,18 +664,22 @@ export function createViewerLoader(deps: {
         }
         catch (err) {
           const msg = (err as Error).message ?? String(err);
-          message.error(`${displayName}: ${msg}`);
+          if (!opts?.suppressNotices) {
+            message.error(`${displayName}: ${msg}`);
+          }
         }
       }
 
       if (okCount > 0) {
         syncViewPresetAndDistanceOnModelLoad();
 
-        message.success(
-          `${okCount} file(s), ${((performance.now() - t0) / 1000).toFixed(
-            2,
-          )} s`,
-        );
+        if (!opts?.suppressNotices) {
+          message.success(
+            `${okCount} file(s), ${((performance.now() - t0) / 1000).toFixed(
+              2,
+            )} s`,
+          );
+        }
 
         parseInfo.success = true;
         parseInfo.errorMsg = '';
@@ -649,7 +687,7 @@ export function createViewerLoader(deps: {
         parseMode.value = 'auto';
         parseInfo.fileName = lastOkName || lastRawFileName!;
 
-        focusSettingsToLayersOrLammps();
+        focusSettingsToLayersOrLammps({ suppressNotices: opts?.suppressNotices });
         window.setTimeout(() => deps.rehydrateSelectionFromSettings?.(), 200);
       }
       else {
@@ -660,7 +698,9 @@ export function createViewerLoader(deps: {
         parseInfo.format = '';
         parseInfo.atomCount = 0;
         parseInfo.frameCount = 1;
-        message.error(deps.t('viewer.parse.notice'));
+        if (!opts?.suppressNotices) {
+          message.error(deps.t('viewer.parse.notice'));
+        }
       }
     }
     catch (err) {
@@ -668,7 +708,9 @@ export function createViewerLoader(deps: {
       parseInfo.errorMsg = (err as Error).message ?? String(err);
       parseInfo.errorSeq += 1;
       console.error(err);
-      message.error(`${deps.t('viewer.parse.notice')}: ${parseInfo.errorMsg}`);
+      if (!opts?.suppressNotices) {
+        message.error(`${deps.t('viewer.parse.notice')}: ${parseInfo.errorMsg}`);
+      }
     }
     finally {
       deps.isLoading.value = false;
@@ -677,7 +719,12 @@ export function createViewerLoader(deps: {
 
   async function loadFilesInternal(
     files: File[],
-    opts?: { hidePreviousLayers?: boolean; forcedLayerId?: string; suppressLammpsWarning?: boolean },
+    opts?: {
+      hidePreviousLayers?: boolean;
+      forcedLayerId?: string;
+      suppressLammpsWarning?: boolean;
+      suppressNotices?: boolean;
+    },
   ): Promise<void> {
     if (!deps.getStage() || !deps.getRuntime()) return;
     if (deps.isLoading.value) return;
@@ -727,6 +774,7 @@ export function createViewerLoader(deps: {
             skipAutoFit: !allowAutoFit,
             forcedLayerId: opts?.forcedLayerId,
             suppressLammpsWarning: opts?.suppressLammpsWarning,
+            suppressNotices: opts?.suppressNotices,
           });
 
           okCount += 1;
@@ -743,18 +791,22 @@ export function createViewerLoader(deps: {
         }
         catch (err) {
           const msg = (err as Error).message ?? String(err);
-          message.error(`${f.name}: ${msg}`);
+          if (!opts?.suppressNotices) {
+            message.error(`${f.name}: ${msg}`);
+          }
         }
       }
 
       if (okCount > 0) {
         syncViewPresetAndDistanceOnModelLoad();
 
-        message.success(
-          `${okCount} file(s), ${((performance.now() - t0) / 1000).toFixed(
-            2,
-          )} s`,
-        );
+        if (!opts?.suppressNotices) {
+          message.success(
+            `${okCount} file(s), ${((performance.now() - t0) / 1000).toFixed(
+              2,
+            )} s`,
+          );
+        }
 
         parseInfo.success = true;
         parseInfo.errorMsg = '';
@@ -762,7 +814,7 @@ export function createViewerLoader(deps: {
         parseMode.value = 'auto';
         parseInfo.fileName = lastOkName || lastRawFileName!;
 
-        focusSettingsToLayersOrLammps();
+        focusSettingsToLayersOrLammps({ suppressNotices: opts?.suppressNotices });
       }
       else {
         parseInfo.success = false;
@@ -772,7 +824,9 @@ export function createViewerLoader(deps: {
         parseInfo.format = '';
         parseInfo.atomCount = 0;
         parseInfo.frameCount = 1;
-        message.error(deps.t('viewer.parse.notice'));
+        if (!opts?.suppressNotices) {
+          message.error(deps.t('viewer.parse.notice'));
+        }
       }
     }
     catch (err) {
@@ -780,7 +834,9 @@ export function createViewerLoader(deps: {
       parseInfo.errorMsg = (err as Error).message ?? String(err);
       parseInfo.errorSeq += 1;
       console.error(err);
-      message.error(`${deps.t('viewer.parse.notice')}: ${parseInfo.errorMsg}`);
+      if (!opts?.suppressNotices) {
+        message.error(`${deps.t('viewer.parse.notice')}: ${parseInfo.errorMsg}`);
+      }
     }
     finally {
       deps.isLoading.value = false;
@@ -789,14 +845,24 @@ export function createViewerLoader(deps: {
 
   async function loadFiles(
     files: File[],
-    opts?: { hidePreviousLayers?: boolean; forcedLayerId?: string; suppressLammpsWarning?: boolean },
+    opts?: {
+      hidePreviousLayers?: boolean;
+      forcedLayerId?: string;
+      suppressLammpsWarning?: boolean;
+      suppressNotices?: boolean;
+    },
   ): Promise<void> {
     await loadFilesInternal(files, opts);
   }
 
   async function loadFile(
     file: File,
-    opts?: { hidePreviousLayers?: boolean; forcedLayerId?: string; suppressLammpsWarning?: boolean },
+    opts?: {
+      hidePreviousLayers?: boolean;
+      forcedLayerId?: string;
+      suppressLammpsWarning?: boolean;
+      suppressNotices?: boolean;
+    },
   ): Promise<void> {
     await loadFilesInternal([file], opts);
   }

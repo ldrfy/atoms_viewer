@@ -114,6 +114,9 @@
       "mappingMissing": "存在未配置的 LAMMPS type→元素映射（E 占位），请在设置中补全以获得正确颜色/半径/键推断。",
       "mappingReused": "已自动复用之前的 LAMMPS 映射关系，请检查映射是否正确。"
     },
+    "layers": {
+      "allLayersForcedVisible": "检测到所有图层都被隐藏，已自动显示全部图层。"
+    },
     "inspect": {
       "title": "原子检查",
       "measureMode": "测量模式（多选 2 点/3 点）",

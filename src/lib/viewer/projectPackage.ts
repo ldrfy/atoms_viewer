@@ -77,8 +77,17 @@ function pruneLayerSnapshot(
   }
   if (Object.keys(nextDetails).length > 0) out.details = nextDetails as LayerSnapshot['details'];
 
-  const lammps = layer.lammps?.data ?? {};
-  if (lammps && Object.keys(lammps).length > 0) out.lammps = { data: { ...lammps } };
+  // 导出时过滤占位映射 E：E 代表未选择，不应写入快照。
+  // Filter placeholder mapping "E" on export: "E" means unresolved and should not be persisted.
+  const lammpsRaw = layer.lammps?.data ?? {};
+  const lammps: Record<string, string> = {};
+  for (const [k, v] of Object.entries(lammpsRaw)) {
+    const key = String(k ?? '').trim();
+    const val = String(v ?? '').trim().toUpperCase();
+    if (!key || !val || val === 'E') continue;
+    lammps[key] = val;
+  }
+  if (Object.keys(lammps).length > 0) out.lammps = { data: { ...lammps } };
 
   const colorData = layer.colors?.data ?? {};
   const colorKeys = Object.keys(colorData);

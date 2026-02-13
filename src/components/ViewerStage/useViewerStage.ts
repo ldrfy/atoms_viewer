@@ -40,6 +40,7 @@ import { createInspectSelectionHelper } from './logic/inspectSelectionHelper';
 import {
   getLayerSnapshotFromCache,
   getLatestLayerSnapshotFromCache,
+  getLatestLayerSnapshotWithResolvedLammps,
   saveLayerSnapshotCache,
 } from './logic/layerSnapshotCache';
 
@@ -576,6 +577,35 @@ export function useViewerStage(
   // 记录“本次加载是否复用了缓存 LAMMPS 映射”。
   // Tracks whether current load reused cached LAMMPS mapping.
   let lammpsCacheReuseSeq = 0;
+  // “全部隐藏已自动显示”提示去重时间戳（毫秒）。
+  // Dedup timestamp (ms) for "all hidden -> force show all" notice.
+  let allLayersForcedVisibleNoticeAt = 0;
+  // 恢复流程提示去重作用域（同 key 仅提示一次）。
+  // Restore notice dedupe scope (same key shown once).
+  let restoreNoticeDepth = 0;
+  const restoreNoticeSeen = new Set<string>();
+
+  function beginRestoreNoticeScope(): void {
+    restoreNoticeDepth += 1;
+    if (restoreNoticeDepth === 1) restoreNoticeSeen.clear();
+  }
+
+  function endRestoreNoticeScope(): void {
+    restoreNoticeDepth = Math.max(0, restoreNoticeDepth - 1);
+    if (restoreNoticeDepth === 0) restoreNoticeSeen.clear();
+  }
+
+  function notifyOnceInRestore(
+    level: 'info' | 'warning' | 'success' | 'error',
+    key: string,
+    content: string,
+  ): void {
+    if (restoreNoticeDepth > 0) {
+      if (restoreNoticeSeen.has(key)) return;
+      restoreNoticeSeen.add(key);
+    }
+    message[level](content);
+  }
   // 仅在一次加载流程中收集新写入 sourceStore 的 layerId。
   // Collect layerIds written into sourceStore only within one load flow.
   let collectingLoadLayerIds = false;
@@ -678,6 +708,22 @@ export function useViewerStage(
     return { typeMap: nextTypeMap, colorMap: nextColorMap };
   }
 
+  // 判断映射是否包含有效元素（非全 E）。
+  // Checks whether a mapping contains resolved elements (not all placeholder E).
+  function hasResolvedLammpsMapping(map: LammpsTypeMapRecord | undefined): boolean {
+    return Object.values(map ?? {}).some(v => String(v ?? '').trim().toUpperCase() !== 'E');
+  }
+
+  // 从当前图层快照提取 typeId 列表，用于映射回填。
+  // Extract typeIds from current layer snapshot for mapping fallback.
+  function getCurrentTypeIdsForLayer(id: string): number[] {
+    if (!runtime) return [];
+    const curSnap = runtime.getLayerSnapshots().find(s => s.id === id);
+    return Object.keys(curSnap?.lammps?.data ?? {})
+      .map(v => Number(v))
+      .filter(v => Number.isFinite(v) && v > 0);
+  }
+
   const layerSourceStore = {
     set(id: string, data: import('../../lib/viewer/sessionTypes').LayerSourceData): void {
       rawLayerSourceStore.set(id, data);
@@ -686,10 +732,33 @@ export function useViewerStage(
       if (!suppressLayerCacheRestore && data?.md5 && runtime) {
         const cached = getLayerSnapshotFromCache(data.md5);
         if (cached) {
+          const currentTypeIds = getCurrentTypeIdsForLayer(id);
+          let resolvedFromLatest: LayerSnapshot | null = null;
+          const cachedMap = cached.lammps?.data ?? {};
+          // 命中同 md5 缓存但映射全为 E 时，尝试用最近有效映射进行回填。
+          // If same-md5 cache map is all E, try filling from latest resolved mapping.
+          if (!hasResolvedLammpsMapping(cachedMap) && currentTypeIds.length > 0) {
+            const latestResolved = getLatestLayerSnapshotWithResolvedLammps(data.md5);
+            const latestMap = latestResolved?.lammps?.data ?? {};
+            if (latestResolved && hasResolvedLammpsMapping(latestMap)) {
+              const fallback = buildLammpsFallbackFromSnapshot({
+                currentTypeIds,
+                cachedMap: latestMap,
+                cachedColors: latestResolved.colors?.data ?? {},
+              });
+              if (fallback) {
+                resolvedFromLatest = {
+                  ...cached,
+                  lammps: { data: fallback.typeMap },
+                  colors: { data: fallback.colorMap },
+                };
+              }
+            }
+          }
           // 新载入模型不沿用缓存的可见性，默认显示。
           // Do not reuse cached visibility for newly loaded models; default to visible.
           const sanitized: LayerSnapshot = {
-            ...cached,
+            ...(resolvedFromLatest ?? cached),
             visible: true,
           };
           runtime.applyLayerSnapshots([sanitized]);
@@ -705,15 +774,13 @@ export function useViewerStage(
         const layerInfo = runtime.layers.value.find(l => l.id === id);
         if (!layerInfo?.hasTypeId) return;
 
-        const latest = getLatestLayerSnapshotFromCache(data.md5);
+        const latest = getLatestLayerSnapshotWithResolvedLammps(data.md5)
+          ?? getLatestLayerSnapshotFromCache(data.md5);
         if (!latest) return;
         const latestMap = latest.lammps?.data ?? {};
         if (Object.keys(latestMap).length === 0) return;
 
-        const curSnap = runtime.getLayerSnapshots().find(s => s.id === id);
-        const currentTypeIds = Object.keys(curSnap?.lammps?.data ?? {})
-          .map(v => Number(v))
-          .filter(v => Number.isFinite(v) && v > 0);
+        const currentTypeIds = getCurrentTypeIdsForLayer(id);
         const fallback = buildLammpsFallbackFromSnapshot({
           currentTypeIds,
           cachedMap: latestMap,
@@ -876,10 +943,16 @@ export function useViewerStage(
       layers: layerSnapshots.map((s) => {
         const atomScale = s.details?.atomScale ?? 0;
         const lammpsCount = s.lammps?.data ? Object.keys(s.lammps.data).length : 0;
+        // 把 LAMMPS 映射内容纳入签名，避免“数量不变但元素已变化”时漏保存。
+        // Include LAMMPS mapping content in signature so value-only changes are persisted.
+        const lammpsSig = Object.entries(s.lammps?.data ?? {})
+          .map(([k, v]) => `${String(k).trim()}:${String(v ?? '').trim().toUpperCase()}`)
+          .sort()
+          .join('|');
         const colorCount = Object.keys(s.colors?.data ?? {}).length;
         const playFps = s.anim?.playFps ?? 0;
         const frameIndex = s.anim?.frameIndex ?? 0;
-        return `${s.source?.md5 ?? s.id}:${s.visible ? 1 : 0}:${atomScale}:${lammpsCount}:${colorCount}:${playFps}:${frameIndex}`;
+        return `${s.source?.md5 ?? s.id}:${s.visible ? 1 : 0}:${atomScale}:${lammpsCount}:${lammpsSig}:${colorCount}:${playFps}:${frameIndex}`;
       }),
       sources: sources.map(s => `${s.md5 ?? s.layerId}:${s.size ?? 0}:${s.cached ? 1 : 0}`),
     });
@@ -1065,6 +1138,22 @@ export function useViewerStage(
     sourceStore: layerSourceStore,
     shouldCacheRemote: () => cacheRemoteOnExport.value,
     rehydrateSelectionFromSettings: () => inspectHelper.rehydrateFromSettings(),
+    // 初次解析时优先使用同 md5 缓存映射，避免先空映射再二次刷新。
+    // Prefer same-md5 cached map at initial parse to avoid two-phase remap flicker.
+    resolveCachedLammpsTypeMap: ({ sourceMeta }) => {
+      const md5 = String(sourceMeta?.md5 ?? '').trim().toLowerCase();
+      if (!md5) return undefined;
+      const cached = getLayerSnapshotFromCache(md5);
+      const map = cached?.lammps?.data ?? {};
+      const out: LammpsTypeMapRecord = {};
+      for (const [k, v] of Object.entries(map)) {
+        const key = String(k ?? '').trim();
+        const val = String(v ?? '').trim().toUpperCase();
+        if (!key || !val || val === 'E') continue;
+        out[key] = val;
+      }
+      return Object.keys(out).length > 0 ? out : undefined;
+    },
   });
 
   const frameMeta = computed<FrameMeta | null>(() => {
@@ -1158,6 +1247,7 @@ export function useViewerStage(
     forcedLayerId?: string;
     suppressLammpsWarning?: boolean;
     suppressSessionSave?: boolean;
+    suppressNotices?: boolean;
   };
 
   // 检查指定图层是否仍含未解析映射（E 占位）。
@@ -1186,7 +1276,7 @@ export function useViewerStage(
         focusKeys: [PANEL_KEYS.lammps],
         open: true,
       });
-      message.warning(t('viewer.lammps.mappingReused'));
+      notifyOnceInRestore('warning', 'viewer.lammps.mappingReused', t('viewer.lammps.mappingReused'));
       return;
     }
     if (!hasUnknownLammpsForLayers(params.loadedLayerIds)) return;
@@ -1194,7 +1284,7 @@ export function useViewerStage(
       focusKeys: [PANEL_KEYS.lammps],
       open: true,
     });
-    message.warning(t('viewer.lammps.mappingMissing'));
+    notifyOnceInRestore('warning', 'viewer.lammps.mappingMissing', t('viewer.lammps.mappingMissing'));
   }
 
   async function loadFileWithSession(
@@ -1311,6 +1401,7 @@ export function useViewerStage(
       hidePreviousLayers?: boolean;
       suppressLammpsWarning?: boolean;
       suppressSessionSave?: boolean;
+      suppressNotices?: boolean;
     },
   ): Promise<void> {
     clearSamplesParam();
@@ -1417,6 +1508,7 @@ export function useViewerStage(
     if (!snapshot) return;
     if (!runtime && !(await waitForRuntimeReady())) return;
     if (!runtime) return;
+    beginRestoreNoticeScope();
     suppressLayerCacheRestore = true;
     if (opts?.suppressSessionSave) {
       suppressSessionSave = true;
@@ -1443,7 +1535,7 @@ export function useViewerStage(
       }
 
       if (!hasFiles && layerSnaps.length === 0) {
-        message.success(t('settings.importSuccess'));
+        notifyOnceInRestore('success', 'settings.importSuccess', t('settings.importSuccess'));
         return;
       }
 
@@ -1471,6 +1563,7 @@ export function useViewerStage(
             forcedLayerId: layer.id,
             suppressLammpsWarning: true,
             suppressSessionSave: opts?.suppressSessionSave,
+            suppressNotices: true,
           });
           continue;
         }
@@ -1487,6 +1580,7 @@ export function useViewerStage(
               hidePreviousLayers: false,
               suppressLammpsWarning: true,
               suppressSessionSave: opts?.suppressSessionSave,
+              suppressNotices: true,
             },
           );
         }
@@ -1494,6 +1588,7 @@ export function useViewerStage(
 
       // 应用每层的外观/颜色/LAMMPS 设置，并恢复视角
       runtime.applyLayerSnapshots(layerSnaps);
+      forceAllLayersVisibleIfAllHidden({ notify: true });
       syncUiFromRuntime();
       const hasUnknownLammps = layerSnaps.some(s =>
         Object.values(s.lammps?.data ?? {}).some(v => String(v ?? '').trim().toUpperCase() === 'E'),
@@ -1503,7 +1598,7 @@ export function useViewerStage(
           focusKeys: [PANEL_KEYS.lammps],
           open: true,
         });
-        message.warning(t('viewer.lammps.mappingMissing'));
+        notifyOnceInRestore('warning', 'viewer.lammps.mappingMissing', t('viewer.lammps.mappingMissing'));
       }
       if (activeLayerIdFromSnapshot) {
         const target = runtime.layers.value.find(l => l.id === activeLayerIdFromSnapshot) ?? null;
@@ -1515,18 +1610,22 @@ export function useViewerStage(
       }
       runtimeTick.value += 1;
       applyViewFromSettings(settingsPatched);
+      if (runtime.layers.value.length > 0) {
+        notifyOnceInRestore('info', 'viewer.settings.modifiedHint', t('viewer.settings.modifiedHint'));
+      }
       if (!opts?.suppressSessionSave) scheduleSessionSave('layers');
 
       if (runtime.layers.value.length > 0) {
-        message.success(t('settings.importSuccess'));
+        notifyOnceInRestore('success', 'settings.importSuccess', t('settings.importSuccess'));
       }
       else {
-        message.success(t('settings.importSuccess'));
+        notifyOnceInRestore('success', 'settings.importSuccess', t('settings.importSuccess'));
       }
     }
     finally {
       suppressLayerCacheRestore = false;
       suppressSessionSave = false;
+      endRestoreNoticeScope();
     }
   }
 
@@ -1592,6 +1691,29 @@ export function useViewerStage(
     if (!runtime) return;
     runtime.setActiveLayer(id);
     syncUiFromRuntime();
+  }
+
+  // 图层可见性兜底：若恢复后全部图层都被隐藏，则强制显示全部并提示用户。
+  // Layer visibility fallback: if all layers are hidden after restore, force-show all and notify.
+  function forceAllLayersVisibleIfAllHidden(opts?: { notify?: boolean }): boolean {
+    if (!runtime) return false;
+    const layers = runtime.layers.value;
+    if (layers.length === 0) return false;
+    const allHidden = layers.every(l => !l.visible);
+    if (!allHidden) return false;
+    runtime.setAllLayersVisible(true);
+    const first = layers[0] ?? null;
+    if (first) runtime.setActiveLayer(first.id);
+    if (opts?.notify !== false) {
+      const now = Date.now();
+      // 同一恢复流程里可能被多次触发，这里做短时间去重，避免重复提示。
+      // May be triggered multiple times in one restore flow; dedupe within a short window.
+      if (now - allLayersForcedVisibleNoticeAt > 1200) {
+        allLayersForcedVisibleNoticeAt = now;
+        notifyOnceInRestore('info', 'viewer.layers.allLayersForcedVisible', t('viewer.layers.allLayersForcedVisible'));
+      }
+    }
+    return true;
   }
 
   function setLayerVisible(id: string, visible: boolean): void {
@@ -2278,6 +2400,7 @@ export function useViewerStage(
     getLayerSnapshots: async () => runtime?.getLayerSnapshots() ?? [],
     applyLayerSnapshots: async (snaps) => {
       runtime?.applyLayerSnapshots(snaps);
+      forceAllLayersVisibleIfAllHidden({ notify: true });
       runtimeTick.value += 1;
       syncUiFromRuntime();
       scheduleSessionSave('layers');

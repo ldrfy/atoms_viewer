@@ -10,6 +10,27 @@ type LayerSnapshotCacheEntry = {
 
 type LayerSnapshotCache = Record<string, LayerSnapshotCacheEntry>;
 
+// 持久化前清理图层快照：移除 LAMMPS 占位映射 E。
+// Cleanup layer snapshot before persistence: remove placeholder LAMMPS mapping "E".
+function sanitizeSnapshotForCache(snapshot: LayerSnapshot): LayerSnapshot {
+  const next: LayerSnapshot = { ...snapshot };
+  const rawMap = snapshot?.lammps?.data ?? {};
+  const cleaned: Record<string, string> = {};
+  for (const [k, v] of Object.entries(rawMap)) {
+    const key = String(k ?? '').trim();
+    const val = String(v ?? '').trim().toUpperCase();
+    if (!key || !val || val === 'E') continue;
+    cleaned[key] = val;
+  }
+  if (Object.keys(cleaned).length > 0) {
+    next.lammps = { data: cleaned };
+  }
+  else {
+    delete (next as any).lammps;
+  }
+  return next;
+}
+
 // 读取缓存的图层快照（按 md5 分组）。
 // Load cached layer snapshots (grouped by md5).
 export function loadLayerSnapshotCache(): LayerSnapshotCache {
@@ -38,7 +59,7 @@ export function saveLayerSnapshotCache(params: {
   for (const snap of layerSnapshots ?? []) {
     const md5 = snap.source?.md5;
     if (!md5) continue;
-    cache[md5] = { snapshot: snap, savedAt: now };
+    cache[md5] = { snapshot: sanitizeSnapshotForCache(snap), savedAt: now };
   }
 
   const staleEntries: Array<{ md5: string; savedAt: number }> = [];
@@ -79,6 +100,29 @@ export function getLatestLayerSnapshotFromCache(excludeMd5?: string): LayerSnaps
     if (excludeMd5 && md5 === excludeMd5) continue;
     const ts = Number(entry?.savedAt ?? -1);
     if (!Number.isFinite(ts)) continue;
+    if (ts > latestAt && entry?.snapshot) {
+      latestAt = ts;
+      latest = entry.snapshot;
+    }
+  }
+  return latest;
+}
+
+// 读取最近一次“包含有效 LAMMPS 映射（非全 E）”的快照。
+// Read the latest snapshot that has effective LAMMPS mapping (not all placeholder E).
+export function getLatestLayerSnapshotWithResolvedLammps(
+  excludeMd5?: string,
+): LayerSnapshot | null {
+  const cache = loadLayerSnapshotCache();
+  let latest: LayerSnapshot | null = null;
+  let latestAt = -1;
+  for (const [md5, entry] of Object.entries(cache)) {
+    if (excludeMd5 && md5 === excludeMd5) continue;
+    const ts = Number(entry?.savedAt ?? -1);
+    if (!Number.isFinite(ts)) continue;
+    const map = entry?.snapshot?.lammps?.data ?? {};
+    const hasResolved = Object.values(map).some(v => String(v ?? '').trim().toUpperCase() !== 'E');
+    if (!hasResolved) continue;
     if (ts > latestAt && entry?.snapshot) {
       latestAt = ts;
       latest = entry.snapshot;

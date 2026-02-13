@@ -114,6 +114,9 @@
       "mappingMissing": "Unresolved LAMMPS type→element mappings found (placeholder 'E'). Please complete them in Settings for correct colors/radii/bond inference.",
       "mappingReused": "Reused previous LAMMPS type mappings from cache. Please verify whether the mapping is correct."
     },
+    "layers": {
+      "allLayersForcedVisible": "All layers were hidden in the restored data, so all layers have been shown automatically."
+    },
     "inspect": {
       "title": "Atom inspector",
       "measureMode": "Measure mode (multi-select 2/3 points)",

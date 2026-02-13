@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { message } from 'antdv-next';
 import { cropCanvasByAlpha, downloadBlob } from '../../../lib/image/cropPng';
 import { buildExportFilename } from '../../../lib/file/filename';
+import ExportPngWorker from '../../../lib/image/exportPngWorker.ts?worker&inline';
 import type { CropBox } from '../recording';
 import {
   isPerspective,
@@ -33,10 +34,9 @@ export function createPngExporter(deps: {
       return null;
     }
 
-    const worker = new Worker(
-      new URL('../../../lib/image/exportPngWorker.ts', import.meta.url),
-      { type: 'module' },
-    );
+    // CN: 使用 Vite Worker 构造器导入，省去 URL 路径拼接。
+    // EN: Use Vite worker constructor import to avoid manual URL wiring.
+    const worker = new ExportPngWorker();
 
     const requestId = Math.floor(Math.random() * 1e9);
     const payload = {

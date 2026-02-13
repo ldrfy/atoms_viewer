@@ -34,7 +34,7 @@
         <a-select
           show-search
           size="small"
-          style="width: 120px;"
+          style="width: 120px; text-align: left;"
           :value="draftMap[String(typeId)] || 'E'"
           :options="atomicOptions"
           :filter-option="filterAtomicOption"

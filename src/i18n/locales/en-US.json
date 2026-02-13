@@ -111,7 +111,8 @@
       "selectConfirm": "Export selection"
     },
     "lammps": {
-      "mappingMissing": "Unresolved LAMMPS type→element mappings found (placeholder 'E'). Please complete them in Settings for correct colors/radii/bond inference."
+      "mappingMissing": "Unresolved LAMMPS type→element mappings found (placeholder 'E'). Please complete them in Settings for correct colors/radii/bond inference.",
+      "mappingReused": "Reused previous LAMMPS type mappings from cache. Please verify whether the mapping is correct."
     },
     "inspect": {
       "title": "Atom inspector",

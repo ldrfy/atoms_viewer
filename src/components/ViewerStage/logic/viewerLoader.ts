@@ -193,9 +193,8 @@ export function createViewerLoader(deps: {
       runtime.setActiveLayerTypeMap(mergedMap);
     }
 
-    if (hasUnknownForThisDump && !opts?.suppressWarning) {
-      message.warning(deps.t('viewer.lammps.mappingMissing'));
-    }
+    // 将未映射提示延后到加载流程收尾阶段，避免与缓存映射自动回填冲突。
+    // Defer unresolved-mapping notice to load-finalization to avoid conflicts with cache remap.
   }
 
   function renderFromText(

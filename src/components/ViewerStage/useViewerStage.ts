@@ -573,6 +573,13 @@ export function useViewerStage(
   const externalLoadingCount = ref(0);
   const uiLoading = computed(() => isLoading.value || externalLoadingCount.value > 0);
   const layerSortBy = ref<LayerSortBy>('name,ASC');
+  // 记录“本次加载是否复用了缓存 LAMMPS 映射”。
+  // Tracks whether current load reused cached LAMMPS mapping.
+  let lammpsCacheReuseSeq = 0;
+  // 仅在一次加载流程中收集新写入 sourceStore 的 layerId。
+  // Collect layerIds written into sourceStore only within one load flow.
+  let collectingLoadLayerIds = false;
+  const currentLoadLayerIds = new Set<string>();
 
   // inspect
   const inspectCtx = createInspectCtx();
@@ -674,6 +681,7 @@ export function useViewerStage(
   const layerSourceStore = {
     set(id: string, data: import('../../lib/viewer/sessionTypes').LayerSourceData): void {
       rawLayerSourceStore.set(id, data);
+      if (collectingLoadLayerIds) currentLoadLayerIds.add(id);
       inspectHelper.rehydrateFromSettings();
       if (!suppressLayerCacheRestore && data?.md5 && runtime) {
         const cached = getLayerSnapshotFromCache(data.md5);
@@ -685,6 +693,7 @@ export function useViewerStage(
             visible: true,
           };
           runtime.applyLayerSnapshots([sanitized]);
+          if (Object.keys(sanitized.lammps?.data ?? {}).length > 0) lammpsCacheReuseSeq += 1;
           runtimeTick.value += 1;
           syncUiFromRuntime();
           scheduleSessionSave('layers');
@@ -720,6 +729,7 @@ export function useViewerStage(
           details: latest.details ? { ...latest.details } : undefined,
         };
         runtime.applyLayerSnapshots([sanitized]);
+        if (Object.keys(sanitized.lammps?.data ?? {}).length > 0) lammpsCacheReuseSeq += 1;
         runtimeTick.value += 1;
         syncUiFromRuntime();
         scheduleSessionSave('layers');
@@ -1150,12 +1160,52 @@ export function useViewerStage(
     suppressSessionSave?: boolean;
   };
 
+  // 检查指定图层是否仍含未解析映射（E 占位）。
+  // Checks whether specified layers still contain unresolved mapping (placeholder E).
+  function hasUnknownLammpsForLayers(layerIds: string[]): boolean {
+    if (!runtime || layerIds.length === 0) return false;
+    const snapById = new Map(runtime.getLayerSnapshots().map(s => [s.id, s]));
+    return layerIds.some((id) => {
+      const snap = snapById.get(id);
+      return Object.values(snap?.lammps?.data ?? {})
+        .some(v => String(v ?? '').trim().toUpperCase() === 'E');
+    });
+  }
+
+  // 在加载结束后统一提示 LAMMPS 映射状态，避免和自动缓存回填冲突。
+  // Finalize LAMMPS mapping notice after load to avoid conflict with cache auto-remap.
+  function finalizeLammpsMappingNotice(params: {
+    suppress?: boolean;
+    reuseSeqBefore: number;
+    loadedLayerIds: string[];
+  }): void {
+    if (params.suppress) return;
+    const reusedFromCache = lammpsCacheReuseSeq > params.reuseSeqBefore;
+    if (reusedFromCache) {
+      requestOpenSettings?.({
+        focusKeys: [PANEL_KEYS.lammps],
+        open: true,
+      });
+      message.warning(t('viewer.lammps.mappingReused'));
+      return;
+    }
+    if (!hasUnknownLammpsForLayers(params.loadedLayerIds)) return;
+    requestOpenSettings?.({
+      focusKeys: [PANEL_KEYS.lammps],
+      open: true,
+    });
+    message.warning(t('viewer.lammps.mappingMissing'));
+  }
+
   async function loadFileWithSession(
     file: File,
     opts?: LoadWithSessionOpts,
   ): Promise<void> {
     clearSamplesParam();
     beginExternalLoading();
+    const reuseSeqBefore = lammpsCacheReuseSeq;
+    collectingLoadLayerIds = true;
+    currentLoadLayerIds.clear();
     try {
       const lower = file.name.toLowerCase();
       if (lower.endsWith('.zip')) {
@@ -1163,12 +1213,19 @@ export function useViewerStage(
         return;
       }
       await loader.loadFile(file, opts);
+      finalizeLammpsMappingNotice({
+        suppress: opts?.suppressLammpsWarning,
+        reuseSeqBefore,
+        loadedLayerIds: Array.from(currentLoadLayerIds),
+      });
       if (!opts?.suppressSessionSave) {
         scheduleSessionSave('layers');
         await persistSessionSnapshot();
       }
     }
     finally {
+      collectingLoadLayerIds = false;
+      currentLoadLayerIds.clear();
       endExternalLoading();
     }
   }
@@ -1180,6 +1237,9 @@ export function useViewerStage(
   ): Promise<void> {
     clearSamplesParam();
     beginExternalLoading();
+    const reuseSeqBefore = lammpsCacheReuseSeq;
+    collectingLoadLayerIds = true;
+    currentLoadLayerIds.clear();
     try {
       const zipFiles = files.filter(f => f.name.toLowerCase().endsWith('.zip'));
       const otherFiles = files.filter(f => !zipFiles.includes(f));
@@ -1193,12 +1253,19 @@ export function useViewerStage(
         ? { ...(opts ?? {}), hidePreviousLayers: false }
         : opts;
       await loader.loadFiles(otherFiles, mergedOpts);
+      finalizeLammpsMappingNotice({
+        suppress: opts?.suppressLammpsWarning,
+        reuseSeqBefore,
+        loadedLayerIds: Array.from(currentLoadLayerIds),
+      });
       if (!opts?.suppressSessionSave) {
         scheduleSessionSave('layers');
         await persistSessionSnapshot();
       }
     }
     finally {
+      collectingLoadLayerIds = false;
+      currentLoadLayerIds.clear();
       endExternalLoading();
     }
   }
@@ -1210,6 +1277,9 @@ export function useViewerStage(
   ): Promise<void> {
     clearSamplesParam();
     beginExternalLoading();
+    const reuseSeqBefore = lammpsCacheReuseSeq;
+    collectingLoadLayerIds = true;
+    currentLoadLayerIds.clear();
     try {
       if (isZipUrl(url, fileName)) {
         const zipFile = await fetchUrlAsFile(url, fileName);
@@ -1218,12 +1288,19 @@ export function useViewerStage(
         return;
       }
       await loader.loadUrl(url, fileName, opts);
+      finalizeLammpsMappingNotice({
+        suppress: opts?.suppressLammpsWarning,
+        reuseSeqBefore,
+        loadedLayerIds: Array.from(currentLoadLayerIds),
+      });
       if (!opts?.suppressSessionSave) {
         scheduleSessionSave('layers');
         await persistSessionSnapshot();
       }
     }
     finally {
+      collectingLoadLayerIds = false;
+      currentLoadLayerIds.clear();
       endExternalLoading();
     }
   }
@@ -1239,6 +1316,9 @@ export function useViewerStage(
     clearSamplesParam();
     if (!items || items.length === 0) return;
     beginExternalLoading();
+    const reuseSeqBefore = lammpsCacheReuseSeq;
+    collectingLoadLayerIds = true;
+    currentLoadLayerIds.clear();
     try {
       const zipItems = items.filter(item => isZipUrl(item.url, item.fileName));
       const otherItems = items.filter(item => !zipItems.includes(item));
@@ -1255,9 +1335,16 @@ export function useViewerStage(
           ? { ...(opts ?? {}), hidePreviousLayers: false }
           : opts;
         await loader.loadUrls(otherItems, mergedOpts);
+        finalizeLammpsMappingNotice({
+          suppress: opts?.suppressLammpsWarning,
+          reuseSeqBefore,
+          loadedLayerIds: Array.from(currentLoadLayerIds),
+        });
       }
     }
     finally {
+      collectingLoadLayerIds = false;
+      currentLoadLayerIds.clear();
       endExternalLoading();
     }
 

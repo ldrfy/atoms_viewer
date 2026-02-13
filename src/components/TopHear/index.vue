@@ -121,7 +121,7 @@
 <script setup lang="ts">
 import type { MenuEmits, MenuProps } from 'antdv-next';
 
-import { computed, ref, h } from 'vue';
+import { computed, ref, h, onMounted, onBeforeUnmount } from 'vue';
 import { useI18n } from 'vue-i18n';
 import {
   HomeOutlined,
@@ -131,7 +131,7 @@ import {
   GithubOutlined,
   QuestionCircleOutlined,
 } from '@antdv-next/icons';
-import { Radio, RadioGroup, useBreakpoint } from 'antdv-next';
+import { Radio, RadioGroup } from 'antdv-next';
 
 type MenuInfo = Parameters<MenuEmits['click']>[0];
 
@@ -160,9 +160,24 @@ const emit = defineEmits<{
 
 const { t } = useI18n();
 
-/* ===== 响应式断点 ===== */
-const screens = useBreakpoint();
-const isMobile = computed(() => screens.value ? screens.value.lg === false : false);
+// 统一与设置侧栏一致的移动端断点，避免两个区域判断不一致。
+// Keep the same mobile breakpoint as SettingsSider to avoid split-brain UI mode.
+const isMobile = ref(false);
+
+// 按 768px 阈值同步设备模式（与 SettingsSider 完全一致）。
+// Sync device mode with a 768px threshold (exactly same as SettingsSider).
+function updateIsMobile(): void {
+  isMobile.value = window.matchMedia('(max-width: 768px)').matches;
+}
+
+onMounted(() => {
+  updateIsMobile();
+  window.addEventListener('resize', updateIsMobile, { passive: true });
+});
+
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', updateIsMobile);
+});
 
 // 用户选择的语言（区分 system 与实际解析语言）
 // User-selected locale (distinguish "system" from resolved locale)

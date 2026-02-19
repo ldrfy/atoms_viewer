@@ -255,10 +255,8 @@ const representationModel = computed<RepresentationId>({
 });
 
 function onResetDisplay(): void {
-  // 重置生效范围为默认值。
-  // Reset effect range to default.
-  const defaultScope = getDefaultLayerScope('details');
-  scope.value = defaultScope;
+  // 先按当前生效范围恢复默认，再重置生效范围为默认值。
+  // Apply reset with current scope first, then restore scope default.
   patchDisplay({
     representation: DEFAULT_DETAILS.representation,
     atomScale: DEFAULT_DETAILS.atomScale,
@@ -270,6 +268,9 @@ function onResetDisplay(): void {
     showAtomIndex: DEFAULT_DETAILS.showAtomIndex,
     showElementSymbol: DEFAULT_DETAILS.showElementSymbol,
   });
+
+  const defaultScope = getDefaultLayerScope('details');
+  scope.value = defaultScope;
 }
 
 const { registerPanelReset } = useSettingsSiderResetContext();

@@ -172,25 +172,33 @@ watch(
 );
 
 function resetColors(): void {
-  // 重置生效范围为默认值。
-  // Reset effect range to default.
+  // 先按当前生效范围恢复默认，再重置生效范围为默认值。
+  // Apply reset with current scope first, then restore scope default.
+  const effectScope = scope.value;
+  const keys = colorKeys.value;
+  if (keys.length > 0) {
+    const api = viewerApi.value;
+    const baseMap = buildKeyBaseColorMap(keys);
+    draftColorMap.value = baseMap;
+    resetHexInputValues();
+    if (api) {
+      if (effectScope === 'all') {
+        api.resetAllLayersColorMapToDefaults();
+        api.refreshColorMap({ applyToAll: true });
+      }
+      else if (effectScope === 'visible') {
+        api.setVisibleLayersColorMap(baseMap);
+      }
+      else {
+        api.setActiveLayerColorMap(baseMap);
+        api.refreshColorMap();
+      }
+    }
+    syncDraftFromActive();
+  }
   const defaultScope = getDefaultLayerScope('colors');
   scope.value = defaultScope;
-  const keys = colorKeys.value;
-  if (keys.length === 0) return;
-  const api = viewerApi.value;
-  const baseMap = buildKeyBaseColorMap(keys);
-  draftColorMap.value = baseMap;
-  resetHexInputValues();
-  if (!api) return;
-  if (scope.value === 'all') {
-    api.resetAllLayersColorMapToDefaults();
-    api.refreshColorMap({ applyToAll: true });
-    syncDraftFromActive();
-    return;
-  }
-  onApplyColorEdits();
-  syncDraftFromActive();
+  markScopeApplied();
 }
 
 // 为每个颜色键构建默认颜色（避免 C.1 等缺失）。

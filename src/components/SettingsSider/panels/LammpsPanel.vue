@@ -140,10 +140,9 @@ function onApplyTypeMap(): void {
 }
 
 function resetLammpsTypeMap(): void {
-  // 重置生效范围为默认值。
-  // Reset effect range to default.
-  const defaultScope = getDefaultLayerScope('lammps');
-  scope.value = defaultScope;
+  // 先按当前生效范围恢复默认，再重置生效范围为默认值。
+  // Apply reset with current scope first, then restore scope default.
+  const effectScope = scope.value;
   const typeIds = viewerApi.value?.activeLayerTypeIds?.value ?? [];
   const nextMap: LammpsTypeMapRecord = {};
   for (const tid0 of typeIds) {
@@ -152,8 +151,19 @@ function resetLammpsTypeMap(): void {
     nextMap[String(tid)] = 'E';
   }
   draftMap.value = { ...nextMap };
-  viewerApi.value?.setActiveLayerTypeMap?.(nextMap);
-  viewerApi.value?.refreshTypeMap?.();
+  if (effectScope === 'all') {
+    viewerApi.value?.resetAllLayersTypeMapToDefaults?.();
+  }
+  else if (effectScope === 'visible') {
+    viewerApi.value?.applyTypeMapToVisibleLayers?.(nextMap);
+  }
+  else {
+    viewerApi.value?.setActiveLayerTypeMap?.(nextMap);
+    viewerApi.value?.refreshTypeMap?.();
+  }
+
+  const defaultScope = getDefaultLayerScope('lammps');
+  scope.value = defaultScope;
 }
 
 const { registerPanelReset } = useSettingsSiderResetContext();

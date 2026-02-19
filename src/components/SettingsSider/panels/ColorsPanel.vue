@@ -32,13 +32,12 @@
       </a-col>
       <a-col :span="14" style="text-align: right;">
         <a-space align="center" :size="4">
-          <a-tooltip
-            v-if="isKeyCustom(key, draftColorMap)"
-            :title="t('settings.panel.colors.resetTooltip')"
-          >
+          <a-tooltip :title="t('settings.panel.colors.resetTooltip')">
             <a-button
               type="text"
               size="small"
+              :disabled="!isKeyCustom(key, draftColorMap)"
+              :style="resetButtonStyle(isKeyCustom(key, draftColorMap))"
               @click="onResetColor(key)"
             >
               <ReloadOutlined />
@@ -47,7 +46,7 @@
           <a-color-picker
             size="small"
             show-text
-            :value="colorPickerValue(getDraftHexValue(key))"
+            :value="colorPickerValue(key)"
             @change="(value: unknown, css: unknown) => onColorPickerChange(key, value, css)"
           />
         </a-space>
@@ -243,8 +242,34 @@ function normalizeHexColor(input: unknown): string | null {
   return `#${hex}`;
 }
 
-function colorPickerValue(color: unknown): string {
-  return normalizeHexColor(color) ?? '#FFFFFF';
+const HIDDEN_ACTION_STYLE = Object.freeze({
+  visibility: 'hidden',
+});
+
+function resetButtonStyle(visible: boolean): Record<string, string> | undefined {
+  return visible ? undefined : HIDDEN_ACTION_STYLE;
+}
+
+// 将十六进制颜色解析为 RGB 通道，供颜色选择器回填透明度值。
+// Parse hex color into RGB channels for restoring alpha in the color picker.
+function parseHexRgb(hex: string): { r: number; g: number; b: number } | null {
+  const normalized = normalizeHexColor(hex);
+  if (!normalized) return null;
+  const raw = normalized.slice(1);
+  const r = Number.parseInt(raw.slice(0, 2), 16);
+  const g = Number.parseInt(raw.slice(2, 4), 16);
+  const b = Number.parseInt(raw.slice(4, 6), 16);
+  if (![r, g, b].every(Number.isFinite)) return null;
+  return { r, g, b };
+}
+
+function colorPickerValue(key: string): string {
+  const parsed = parseColorValue(draftColorMap.value[key] ?? '');
+  if (!parsed) return '#FFFFFF';
+  const rgb = parseHexRgb(parsed.hex);
+  if (!rgb) return parsed.hex;
+  if (parsed.alpha >= 0.999) return parsed.hex;
+  return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${parsed.alpha})`;
 }
 
 // Patch draft color for a key (hex + opacity).
@@ -285,12 +310,25 @@ function resolveColorPayload(
   value: unknown,
   css: unknown,
 ): { hex: string | null; alpha: number | null } {
-  const hex = normalizeHexColor(resolveColorCssString(value, css));
-  const rawAlpha = (value as any)?.toRgb?.()?.a;
+  const colorCss = resolveColorCssString(value, css);
+  const hex = normalizeHexColor(colorCss);
+  const rawAlpha = (value as any)?.toRgb?.()?.a ?? resolveAlphaFromCss(colorCss);
   const alpha = Number.isFinite(rawAlpha)
     ? Math.min(1, Math.max(0, Number(rawAlpha)))
     : null;
   return { hex, alpha };
+}
+
+// 从 rgba()/hsla() 字符串中提取 alpha，兜底首次透明度拖动场景。
+// Extract alpha from rgba()/hsla() strings as a fallback for first opacity edits.
+function resolveAlphaFromCss(css: string): number | null {
+  const s = String(css ?? '').trim().toLowerCase();
+  if (!s) return null;
+  const rgba = s.match(/^rgba\(\s*[\d.]+\s*,\s*[\d.]+\s*,\s*[\d.]+\s*,\s*([\d.]+)\s*\)$/);
+  if (rgba?.[1]) return Number(rgba[1]);
+  const hsla = s.match(/^hsla\(\s*[\d.]+\s*,\s*[\d.]+%\s*,\s*[\d.]+%\s*,\s*([\d.]+)\s*\)$/);
+  if (hsla?.[1]) return Number(hsla[1]);
+  return null;
 }
 
 const isApplyDisabled = computed(() => (
@@ -315,12 +353,6 @@ function onApplyColorEdits(): void {
   api.setActiveLayerColorMap(map);
   api.refreshColorMap();
   markScopeApplied();
-}
-
-function getDraftHexValue(key: string): string {
-  const raw = draftColorMap.value[key] ?? '';
-  const parsed = parseColorValue(raw);
-  return parsed?.hex ?? '';
 }
 
 function getDraftAlphaValue(key: string): number {

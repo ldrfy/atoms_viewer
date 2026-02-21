@@ -65,14 +65,24 @@
 
         <!-- ===== 移动端 ===== -->
         <template v-else>
-          <a-button
-            variant="link"
-            color="default"
-            :title="t('common.menu')"
-            @click="mobileOpen = true"
-          >
-            <MenuOutlined />
-          </a-button>
+          <a-flex>
+            <a-button
+              variant="link"
+              color="default"
+              :title="t('settings.title')"
+              @click="openSettings"
+            >
+              <SettingOutlined />
+            </a-button>
+            <a-button
+              variant="link"
+              color="default"
+              :title="t('common.menu')"
+              @click="openMobilePanel"
+            >
+              <MenuOutlined />
+            </a-button>
+          </a-flex>
         </template>
       </div>
     </div>
@@ -118,13 +128,6 @@
           :right-icon="LinkOutlined"
           @click="openDocs"
         />
-
-        <DrawerActionItem
-          :label="t('settings.title')"
-          :left-icon="SettingOutlined"
-          :right-icon="RightOutlined"
-          @click="openSettings"
-        />
       </a-flex>
     </a-drawer>
   </div>
@@ -142,7 +145,6 @@ import {
   MenuOutlined,
   GithubOutlined,
   QuestionCircleOutlined,
-  RightOutlined,
   LinkOutlined,
 } from '@antdv-next/icons';
 import DrawerActionItem from './parts/DrawerActionItem.vue';
@@ -252,6 +254,12 @@ const localeMenu = computed<MenuProps>(() => ({
 /* ===== 行为 ===== */
 function closeDrawer() {
   mobileOpen.value = false;
+}
+
+// 打开移动端语言等操作抽屉。
+// Open the mobile action drawer for locale and links.
+function openMobilePanel(): void {
+  mobileOpen.value = true;
 }
 
 // 移动端语言切换后立即关闭抽屉，减少一次额外点击。

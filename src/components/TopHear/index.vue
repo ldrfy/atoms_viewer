@@ -87,33 +87,45 @@
       :closable="false"
       @close="closeDrawer"
     >
-      <a-collapse
-        v-model:active-key="activeKey"
-        accordion
-        ghost
-        :items="collapseItems"
-      />
+      <a-flex vertical :gap="8">
+        <a-flex justify="space-between" align="center">
+          <a-space :size="12" align="center">
+            <GlobalOutlined />
+            <a-typography-text>
+              {{ t('viewer.locale.title') }}
+            </a-typography-text>
+          </a-space>
+          <a-select
+            :value="curLocaleProxy"
+            :options="localeSelectOptions"
+            style="min-width: 128px;"
+            show-search
+            option-filter-prop="label"
+            @change="onMobileLocaleChange"
+          />
+        </a-flex>
 
-      <a-space direction="vertical" class="drawer-links">
-        <a-space class="drawer-links-row" :size="16">
-          <a-button type="text" class="drawer-link-btn" @click="openGithub">
-            <GithubOutlined />
-            <span class="drawer-link-text">GitHub</span>
-          </a-button>
+        <DrawerActionItem
+          label="GitHub"
+          :left-icon="GithubOutlined"
+          :right-icon="LinkOutlined"
+          @click="openGithub"
+        />
 
-          <a-button type="text" class="drawer-link-btn" @click="openDocs">
-            <QuestionCircleOutlined />
-            <span class="drawer-link-text">{{ t('viewer.links.docs') }}</span>
-          </a-button>
-        </a-space>
+        <DrawerActionItem
+          :label="t('viewer.links.docs')"
+          :left-icon="QuestionCircleOutlined"
+          :right-icon="LinkOutlined"
+          @click="openDocs"
+        />
 
-        <a-button type="text" class="drawer-link-btn drawer-links-single" @click="openSettings">
-          <SettingOutlined />
-          <span class="drawer-link-text">
-            {{ t("settings.title") }}
-          </span>
-        </a-button>
-      </a-space>
+        <DrawerActionItem
+          :label="t('settings.title')"
+          :left-icon="SettingOutlined"
+          :right-icon="RightOutlined"
+          @click="openSettings"
+        />
+      </a-flex>
     </a-drawer>
   </div>
 </template>
@@ -121,7 +133,7 @@
 <script setup lang="ts">
 import type { MenuEmits, MenuProps } from 'antdv-next';
 
-import { computed, ref, h, onMounted, onBeforeUnmount } from 'vue';
+import { computed, ref, onMounted, onBeforeUnmount } from 'vue';
 import { useI18n } from 'vue-i18n';
 import {
   HomeOutlined,
@@ -130,8 +142,10 @@ import {
   MenuOutlined,
   GithubOutlined,
   QuestionCircleOutlined,
+  RightOutlined,
+  LinkOutlined,
 } from '@antdv-next/icons';
-import { Radio, RadioGroup } from 'antdv-next';
+import DrawerActionItem from './parts/DrawerActionItem.vue';
 
 type MenuInfo = Parameters<MenuEmits['click']>[0];
 
@@ -198,7 +212,6 @@ const drawerBodyStyle = computed(() => ({
 
 /* ===== Drawer 状态 ===== */
 const mobileOpen = ref(false);
-const activeKey = ref<string | undefined>(undefined);
 
 /* ===== locale（关键：绑定到 vue-i18n 的响应式 locale）===== */
 const curLocaleProxy = computed<SupportLocale>({
@@ -216,8 +229,13 @@ const localeItems = computed(() =>
   })),
 );
 
-const currentLocaleItem = computed(() =>
-  localeItems.value.find(i => i.key === curLocaleProxy.value),
+// 移动端语言选择器选项。
+// Locale options for mobile select.
+const localeSelectOptions = computed(() =>
+  localeItems.value.map(item => ({
+    value: item.key,
+    label: item.label,
+  })),
 );
 
 // Desktop dropdown menu for locale picker.
@@ -231,46 +249,16 @@ const localeMenu = computed<MenuProps>(() => ({
   onClick: (e: MenuInfo) => onSelectLocale(String(e.key)),
 }));
 
-// 折叠项：移动端语言选择
-// Collapse items: mobile locale picker
-const collapseItems = computed(() => {
-  const header = h('span', { class: 'collapse-header' }, [
-    h('span', { class: 'collapse-title' }, t('viewer.locale.title')),
-    h('span', { class: 'collapse-value' }, currentLocaleItem.value?.label ?? ''),
-  ]);
-
-  const radios = h(
-    RadioGroup,
-    {
-      'class': 'lang_radio_group',
-      'value': curLocaleProxy.value,
-      'onUpdate:value': (val: SupportLocale) => {
-        curLocaleProxy.value = val;
-        closeDrawer();
-      },
-    },
-    () => localeItems.value.map(item =>
-      h(Radio, {
-        key: item.key,
-        value: item.key,
-        class: 'lang-radio-item',
-      }, () => item.label),
-    ),
-  );
-
-  return [
-    {
-      key: 'locale',
-      label: header,
-      children: radios,
-    },
-  ];
-});
-
 /* ===== 行为 ===== */
 function closeDrawer() {
   mobileOpen.value = false;
-  activeKey.value = undefined;
+}
+
+// 移动端语言切换后立即关闭抽屉，减少一次额外点击。
+// Close drawer right after mobile locale switch to reduce one extra tap.
+function onMobileLocaleChange(val: SupportLocale | string): void {
+  curLocaleProxy.value = val as SupportLocale;
+  closeDrawer();
 }
 
 function openSettings() {
@@ -344,82 +332,18 @@ function onClickBrand(): void {
     align-items: center;
 }
 
-.action-item {
-    cursor: pointer;
-}
-
-.action-text {
-    margin-left: 8px;
-}
-
-.lang_radio_group {
-    margin-left: 24px;
-    margin-top: -12px;
-}
-
-.lang-radio-item {
-    display: block;
-    margin-bottom: 8px;
-}
-
-.lang-radio-item:last-child {
-    margin-bottom: 0;
-}
-
-.plain-click {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    cursor: pointer;
-    padding: 8px;
-}
-
-/* Ant Typography 默认不会给 hover / active 上色，这里只是兜底 */
-.plain-click:hover,
-.plain-click:active {
-    color: inherit;
-}
-
-.drawer-links {
-    width: 100%;
-}
-
-.drawer-links-row {
-    width: 100%;
-    justify-content: center;
-}
-
-.drawer-link-text {
-    margin-left: 12px;
-}
-
-.drawer-link-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.drawer-links-single {
-    width: 100%;
-    justify-content: center;
-}
-
 .tophear-drawer .ant-drawer-body {
     padding:
         calc(16px + env(safe-area-inset-top))
         calc(16px + env(safe-area-inset-right))
         calc(16px + env(safe-area-inset-bottom))
         calc(16px + env(safe-area-inset-left));
+    max-height: calc(100vh - 24px);
+    overflow: auto;
 }
 
 .tophear-drawer .ant-drawer-content-wrapper {
     height: fit-content !important;
-}
-
-.tophear-drawer .ant-drawer-body {
-    max-height: calc(100vh - 24px);
-    overflow: auto;
 }
 
 .btn-icon-top{

@@ -7,16 +7,20 @@
     >
       <a-typography-text>{{ label }}</a-typography-text>
       <a-space :size="6" align="center">
-        <a-tooltip v-if="showReset" :title="resetTooltip">
-          <a-button
-            type="text"
-            size="small"
-            :disabled="disabled"
-            @click="emit('reset')"
-          >
-            <ReloadOutlined />
-          </a-button>
-        </a-tooltip>
+        <!-- 保持节点稳定，同时把显示控制放在普通容器上，避免 Tooltip 组件层级导致显示异常 -->
+        <!-- Keep node stable and toggle visibility on a plain wrapper to avoid Tooltip visibility glitches -->
+        <span v-show="showReset">
+          <a-tooltip :title="resetTooltip">
+            <a-button
+              type="text"
+              size="small"
+              :disabled="disabled"
+              @click="emit('reset')"
+            >
+              <ReloadOutlined />
+            </a-button>
+          </a-tooltip>
+        </span>
         <a-color-picker
           size="small"
           show-text

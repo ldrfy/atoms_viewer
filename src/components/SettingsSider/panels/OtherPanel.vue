@@ -160,8 +160,11 @@ const bgColorModel = computed<string>({
 const isBgTransparent = computed(() => settings.value.other.backgroundTransparent);
 
 function resetBgToTransparent(): void {
+  // 同步恢复默认背景色，避免“背景已重置但脏计数仍存在”。
+  // Also restore default background color to clear background dirty state.
   patchSettings({
     other: {
+      backgroundColor: DEFAULT_SETTINGS.other.backgroundColor,
       backgroundTransparent: true,
       backgroundColorMode: 'custom',
     },

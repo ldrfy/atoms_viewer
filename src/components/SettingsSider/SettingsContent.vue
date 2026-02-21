@@ -268,9 +268,13 @@ const otherDirtyCount = computed(() => {
   if (settings.value.other.themeMode !== DEFAULT_SETTINGS.other.themeMode) count += 1;
   if (settings.value.other.visualStyle !== DEFAULT_SETTINGS.other.visualStyle) count += 1;
   if (settings.value.other.modelLightIntensity !== styleBase.modelLightIntensity) count += 1;
-  if (settings.value.other.backgroundColor !== DEFAULT_SETTINGS.other.backgroundColor) count += 1;
-  if (settings.value.other.backgroundColorMode !== DEFAULT_SETTINGS.other.backgroundColorMode) count += 1;
-  if (settings.value.other.backgroundTransparent !== DEFAULT_SETTINGS.other.backgroundTransparent) count += 1;
+  // 背景相关字段（颜色/模式/透明）在 UI 上视为一个设置项，只计 1 次。
+  // Treat background fields (color/mode/transparent) as one logical setting item.
+  const backgroundDirty
+    = settings.value.other.backgroundColor !== DEFAULT_SETTINGS.other.backgroundColor
+      || settings.value.other.backgroundColorMode !== DEFAULT_SETTINGS.other.backgroundColorMode
+      || settings.value.other.backgroundTransparent !== DEFAULT_SETTINGS.other.backgroundTransparent;
+  if (backgroundDirty) count += 1;
   if (settings.value.other.selectionHighlightColor !== DEFAULT_SETTINGS.other.selectionHighlightColor) count += 1;
   if ((settings.value.other.themeReadabilityCheckOnOpen ?? true)
     !== (DEFAULT_SETTINGS.other.themeReadabilityCheckOnOpen ?? true)) count += 1;

@@ -172,6 +172,7 @@ import { computed, unref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import type { AnimCtx, ParseCtx } from '../ctx';
 import { RECORD_FPS_MIN, RECORD_FPS_MAX } from '../../../lib/viewer/constants';
+import { DEFAULT_LAYER_ANIM, DEFAULT_RECORD } from '../../../lib/viewer/settings';
 import ParseInfoPopover from './ParseInfoPopover.vue';
 
 const props = defineProps<{ ctx: AnimCtx; parseCtx: ParseCtx }>();
@@ -218,18 +219,31 @@ const frameIndexModel = computed<number>({
   },
 });
 
+// 统一清洗帧率输入，确保清空/非法输入时回退默认值，并限制在可用范围内。
+// Normalize fps input with default fallback and valid-range clamp.
+function normalizeFpsInput(v: unknown, fallback: number): number {
+  const raw = Number(v);
+  const normalized = Number.isFinite(raw) ? Math.floor(raw) : fallback;
+  return Math.max(RECORD_FPS_MIN, Math.min(RECORD_FPS_MAX, normalized));
+}
+
 const fpsModel = computed<number>({
-  get: () => props.ctx.fps.value,
+  get: () => normalizeFpsInput(props.ctx.fps.value, DEFAULT_LAYER_ANIM.playFps),
   set: (v: number) => {
     // eslint-disable-next-line vue/no-mutating-props
-    props.ctx.fps.value = v;
+    props.ctx.fps.value = normalizeFpsInput(v, DEFAULT_LAYER_ANIM.playFps);
   },
 });
 
 const recordFpsModel = computed<number>({
-  get: () => unref(props.ctx.settings).record.frame_rate ?? 60,
+  get: () => normalizeFpsInput(
+    unref(props.ctx.settings).record.frame_rate,
+    DEFAULT_RECORD.frame_rate,
+  ),
   set: (v: number) => {
-    props.ctx.patchSettings({ record: { frame_rate: v } });
+    props.ctx.patchSettings({
+      record: { frame_rate: normalizeFpsInput(v, DEFAULT_RECORD.frame_rate) },
+    });
   },
 });
 

@@ -105,6 +105,8 @@ export type ViewerPublicApi = {
   setVisibleLayersColorMap: (map: ColorMapRecord) => void;
   /** Reset all layers' color maps to default element colors. */
   resetAllLayersColorMapToDefaults: () => void;
+  /** Reset all layers' animation state (frame index + playback fps) to defaults. */
+  resetAllLayersAnimToDefaults: () => void;
 
   /** Per-layer display settings (atom size / bond visibility / quality) for the active layer. */
   activeLayerDisplay: Ref<DetailsSettingsGroup | null>;

@@ -160,6 +160,8 @@ type ViewerStageBridgeApi = {
   setVisibleLayersColorMap: (map: ColorMapRecord) => void;
   /** 重置所有图层颜色映射为默认 */
   resetAllLayersColorMapToDefaults: () => void;
+  /** 重置所有图层动画状态为默认（帧序 + 播放帧率） */
+  resetAllLayersAnimToDefaults: () => void;
 
   /** 当前激活图层的显示设置 */
   activeLayerDisplay: Ref<DetailsSettingsGroup | null>;
@@ -1886,6 +1888,15 @@ export function useViewerStage(
     scheduleSessionSave('layers');
   }
 
+  // 重置所有图层动画状态并同步 UI。
+  // Reset all layers animation state and sync UI.
+  function resetAllLayersAnimToDefaults(): void {
+    if (!runtime) return;
+    runtime.resetAllLayersAnimToDefaults();
+    syncUiFromRuntime();
+    scheduleSessionSave('layers');
+  }
+
   function setActiveLayerDisplay(
     patch: Partial<DetailsSettingsGroup>,
     opts?: { applyToAll?: boolean },
@@ -2389,6 +2400,7 @@ export function useViewerStage(
     setAllLayersColorMap,
     setVisibleLayersColorMap,
     resetAllLayersColorMapToDefaults,
+    resetAllLayersAnimToDefaults,
 
     activeLayerDisplay,
     setActiveLayerDisplay,

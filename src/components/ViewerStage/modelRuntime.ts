@@ -316,6 +316,7 @@ export type ModelRuntime = {
   applyFrameByIndex: (idx: number, opts?: { refreshBonds?: boolean }) => void;
   getActiveLayerPlayFps: () => number;
   setActiveLayerPlayFps: (fps: number) => void;
+  resetAllLayersAnimToDefaults: () => void;
   getActiveAtoms: () => Atom[] | null;
   getAtomsForLayer: (id: string) => Atom[] | null;
   getFrameMetaForLayer: (id: string | null, frameIndex?: number) => FrameMeta | null;
@@ -1414,6 +1415,24 @@ export function createModelRuntime(args: {
     active.playFps = Math.max(1, Math.floor(fps));
   }
 
+  // 重置所有图层动画状态（当前帧 + 播放帧率）到默认值。
+  // Reset all layers animation state (frame index + playback fps) to defaults.
+  function resetAllLayersAnimToDefaults(): void {
+    for (const layer of layerMap.values()) {
+      layer.frameIndex = DEFAULT_LAYER_ANIM.frameIndex;
+      layer.playFps = DEFAULT_LAYER_ANIM.playFps;
+      layer.currentFrameAtoms = layer.model.frames?.[0] ?? layer.model.atoms;
+      layer.currentMappedAtoms = null;
+      layer.mappedFrameIndex = -1;
+    }
+    const active = getActiveLayer();
+    if (active) {
+      applyFrameByIndex(DEFAULT_LAYER_ANIM.frameIndex);
+      return;
+    }
+    invalidate();
+  }
+
   function getFrameMetaForLayer(
     id: string | null,
     frameIndex?: number,
@@ -2503,6 +2522,7 @@ export function createModelRuntime(args: {
     applyFrameByIndex,
     getActiveLayerPlayFps,
     setActiveLayerPlayFps,
+    resetAllLayersAnimToDefaults,
     getActiveAtoms,
     getAtomsForLayer,
     getFrameMetaForLayer,

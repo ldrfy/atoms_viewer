@@ -86,6 +86,7 @@ export async function applyDefaultSettings(params: {
     useAtomDefaults: false,
   });
   viewerApi.resetAllLayersColorMapToDefaults();
+  viewerApi.resetAllLayersAnimToDefaults();
   if (Object.keys(DEFAULT_COLORS.data ?? {}).length > 0) {
     viewerApi.setAllLayersColorMap(DEFAULT_COLORS.data);
   }

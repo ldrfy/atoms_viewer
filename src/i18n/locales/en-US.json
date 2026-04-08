@@ -198,7 +198,8 @@
         "rotY": "Rotate Y",
         "rotZ": "Rotate Z",
         "resetPose": "Reset rotation",
-        "resetView": "Reset original distance"
+        "resetView": "Reset original distance",
+        "useRealLayerPositions": "Keep real layer coordinates"
       },
       "rotation": {
         "header": "Auto Spin",

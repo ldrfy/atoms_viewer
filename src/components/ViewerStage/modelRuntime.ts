@@ -335,6 +335,8 @@ export type ModelRuntime = {
   setAllLayersVisible: (visible: boolean) => void;
   /** Sort layers for display/order (does not change layer data). */
   sortLayers: (compare: (a: ModelLayerInfo, b: ModelLayerInfo) => number) => void;
+  /** Apply layer-position mode changes from settings immediately. */
+  applyLayerPositioningMode: () => void;
 
   hasAnyTypeId: () => boolean;
   onTypeMapChanged: () => void;
@@ -423,6 +425,49 @@ export function createModelRuntime(args: {
   let visibleClipRadius = 0;
   let lastClipDist = -1;
   let lastClipRadius = -1;
+  // 场景全局几何中心偏移（世界坐标）。
+  // Scene global geometry-center offset in world coordinates.
+  const sceneCenterOffset = new THREE.Vector3(0, 0, 0);
+  // 图层位置模式：true=实际坐标，false=每层居中叠放。
+  // Layer position mode: true=real coordinates, false=center each layer.
+  function useRealLayerPositions(): boolean {
+    return getSettings().view.useRealLayerPositions ?? true;
+  }
+
+  // 更新图层组世界位置：局部居中渲染 + 世界偏移回补。
+  // Update layer world position: local-centered rendering + world offset compensation.
+  function updateLayerGroupPositionByDisplayAtoms(
+    layer: LayerInternal,
+    displayAtoms: Atom[],
+  ): void {
+    if (!displayAtoms || displayAtoms.length === 0) return;
+    if (!useRealLayerPositions()) {
+      layer.group.position.set(0, 0, 0);
+      return;
+    }
+    const c = computeMeanCenterInto(displayAtoms, centerTmp);
+    layer.group.position.set(
+      c.x - sceneCenterOffset.x,
+      c.y - sceneCenterOffset.y,
+      c.z - sceneCenterOffset.z,
+    );
+  }
+
+  // 按当前帧刷新单层世界位置，保持图层间真实相对坐标。
+  // Refresh one layer world position from current frame, preserving real inter-layer offsets.
+  function updateLayerGroupPositionFromCurrentFrame(layer: LayerInternal): void {
+    const mapped = getMappedAtomsForCurrentFrame(layer);
+    const displayAtoms = getDisplayAtoms(layer, mapped).atoms;
+    updateLayerGroupPositionByDisplayAtoms(layer, displayAtoms);
+  }
+
+  // 刷新所有图层的世界偏移（用于全局中心变更）。
+  // Refresh all layer world offsets (used after global-center changes).
+  function updateAllLayerGroupPositions(): void {
+    for (const layer of layerMap.values()) {
+      updateLayerGroupPositionFromCurrentFrame(layer);
+    }
+  }
 
   function recomputeVisibleClipRadius(): void {
     let minX = Number.POSITIVE_INFINITY;
@@ -447,12 +492,15 @@ export function createModelRuntime(args: {
       const bounds = l.clipBounds;
       if (!bounds) continue;
       any = true;
-      if (bounds.minX < minX) minX = bounds.minX;
-      if (bounds.minY < minY) minY = bounds.minY;
-      if (bounds.minZ < minZ) minZ = bounds.minZ;
-      if (bounds.maxX > maxX) maxX = bounds.maxX;
-      if (bounds.maxY > maxY) maxY = bounds.maxY;
-      if (bounds.maxZ > maxZ) maxZ = bounds.maxZ;
+      const ox = l.group.position.x;
+      const oy = l.group.position.y;
+      const oz = l.group.position.z;
+      if (bounds.minX + ox < minX) minX = bounds.minX + ox;
+      if (bounds.minY + oy < minY) minY = bounds.minY + oy;
+      if (bounds.minZ + oz < minZ) minZ = bounds.minZ + oz;
+      if (bounds.maxX + ox > maxX) maxX = bounds.maxX + ox;
+      if (bounds.maxY + oy > maxY) maxY = bounds.maxY + oy;
+      if (bounds.maxZ + oz > maxZ) maxZ = bounds.maxZ + oz;
       const r = bounds.maxSphereBase * display.atomScale;
       if (r > maxSphere) maxSphere = r;
     }
@@ -909,9 +957,12 @@ export function createModelRuntime(args: {
     const controls = stage.getControls();
     const display = getLayerDisplay(layer);
 
-    // center by current mean to match applyFrameAtomsToMeshes(baseCenter=0)
-    const c = computeMeanCenterInto(atoms, centerTmp);
-    const centeredAtoms = makeCenteredAtomsView(atoms, c);
+    // 按设置切换：真实坐标模式按全局偏移拟合；居中模式按当前图层中心拟合。
+    // Switch by settings: real-coordinate mode uses global offset; centered mode uses layer center.
+    const centerForFit = useRealLayerPositions()
+      ? sceneCenterOffset
+      : computeMeanCenterInto(atoms, centerTmp);
+    const centeredAtoms = makeCenteredAtomsView(atoms, centerForFit);
 
     const orthoHalf = fitCameraToAtomsImpl({
       atoms: centeredAtoms,
@@ -1010,6 +1061,7 @@ export function createModelRuntime(args: {
       centerTmp: centerTmp2,
       matTmp,
     });
+    updateLayerGroupPositionByDisplayAtoms(layer, displayAtoms);
 
     applyLayerSurfaceSettings([layer]);
   }
@@ -1386,6 +1438,7 @@ export function createModelRuntime(args: {
     visibleClipRadius = 0;
     lastClipDist = -1;
     lastClipRadius = -1;
+    sceneCenterOffset.set(0, 0, 0);
 
     syncHasModelFlag();
     invalidate();
@@ -1513,6 +1566,7 @@ export function createModelRuntime(args: {
       centerTmp: centerTmp,
       matTmp,
     });
+    updateLayerGroupPositionByDisplayAtoms(active, displayAtoms);
     updateAtomLabelsForLayer(active);
 
     if (opts?.refreshBonds) {
@@ -1684,6 +1738,15 @@ export function createModelRuntime(args: {
     active.currentMappedAtoms = null;
     active.mappedFrameIndex = -1;
     updateAxesForAtoms(getDisplayAtoms(active, atoms).atoms);
+    invalidate();
+  }
+
+  // 立即应用图层定位模式（真实坐标 / 居中叠放）。
+  // Apply layer positioning mode immediately (real coordinates / centered stacking).
+  function applyLayerPositioningMode(): void {
+    updateAllLayerGroupPositions();
+    recomputeVisibleClipRadius();
+    tickCameraClipping(true);
     invalidate();
   }
 
@@ -2536,6 +2599,7 @@ export function createModelRuntime(args: {
     tickCameraClipping,
     setAllLayersVisible,
     sortLayers,
+    applyLayerPositioningMode,
 
     hasAnyTypeId,
     onTypeMapChanged,

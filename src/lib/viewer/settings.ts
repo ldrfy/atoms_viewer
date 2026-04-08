@@ -105,6 +105,9 @@ export const DEFAULT_AUTO_ROTATE: RotateSettingsGroup = {
 export type DisplaySettingsGroup = {
   rotationDeg: RotationDeg;
   orthographic: boolean;
+  /** true: keep inter-layer real coordinates; false: center each layer. */
+  /** true：保持图层真实相对坐标；false：每个图层单独居中。 */
+  useRealLayerPositions: boolean;
   resetViewSeq?: number;
   viewPresets: ViewPreset[];
   dualViewDistance: number;
@@ -114,6 +117,7 @@ export type DisplaySettingsGroup = {
 export const DEFAULT_DISPLAY: DisplaySettingsGroup = {
   rotationDeg: { x: 0, y: 0, z: 0 } as RotationDeg,
   orthographic: false,
+  useRealLayerPositions: true,
   resetViewSeq: 0,
   viewPresets: ['front'] as ViewPreset[],
   dualViewDistance: 10,

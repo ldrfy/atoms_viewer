@@ -198,7 +198,8 @@
         "rotY": "Y 轴旋转",
         "rotZ": "Z 轴旋转",
         "resetPose": "回到旋转前",
-        "resetView": "恢复原始视距"
+        "resetView": "恢复原始视距",
+        "useRealLayerPositions": "按实际坐标保持图层相对位置"
       },
       "rotation": {
         "header": "自动旋转",

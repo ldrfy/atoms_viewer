@@ -231,6 +231,7 @@ const viewDirtyCount = computed(() => {
     : DEFAULT_SETTINGS.view.dualViewDistance;
   let count = 0;
   if (settings.value.view.orthographic !== DEFAULT_SETTINGS.view.orthographic) count += 1;
+  if (settings.value.view.useRealLayerPositions !== DEFAULT_SETTINGS.view.useRealLayerPositions) count += 1;
   if (!arraysEqual(settings.value.view.viewPresets, DEFAULT_SETTINGS.view.viewPresets)) count += 1;
   if (settings.value.view.dualViewSplit !== DEFAULT_SETTINGS.view.dualViewSplit) count += 1;
   if ((settings.value.view.dualViewDistance ?? defaultDistance) !== defaultDistance) count += 1;

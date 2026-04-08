@@ -2477,6 +2477,14 @@ export function useViewerStage(
     { immediate: true, deep: true },
   );
 
+  watch(
+    () => settingsRef.value.view.useRealLayerPositions,
+    () => {
+      runtime?.applyLayerPositioningMode();
+    },
+    { immediate: true },
+  );
+
   return {
     ...recording,
 

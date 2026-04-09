@@ -12,6 +12,7 @@ export type SettingsPatch = {
   };
   pan?: Partial<ViewerSettings['pan']>;
   record?: Partial<ViewerSettings['record']>;
+  cylinder?: Partial<ViewerSettings['cylinder']>;
   effectRange?: Partial<ViewerSettings['effectRange']>;
   other?: Partial<ViewerSettings['other']>;
 };
@@ -35,6 +36,11 @@ export function cloneSettings(v: ViewerSettings): ViewerSettings {
       panOffsetRight: { ...v.pan.panOffsetRight },
     },
     record: { ...v.record },
+    cylinder: {
+      ...v.cylinder,
+      center: { ...v.cylinder.center },
+      axis: { ...v.cylinder.axis },
+    },
     effectRange: { ...v.effectRange },
     other: { ...v.other },
   };
@@ -79,6 +85,18 @@ export function mergeSettings(
     };
   }
   if (patch.record) next.record = { ...next.record, ...patch.record };
+  if (patch.cylinder) {
+    next.cylinder = {
+      ...next.cylinder,
+      ...patch.cylinder,
+      center: patch.cylinder.center
+        ? { ...next.cylinder.center, ...patch.cylinder.center }
+        : next.cylinder.center,
+      axis: patch.cylinder.axis
+        ? { ...next.cylinder.axis, ...patch.cylinder.axis }
+        : next.cylinder.axis,
+    };
+  }
   if (patch.effectRange) next.effectRange = { ...next.effectRange, ...patch.effectRange };
   if (patch.other) next.other = { ...next.other, ...patch.other };
   return next;

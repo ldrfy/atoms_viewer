@@ -21,6 +21,11 @@ export function buildCategorizedSettings(
       panOffsetRight: { ...settings.pan.panOffsetRight },
     },
     record: { ...settings.record },
+    cylinder: {
+      ...settings.cylinder,
+      center: { ...settings.cylinder.center },
+      axis: { ...settings.cylinder.axis },
+    },
     effectRange: { ...settings.effectRange },
     other: {
       ...settings.other,
@@ -47,6 +52,11 @@ export function mergeCategorizedSettings(
       panOffsetRight: { ...DEFAULT_SETTINGS.pan.panOffsetRight },
     },
     record: { ...DEFAULT_SETTINGS.record },
+    cylinder: {
+      ...DEFAULT_SETTINGS.cylinder,
+      center: { ...DEFAULT_SETTINGS.cylinder.center },
+      axis: { ...DEFAULT_SETTINGS.cylinder.axis },
+    },
     effectRange: { ...DEFAULT_SETTINGS.effectRange },
     other: {
       ...DEFAULT_SETTINGS.other,
@@ -102,6 +112,19 @@ export function mergeCategorizedSettings(
     base.record = {
       ...base.record,
       ...apply.record,
+    };
+  }
+
+  if (apply.cylinder) {
+    base.cylinder = {
+      ...base.cylinder,
+      ...apply.cylinder,
+      center: apply.cylinder.center
+        ? { ...base.cylinder.center, ...apply.cylinder.center }
+        : base.cylinder.center,
+      axis: apply.cylinder.axis
+        ? { ...base.cylinder.axis, ...apply.cylinder.axis }
+        : base.cylinder.axis,
     };
   }
 
@@ -208,6 +231,31 @@ export function pruneDefaultSettings(
     if (diff) record.recordCropBox = { ...b };
   }
   if (Object.keys(record).length > 0) out.record = record as ViewerSettingsCategorized['record'];
+
+  const cylinder: Partial<ViewerSettingsCategorized['cylinder']> = {};
+  if (input.cylinder.enabled !== d.cylinder.enabled) cylinder.enabled = input.cylinder.enabled;
+  if (input.cylinder.shapeType !== d.cylinder.shapeType) cylinder.shapeType = input.cylinder.shapeType;
+  if (input.cylinder.color !== d.cylinder.color) cylinder.color = input.cylinder.color;
+  if (
+    input.cylinder.center.x !== d.cylinder.center.x
+    || input.cylinder.center.y !== d.cylinder.center.y
+    || input.cylinder.center.z !== d.cylinder.center.z
+  ) {
+    cylinder.center = { ...input.cylinder.center };
+  }
+  if (
+    input.cylinder.axis.x !== d.cylinder.axis.x
+    || input.cylinder.axis.y !== d.cylinder.axis.y
+    || input.cylinder.axis.z !== d.cylinder.axis.z
+  ) {
+    cylinder.axis = { ...input.cylinder.axis };
+  }
+  if (input.cylinder.height !== d.cylinder.height) cylinder.height = input.cylinder.height;
+  if (input.cylinder.radius !== d.cylinder.radius) cylinder.radius = input.cylinder.radius;
+  if (input.cylinder.sizeX !== d.cylinder.sizeX) cylinder.sizeX = input.cylinder.sizeX;
+  if (input.cylinder.sizeY !== d.cylinder.sizeY) cylinder.sizeY = input.cylinder.sizeY;
+  if (input.cylinder.sizeZ !== d.cylinder.sizeZ) cylinder.sizeZ = input.cylinder.sizeZ;
+  if (Object.keys(cylinder).length > 0) out.cylinder = cylinder as ViewerSettingsCategorized['cylinder'];
 
   const effectRange: Partial<ViewerSettingsCategorized['effectRange']> = {};
   if (input.effectRange.colors !== d.effectRange.colors) effectRange.colors = input.effectRange.colors;

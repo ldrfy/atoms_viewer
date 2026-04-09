@@ -44,6 +44,7 @@ declare module 'vue' {
     ATypographyText: typeof import('antdv-next')['TypographyText']
     CollapsePanelLabel: typeof import('./src/components/SettingsSider/parts/CollapsePanelLabel.vue')['default']
     ColorsPanel: typeof import('./src/components/SettingsSider/panels/ColorsPanel.vue')['default']
+    CylinderPanel: typeof import('./src/components/SettingsSider/panels/CylinderPanel.vue')['default']
     DetailsPanel: typeof import('./src/components/SettingsSider/panels/DetailsPanel.vue')['default']
     DrawerActionItem: typeof import('./src/components/TopHear/parts/DrawerActionItem.vue')['default']
     FilesPanel: typeof import('./src/components/SettingsSider/panels/FilesPanel.vue')['default']

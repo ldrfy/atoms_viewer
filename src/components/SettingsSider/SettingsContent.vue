@@ -76,6 +76,7 @@ import {
 import { Modal, type CollapseProps } from 'antdv-next';
 
 import FilesPanel from './panels/FilesPanel.vue';
+import CylinderPanel from './panels/CylinderPanel.vue';
 import LayersPanel from './panels/LayersPanel.vue';
 import ViewPanel from './panels/ViewPanel.vue';
 import RotatePanel from './panels/RotatePanel.vue';
@@ -255,6 +256,25 @@ const rotationDirtyCount = computed(() => {
   return count;
 });
 
+// 圆柱面板修改计数。
+// Dirty count for Cylinder panel.
+const cylinderDirtyCount = computed(() => {
+  const cur = settings.value.cylinder;
+  const def = DEFAULT_SETTINGS.cylinder;
+  let count = 0;
+  if (!!cur.enabled !== !!def.enabled) count += 1;
+  if (cur.shapeType !== def.shapeType) count += 1;
+  if (cur.color !== def.color) count += 1;
+  if (cur.center.x !== def.center.x || cur.center.y !== def.center.y || cur.center.z !== def.center.z) count += 1;
+  if (cur.axis.x !== def.axis.x || cur.axis.y !== def.axis.y || cur.axis.z !== def.axis.z) count += 1;
+  if (cur.height !== def.height) count += 1;
+  if (cur.radius !== def.radius) count += 1;
+  if (cur.sizeX !== def.sizeX) count += 1;
+  if (cur.sizeY !== def.sizeY) count += 1;
+  if (cur.sizeZ !== def.sizeZ) count += 1;
+  return count;
+});
+
 // 其他面板修改计数。
 // Dirty count for Other panel.
 const otherDirtyCount = computed(() => {
@@ -350,6 +370,7 @@ function getPanelDirtyCount(key: string): number {
   if (key === PANEL_KEYS.details) return detailsDirtyCount.value;
   if (key === PANEL_KEYS.view) return viewDirtyCount.value;
   if (key === PANEL_KEYS.rotation) return rotationDirtyCount.value;
+  if (key === PANEL_KEYS.cylinder) return cylinderDirtyCount.value;
   if (key === PANEL_KEYS.other) return otherDirtyCount.value;
   return 0;
 }
@@ -372,6 +393,7 @@ const basePanels = [
   { key: PANEL_KEYS.lammps, headerKey: PANEL_HEADER_KEYS.lammps, comp: LammpsPanel, icon: SwapOutlined },
   { key: PANEL_KEYS.colors, headerKey: PANEL_HEADER_KEYS.colors, comp: ColorsPanel, icon: BgColorsOutlined },
   { key: PANEL_KEYS.details, headerKey: PANEL_HEADER_KEYS.details, comp: DetailsPanel, icon: SlidersOutlined },
+  { key: PANEL_KEYS.cylinder, headerKey: PANEL_HEADER_KEYS.cylinder, comp: CylinderPanel, icon: SlidersOutlined },
   { key: PANEL_KEYS.rotation, headerKey: PANEL_HEADER_KEYS.rotation, comp: RotatePanel, icon: SyncOutlined },
   { key: PANEL_KEYS.files, headerKey: PANEL_HEADER_KEYS.files, comp: FilesPanel, icon: FolderOpenOutlined },
   { key: PANEL_KEYS.other, headerKey: PANEL_HEADER_KEYS.other, comp: OtherPanel, icon: SettingOutlined },

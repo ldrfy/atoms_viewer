@@ -278,6 +278,9 @@ export function pruneDefaultSettings(
   if (input.other.selectionHighlightColor !== d.other.selectionHighlightColor) {
     other.selectionHighlightColor = input.other.selectionHighlightColor;
   }
+  if (input.other.showSelectionLines !== d.other.showSelectionLines) {
+    other.showSelectionLines = input.other.showSelectionLines;
+  }
   if (input.other.panStepScale !== d.other.panStepScale) {
     other.panStepScale = input.other.panStepScale;
   }

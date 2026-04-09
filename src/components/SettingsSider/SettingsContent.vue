@@ -285,6 +285,7 @@ const otherDirtyCount = computed(() => {
   if (settings.value.other.showAxes !== DEFAULT_SETTINGS.other.showAxes) count += 1;
   if (settings.value.other.refreshBondsOnPlay !== DEFAULT_SETTINGS.other.refreshBondsOnPlay) count += 1;
   if (settings.value.other.keepActiveLayerOnHide !== DEFAULT_SETTINGS.other.keepActiveLayerOnHide) count += 1;
+  if (settings.value.other.showSelectionLines !== DEFAULT_SETTINGS.other.showSelectionLines) count += 1;
   if (settings.value.other.panStepScale !== DEFAULT_SETTINGS.other.panStepScale) count += 1;
   if (settings.value.other.themeMode !== DEFAULT_SETTINGS.other.themeMode) count += 1;
   if (settings.value.other.visualStyle !== DEFAULT_SETTINGS.other.visualStyle) count += 1;

@@ -1114,6 +1114,13 @@ export function useViewerStage(
   );
 
   watch(
+    () => settingsRef.value.other.showSelectionLines,
+    () => {
+      picking.updateSelectionVisuals();
+    },
+  );
+
+  watch(
     () => settingsRef.value.cylinder,
     () => {
       picking.updateSelectionVisuals();

@@ -64,6 +64,12 @@
     />
 
     <SettingSwitchField
+      v-model:checked="showSelectionLinesModel"
+      :label="t('settings.panel.other.selectionLinesLabel')"
+      :hint="showSelectionLinesHint"
+    />
+
+    <SettingSwitchField
       v-model:checked="keepActiveLayerOnHideModel"
       :label="t('settings.panel.other.keepActiveLayerOnHideLabel')"
       :hint="keepActiveLayerOnHideHint"
@@ -215,6 +221,17 @@ const selectionHighlightColorModel = computed({
   get: () => settings.value.other.selectionHighlightColor ?? DEFAULT_SETTINGS.other.selectionHighlightColor,
   set: (v: string) => patchSettings({ other: { selectionHighlightColor: v } }),
 });
+
+const showSelectionLinesModel = computed({
+  get: () => settings.value.other.showSelectionLines ?? DEFAULT_SETTINGS.other.showSelectionLines,
+  set: (v: boolean) => patchSettings({ other: { showSelectionLines: v } }),
+});
+
+const showSelectionLinesHint = computed(() =>
+  showSelectionLinesModel.value
+    ? t('settings.panel.other.selectionLinesOn')
+    : t('settings.panel.other.selectionLinesOff'),
+);
 
 const selectionHighlightColorIsCustom = computed(() => {
   const base = normalizeHexColor(DEFAULT_SETTINGS.other.selectionHighlightColor)

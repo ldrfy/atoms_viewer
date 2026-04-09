@@ -104,6 +104,12 @@ export function createViewerPickingController(deps: RenderDeps) {
   const cylinderQuat = new THREE.Quaternion();
   const selectionColor = new THREE.Color();
   const cylinderResolvedColor = new THREE.Color();
+  const selectionLabelColor = new THREE.Color();
+  const labelProjectWorld = new THREE.Vector3();
+  const labelProjectNdc = new THREE.Vector3();
+  const labelLocalPos = new THREE.Vector3();
+  const labelLocalTryPos = new THREE.Vector3();
+  const placedSelectionLabels: Array<{ x: number; y: number }> = [];
   const pickCamPos = new THREE.Vector3();
   const pickCamUp = new THREE.Vector3();
   const pickCamQuat = new THREE.Quaternion();
@@ -266,6 +272,47 @@ export function createViewerPickingController(deps: RenderDeps) {
     return label;
   }
 
+  // 将选中标签背景色设置为该原子的当前颜色（跟随原子颜色设置）。
+  // Set selection-label background to the atom's current color (follows atom color settings).
+  function applySelectionLabelStyle(
+    label: CSS2DObject,
+    visual: { mesh: THREE.InstancedMesh; instanceId: number } | null,
+  ): void {
+    const el = label.element as HTMLElement | undefined;
+    if (!el) return;
+
+    // Default fallback color.
+    // 默认兜底颜色。
+    selectionLabelColor.set('#666666');
+
+    if (visual?.mesh) {
+      const mesh = visual.mesh;
+      const mat = mesh.material as any;
+      const hasInstanceColor = !!mesh.instanceColor && typeof mesh.getColorAt === 'function';
+
+      if (hasInstanceColor && visual.instanceId >= 0 && visual.instanceId < mesh.count) {
+        mesh.getColorAt(visual.instanceId, selectionLabelColor);
+      }
+      else if (Array.isArray(mat)) {
+        const first = mat[0];
+        if (first?.color) selectionLabelColor.copy(first.color as THREE.Color);
+      }
+      else if (mat?.color) {
+        selectionLabelColor.copy(mat.color as THREE.Color);
+      }
+    }
+
+    const r = Math.round(selectionLabelColor.r * 255);
+    const g = Math.round(selectionLabelColor.g * 255);
+    const b = Math.round(selectionLabelColor.b * 255);
+    const luminance = 0.2126 * selectionLabelColor.r + 0.7152 * selectionLabelColor.g + 0.0722 * selectionLabelColor.b;
+    const textColor = luminance > 0.58 ? '#111111' : '#ffffff';
+
+    el.style.background = `rgba(${r}, ${g}, ${b}, 0.88)`;
+    el.style.borderColor = `rgba(${r}, ${g}, ${b}, 0.95)`;
+    el.style.color = textColor;
+  }
+
   function updateSelectionVisuals(): void {
     const stage = deps.getStage();
     if (!stage) return;
@@ -319,6 +366,23 @@ export function createViewerPickingController(deps: RenderDeps) {
     if (labelGroup) labelGroup.visible = false;
 
     const pts: THREE.Vector3[] = [];
+    placedSelectionLabels.length = 0;
+    const camera = stage.getCamera();
+    const canvasRect = stage.renderer.domElement.getBoundingClientRect();
+    const minLabelDxPx = 58;
+    const minLabelDyPx = 20;
+    const maxLabelShiftTries = 8;
+    const labelShiftStep = 0.22;
+
+    const worldToScreenPx = (localPos: THREE.Vector3): { x: number; y: number } | null => {
+      labelProjectWorld.copy(localPos);
+      stage.modelGroup.localToWorld(labelProjectWorld);
+      labelProjectNdc.copy(labelProjectWorld).project(camera);
+      if (!Number.isFinite(labelProjectNdc.x) || !Number.isFinite(labelProjectNdc.y)) return null;
+      const x = ((labelProjectNdc.x + 1) / 2) * Math.max(1, canvasRect.width);
+      const y = ((1 - labelProjectNdc.y) / 2) * Math.max(1, canvasRect.height);
+      return { x, y };
+    };
     const count = Math.min(sel.length, selectionVisuals.length);
     if (count > markerCapacity) {
       markerCapacity = Math.max(count, markerCapacity * 2);
@@ -385,8 +449,23 @@ export function createViewerPickingController(deps: RenderDeps) {
       const labelText = labelParts.join(' ');
       if (labelText) {
         const label = ensureSelectionLabel(i, labelText);
+        applySelectionLabelStyle(label, v);
         const labelOffset = Math.max(0.05, r * 1.6);
-        label.position.set(tmpPos.x, tmpPos.y + labelOffset, tmpPos.z);
+        labelLocalPos.set(tmpPos.x, tmpPos.y + labelOffset, tmpPos.z);
+        labelLocalTryPos.copy(labelLocalPos);
+        let placedScreen = worldToScreenPx(labelLocalTryPos);
+        if (placedScreen) {
+          for (let t = 0; t < maxLabelShiftTries; t += 1) {
+            const overlapped = placedSelectionLabels.some(p =>
+              Math.abs(placedScreen!.x - p.x) < minLabelDxPx
+              && Math.abs(placedScreen!.y - p.y) < minLabelDyPx);
+            if (!overlapped) break;
+            labelLocalTryPos.y += labelShiftStep;
+            placedScreen = worldToScreenPx(labelLocalTryPos) ?? placedScreen;
+          }
+          placedSelectionLabels.push({ x: placedScreen.x, y: placedScreen.y });
+        }
+        label.position.copy(labelLocalTryPos);
         label.visible = true;
         labelVisibleCount += 1;
       }
@@ -434,6 +513,7 @@ export function createViewerPickingController(deps: RenderDeps) {
     };
 
     const segments = Math.max(0, pts.length - 1);
+    const showSelectionLines = deps.settingsRef.value.other.showSelectionLines ?? true;
     if (segments > lineCapacity) {
       lineCapacity = Math.max(segments, lineCapacity * 2);
       if (lineMesh) selectionGroup.remove(lineMesh);
@@ -447,8 +527,8 @@ export function createViewerPickingController(deps: RenderDeps) {
       selectionGroup.add(lineMesh);
     }
 
-    lineMesh.count = segments;
-    lineMesh.visible = segments > 0;
+    lineMesh.count = showSelectionLines ? segments : 0;
+    lineMesh.visible = showSelectionLines && segments > 0;
     for (let i = 0; i < segments; i += 1) {
       updateLine(lineMesh, i, pts[i]!, pts[i + 1]!);
     }
@@ -497,7 +577,7 @@ export function createViewerPickingController(deps: RenderDeps) {
       if (cuboidMesh) cuboidMesh.visible = false;
     }
 
-    if (pts.length >= 3) {
+    if (showSelectionLines && pts.length >= 3) {
       const triCount = pts.length - 2;
       const positions = new Float32Array(triCount * 9);
       const p0 = pts[0]!;

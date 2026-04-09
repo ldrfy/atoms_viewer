@@ -194,6 +194,7 @@ export type OtherSettingsGroup = {
   themeMode: ThemeMode;
   visualStyle: VisualStyleId;
   selectionHighlightColor: string;
+  showSelectionLines: boolean;
   panStepScale: number;
   backgroundColor: string;
   backgroundColorMode: 'auto' | 'custom';
@@ -210,6 +211,7 @@ export const DEFAULT_OTHER: OtherSettingsGroup = {
   themeMode: 'system',
   visualStyle: 'default',
   selectionHighlightColor: '#ffd400',
+  showSelectionLines: true,
   panStepScale: 1,
   backgroundColor: '#ffffff',
   backgroundColorMode: 'custom',

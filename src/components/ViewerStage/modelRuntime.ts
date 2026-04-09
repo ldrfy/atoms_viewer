@@ -2363,6 +2363,11 @@ export function createModelRuntime(args: {
         const alpha = parsed?.alpha ?? 1;
         m.opacity = alpha;
         m.transparent = alpha < 0.999;
+        // Transparent materials should not write depth, otherwise front transparent
+        // fragments can incorrectly occlude back fragments.
+        // 半透明材质不应写入深度，否则前层透明片元会错误遮挡后层。
+        m.depthTest = true;
+        m.depthWrite = alpha >= 0.999;
       }
       if (m) m.needsUpdate = true;
     };
@@ -2406,6 +2411,10 @@ export function createModelRuntime(args: {
       const uniformAlpha = getUniformAlpha(instanceColorKeys, map);
       m.opacity = uniformAlpha ?? 1;
       m.transparent = (uniformAlpha ?? 1) < 0.999;
+      // Keep depth test on; disable depth write only for transparent case.
+      // 保持深度测试开启；仅在半透明时禁用深度写入。
+      m.depthTest = true;
+      m.depthWrite = (uniformAlpha ?? 1) >= 0.999;
       m.needsUpdate = true;
     };
     if (Array.isArray(matAny)) {

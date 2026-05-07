@@ -1,6 +1,5 @@
 export const PANEL_KEYS = {
   files: 'files',
-  cylinder: 'cylinder',
   rotation: 'rotation',
   view: 'view',
   layers: 'layers',
@@ -14,7 +13,6 @@ export type PanelKey = (typeof PANEL_KEYS)[keyof typeof PANEL_KEYS];
 
 export const PANEL_HEADER_KEYS: Record<PanelKey, string> = {
   files: 'settings.panel.files.header',
-  cylinder: 'settings.panel.cylinder.header',
   rotation: 'settings.panel.rotation.header',
   view: 'settings.panel.view.header',
   layers: 'settings.panel.layers.header',
@@ -26,7 +24,6 @@ export const PANEL_HEADER_KEYS: Record<PanelKey, string> = {
 
 export const PANEL_ORDER: PanelKey[] = [
   PANEL_KEYS.files,
-  PANEL_KEYS.cylinder,
   PANEL_KEYS.rotation,
   PANEL_KEYS.view,
   PANEL_KEYS.layers,

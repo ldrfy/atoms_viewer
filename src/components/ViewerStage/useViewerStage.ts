@@ -73,7 +73,6 @@ import { setThemeMode } from '../../theme/mode';
 import { exportStructureText, type StructureExportFormat } from '../../lib/structure/export';
 import { writeUrlListParam } from '../../lib/urlParams';
 import { PANEL_KEYS } from '../../lib/viewer/panelKeys';
-import { computeCylinderDefaultsFromAtoms } from '../../lib/viewer/cylinderDefaults';
 
 /**
  * Template ref callback param type (works for DOM + component instance).
@@ -182,16 +181,6 @@ type ViewerStageBridgeApi = {
 
   /** 可见图层是否存在自定义颜色 */
   visibleCustomColors: Ref<boolean>;
-  /** 基于当前激活图层计算圆柱默认参数 */
-  computeDefaultCylinderParams: () => {
-    center: { x: number; y: number; z: number };
-    axis: { x: number; y: number; z: number };
-    radius: number;
-    height: number;
-    sizeX: number;
-    sizeY: number;
-    sizeZ: number;
-  };
 
   /** 获取图层快照（含源信息与设置），用于导出/会话恢复 */
   getLayerSnapshots: () => Promise<import('../../lib/viewer/sessionTypes').LayerSnapshot[]>;
@@ -1119,15 +1108,6 @@ export function useViewerStage(
       picking.updateSelectionVisuals();
     },
   );
-
-  watch(
-    () => settingsRef.value.cylinder,
-    () => {
-      picking.updateSelectionVisuals();
-    },
-    { deep: true },
-  );
-
   // animation
   const anim = createViewerAnimationController({
     getRuntime: () => runtime,
@@ -2435,12 +2415,6 @@ export function useViewerStage(
     applyViewFromSettings,
     suspendSettingsSync: (ms = 200) => settingsSync.suspend(ms),
     visibleCustomColors,
-    // 面板“恢复默认”时，按当前模型实时计算圆柱默认参数。
-    // Compute cylinder defaults from the current model for panel reset.
-    computeDefaultCylinderParams: () => {
-      const atoms = runtime?.getActiveAtoms() ?? null;
-      return computeCylinderDefaultsFromAtoms(atoms);
-    },
     getLayerSnapshots: async () => runtime?.getLayerSnapshots() ?? [],
     applyLayerSnapshots: async (snaps) => {
       runtime?.applyLayerSnapshots(snaps);

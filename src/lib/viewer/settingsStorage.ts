@@ -27,11 +27,6 @@ export function buildDefaultSettings(): ViewerSettings {
       panOffsetRight: { ...DEFAULT_SETTINGS.pan.panOffsetRight },
     },
     record: { ...DEFAULT_SETTINGS.record },
-    cylinder: {
-      ...DEFAULT_SETTINGS.cylinder,
-      center: { ...DEFAULT_SETTINGS.cylinder.center },
-      axis: { ...DEFAULT_SETTINGS.cylinder.axis },
-    },
     effectRange: { ...DEFAULT_SETTINGS.effectRange },
     other: {
       ...DEFAULT_SETTINGS.other,
@@ -78,11 +73,6 @@ export function saveSettingsToStorage(settings: ViewerSettings): void {
         panOffsetRight: { ...settings.pan.panOffsetRight },
       },
       record: { ...settings.record },
-      cylinder: {
-        ...settings.cylinder,
-        center: { ...settings.cylinder.center },
-        axis: { ...settings.cylinder.axis },
-      },
       effectRange: { ...settings.effectRange },
       other: {
         ...settings.other,

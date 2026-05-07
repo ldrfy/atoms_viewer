@@ -10,7 +10,6 @@ import { formatLayerDisplayName } from '../../../lib/viewer/layerDisplayName';
 import type { Atom } from '../../../lib/structure/types';
 import type { AnyCamera } from '../../../lib/three/camera';
 import { makeTextLabel } from '../../../lib/three/labels2d';
-import { parseColorValue } from '../colorMap';
 import type { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 
 import type { ThreeStage } from '../../../lib/three/stage';
@@ -69,16 +68,6 @@ export function createViewerPickingController(deps: RenderDeps) {
   let lineCapacity = 0;
   let lineGeometry: THREE.CylinderGeometry | null = null;
   let lineMaterial: THREE.MeshBasicMaterial | null = null;
-  // 圆柱标注网格（使用前两个选中原子作为端点）。
-  // Cylinder annotation mesh (uses the first two selected atoms as endpoints).
-  let cylinderMesh: THREE.Mesh | null = null;
-  let cylinderGeometry: THREE.CylinderGeometry | null = null;
-  let cylinderMaterial: THREE.MeshBasicMaterial | null = null;
-  // 长方体标注网格。
-  // Cuboid annotation mesh.
-  let cuboidMesh: THREE.Mesh | null = null;
-  let cuboidGeometry: THREE.BoxGeometry | null = null;
-  let cuboidMaterial: THREE.MeshBasicMaterial | null = null;
   let fillMesh: THREE.Mesh | null = null;
   let fillGeometry: THREE.BufferGeometry | null = null;
   let fillMaterial: THREE.MeshBasicMaterial | null = null;
@@ -98,18 +87,13 @@ export function createViewerPickingController(deps: RenderDeps) {
   const lineCenter = new THREE.Vector3();
   const lineP1 = new THREE.Vector3();
   const lineP2 = new THREE.Vector3();
-  const cylinderCenter = new THREE.Vector3();
-  const cylinderScale = new THREE.Vector3();
-  const cylinderDir = new THREE.Vector3();
-  const cylinderQuat = new THREE.Quaternion();
-  const selectionColor = new THREE.Color();
-  const cylinderResolvedColor = new THREE.Color();
   const selectionLabelColor = new THREE.Color();
   const labelProjectWorld = new THREE.Vector3();
   const labelProjectNdc = new THREE.Vector3();
   const labelLocalPos = new THREE.Vector3();
   const labelLocalTryPos = new THREE.Vector3();
   const placedSelectionLabels: Array<{ x: number; y: number }> = [];
+  const highlightColor = new THREE.Color();
   const pickCamPos = new THREE.Vector3();
   const pickCamUp = new THREE.Vector3();
   const pickCamQuat = new THREE.Quaternion();
@@ -213,34 +197,6 @@ export function createViewerPickingController(deps: RenderDeps) {
     lineMesh.frustumCulled = false;
     selectionGroup.add(lineMesh);
 
-    cylinderGeometry = new THREE.CylinderGeometry(1, 1, 1, 24, 1, false);
-    cylinderMaterial = new THREE.MeshBasicMaterial({
-      color: new THREE.Color(0xffd400),
-      transparent: true,
-      opacity: 0.45,
-      depthTest: true,
-      depthWrite: false,
-    });
-    cylinderMesh = new THREE.Mesh(cylinderGeometry, cylinderMaterial);
-    cylinderMesh.visible = false;
-    cylinderMesh.renderOrder = 11;
-    cylinderMesh.frustumCulled = false;
-    selectionGroup.add(cylinderMesh);
-
-    cuboidGeometry = new THREE.BoxGeometry(1, 1, 1);
-    cuboidMaterial = new THREE.MeshBasicMaterial({
-      color: new THREE.Color(0xffd400),
-      transparent: true,
-      opacity: 0.45,
-      depthTest: true,
-      depthWrite: false,
-    });
-    cuboidMesh = new THREE.Mesh(cuboidGeometry, cuboidMaterial);
-    cuboidMesh.visible = false;
-    cuboidMesh.renderOrder = 11;
-    cuboidMesh.frustumCulled = false;
-    selectionGroup.add(cuboidMesh);
-
     fillGeometry = new THREE.BufferGeometry();
     fillMaterial = new THREE.MeshBasicMaterial({
       color: new THREE.Color(0xffd400),
@@ -327,43 +283,31 @@ export function createViewerPickingController(deps: RenderDeps) {
     const sel = deps.inspectCtx.selected.value;
     const rawColor = deps.settingsRef.value.other.selectionHighlightColor ?? '#ffd400';
     try {
-      selectionColor.set(rawColor);
+      highlightColor.set(rawColor);
     }
     catch {
-      selectionColor.set('#ffd400');
+      highlightColor.set('#ffd400');
     }
-    const cylinderSettings = deps.settingsRef.value.cylinder;
-    const cylinderParsedColor = parseColorValue(cylinderSettings.color ?? rawColor)
-      ?? { hex: rawColor, alpha: 1 };
-    try {
-      cylinderResolvedColor.set(cylinderParsedColor.hex);
-    }
-    catch {
-      cylinderResolvedColor.copy(selectionColor);
-    }
-
-    // 选中高亮保持使用全局高亮色；圆柱可按面板选择跟随或自定义。
-    // Selection highlight always uses global highlight color; cylinder can follow or override.
-    if (markerMaterial) markerMaterial.color.copy(selectionColor);
-    if (lineMaterial) lineMaterial.color.copy(selectionColor);
-    if (fillMaterial) fillMaterial.color.copy(selectionColor);
-    if (cylinderMaterial) {
-      cylinderMaterial.color.copy(cylinderResolvedColor);
-      cylinderMaterial.opacity = Math.max(0.02, Math.min(1, cylinderParsedColor.alpha ?? 1));
-      cylinderMaterial.needsUpdate = true;
-    }
-    if (cuboidMaterial) {
-      cuboidMaterial.color.copy(cylinderResolvedColor);
-      cuboidMaterial.opacity = Math.max(0.02, Math.min(1, cylinderParsedColor.alpha ?? 1));
-      cuboidMaterial.needsUpdate = true;
-    }
+    if (markerMaterial) markerMaterial.color.copy(highlightColor);
+    if (lineMaterial) lineMaterial.color.copy(highlightColor);
+    if (fillMaterial) fillMaterial.color.copy(highlightColor);
 
     markerMesh.visible = false;
     lineMesh.visible = false;
     fillMesh.visible = false;
-    if (cylinderMesh) cylinderMesh.visible = false;
-    if (cuboidMesh) cuboidMesh.visible = false;
     if (labelGroup) labelGroup.visible = false;
+
+    if (sel.length === 0 || selectionVisuals.length === 0) {
+      markerMesh.count = 0;
+      markerMesh.instanceMatrix.needsUpdate = true;
+      lineMesh.count = 0;
+      lineMesh.instanceMatrix.needsUpdate = true;
+      for (const label of labelNodes) {
+        if (label) label.visible = false;
+      }
+      requestRedraw();
+      return;
+    }
 
     const pts: THREE.Vector3[] = [];
     placedSelectionLabels.length = 0;
@@ -534,50 +478,7 @@ export function createViewerPickingController(deps: RenderDeps) {
     }
     lineMesh.instanceMatrix.needsUpdate = true;
 
-    // 圆柱改为“参数驱动”，不再依赖选中原子。
-    // Cylinder is now fully parameter-driven, no longer based on selected atoms.
-    const cylinderEnabled = deps.settingsRef.value.cylinder.enabled ?? false;
-    if (cylinderEnabled && cylinderSettings.shapeType === 'cuboid' && cuboidMesh) {
-      const center = cylinderSettings.center ?? { x: 0, y: 0, z: 0 };
-      cylinderCenter.set(center.x ?? 0, center.y ?? 0, center.z ?? 0);
-      tmpQuat.identity();
-      const sx = Math.max(0.001, cylinderSettings.sizeX ?? 10);
-      const sy = Math.max(0.001, cylinderSettings.sizeY ?? 10);
-      const sz = Math.max(0.001, cylinderSettings.sizeZ ?? 10);
-      // BoxGeometry 默认方向即 x/y/z 轴，直接用缩放映射三个方向长度。
-      // BoxGeometry is axis-aligned by default; map dimensions via scale.
-      cylinderScale.set(sx, sy, sz);
-      tmpMat.compose(cylinderCenter, tmpQuat, cylinderScale);
-      cuboidMesh.matrix.copy(tmpMat);
-      cuboidMesh.matrixAutoUpdate = false;
-      cuboidMesh.matrixWorldNeedsUpdate = true;
-      cuboidMesh.visible = true;
-      if (cylinderMesh) cylinderMesh.visible = false;
-    }
-    else if (cylinderEnabled && cylinderMesh) {
-      const center = cylinderSettings.center ?? { x: 0, y: 0, z: 0 };
-      const axis = cylinderSettings.axis ?? { x: 0, y: 0, z: 1 };
-      cylinderCenter.set(center.x ?? 0, center.y ?? 0, center.z ?? 0);
-      cylinderDir.set(axis.x ?? 0, axis.y ?? 0, axis.z ?? 1);
-      if (cylinderDir.lengthSq() < 1.0e-12) cylinderDir.set(0, 0, 1);
-      cylinderDir.normalize();
-      cylinderQuat.setFromUnitVectors(lineUp, cylinderDir);
-      const height = Math.max(0.001, cylinderSettings.height ?? 10);
-      const radius = Math.max(0.001, cylinderSettings.radius ?? 0.16);
-      cylinderScale.set(radius, height, radius);
-      tmpMat.compose(cylinderCenter, cylinderQuat, cylinderScale);
-      cylinderMesh.matrix.copy(tmpMat);
-      cylinderMesh.matrixAutoUpdate = false;
-      cylinderMesh.matrixWorldNeedsUpdate = true;
-      cylinderMesh.visible = true;
-      if (cuboidMesh) cuboidMesh.visible = false;
-    }
-    else if (cylinderMesh) {
-      cylinderMesh.visible = false;
-      if (cuboidMesh) cuboidMesh.visible = false;
-    }
-
-    if (showSelectionLines && pts.length >= 3) {
+    if (pts.length >= 3) {
       const triCount = pts.length - 2;
       const positions = new Float32Array(triCount * 9);
       const p0 = pts[0]!;

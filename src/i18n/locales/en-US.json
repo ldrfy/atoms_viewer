@@ -301,26 +301,6 @@
           "exportFull": "Export full settings (include defaults)"
         }
       },
-      "cylinder": {
-        "header": "Geometry",
-        "enable": "Enable geometry",
-        "enableHint": "Render geometry from the parameters below (independent of atom selection).",
-        "shapeType": "Shape type",
-        "shapeOptions": {
-          "cylinder": "Cylinder",
-          "cuboid": "Cuboid"
-        },
-        "color": "Cylinder color",
-        "colorHint": "Used for current geometry shape, with opacity support.",
-        "colorResetTooltip": "Reset to default cylinder color.",
-        "center": "Cylinder center (x, y, z)",
-        "axis": "Cylinder axis (x, y, z)",
-        "height": "Cylinder length",
-        "radius": "Cylinder radius",
-        "sizeX": "Cuboid X length",
-        "sizeY": "Cuboid Y length",
-        "sizeZ": "Cuboid Z length"
-      },
       "scope": {
         "currentLayerLabel": "Current layer",
         "options": {

@@ -301,26 +301,6 @@
           "exportFull": "导出完整设置（包含默认值）"
         }
       },
-      "cylinder": {
-        "header": "几何图形",
-        "enable": "启用几何图形",
-        "enableHint": "按下方参数绘制几何图形（与原子选中无关）。",
-        "shapeType": "图形类型",
-        "shapeOptions": {
-          "cylinder": "圆柱",
-          "cuboid": "长方体"
-        },
-        "color": "圆柱颜色",
-        "colorHint": "用于当前几何图形，支持透明度。",
-        "colorResetTooltip": "恢复默认圆柱颜色。",
-        "center": "圆柱中心 (x, y, z)",
-        "axis": "圆柱方向 (x, y, z)",
-        "height": "圆柱长度",
-        "radius": "圆柱半径",
-        "sizeX": "长方体 X 长度",
-        "sizeY": "长方体 Y 长度",
-        "sizeZ": "长方体 Z 长度"
-      },
       "scope": {
         "currentLayerLabel": "当前图层",
         "options": {

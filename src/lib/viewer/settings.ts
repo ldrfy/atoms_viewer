@@ -52,7 +52,6 @@ export type ViewerSettings = {
   view: DisplaySettingsGroup;
   pan: PanSettingsGroup;
   record: RecordSettingsGroup;
-  cylinder: CylinderSettingsGroup;
   effectRange: EffectRangeSettingsGroup;
   other: OtherSettingsGroup;
 };
@@ -232,33 +231,6 @@ export const DEFAULT_RECORD: RecordSettingsGroup = {
   recordCropBox: null,
 };
 
-// 圆柱标注设置。
-// Cylinder annotation settings.
-export type CylinderSettingsGroup = {
-  enabled: boolean;
-  shapeType: 'cylinder' | 'cuboid';
-  color: string;
-  center: { x: number; y: number; z: number };
-  axis: { x: number; y: number; z: number };
-  height: number;
-  radius: number;
-  sizeX: number;
-  sizeY: number;
-  sizeZ: number;
-};
-export const DEFAULT_CYLINDER: CylinderSettingsGroup = {
-  enabled: false,
-  shapeType: 'cylinder',
-  color: '#ffd400',
-  center: { x: 0, y: 0, z: 0 },
-  axis: { x: 0, y: 0, z: 1 },
-  height: 10,
-  radius: 0.16,
-  sizeX: 10,
-  sizeY: 10,
-  sizeZ: 10,
-};
-
 /**
  * Default viewer settings for a fresh session.
  * 初始默认设置（首次进入或清理后使用）。
@@ -269,7 +241,6 @@ export const DEFAULT_SETTINGS: ViewerSettings = {
   view: DEFAULT_DISPLAY,
   pan: DEFAULT_PAN,
   record: DEFAULT_RECORD,
-  cylinder: DEFAULT_CYLINDER,
   effectRange: DEFAULT_EFFECT_RANGE,
   other: DEFAULT_OTHER,
 };

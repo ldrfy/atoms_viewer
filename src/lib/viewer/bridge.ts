@@ -144,16 +144,6 @@ export type ViewerPublicApi = {
 
   /** Whether any visible layer uses custom atom colors. */
   visibleCustomColors: Ref<boolean>;
-  /** Compute default cylinder params from current active layer atoms. */
-  computeDefaultCylinderParams: () => {
-    center: { x: number; y: number; z: number };
-    axis: { x: number; y: number; z: number };
-    radius: number;
-    height: number;
-    sizeX: number;
-    sizeY: number;
-    sizeZ: number;
-  };
 };
 
 /**

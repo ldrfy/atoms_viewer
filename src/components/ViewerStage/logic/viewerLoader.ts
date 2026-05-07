@@ -25,7 +25,6 @@ import { readSessionCacheSizeMap } from '../../../lib/viewer/sessionStorage';
 import { parseStructure, toForcedFilename } from '../../../lib/structure/parse';
 import type { ParseMode, ParseInfo } from '../../../lib/structure/parse';
 import type { StructureModel } from '../../../lib/structure/types';
-import { computeCylinderDefaultsFromAtoms } from '../../../lib/viewer/cylinderDefaults';
 
 import {
   buildLammpsTypeToElementMap,
@@ -276,28 +275,6 @@ export function createViewerLoader(deps: {
       lastLoadNeedsLammpsFocus = false;
     }
     lastLoadIsLammps = isLmp;
-
-    if (reason === 'load' && deps.patchSettings) {
-      // 默认参数始终基于“当前选中图层（active layer）”计算，
-      // 不按所有图层或可见图层聚合。
-      // Always compute defaults from the selected model (active layer),
-      // never from all/visible layers aggregation.
-      const activeId = runtime.activeLayerId.value;
-      const activeAtoms = activeId ? runtime.getAtomsForLayer(activeId) : null;
-      const fallbackAtoms = (model.frames && model.frames[0]) ? model.frames[0] : model.atoms;
-      const defaultCylinder = computeCylinderDefaultsFromAtoms(activeAtoms ?? fallbackAtoms);
-      deps.patchSettings({
-        cylinder: {
-          center: defaultCylinder.center,
-          axis: defaultCylinder.axis,
-          radius: defaultCylinder.radius,
-          height: defaultCylinder.height,
-          sizeX: defaultCylinder.sizeX,
-          sizeY: defaultCylinder.sizeY,
-          sizeZ: defaultCylinder.sizeZ,
-        },
-      });
-    }
 
     if (reason === 'reparse') {
       message.success(

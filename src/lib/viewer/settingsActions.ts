@@ -57,6 +57,7 @@ export async function applyDefaultSettings(params: {
   if (viewerApi) {
     viewerApi.suspendSettingsSync(300);
     viewerApi.setCacheRemoteOnExport?.(nextSettings.files.cacheRemoteOnExport ?? true);
+    viewerApi.setLayerUseRealPositions?.(true);
   }
 
   replaceSettings(nextSettings);

@@ -1,5 +1,6 @@
 import { buildExportFilename } from '../file/filename';
 import { APP_BUILD_TIME, APP_VERSION } from '../appMeta';
+import { DEFAULT_LAYER_USE_REAL_POSITIONS } from './constants';
 import type { ViewerSettings, DetailsSettingsGroup } from './settings';
 import { DEFAULT_DETAILS, DEFAULT_LAYER_ANIM } from './settings';
 import type {
@@ -160,7 +161,7 @@ export function buildSettingsSnapshot(
     activeId: activeLayerId ?? undefined,
     data: layerData,
   };
-  if (useRealLayerPositions !== true) {
+  if (useRealLayerPositions !== DEFAULT_LAYER_USE_REAL_POSITIONS) {
     layersSnapshot.useRealLayerPositions = useRealLayerPositions;
   }
   const payload: SessionSnapshot = {

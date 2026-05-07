@@ -1,6 +1,11 @@
 import type { ViewerPublicApi } from './bridge';
+import { DEFAULT_LAYER_USE_REAL_POSITIONS } from './constants';
 import type { ViewerSettings } from './settings';
-import type { LayerSnapshot, LayersSnapshot, LayerSortBy } from './sessionTypes';
+import {
+  type LayerSnapshot,
+  type LayersSnapshot,
+  type LayerSortBy,
+} from './sessionTypes';
 import type { SupportLocale } from '../../i18n';
 
 import {
@@ -57,7 +62,7 @@ export async function applyDefaultSettings(params: {
   if (viewerApi) {
     viewerApi.suspendSettingsSync(300);
     viewerApi.setCacheRemoteOnExport?.(nextSettings.files.cacheRemoteOnExport ?? true);
-    viewerApi.setLayerUseRealPositions?.(true);
+    viewerApi.setLayerUseRealPositions?.(DEFAULT_LAYER_USE_REAL_POSITIONS);
   }
 
   replaceSettings(nextSettings);
@@ -159,7 +164,7 @@ export async function buildSettingsExportJson(params: {
     ? await viewerApi.getLayerSnapshots()
     : [];
   const layersSortBy = viewerApi?.layerSortBy?.value ?? 'name,ASC';
-  const useRealLayerPositions = viewerApi?.layerUseRealPositions?.value ?? true;
+  const useRealLayerPositions = viewerApi?.layerUseRealPositions?.value ?? DEFAULT_LAYER_USE_REAL_POSITIONS;
   const payload = buildSettingsSnapshot(
     data,
     layerSnapshots,

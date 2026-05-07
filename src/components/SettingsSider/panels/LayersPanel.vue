@@ -115,6 +115,7 @@ import { DeleteOutlined, QuestionCircleOutlined, FolderOpenOutlined, EyeOutlined
 import { computed, onBeforeUnmount } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { viewerApiRef } from '../../../lib/viewer/bridge';
+import { DEFAULT_LAYER_USE_REAL_POSITIONS } from '../../../lib/viewer/constants';
 import { formatLayerDisplayName } from '../../../lib/viewer/layerDisplayName';
 import { PANEL_KEYS } from '../../../lib/viewer/panelKeys';
 import SettingSwitchField from '../parts/SettingSwitchField.vue';
@@ -141,7 +142,7 @@ const sortOptions = computed(() => ([
 // 图层位置模式存放在图层会话状态中。
 // Layer positioning is stored in layer session state.
 const realLayerPositionsModel = computed({
-  get: () => viewerApi.value?.layerUseRealPositions.value ?? true,
+  get: () => viewerApi.value?.layerUseRealPositions.value ?? DEFAULT_LAYER_USE_REAL_POSITIONS,
   set: (v: boolean) => viewerApi.value?.setLayerUseRealPositions(!!v),
 });
 
@@ -228,7 +229,7 @@ function onSortChange(val: string): void {
 }
 
 function resetLayersPanel(): void {
-  viewerApi.value?.setLayerUseRealPositions(true);
+  viewerApi.value?.setLayerUseRealPositions(DEFAULT_LAYER_USE_REAL_POSITIONS);
 }
 
 const { registerPanelReset } = useSettingsSiderResetContext();

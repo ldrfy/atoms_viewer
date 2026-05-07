@@ -60,10 +60,11 @@
       </a-space>
       <SettingSliderField
         v-model:value="dualViewDistanceModel"
-        :min="DUAL_VIEW_DISTANCE_MIN"
+        :min="dualViewDistanceMin"
         :max="dualViewDistanceMax"
-        :slider-step="0.01"
-        :precision="2"
+        :slider-step="DUAL_VIEW_DISTANCE_SLIDER_STEP"
+        :input-step="DUAL_VIEW_DISTANCE_INPUT_STEP"
+        :precision="DUAL_VIEW_DISTANCE_PRECISION"
         :disabled="!hasAnyLayer"
       />
     </a-flex>
@@ -120,7 +121,14 @@ import { message } from 'antdv-next';
 import { QuestionCircleOutlined, ReloadOutlined } from '@antdv-next/icons';
 import { useI18n } from 'vue-i18n';
 import { normalizeViewPresets, type ViewPreset } from '../../../lib/viewer/viewPresets';
-import { DUAL_VIEW_DISTANCE_MIN } from '../../../lib/viewer/constants';
+import {
+  DUAL_VIEW_DISTANCE_INPUT_STEP,
+  DUAL_VIEW_DISTANCE_MAX_BASE,
+  DUAL_VIEW_DISTANCE_MAX_FACTOR,
+  DUAL_VIEW_DISTANCE_MIN,
+  DUAL_VIEW_DISTANCE_PRECISION,
+  DUAL_VIEW_DISTANCE_SLIDER_STEP,
+} from '../../../lib/viewer/constants';
 import { DEFAULT_DISPLAY } from '../../../lib/viewer/settings';
 import { useSettingsSiderContext } from '../useSettingsSiderContext';
 import { PANEL_KEYS } from '../../../lib/viewer/panelKeys';
@@ -183,10 +191,17 @@ const dualViewDistanceModel = computed({
 });
 
 const dualViewDistanceMax = computed(() => {
-  const v = settings.value.view.dualViewDistance ?? 10;
-  return Math.max(200, Math.ceil(v * 1.2));
+  const v = Math.abs(settings.value.view.dualViewDistance ?? 10);
+  const def = Math.abs(getDefaultDistance());
+  return Math.max(
+    DUAL_VIEW_DISTANCE_MAX_BASE,
+    Math.ceil(Math.max(v, def) * DUAL_VIEW_DISTANCE_MAX_FACTOR),
+  );
 });
-// const dualViewDistanceMax = 500;
+
+const dualViewDistanceMin = computed(() =>
+  settings.value.view.orthographic ? DUAL_VIEW_DISTANCE_MIN : -dualViewDistanceMax.value,
+);
 
 // Switch label is "perspective"; stored setting is `orthographic`.
 // UI "ON" means perspective, so invert.

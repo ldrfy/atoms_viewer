@@ -103,6 +103,7 @@ import { isLammpsDumpFormat } from '../../lib/structure/parsers/lammpsDump';
 import { isLammpsDataFormat } from '../../lib/structure/parsers/lammpsData';
 import { getElementColorHex } from '../../lib/structure/chem';
 import { getVisualStylePreset } from '../../lib/viewer/visualStyles';
+import { DEFAULT_LAYER_USE_REAL_POSITIONS } from '../../lib/viewer/constants';
 import { PANEL_KEYS, PANEL_HEADER_KEYS } from '../../lib/viewer/panelKeys';
 import { applyDefaultSettings } from '../../lib/viewer/settingsActions';
 import { saveSettingsToStorage } from '../../lib/viewer/settingsStorage';
@@ -195,7 +196,10 @@ const filesDirtyCount = computed(() => {
 const layersDirtyCount = computed(() => {
   const count = viewerApi.value?.layers.value.length ?? 0;
   const extraLayers = count > 1 ? count : 0;
-  const realPosDirty = (viewerApi.value?.layerUseRealPositions.value ?? true) !== true ? 1 : 0;
+  const realPosDirty = (viewerApi.value?.layerUseRealPositions.value ?? DEFAULT_LAYER_USE_REAL_POSITIONS)
+    !== DEFAULT_LAYER_USE_REAL_POSITIONS
+    ? 1
+    : 0;
   return extraLayers + realPosDirty;
 });
 

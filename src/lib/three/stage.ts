@@ -211,6 +211,38 @@ export function createThreeStage(params: {
   // Keep zoom/pan enabled, but disable camera rotation so settings' XYZ rotation can stay in sync.
   controls.enableRotate = false;
 
+  // 预设视角对应的基准相机方向；负视距时会沿其反方向穿过目标点。
+  // Base camera direction for a preset; negative distance crosses the target along the opposite side.
+  function getPresetDirection(preset: ViewPreset | undefined): THREE.Vector3 {
+    switch (preset) {
+      case 'side':
+        return new THREE.Vector3(1, 0, 0);
+      case 'top':
+        return new THREE.Vector3(0, 1, 0);
+      case 'front':
+      default:
+        return new THREE.Vector3(0, 0, 1);
+    }
+  }
+
+  // 主视口当前使用的基准方向；优先按预设，回退到相机朝向。
+  // Base direction for the main viewport; prefer preset direction, fall back to camera orientation.
+  function getMainViewDirection(): THREE.Vector3 {
+    const preset0 = viewPresets[0];
+    if (preset0) return getPresetDirection(preset0);
+    const dir = new THREE.Vector3();
+    camera.getWorldDirection(dir);
+    return dir.multiplyScalar(-1);
+  }
+
+  // 透视视距允许为负，但不能精确落在 0，避免相机与目标重合。
+  // Perspective distance can be negative, but must avoid landing exactly on 0 to prevent camera-target overlap.
+  function normalizePerspectiveDistance(dist: number): number {
+    if (!Number.isFinite(dist)) return 0.0001;
+    if (Math.abs(dist) < 0.0001) return dist < 0 ? -0.0001 : 0.0001;
+    return dist;
+  }
+
   /**
    * OrbitControls 只作用于主相机。
    * 当启用“预设视角”时，需要把“当前距离/缩放”同步回 dualViewDistance，
@@ -220,7 +252,8 @@ export function createThreeStage(params: {
     if (viewPresets.length === 0) return;
 
     if (isPerspective(camera)) {
-      dualViewDistance = camera.position.distanceTo(controls.target);
+      tmpV3.copy(camera.position).sub(controls.target);
+      dualViewDistance = tmpV3.dot(getMainViewDirection());
       return;
     }
 
@@ -438,16 +471,16 @@ export function createThreeStage(params: {
   }
 
   function applyViewDistance(dist: number): void {
-    dualViewDistance = Math.max(0.001, dist);
+    dualViewDistance = isPerspective(camera)
+      ? normalizePerspectiveDistance(dist)
+      : Math.max(0.0001, dist);
 
     const target = controls.target;
-    const dir = camera.position.clone().sub(target).normalize();
 
     // Perspective: move along current view direction.
     if (isPerspective(camera)) {
-      camera.position.copy(
-        target.clone().add(dir.multiplyScalar(dualViewDistance)),
-      );
+      const dir = getMainViewDirection();
+      camera.position.copy(target.clone().add(dir.multiplyScalar(dualViewDistance)));
       camera.lookAt(target);
       camera.updateProjectionMatrix();
       controls.update();
@@ -793,7 +826,9 @@ export function createThreeStage(params: {
     // Keep settings in sync even when disabled, but only apply to the camera when presets are enabled.
     // Use a tiny epsilon to avoid invalid near/far values.
     // 使用极小值避免 near/far 非法。
-    const d = Math.max(0.001, dist);
+    const d = isPerspective(camera)
+      ? normalizePerspectiveDistance(dist)
+      : Math.max(0.0001, dist);
     // If this update comes from controls-sync (wheel/pinch), it may already match the stage state.
     // Avoid re-applying to prevent feedback jitter.
     if (Math.abs(d - dualViewDistance) < 1e-6) {

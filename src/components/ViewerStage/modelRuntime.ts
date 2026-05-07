@@ -53,6 +53,7 @@ import type {
   LayerSnapshot,
   LayerSourceInfo,
 } from '../../lib/viewer/sessionTypes';
+import { DUAL_VIEW_FIT_MARGIN } from '../../lib/viewer/constants';
 
 function normalizeLayerDisplay(
   patch: Partial<DetailsSettingsGroup>,
@@ -975,7 +976,7 @@ export function createModelRuntime(args: {
         getSphereBaseRadiusByElement(el, atomSizeFactor)
         * display.atomScale,
       orthoHalfHeight: stage.getOrthoHalfHeight(),
-      margin: 1.25,
+      margin: DUAL_VIEW_FIT_MARGIN,
     });
 
     if (!isPerspective(camera)) {

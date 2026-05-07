@@ -19,8 +19,29 @@ export const MODEL_LIGHT_INTENSITY_MAX = 3;
 export const ATOM_ROUGHNESS_MIN = 0;
 export const ATOM_ROUGHNESS_MAX = 1;
 
-// Dual-view distance range. / 双视图视距范围。
-export const DUAL_VIEW_DISTANCE_MIN = 1;
+// Dual-view distance lower bound.
+// 双视图视距下限；数值越小，模型看起来越大。
+export const DUAL_VIEW_DISTANCE_MIN = 0.0001;
+// Dual-view distance max fallback used by the UI slider.
+// 双视图视距滑条的保底最大值。
+export const DUAL_VIEW_DISTANCE_MAX_BASE = 200;
+// Dual-view distance slider growth factor based on current/default value.
+// 双视图视距滑条的动态放大倍数，基于当前值和默认值计算。
+export const DUAL_VIEW_DISTANCE_MAX_FACTOR = 2;
+// Dual-view distance slider step in the UI.
+// 双视图视距滑条步长。
+export const DUAL_VIEW_DISTANCE_SLIDER_STEP = 0.001;
+// Dual-view distance numeric input step in the UI.
+// 双视图视距输入框步长。
+export const DUAL_VIEW_DISTANCE_INPUT_STEP = 0.0001;
+// Dual-view distance numeric input precision in the UI.
+// 双视图视距输入框精度。
+export const DUAL_VIEW_DISTANCE_PRECISION = 4;
+// Camera fit margin applied when loading a model.
+// 模型载入时相机自动拟合的余量倍数；越大则初始看起来越远。
+export const DUAL_VIEW_FIT_MARGIN = 1.8;
+// Default layer-position mode. / 图层相对位置模式默认值。
+export const DEFAULT_LAYER_USE_REAL_POSITIONS = false;
 
 // Layer display ranges. / 图层外观参数范围。
 export const BOND_FACTOR_MIN = 0.5;

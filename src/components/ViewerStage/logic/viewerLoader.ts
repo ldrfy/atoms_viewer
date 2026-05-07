@@ -295,10 +295,14 @@ export function createViewerLoader(deps: {
     const controls = stage.getControls();
     const settings = getSettings();
     const distFromSettings = settings.view.dualViewDistance;
+    const initialDistFromSettings = settings.view.initialDualViewDistance;
     const distFromCamera = cam.position.distanceTo(controls.target);
-    const dist = (typeof distFromSettings === 'number' && Number.isFinite(distFromSettings))
-      ? distFromSettings
-      : distFromCamera;
+    // 若当前值只是初始/默认视距，则跟随新模型的 fit 结果。
+    // If the current distance is still the initial/default one, follow the new model fit.
+    const shouldUseFittedDistance
+      = !Number.isFinite(distFromSettings)
+        || Math.abs(distFromSettings - initialDistFromSettings) < 1e-6;
+    const dist = shouldUseFittedDistance ? distFromCamera : distFromSettings;
 
     stage.setDualViewDistance(dist);
 
@@ -308,7 +312,7 @@ export function createViewerLoader(deps: {
           initialDualViewDistance: distFromCamera,
         },
       };
-      if (!Number.isFinite(distFromSettings)) {
+      if (shouldUseFittedDistance) {
         patch.view = {
           ...(patch.view ?? {}),
           dualViewDistance: dist,

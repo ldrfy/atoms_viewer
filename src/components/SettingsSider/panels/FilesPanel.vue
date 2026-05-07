@@ -175,6 +175,7 @@ import { useSettingsSiderContext } from '../useSettingsSiderContext';
 import { useSettingsSiderControlContext } from '../useSettingsSiderControlContext';
 import { useSettingsSiderResetContext } from '../useSettingsSiderResetContext';
 import { PANEL_KEYS } from '../../../lib/viewer/panelKeys';
+import { DEFAULT_LAYER_USE_REAL_POSITIONS } from '../../../lib/viewer/constants';
 import { DEFAULT_SETTINGS } from '../../../lib/viewer/settings';
 import { buildProjectZip, parseProjectZip } from '../../../lib/viewer/projectPackage';
 import { getLocale, setLocale, SUPPORT_LOCALES } from '../../../i18n';
@@ -423,7 +424,7 @@ async function onExportProject(): Promise<void> {
     const { blob, filename } = await buildProjectZip({
       settings: settings.value,
       layers: snaps,
-      useRealLayerPositions: api.layerUseRealPositions?.value ?? true,
+      useRealLayerPositions: api.layerUseRealPositions?.value ?? DEFAULT_LAYER_USE_REAL_POSITIONS,
       sources,
       modelFileName: api.parseInfo?.fileName ?? 'atoms-viewer',
       app: { locale: getLocale() },

@@ -22,6 +22,7 @@ import { createThreeStage, type ThreeStage } from '../../lib/three/stage';
 import { getAutoRotatePreset } from '../../lib/viewer/autoRotate';
 import {
   AUTO_ROTATE_ROTATION_SYNC_INTERVAL_MS,
+  DEFAULT_LAYER_USE_REAL_POSITIONS,
   DUAL_VIEW_DISTANCE_SYNC_INTERVAL_MS,
   SESSION_SAVE_DELAY_LAYERS_MS,
   SESSION_SAVE_DELAY_SETTINGS_MS,
@@ -580,7 +581,7 @@ export function useViewerStage(
   const externalLoadingCount = ref(0);
   const uiLoading = computed(() => isLoading.value || externalLoadingCount.value > 0);
   const layerSortBy = ref<LayerSortBy>('name,ASC');
-  const layerUseRealPositions = ref(true);
+  const layerUseRealPositions = ref(DEFAULT_LAYER_USE_REAL_POSITIONS);
   // 记录“本次加载是否复用了缓存 LAMMPS 映射”。
   // Tracks whether current load reused cached LAMMPS mapping.
   let lammpsCacheReuseSeq = 0;
@@ -1535,7 +1536,7 @@ export function useViewerStage(
       const normalizedLayers = normalizeLayersSnapshot(snapshot.layers);
       const activeLayerIdFromSnapshot = normalizedLayers?.activeId ?? null;
       const { sortBy, snaps: layerSnaps } = sortLayerSnapshots(normalizedLayers);
-      layerUseRealPositions.value = normalizedLayers?.useRealLayerPositions ?? true;
+      layerUseRealPositions.value = normalizedLayers?.useRealLayerPositions ?? DEFAULT_LAYER_USE_REAL_POSITIONS;
       // 先还原设置
       const rawSettings = (snapshot.settings && typeof snapshot.settings === 'object')
         ? snapshot.settings as any

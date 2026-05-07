@@ -191,10 +191,12 @@ const filesDirtyCount = computed(() => {
   return count;
 });
 // 图层面板修改计数（额外图层数）。
-// Dirty count for Layers panel (extra layers).
+// Dirty count for Layers panel (extra layers + layer-position mode).
 const layersDirtyCount = computed(() => {
   const count = viewerApi.value?.layers.value.length ?? 0;
-  return count > 1 ? count : 0;
+  const extraLayers = count > 1 ? count : 0;
+  const realPosDirty = (viewerApi.value?.layerUseRealPositions.value ?? true) !== true ? 1 : 0;
+  return extraLayers + realPosDirty;
 });
 
 // 细节面板修改计数。
@@ -231,7 +233,6 @@ const viewDirtyCount = computed(() => {
     : DEFAULT_SETTINGS.view.dualViewDistance;
   let count = 0;
   if (settings.value.view.orthographic !== DEFAULT_SETTINGS.view.orthographic) count += 1;
-  if (settings.value.view.useRealLayerPositions !== DEFAULT_SETTINGS.view.useRealLayerPositions) count += 1;
   if (!arraysEqual(settings.value.view.viewPresets, DEFAULT_SETTINGS.view.viewPresets)) count += 1;
   if (settings.value.view.dualViewSplit !== DEFAULT_SETTINGS.view.dualViewSplit) count += 1;
   if ((settings.value.view.dualViewDistance ?? defaultDistance) !== defaultDistance) count += 1;

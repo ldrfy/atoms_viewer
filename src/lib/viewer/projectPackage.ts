@@ -137,6 +137,7 @@ function pruneLayerSnapshot(
 export function buildSettingsSnapshot(
   settings: ViewerSettings,
   layers: LayerSnapshot[],
+  useRealLayerPositions: boolean,
   app?: SessionSnapshot['app'],
   layersSortBy: LayerSortBy = 'name,ASC',
   activeLayerId?: string | null,
@@ -159,6 +160,9 @@ export function buildSettingsSnapshot(
     activeId: activeLayerId ?? undefined,
     data: layerData,
   };
+  if (useRealLayerPositions !== true) {
+    layersSnapshot.useRealLayerPositions = useRealLayerPositions;
+  }
   const payload: SessionSnapshot = {
     settings: pruned,
     layers: layersSnapshot,
@@ -175,6 +179,7 @@ export function buildSettingsSnapshot(
 export async function buildProjectZip(params: {
   settings: ViewerSettings;
   layers: LayerSnapshot[];
+  useRealLayerPositions: boolean;
   sources: LayerSourceData[];
   modelFileName?: string;
   app?: SessionSnapshot['app'];
@@ -185,6 +190,7 @@ export async function buildProjectZip(params: {
   const {
     settings,
     layers,
+    useRealLayerPositions,
     sources,
     modelFileName,
     app,
@@ -195,6 +201,7 @@ export async function buildProjectZip(params: {
   const payload = buildSettingsSnapshot(
     settings,
     layers,
+    useRealLayerPositions,
     app,
     layersSortBy,
     activeLayerId,

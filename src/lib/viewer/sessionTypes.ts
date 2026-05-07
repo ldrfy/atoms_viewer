@@ -44,6 +44,7 @@ export type LayerSnapshot = {
 export type LayerSortBy = 'time,ASC' | 'time,DESC' | 'name,ASC' | 'name,DESC';
 
 export type LayersSnapshot = {
+  useRealLayerPositions?: boolean;
   sortBy: LayerSortBy;
   activeId?: string;
   data: Record<string, LayerSnapshot>;

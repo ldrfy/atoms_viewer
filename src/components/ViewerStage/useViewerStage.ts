@@ -127,6 +127,10 @@ type ViewerStageBridgeApi = {
   sortLayers: (opts: { by: 'time' | 'name'; direction: 'asc' | 'desc' }) => void;
   /** 当前图层排序模式 */
   layerSortBy: Ref<LayerSortBy>;
+  /** 按实际坐标保持图层相对位置 */
+  layerUseRealPositions: Ref<boolean>;
+  /** 设置图层相对位置模式 */
+  setLayerUseRealPositions: (v: boolean) => void;
   /** 移除图层 */
   removeLayer: (id: string) => void;
 
@@ -576,6 +580,7 @@ export function useViewerStage(
   const externalLoadingCount = ref(0);
   const uiLoading = computed(() => isLoading.value || externalLoadingCount.value > 0);
   const layerSortBy = ref<LayerSortBy>('name,ASC');
+  const layerUseRealPositions = ref(true);
   // 记录“本次加载是否复用了缓存 LAMMPS 映射”。
   // Tracks whether current load reused cached LAMMPS mapping.
   let lammpsCacheReuseSeq = 0;
@@ -921,6 +926,7 @@ export function useViewerStage(
     const snapshot = buildSettingsSnapshot(
       settingsRef.value,
       layerSnapshots,
+      layerUseRealPositions.value,
       undefined,
       layerSortBy.value,
       runtime?.activeLayerId.value ?? null,
@@ -942,6 +948,7 @@ export function useViewerStage(
         recordDelaySec: curSettings.record.recordDelaySec,
         recordCropBox: curSettings.record.recordCropBox,
       },
+      layerUseRealPositions: layerUseRealPositions.value,
       layers: layerSnapshots.map((s) => {
         const atomScale = s.details?.atomScale ?? 0;
         const lammpsCount = s.lammps?.data ? Object.keys(s.lammps.data).length : 0;
@@ -1528,6 +1535,7 @@ export function useViewerStage(
       const normalizedLayers = normalizeLayersSnapshot(snapshot.layers);
       const activeLayerIdFromSnapshot = normalizedLayers?.activeId ?? null;
       const { sortBy, snaps: layerSnaps } = sortLayerSnapshots(normalizedLayers);
+      layerUseRealPositions.value = normalizedLayers?.useRealLayerPositions ?? true;
       // 先还原设置
       const rawSettings = (snapshot.settings && typeof snapshot.settings === 'object')
         ? snapshot.settings as any
@@ -1824,6 +1832,12 @@ export function useViewerStage(
     const nextSortBy: LayerSortBy = `${opts.by},${opts.direction.toUpperCase()}` as LayerSortBy;
     layerSortBy.value = nextSortBy;
     runtime.sortLayers((a, b) => compareModelLayers(a, b, nextSortBy));
+    scheduleSessionSave('layers');
+  }
+
+  function setLayerUseRealPositions(v: boolean): void {
+    layerUseRealPositions.value = !!v;
+    runtime?.applyLayerPositioningMode();
     scheduleSessionSave('layers');
   }
 
@@ -2188,6 +2202,7 @@ export function useViewerStage(
     runtime = createModelRuntime({
       stage,
       settingsRef,
+      useRealLayerPositionsRef: layerUseRealPositions,
       hasModel,
       atomSizeFactor: 0.5,
     });
@@ -2390,6 +2405,8 @@ export function useViewerStage(
     setAllLayersVisible,
     sortLayers,
     layerSortBy,
+    layerUseRealPositions,
+    setLayerUseRealPositions,
     removeLayer,
 
     activeLayerTypeMap,
@@ -2481,14 +2498,6 @@ export function useViewerStage(
       }
     },
     { immediate: true, deep: true },
-  );
-
-  watch(
-    () => settingsRef.value.view.useRealLayerPositions,
-    () => {
-      runtime?.applyLayerPositioningMode();
-    },
-    { immediate: true },
   );
 
   return {

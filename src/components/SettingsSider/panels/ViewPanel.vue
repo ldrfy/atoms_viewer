@@ -111,12 +111,6 @@
         </template>
       </SettingSliderField>
     </a-flex>
-
-    <SettingSwitchField
-      v-model:checked="realLayerPositionsModel"
-      :label="t('settings.panel.view.useRealLayerPositions')"
-      :disabled="!hasAnyLayer"
-    />
   </a-flex>
 </template>
 
@@ -201,13 +195,6 @@ const orthographicModel = computed({
   set: (v: boolean) => patchSettings({ view: { orthographic: !v } }),
 });
 
-// 图层位置模式：开启为真实相对坐标，关闭为各图层居中叠放。
-// Layer positioning mode: ON keeps real inter-layer offsets, OFF centers each layer.
-const realLayerPositionsModel = computed({
-  get: () => settings.value.view.useRealLayerPositions ?? DEFAULT_DISPLAY.useRealLayerPositions,
-  set: (v: boolean) => patchSettings({ view: { useRealLayerPositions: !!v } }),
-});
-
 function getDefaultDistance(): number {
   const s = settings.value.view;
   const d
@@ -263,7 +250,6 @@ function resetViewPanel(): void {
   patchSettings({
     view: {
       orthographic: DEFAULT_DISPLAY.orthographic,
-      useRealLayerPositions: DEFAULT_DISPLAY.useRealLayerPositions,
       viewPresets: [...DEFAULT_DISPLAY.viewPresets],
     },
   });

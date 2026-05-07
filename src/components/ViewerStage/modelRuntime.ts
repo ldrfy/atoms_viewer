@@ -384,12 +384,14 @@ export type ModelRuntime = {
 export function createModelRuntime(args: {
   stage: ThreeStage;
   settingsRef: Readonly<Ref<ViewerSettings>>;
+  useRealLayerPositionsRef: Readonly<Ref<boolean>>;
   hasModel: Ref<boolean>;
   atomSizeFactor: number;
 }): ModelRuntime {
   const {
     stage,
     settingsRef,
+    useRealLayerPositionsRef,
     hasModel,
     atomSizeFactor,
   } = args;
@@ -431,7 +433,7 @@ export function createModelRuntime(args: {
   // 图层位置模式：true=实际坐标，false=每层居中叠放。
   // Layer position mode: true=real coordinates, false=center each layer.
   function useRealLayerPositions(): boolean {
-    return getSettings().view.useRealLayerPositions ?? true;
+    return !!useRealLayerPositionsRef.value;
   }
 
   // 更新图层组世界位置：局部居中渲染 + 世界偏移回补。

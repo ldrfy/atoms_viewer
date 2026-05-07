@@ -423,6 +423,7 @@ async function onExportProject(): Promise<void> {
     const { blob, filename } = await buildProjectZip({
       settings: settings.value,
       layers: snaps,
+      useRealLayerPositions: api.layerUseRealPositions?.value ?? true,
       sources,
       modelFileName: api.parseInfo?.fileName ?? 'atoms-viewer',
       app: { locale: getLocale() },

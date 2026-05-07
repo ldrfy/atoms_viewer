@@ -154,9 +154,6 @@ export function pruneDefaultSettings(
   if (input.view.rotationDeg.z !== d.view.rotationDeg.z) rot.z = input.view.rotationDeg.z;
   if (Object.keys(rot).length > 0) view.rotationDeg = rot as ViewerSettingsCategorized['view']['rotationDeg'];
   if (input.view.orthographic !== d.view.orthographic) view.orthographic = input.view.orthographic;
-  if (input.view.useRealLayerPositions !== d.view.useRealLayerPositions) {
-    view.useRealLayerPositions = input.view.useRealLayerPositions;
-  }
   if (input.view.resetViewSeq !== d.view.resetViewSeq) view.resetViewSeq = input.view.resetViewSeq;
   if (input.view.dualViewDistance !== d.view.dualViewDistance) view.dualViewDistance = input.view.dualViewDistance;
   if (input.view.initialDualViewDistance !== d.view.initialDualViewDistance) {

@@ -67,6 +67,10 @@ export type ViewerPublicApi = {
   sortLayers: (opts: { by: 'time' | 'name'; direction: 'asc' | 'desc' }) => void;
   /** Current layer sort mode (persisted in session export). */
   layerSortBy: Ref<LayerSortBy>;
+  /** Whether visible layers keep their real relative positions. */
+  layerUseRealPositions: Ref<boolean>;
+  /** Toggle real-layer positioning mode. */
+  setLayerUseRealPositions: (v: boolean) => void;
   /** Remove a layer from the scene and internal state. */
   removeLayer: (id: string) => void;
 

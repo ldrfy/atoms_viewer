@@ -21,10 +21,14 @@ export type ParsedSettingsImport = {
 
 function normalizeLayerSnapshots(
   layers?: LayersSnapshot,
-): { sortBy: LayerSortBy; snaps: LayerSnapshot[] } {
+): { sortBy: LayerSortBy; snaps: LayerSnapshot[]; useRealLayerPositions?: boolean } {
   const sortBy = layers?.sortBy ?? 'name,ASC';
   const snaps = layers?.data ? Object.values(layers.data) : [];
-  return { sortBy, snaps };
+  return {
+    sortBy,
+    snaps,
+    useRealLayerPositions: layers?.useRealLayerPositions,
+  };
 }
 
 export async function applyDefaultSettings(params: {
@@ -154,9 +158,11 @@ export async function buildSettingsExportJson(params: {
     ? await viewerApi.getLayerSnapshots()
     : [];
   const layersSortBy = viewerApi?.layerSortBy?.value ?? 'name,ASC';
+  const useRealLayerPositions = viewerApi?.layerUseRealPositions?.value ?? true;
   const payload = buildSettingsSnapshot(
     data,
     layerSnapshots,
+    useRealLayerPositions,
     locale ? { locale } : undefined,
     layersSortBy,
     viewerApi?.activeLayerId?.value ?? null,
@@ -180,7 +186,10 @@ export function parseSettingsImport(raw: string): ParsedSettingsImport {
       ? raw.data as Record<string, LayerSnapshot>
       : undefined;
     const sortBy = typeof raw.sortBy === 'string' ? raw.sortBy as LayerSortBy : 'name,ASC';
-    if (data) layers = { sortBy, data };
+    const useRealLayerPositions = typeof raw.useRealLayerPositions === 'boolean'
+      ? raw.useRealLayerPositions
+      : undefined;
+    if (data) layers = { sortBy, data, useRealLayerPositions };
   }
 
   if (!topSettings || typeof topSettings !== 'object') {

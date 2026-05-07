@@ -36,6 +36,12 @@
       </a-tooltip>
     </a-flex>
 
+    <SettingSwitchField
+      v-model:checked="realLayerPositionsModel"
+      :label="t('settings.panel.view.useRealLayerPositions')"
+      :disabled="layerList.length === 0"
+    />
+
     <a-divider style="margin-top: 2px; margin-bottom: 8px;" />
 
     <a-alert
@@ -106,10 +112,13 @@
 
 <script setup lang="ts">
 import { DeleteOutlined, QuestionCircleOutlined, FolderOpenOutlined, EyeOutlined, EyeInvisibleOutlined } from '@antdv-next/icons';
-import { computed } from 'vue';
+import { computed, onBeforeUnmount } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { viewerApiRef } from '../../../lib/viewer/bridge';
 import { formatLayerDisplayName } from '../../../lib/viewer/layerDisplayName';
+import { PANEL_KEYS } from '../../../lib/viewer/panelKeys';
+import SettingSwitchField from '../parts/SettingSwitchField.vue';
+import { useSettingsSiderResetContext } from '../useSettingsSiderResetContext';
 
 const { t } = useI18n();
 
@@ -128,6 +137,13 @@ const sortOptions = computed(() => ([
   { value: 'name,ASC', label: t('settings.panel.layers.sort.nameAsc') },
   { value: 'name,DESC', label: t('settings.panel.layers.sort.nameDesc') },
 ]));
+
+// 图层位置模式存放在图层会话状态中。
+// Layer positioning is stored in layer session state.
+const realLayerPositionsModel = computed({
+  get: () => viewerApi.value?.layerUseRealPositions.value ?? true,
+  set: (v: boolean) => viewerApi.value?.setLayerUseRealPositions(!!v),
+});
 
 // 图层项样式，尽量复用 Ant 列表并只保留激活态差异。
 // Layer item style keeps Ant List base behavior and only adds active-state difference.
@@ -210,4 +226,14 @@ function onSortChange(val: string): void {
   const direction = dirRaw === 'desc' ? 'desc' : 'asc';
   viewerApi.value?.sortLayers({ by, direction });
 }
+
+function resetLayersPanel(): void {
+  viewerApi.value?.setLayerUseRealPositions(true);
+}
+
+const { registerPanelReset } = useSettingsSiderResetContext();
+const unregisterLayersReset = registerPanelReset(PANEL_KEYS.layers, resetLayersPanel);
+onBeforeUnmount(() => {
+  unregisterLayersReset();
+});
 </script>

@@ -82,6 +82,9 @@ export function createViewerPickingController(deps: RenderDeps) {
   let fillMesh: THREE.Mesh | null = null;
   let fillGeometry: THREE.BufferGeometry | null = null;
   let fillMaterial: THREE.MeshBasicMaterial | null = null;
+  // 设置圆柱径向分段数，避免大半径时显示成明显多边形。
+  // Radial segments for settings cylinder, preventing visible polygon edges at large radii.
+  const SETTINGS_CYLINDER_RADIAL_SEGMENTS = 96;
 
   let selectionVisuals: Array<{
     mesh: THREE.InstancedMesh;
@@ -207,7 +210,14 @@ export function createViewerPickingController(deps: RenderDeps) {
     lineMesh.frustumCulled = false;
     selectionGroup.add(lineMesh);
 
-    cylinderGeometry = new THREE.CylinderGeometry(1, 1, 1, 24, 1, false);
+    cylinderGeometry = new THREE.CylinderGeometry(
+      1,
+      1,
+      1,
+      SETTINGS_CYLINDER_RADIAL_SEGMENTS,
+      1,
+      false,
+    );
     cylinderMaterial = new THREE.MeshBasicMaterial({
       color: new THREE.Color(0xffd400),
       transparent: true,

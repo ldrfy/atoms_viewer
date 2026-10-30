@@ -1,6 +1,7 @@
 # Logs
 test*
 atoms_viewer
+lav
 logs
 *.log
 npm-debug.log*
